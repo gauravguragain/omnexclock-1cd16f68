@@ -30,6 +30,7 @@ export default function AdminLayout() {
     );
   }
 
+  // UX guard only — all data access is protected by RLS policies server-side.
   if (!user) return <Navigate to="/auth" replace />;
   if (!isAdmin) {
     return (
