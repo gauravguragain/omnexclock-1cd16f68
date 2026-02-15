@@ -22,8 +22,8 @@ export default function LiveMonitorPage() {
     const { data: events } = await supabase
       .from("clock_events")
       .select("*, employees(name)")
-      .gte("timestamp", today.toISOString())
-      .order("timestamp", { ascending: false });
+      .gte("created_at", today.toISOString())
+      .order("created_at", { ascending: false });
 
     if (!events) return;
 
@@ -35,7 +35,7 @@ export default function LiveMonitorPage() {
           id: ev.employee_id,
           name: emp?.name || "Unknown",
           lastEvent: ev.event_type,
-          lastTime: new Date(ev.timestamp).toLocaleTimeString("en-AU", { hour: "2-digit", minute: "2-digit", hour12: true }),
+          lastTime: new Date(ev.created_at).toLocaleTimeString("en-AU", { hour: "2-digit", minute: "2-digit", hour12: true }),
           photoUrl: ev.photo_url || undefined,
         });
       }
