@@ -77,7 +77,7 @@ export default function DashboardPage() {
     let breakMinutes = 0;
 
     for (const ev of events) {
-      const t = new Date(ev.created_at);
+      const t = new Date(ev.timestamp);
       switch (ev.event_type) {
         case "clock_in":
           clockIn = t;
@@ -141,10 +141,13 @@ export default function DashboardPage() {
     weekAgo.setDate(weekAgo.getDate() - 7);
     weekAgo.setHours(0, 0, 0, 0);
 
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+
     const [empRes, todayEventsRes, weekEventsRes, recentRes] = await Promise.all([
       supabase.from("employees").select("id, name", { count: "exact" }).eq("active", true),
-      supabase.from("clock_events").select("*").gte("created_at", today.toISOString()).order("created_at"),
-      supabase.from("clock_events").select("*, employees(name)").gte("created_at", weekAgo.toISOString()).order("created_at"),
+      supabase.from("clock_events").select("*").gte("timestamp", today.toISOString()).lt("timestamp", tomorrow.toISOString()).order("timestamp"),
+      supabase.from("clock_events").select("*, employees(name)").gte("timestamp", weekAgo.toISOString()).order("timestamp"),
       supabase.from("clock_events").select("*, employees(name)").order("created_at", { ascending: false }).limit(10),
     ]);
 
@@ -179,7 +182,7 @@ export default function DashboardPage() {
     const todayKey = toLocalDateKey(new Date());
     const dailyMap = new Map<string, { events: Map<string, any[]> }>();
     for (const ev of weekEvents) {
-      const key = toLocalDateKey(new Date(ev.created_at));
+      const key = toLocalDateKey(new Date(ev.timestamp));
       if (!dailyMap.has(key)) dailyMap.set(key, { events: new Map() });
       const dayData = dailyMap.get(key)!;
       if (!dayData.events.has(ev.employee_id)) dayData.events.set(ev.employee_id, []);
@@ -243,7 +246,7 @@ export default function DashboardPage() {
         let empHours = 0;
         
         for (const ev of evs) {
-          const t = new Date(ev.created_at);
+          const t = new Date(ev.timestamp);
           if (t.getTime() > cutoff) break;
           switch (ev.event_type) {
             case "clock_in": clockIn = t; breakMin = 0; breakStart = null; break;
