@@ -58,22 +58,41 @@ export default function UsersPage() {
 
   useEffect(() => { fetchUsers(); }, []);
 
-  const toggleApproval = async (user: UserProfile) => {
+  const revokeAndDelete = async (user: UserProfile) => {
+    if (!confirm(`Revoke access and permanently delete ${user.email}? This cannot be undone.`)) return;
     setActionLoading((prev) => new Set(prev).add(user.id));
-    const newApproved = !user.approved;
+
+    const { data, error } = await supabase.functions.invoke("delete-user", {
+      body: { user_id: user.id },
+    });
+
+    if (error || data?.error) {
+      toast({ title: "Error", description: data?.error || error?.message || "Failed to delete user", variant: "destructive" });
+    } else {
+      await logAudit("user_deleted", { user_id: user.id, email: user.email });
+      toast({ title: "User deleted", description: `${user.email} has been removed.` });
+      fetchUsers();
+    }
+
+    setActionLoading((prev) => {
+      const s = new Set(prev);
+      s.delete(user.id);
+      return s;
+    });
+  };
+
+  const approveUser = async (user: UserProfile) => {
+    setActionLoading((prev) => new Set(prev).add(user.id));
     const { error } = await supabase
       .from("profiles")
-      .update({ approved: newApproved })
+      .update({ approved: true })
       .eq("id", user.id);
 
     if (error) {
       toast({ title: "Error", description: error.message, variant: "destructive" });
     } else {
-      await logAudit(newApproved ? "user_approved" : "user_revoked", {
-        user_id: user.id,
-        email: user.email,
-      });
-      toast({ title: newApproved ? "User Approved" : "Access Revoked" });
+      await logAudit("user_approved", { user_id: user.id, email: user.email });
+      toast({ title: "User Approved" });
       fetchUsers();
     }
     setActionLoading((prev) => {
@@ -209,20 +228,30 @@ export default function UsersPage() {
                         </Badge>
                       </TableCell>
                       <TableCell className="text-right space-x-1">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => toggleApproval(user)}
-                          disabled={actionLoading.has(user.id)}
-                          title={user.approved ? "Revoke access" : "Approve user"}
-                        >
-                          {user.approved ? (
+                        {user.approved ? (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => revokeAndDelete(user)}
+                            disabled={actionLoading.has(user.id)}
+                            title="Revoke access & delete user"
+                            className="text-destructive hover:text-destructive"
+                          >
                             <UserX className="h-4 w-4 mr-1" />
-                          ) : (
+                            Delete
+                          </Button>
+                        ) : (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => approveUser(user)}
+                            disabled={actionLoading.has(user.id)}
+                            title="Approve user"
+                          >
                             <UserCheck className="h-4 w-4 mr-1" />
-                          )}
-                          {user.approved ? "Revoke" : "Approve"}
-                        </Button>
+                            Approve
+                          </Button>
+                        )}
                         <Button
                           variant="ghost"
                           size="sm"
