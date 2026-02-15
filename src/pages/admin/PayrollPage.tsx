@@ -37,18 +37,16 @@ export default function PayrollPage() {
   const [entries, setEntries] = useState<PayrollEntry[]>([]);
   const [loading, setLoading] = useState(false);
   const [dateFrom, setDateFrom] = useState<Date>(() => {
-    const d = new Date();
-    const day = d.getDay(); // 0=Sun, 1=Mon...
+    const now = new Date();
+    const day = now.getDay(); // 0=Sun, 1=Mon...
     const diff = day === 0 ? 6 : day - 1; // days since Monday
-    d.setDate(d.getDate() - diff);
-    return d;
+    return new Date(now.getFullYear(), now.getMonth(), now.getDate() - diff);
   });
   const [dateTo, setDateTo] = useState<Date>(() => {
-    const d = new Date();
-    const day = d.getDay();
+    const now = new Date();
+    const day = now.getDay();
     const diff = day === 0 ? 0 : 7 - day; // days until Sunday
-    d.setDate(d.getDate() + diff);
-    return d;
+    return new Date(now.getFullYear(), now.getMonth(), now.getDate() + diff);
   });
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(0);

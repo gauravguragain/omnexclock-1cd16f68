@@ -71,18 +71,16 @@ export default function TimesheetsPage() {
   const [employees, setEmployees] = useState<{ id: string; name: string }[]>([]);
   const [selectedEmployee, setSelectedEmployee] = useState<string>("all");
   const [dateFrom, setDateFrom] = useState<Date>(() => {
-    const d = new Date();
-    const day = d.getDay();
+    const now = new Date();
+    const day = now.getDay();
     const diff = day === 0 ? 6 : day - 1;
-    d.setDate(d.getDate() - diff);
-    return d;
+    return new Date(now.getFullYear(), now.getMonth(), now.getDate() - diff);
   });
   const [dateTo, setDateTo] = useState<Date>(() => {
-    const d = new Date();
-    const day = d.getDay();
+    const now = new Date();
+    const day = now.getDay();
     const diff = day === 0 ? 0 : 7 - day;
-    d.setDate(d.getDate() + diff);
-    return d;
+    return new Date(now.getFullYear(), now.getMonth(), now.getDate() + diff);
   });
   const [editDialog, setEditDialog] = useState(false);
   const [editForm, setEditForm] = useState<EditForm>({ employee_id: "", date: "", clock_in: "", clock_out: "", break_start: "", break_end: "" });
