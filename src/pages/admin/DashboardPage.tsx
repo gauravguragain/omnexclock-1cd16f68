@@ -43,7 +43,7 @@ export default function DashboardPage() {
     fetchAll();
   }, []);
 
-  const calcHoursFromEvents = (events: any[]) => {
+  const calcHoursFromEvents = (events: any[], allowOpen = false) => {
     let hours = 0;
     let clockIn: Date | null = null;
     let breakStart: Date | null = null;
@@ -52,7 +52,11 @@ export default function DashboardPage() {
     for (const ev of events) {
       const t = new Date(ev.timestamp);
       switch (ev.event_type) {
-        case "clock_in": clockIn = t; break;
+        case "clock_in":
+          clockIn = t;
+          breakMinutes = 0;
+          breakStart = null;
+          break;
         case "clock_out":
           if (clockIn) {
             hours += (t.getTime() - clockIn.getTime()) / 3600000 - breakMinutes / 60;
@@ -69,10 +73,25 @@ export default function DashboardPage() {
           break;
       }
     }
-    if (clockIn) {
-      hours += (Date.now() - clockIn.getTime()) / 3600000 - breakMinutes / 60;
+    // Only count open shifts if allowOpen (i.e. for today's stats, not historical)
+    if (clockIn && allowOpen) {
+      const endTime = breakStart ? breakStart.getTime() : Date.now();
+      hours += (endTime - clockIn.getTime()) / 3600000 - breakMinutes / 60;
     }
     return Math.max(0, hours);
+  };
+
+  const getCurrentlyClockedIn = (events: any[]) => {
+    // Track last event per employee
+    const lastEvent = new Map<string, string>();
+    for (const ev of events) {
+      lastEvent.set(ev.employee_id, ev.event_type);
+    }
+    let count = 0;
+    for (const type of lastEvent.values()) {
+      if (type === "clock_in" || type === "break_start" || type === "break_end") count++;
+    }
+    return count;
   };
 
   const fetchAll = async () => {
@@ -105,12 +124,12 @@ export default function DashboardPage() {
     }
     let totalHoursToday = 0;
     for (const evs of todayByEmp.values()) {
-      totalHoursToday += calcHoursFromEvents(evs);
+      totalHoursToday += calcHoursFromEvents(evs, true); // allowOpen for today
     }
 
     setStats({
       totalEmployees,
-      activeToday: uniqueToday.size,
+      activeToday: getCurrentlyClockedIn(todayEvents),
       totalHoursToday: Math.round(totalHoursToday * 10) / 10,
       avgShift: uniqueToday.size > 0 ? Math.round((totalHoursToday / uniqueToday.size) * 10) / 10 : 0,
     });
@@ -126,17 +145,19 @@ export default function DashboardPage() {
     }
 
     const weekly: DailyHours[] = [];
+    const todayLabel = new Date().toLocaleDateString("en-AU", { weekday: "short", day: "numeric", month: "short" });
     for (let i = 6; i >= 0; i--) {
       const d = new Date();
       d.setDate(d.getDate() - i);
       const label = d.toLocaleDateString("en-AU", { weekday: "short", day: "numeric", month: "short" });
+      const isToday = label === todayLabel;
       const dayData = dailyMap.get(label);
       let dayHours = 0;
       let dayEmps = 0;
       if (dayData) {
         dayEmps = dayData.events.size;
         for (const evs of dayData.events.values()) {
-          dayHours += calcHoursFromEvents(evs);
+          dayHours += calcHoursFromEvents(evs, isToday);
         }
       }
       weekly.push({ date: label, hours: Math.round(dayHours * 10) / 10, employees: dayEmps });
@@ -155,7 +176,7 @@ export default function DashboardPage() {
     }
     const breakdown: EmployeeBreakdown[] = [];
     for (const [empId, evs] of weekByEmp) {
-      const h = calcHoursFromEvents(evs);
+      const h = calcHoursFromEvents(evs, true);
       breakdown.push({ name: empNameMap.get(empId) || (evs[0] as any).employees?.name || "Unknown", hours: Math.round(h * 10) / 10 });
     }
     breakdown.sort((a, b) => b.hours - a.hours);
