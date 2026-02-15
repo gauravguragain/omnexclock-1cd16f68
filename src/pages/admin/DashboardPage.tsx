@@ -30,7 +30,8 @@ interface EmployeeBreakdown {
 
 interface HourlyActivity {
   hour: string;
-  events: number;
+  cumulativeHours: number;
+  employees: string[];
 }
 
 const CHART_COLORS = [
@@ -193,17 +194,63 @@ export default function DashboardPage() {
     breakdown.sort((a, b) => b.hours - a.hours);
     setEmployeeBreakdown(breakdown);
 
-    // Hourly activity (today)
-    const hourCounts = new Array(24).fill(0);
-    for (const ev of todayEvents) {
-      const h = new Date(ev.timestamp).getHours();
-      hourCounts[h]++;
+    // Hourly cumulative hours (today) with employee names
+    const hourlyData: HourlyActivity[] = [];
+    let cumulative = 0;
+    for (let h = 5; h <= 23; h++) {
+      const hourEnd = new Date(today);
+      hourEnd.setHours(h + 1, 0, 0, 0);
+      const cutoff = Math.min(hourEnd.getTime(), Date.now());
+      
+      // Calculate total hours worked up to this hour
+      let totalHoursUpTo = 0;
+      const activeEmps: Set<string> = new Set();
+      
+      for (const [empId, evs] of todayByEmp) {
+        let clockIn: Date | null = null;
+        let breakStart: Date | null = null;
+        let breakMin = 0;
+        let empHours = 0;
+        
+        for (const ev of evs) {
+          const t = new Date(ev.timestamp);
+          if (t.getTime() > cutoff) break;
+          switch (ev.event_type) {
+            case "clock_in": clockIn = t; breakMin = 0; breakStart = null; break;
+            case "clock_out":
+              if (clockIn) {
+                empHours += (t.getTime() - clockIn.getTime()) / 3600000 - breakMin / 60;
+                clockIn = null; breakMin = 0;
+              }
+              break;
+            case "break_start": breakStart = t; break;
+            case "break_end":
+              if (breakStart) { breakMin += (t.getTime() - breakStart.getTime()) / 60000; breakStart = null; }
+              break;
+          }
+        }
+        if (clockIn && cutoff > clockIn.getTime()) {
+          const endT = breakStart ? Math.min(breakStart.getTime(), cutoff) : cutoff;
+          empHours += (endT - clockIn.getTime()) / 3600000 - breakMin / 60;
+        }
+        empHours = Math.max(0, empHours);
+        if (empHours > 0) {
+          totalHoursUpTo += empHours;
+          const empName = empNameMap.get(empId) || "Unknown";
+          activeEmps.add(empName);
+        }
+      }
+      
+      // Only show hours up to current time
+      if (hourEnd.getTime() <= Date.now() || h <= new Date().getHours()) {
+        hourlyData.push({
+          hour: `${h.toString().padStart(2, "0")}:00`,
+          cumulativeHours: roundHours(totalHoursUpTo),
+          employees: Array.from(activeEmps),
+        });
+      }
     }
-    const hourly: HourlyActivity[] = hourCounts.map((count, i) => ({
-      hour: `${i.toString().padStart(2, "0")}:00`,
-      events: count,
-    })).filter((_, i) => i >= 5 && i <= 23);
-    setHourlyActivity(hourly);
+    setHourlyActivity(hourlyData);
 
     // Recent events
     setRecentEvents(
@@ -303,16 +350,31 @@ export default function DashboardPage() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <Card>
           <CardHeader>
-            <CardTitle className="text-sm font-medium text-muted-foreground">Today's Activity by Hour</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">Today's Cumulative Hours</CardTitle>
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={250}>
               <AreaChart data={hourlyActivity}>
                 <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
                 <XAxis dataKey="hour" tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} />
-                <YAxis tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} allowDecimals={false} />
-                <Tooltip contentStyle={{ backgroundColor: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 8, color: "hsl(var(--foreground))" }} />
-                <Area type="monotone" dataKey="events" name="Events" stroke="hsl(45, 60%, 53%)" fill="hsl(45, 60%, 53%)" fillOpacity={0.2} />
+                <YAxis tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} />
+                <Tooltip
+                  contentStyle={{ backgroundColor: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 8, color: "hsl(var(--foreground))" }}
+                  content={({ active, payload }) => {
+                    if (!active || !payload?.length) return null;
+                    const data = payload[0].payload as HourlyActivity;
+                    return (
+                      <div style={{ backgroundColor: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 8, padding: "8px 12px", color: "hsl(var(--foreground))" }}>
+                        <p className="font-medium text-sm">{data.hour}</p>
+                        <p className="text-sm" style={{ color: "hsl(45, 60%, 53%)" }}>{data.cumulativeHours} hrs</p>
+                        {data.employees.length > 0 && (
+                          <p className="text-xs text-muted-foreground mt-1">{data.employees.join(", ")}</p>
+                        )}
+                      </div>
+                    );
+                  }}
+                />
+                <Area type="monotone" dataKey="cumulativeHours" name="Hours" stroke="hsl(45, 60%, 53%)" fill="hsl(45, 60%, 53%)" fillOpacity={0.2} />
               </AreaChart>
             </ResponsiveContainer>
           </CardContent>
