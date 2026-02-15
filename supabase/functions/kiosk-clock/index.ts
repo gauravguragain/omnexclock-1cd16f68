@@ -85,6 +85,13 @@ serve(async (req) => {
       });
     }
 
+    // Log to audit
+    await supabase.from("audit_logs").insert({
+      user_id: null,
+      action: `kiosk_${event_type}`,
+      details: { employee_id: employee.id, employee_name: employee.name, event_type, photo_url },
+    });
+
     return new Response(
       JSON.stringify({
         success: true,

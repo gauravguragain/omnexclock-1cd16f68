@@ -9,6 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { useToast } from "@/hooks/use-toast";
 import { Plus, Pencil, UserX, UserCheck, Search } from "lucide-react";
 import type { Tables } from "@/integrations/supabase/types";
+import { logAudit } from "@/lib/auditLog";
 
 type Employee = Tables<"employees">;
 
@@ -37,10 +38,12 @@ export default function EmployeesPage() {
     if (editing) {
       const { error } = await supabase.from("employees").update(payload).eq("id", editing.id);
       if (error) { toast({ title: "Error", description: error.message, variant: "destructive" }); return; }
+      await logAudit("employee_edit", { employee_id: editing.id, name: form.name, employee_code: form.employee_code, pay_rate: form.pay_rate });
       toast({ title: "Employee updated" });
     } else {
-      const { error } = await supabase.from("employees").insert(payload);
+      const { data, error } = await supabase.from("employees").insert(payload).select("id").single();
       if (error) { toast({ title: "Error", description: error.message, variant: "destructive" }); return; }
+      await logAudit("employee_add", { employee_id: data?.id, name: form.name, employee_code: form.employee_code, pay_rate: form.pay_rate });
       toast({ title: "Employee added" });
     }
     setDialogOpen(false);
@@ -50,7 +53,9 @@ export default function EmployeesPage() {
   };
 
   const toggleActive = async (emp: Employee) => {
-    await supabase.from("employees").update({ active: !emp.active }).eq("id", emp.id);
+    const newActive = !emp.active;
+    await supabase.from("employees").update({ active: newActive }).eq("id", emp.id);
+    await logAudit(newActive ? "employee_activate" : "employee_deactivate", { employee_id: emp.id, name: emp.name });
     fetchEmployees();
   };
 

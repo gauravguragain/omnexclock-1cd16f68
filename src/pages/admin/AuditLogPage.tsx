@@ -73,6 +73,17 @@ export default function AuditLogPage() {
     timesheet_edit: "bg-warning/20 text-warning border-warning/30",
     timesheet_add: "bg-primary/20 text-primary border-primary/30",
     timesheet_delete: "bg-destructive/20 text-destructive border-destructive/30",
+    timesheet_approve: "bg-success/20 text-success border-success/30",
+    timesheet_unapprove: "bg-warning/20 text-warning border-warning/30",
+    timesheet_approve_all: "bg-success/20 text-success border-success/30",
+    employee_add: "bg-primary/20 text-primary border-primary/30",
+    employee_edit: "bg-warning/20 text-warning border-warning/30",
+    employee_activate: "bg-success/20 text-success border-success/30",
+    employee_deactivate: "bg-destructive/20 text-destructive border-destructive/30",
+    kiosk_clock_in: "bg-success/20 text-success border-success/30",
+    kiosk_clock_out: "bg-destructive/20 text-destructive border-destructive/30",
+    kiosk_break_start: "bg-warning/20 text-warning border-warning/30",
+    kiosk_break_end: "bg-primary/20 text-primary border-primary/30",
   };
 
   const filteredLogs = logs.filter((log) => {
