@@ -5,6 +5,7 @@ import {
   Users, Clock, CalendarDays, DollarSign, BarChart3, Monitor, LogOut, Menu, X, Settings, FileText
 } from "lucide-react";
 import { useState } from "react";
+import { useSessionGuard } from "@/hooks/useSessionGuard";
 
 const navItems = [
   { path: "/admin", label: "Dashboard", icon: BarChart3 },
@@ -19,6 +20,7 @@ export default function AdminLayout() {
   const { user, isAdmin, loading, signOut } = useAuth();
   const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  useSessionGuard();
 
   if (loading) {
     return (
