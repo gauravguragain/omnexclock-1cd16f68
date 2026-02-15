@@ -489,13 +489,14 @@ export default function TimesheetsPage() {
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-col sm:flex-row gap-3 justify-between items-start sm:items-center">
-        <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center">
+      {/* Filters row */}
+      <div className="flex flex-col gap-3">
+        <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center">
           <Select value={selectedEmployee} onValueChange={setSelectedEmployee}>
             <SelectTrigger className="w-full sm:w-48">
               <SelectValue placeholder="All employees" />
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent className="bg-card border-border z-50">
               <SelectItem value="all">All Employees</SelectItem>
               {employees.map((e) => (
                 <SelectItem key={e.id} value={e.id}>{e.name}</SelectItem>
@@ -504,34 +505,36 @@ export default function TimesheetsPage() {
           </Select>
           <DateRangeSelector dateFrom={dateFrom} dateTo={dateTo} onChangeFrom={setDateFrom} onChangeTo={setDateTo} />
         </div>
-        <div className="flex gap-2">
-          <Button variant="outline" onClick={downloadCSV} disabled={filtered.length === 0}>
-            <Download className="mr-2 h-4 w-4" /> Download CSV
+
+        {/* Action buttons - wrap on mobile */}
+        <div className="flex flex-wrap gap-2">
+          <Button variant="outline" size="sm" onClick={downloadCSV} disabled={filtered.length === 0}>
+            <Download className="mr-1.5 h-4 w-4" /> <span className="hidden xs:inline">Download</span> CSV
           </Button>
-          <Button variant="outline" onClick={approveAll} disabled={saving} className="text-green-500 border-green-500/30 hover:bg-green-500/10">
-            <CheckCircle2 className="mr-2 h-4 w-4" /> Approve All
+          <Button variant="outline" size="sm" onClick={approveAll} disabled={saving} className="text-green-500 border-green-500/30 hover:bg-green-500/10">
+            <CheckCircle2 className="mr-1.5 h-4 w-4" /> Approve All
           </Button>
-          <Button onClick={openAdd}>
-            <Plus className="mr-2 h-4 w-4" /> Add Entry
+          <Button size="sm" onClick={openAdd}>
+            <Plus className="mr-1.5 h-4 w-4" /> Add Entry
           </Button>
         </div>
       </div>
 
       {/* Summary badges */}
-      <div className="flex gap-3">
-        <Badge variant="outline" className="text-xs px-3 py-1">
+      <div className="flex flex-wrap gap-2">
+        <Badge variant="outline" className="text-xs px-2.5 py-1">
           Total: {filtered.length}
         </Badge>
-        <Badge variant="outline" className="text-xs px-3 py-1 text-green-500 border-green-500/30">
+        <Badge variant="outline" className="text-xs px-2.5 py-1 text-green-500 border-green-500/30">
           <CheckCircle2 className="mr-1 h-3 w-3" /> Approved: {approvedCount}
         </Badge>
-        <Badge variant="outline" className="text-xs px-3 py-1 text-yellow-500 border-yellow-500/30">
+        <Badge variant="outline" className="text-xs px-2.5 py-1 text-yellow-500 border-yellow-500/30">
           Pending: {pendingCount}
         </Badge>
       </div>
 
       <Card>
-        <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
+        <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 px-3 sm:px-6">
           <CardTitle className="text-sm font-medium text-muted-foreground">
             Timesheets ({filtered.length} entries)
           </CardTitle>
@@ -541,21 +544,69 @@ export default function TimesheetsPage() {
           </div>
         </CardHeader>
         <CardContent className="p-0">
-          <div className="overflow-x-auto">
+          {/* Mobile card view */}
+          <div className="block md:hidden divide-y divide-border">
+            {filtered.map((e, i) => (
+              <div key={i} className={cn("p-3 space-y-2", e.approved && "bg-green-500/5")}>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => toggleApproval(e)}
+                      disabled={approvingIds.has(`${e.employee_id}-${e.raw_date}`)}
+                      className={cn("h-7 w-7 p-0", e.approved ? "text-green-500 hover:text-green-400" : "text-muted-foreground hover:text-yellow-500")}
+                    >
+                      {e.approved ? <CheckCircle2 className="h-4 w-4" /> : <XCircle className="h-4 w-4" />}
+                    </Button>
+                    <span className="font-medium text-foreground">{e.employee_name}</span>
+                  </div>
+                  <div className="flex gap-1">
+                    <Button variant="ghost" size="sm" onClick={() => openEdit(e)} disabled={saving} className="h-7 w-7 p-0">
+                      <Pencil className="h-3.5 w-3.5" />
+                    </Button>
+                    <Button variant="ghost" size="sm" onClick={() => deleteEntry(e)} disabled={saving} className="h-7 w-7 p-0 text-destructive hover:text-destructive">
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
+                </div>
+                <div className="grid grid-cols-3 gap-x-4 gap-y-1 text-xs text-muted-foreground">
+                  <span>Date</span><span>Clock In</span><span>Clock Out</span>
+                  <span className="text-foreground">{e.date}</span>
+                  <span className="text-foreground">{e.clock_in || "-"}</span>
+                  <span className="text-foreground">{e.clock_out || "-"}</span>
+                </div>
+                <div className="grid grid-cols-3 gap-x-4 gap-y-1 text-xs text-muted-foreground">
+                  <span>Break</span><span>Total</span><span className="font-medium">Net</span>
+                  <span className="text-foreground">{e.break_minutes}m</span>
+                  <span className="text-foreground">{e.total_hours}h</span>
+                  <span className="text-foreground font-semibold">{e.net_hours}h</span>
+                </div>
+              </div>
+            ))}
+            {filtered.length === 0 && (
+              <div className="text-center text-muted-foreground py-8">
+                No timesheet data for this period.
+              </div>
+            )}
+          </div>
+
+          {/* Desktop table view */}
+          <div className="hidden md:block overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Status</TableHead>
+                  <TableHead className="w-12">Status</TableHead>
                   <TableHead>Employee</TableHead>
                   <TableHead>Date</TableHead>
                   <TableHead>Clock In</TableHead>
                   <TableHead>Clock Out</TableHead>
-                  <TableHead>Break Start</TableHead>
-                  <TableHead>Break End</TableHead>
-                  <TableHead>Break (min)</TableHead>
-                  <TableHead>Total (hrs)</TableHead>
-                  <TableHead>Net (hrs)</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
+                  <TableHead className="hidden lg:table-cell">Break Start</TableHead>
+                  <TableHead className="hidden lg:table-cell">Break End</TableHead>
+                  <TableHead>Break</TableHead>
+                  <TableHead>Total</TableHead>
+                  <TableHead>Net</TableHead>
+                  <TableHead className="text-right w-20">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -573,20 +624,20 @@ export default function TimesheetsPage() {
                       </Button>
                     </TableCell>
                     <TableCell className="font-medium">{e.employee_name}</TableCell>
-                    <TableCell>{e.date}</TableCell>
+                    <TableCell className="whitespace-nowrap">{e.date}</TableCell>
                     <TableCell>{e.clock_in || "-"}</TableCell>
                     <TableCell>{e.clock_out || "-"}</TableCell>
-                    <TableCell>{e.break_start || "-"}</TableCell>
-                    <TableCell>{e.break_end || "-"}</TableCell>
-                    <TableCell>{e.break_minutes}</TableCell>
-                    <TableCell>{e.total_hours}</TableCell>
-                    <TableCell className="font-semibold">{e.net_hours}</TableCell>
+                    <TableCell className="hidden lg:table-cell">{e.break_start || "-"}</TableCell>
+                    <TableCell className="hidden lg:table-cell">{e.break_end || "-"}</TableCell>
+                    <TableCell>{e.break_minutes}m</TableCell>
+                    <TableCell>{e.total_hours}h</TableCell>
+                    <TableCell className="font-semibold">{e.net_hours}h</TableCell>
                     <TableCell className="text-right">
                       <div className="flex gap-1 justify-end">
-                        <Button variant="ghost" size="sm" onClick={() => openEdit(e)} disabled={saving}>
+                        <Button variant="ghost" size="sm" onClick={() => openEdit(e)} disabled={saving} className="h-7 w-7 p-0">
                           <Pencil className="h-3.5 w-3.5" />
                         </Button>
-                        <Button variant="ghost" size="sm" onClick={() => deleteEntry(e)} disabled={saving} className="text-destructive hover:text-destructive">
+                        <Button variant="ghost" size="sm" onClick={() => deleteEntry(e)} disabled={saving} className="h-7 w-7 p-0 text-destructive hover:text-destructive">
                           <Trash2 className="h-3.5 w-3.5" />
                         </Button>
                       </div>
