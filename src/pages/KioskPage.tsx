@@ -63,7 +63,32 @@ export default function KioskPage() {
 
   const handleSubmitCode = async () => {
     if (!code) return;
-    setStep("action_select");
+    setLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from("employees")
+        .select("name, active")
+        .eq("employee_code", code)
+        .maybeSingle();
+
+      if (error || !data) {
+        toast({ title: "Invalid Code", description: "Employee not found. Please try again.", variant: "destructive" });
+        setCode("");
+        setLoading(false);
+        return;
+      }
+      if (!data.active) {
+        toast({ title: "Access Denied", description: "This employee account is deactivated.", variant: "destructive" });
+        setCode("");
+        setLoading(false);
+        return;
+      }
+      setEmployeeName(data.name);
+      setStep("action_select");
+    } catch {
+      toast({ title: "Error", description: "Unable to verify employee code.", variant: "destructive" });
+    }
+    setLoading(false);
   };
 
   const handleActionSelect = (action: string) => {
