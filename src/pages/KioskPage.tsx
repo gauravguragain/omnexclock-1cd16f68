@@ -120,10 +120,10 @@ export default function KioskPage() {
         <img src="/logo.jpeg" alt="Pro Regal Pavilion" className="h-16 w-16 mx-auto rounded-lg object-cover mb-2" />
         <h1 className="text-xl font-bold gold-text">Pro Regal Pavilion</h1>
         <p className="text-3xl font-mono text-foreground mt-2">
-          {currentTime.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" })}
+          {currentTime.toLocaleTimeString("en-AU", { hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: true })}
         </p>
         <p className="text-sm text-muted-foreground">
-          {currentTime.toLocaleDateString([], { weekday: "long", year: "numeric", month: "long", day: "numeric" })}
+          {currentTime.toLocaleDateString("en-AU", { weekday: "long", year: "numeric", month: "long", day: "numeric" })}
         </p>
       </div>
 
@@ -230,7 +230,7 @@ export default function KioskPage() {
             <h2 className="text-2xl font-bold text-foreground">{actionLabels[selectedAction]?.label}</h2>
             <p className="text-xl gold-text font-semibold">{employeeName}</p>
             <p className="text-muted-foreground text-sm">
-              {currentTime.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+              {currentTime.toLocaleTimeString("en-AU", { hour: "2-digit", minute: "2-digit", hour12: true })}
             </p>
           </CardContent>
         </Card>

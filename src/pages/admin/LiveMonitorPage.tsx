@@ -35,7 +35,7 @@ export default function LiveMonitorPage() {
           id: ev.employee_id,
           name: emp?.name || "Unknown",
           lastEvent: ev.event_type,
-          lastTime: new Date(ev.timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+          lastTime: new Date(ev.timestamp).toLocaleTimeString("en-AU", { hour: "2-digit", minute: "2-digit", hour12: true }),
           photoUrl: ev.photo_url || undefined,
         });
       }
