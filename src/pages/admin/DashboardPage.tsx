@@ -20,11 +20,60 @@ export default function DashboardPage() {
       const todayEvents = eventsRes.data || [];
       const uniqueEmployees = new Set(todayEvents.map((e) => e.employee_id));
 
+      // Calculate actual hours from clock_in/clock_out pairs per employee
+      let totalHours = 0;
+      const employeeHours = new Map<string, number>();
+
+      for (const empId of uniqueEmployees) {
+        const empEvents = todayEvents
+          .filter((e) => e.employee_id === empId)
+          .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+
+        let clockIn: Date | null = null;
+        let breakStart: Date | null = null;
+        let hours = 0;
+        let breakMinutes = 0;
+
+        for (const ev of empEvents) {
+          const t = new Date(ev.timestamp);
+          switch (ev.event_type) {
+            case "clock_in":
+              clockIn = t;
+              break;
+            case "clock_out":
+              if (clockIn) {
+                hours += (t.getTime() - clockIn.getTime()) / 3600000 - breakMinutes / 60;
+                clockIn = null;
+                breakMinutes = 0;
+              }
+              break;
+            case "break_start":
+              breakStart = t;
+              break;
+            case "break_end":
+              if (breakStart) {
+                breakMinutes += (t.getTime() - breakStart.getTime()) / 60000;
+                breakStart = null;
+              }
+              break;
+          }
+        }
+
+        // If still clocked in, calculate up to now
+        if (clockIn) {
+          hours += (Date.now() - clockIn.getTime()) / 3600000 - breakMinutes / 60;
+        }
+
+        hours = Math.max(0, hours);
+        employeeHours.set(empId, hours);
+        totalHours += hours;
+      }
+
       setStats({
         totalEmployees,
         activeToday: uniqueEmployees.size,
-        totalHoursToday: Math.round(todayEvents.length * 1.5),
-        avgShift: uniqueEmployees.size > 0 ? Math.round((todayEvents.length * 1.5) / uniqueEmployees.size * 10) / 10 : 0,
+        totalHoursToday: Math.round(totalHours * 10) / 10,
+        avgShift: uniqueEmployees.size > 0 ? Math.round((totalHours / uniqueEmployees.size) * 10) / 10 : 0,
       });
     };
     fetchStats();
