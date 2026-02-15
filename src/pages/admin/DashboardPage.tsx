@@ -53,6 +53,7 @@ export default function DashboardPage() {
   useEffect(() => {
     fetchAll();
 
+    // Realtime: refresh on any clock_events change
     const channel = supabase
       .channel("dashboard-realtime")
       .on("postgres_changes", { event: "*", schema: "public", table: "clock_events" }, () => {
@@ -60,7 +61,11 @@ export default function DashboardPage() {
       })
       .subscribe();
 
+    // Periodic refresh every 30s to keep running hours/charts accurate
+    const interval = setInterval(fetchAll, 30000);
+
     return () => {
+      clearInterval(interval);
       supabase.removeChannel(channel);
     };
   }, []);
@@ -72,7 +77,7 @@ export default function DashboardPage() {
     let breakMinutes = 0;
 
     for (const ev of events) {
-      const t = new Date(ev.timestamp);
+      const t = new Date(ev.created_at);
       switch (ev.event_type) {
         case "clock_in":
           clockIn = t;
@@ -224,7 +229,7 @@ export default function DashboardPage() {
         let empHours = 0;
         
         for (const ev of evs) {
-          const t = new Date(ev.timestamp);
+          const t = new Date(ev.created_at);
           if (t.getTime() > cutoff) break;
           switch (ev.event_type) {
             case "clock_in": clockIn = t; breakMin = 0; breakStart = null; break;
