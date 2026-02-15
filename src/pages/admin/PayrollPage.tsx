@@ -38,10 +38,18 @@ export default function PayrollPage() {
   const [loading, setLoading] = useState(false);
   const [dateFrom, setDateFrom] = useState<Date>(() => {
     const d = new Date();
-    d.setDate(d.getDate() - (d.getDay() || 7));
+    const day = d.getDay(); // 0=Sun, 1=Mon...
+    const diff = day === 0 ? 6 : day - 1; // days since Monday
+    d.setDate(d.getDate() - diff);
     return d;
   });
-  const [dateTo, setDateTo] = useState<Date>(() => new Date());
+  const [dateTo, setDateTo] = useState<Date>(() => {
+    const d = new Date();
+    const day = d.getDay();
+    const diff = day === 0 ? 0 : 7 - day; // days until Sunday
+    d.setDate(d.getDate() + diff);
+    return d;
+  });
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(0);
   const [sortKey, setSortKey] = useState<SortKey>("gross_pay");
@@ -243,7 +251,7 @@ export default function PayrollPage() {
               </Button>
             </PopoverTrigger>
             <PopoverContent className="w-auto p-0" align="start">
-              <Calendar mode="single" selected={dateFrom} onSelect={(d) => d && setDateFrom(d)} initialFocus className={cn("p-3 pointer-events-auto")} />
+              <Calendar mode="single" selected={dateFrom} onSelect={(d) => d && setDateFrom(d)} weekStartsOn={1} initialFocus className={cn("p-3 pointer-events-auto")} />
             </PopoverContent>
           </Popover>
           <Popover>
@@ -254,7 +262,7 @@ export default function PayrollPage() {
               </Button>
             </PopoverTrigger>
             <PopoverContent className="w-auto p-0" align="start">
-              <Calendar mode="single" selected={dateTo} onSelect={(d) => d && setDateTo(d)} initialFocus className={cn("p-3 pointer-events-auto")} />
+              <Calendar mode="single" selected={dateTo} onSelect={(d) => d && setDateTo(d)} weekStartsOn={1} initialFocus className={cn("p-3 pointer-events-auto")} />
             </PopoverContent>
           </Popover>
         </div>

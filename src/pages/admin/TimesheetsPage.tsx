@@ -57,6 +57,7 @@ function DatePickerInput({ date, onChange, label }: { date: Date; onChange: (d: 
           mode="single"
           selected={date}
           onSelect={(d) => d && onChange(d)}
+          weekStartsOn={1}
           initialFocus
           className={cn("p-3 pointer-events-auto")}
         />
@@ -70,9 +71,19 @@ export default function TimesheetsPage() {
   const [employees, setEmployees] = useState<{ id: string; name: string }[]>([]);
   const [selectedEmployee, setSelectedEmployee] = useState<string>("all");
   const [dateFrom, setDateFrom] = useState<Date>(() => {
-    const d = new Date(); d.setDate(d.getDate() - 7); return d;
+    const d = new Date();
+    const day = d.getDay();
+    const diff = day === 0 ? 6 : day - 1;
+    d.setDate(d.getDate() - diff);
+    return d;
   });
-  const [dateTo, setDateTo] = useState<Date>(() => new Date());
+  const [dateTo, setDateTo] = useState<Date>(() => {
+    const d = new Date();
+    const day = d.getDay();
+    const diff = day === 0 ? 0 : 7 - day;
+    d.setDate(d.getDate() + diff);
+    return d;
+  });
   const [editDialog, setEditDialog] = useState(false);
   const [editForm, setEditForm] = useState<EditForm>({ employee_id: "", date: "", clock_in: "", clock_out: "", break_start: "", break_end: "" });
   const [editingEntry, setEditingEntry] = useState<TimesheetEntry | null>(null);
