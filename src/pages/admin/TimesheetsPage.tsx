@@ -115,6 +115,8 @@ export default function TimesheetsPage() {
   const [addDialog, setAddDialog] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [approvals, setApprovals] = useState<Map<string, boolean>>(new Map());
+  const [saving, setSaving] = useState(false);
+  const [approvingIds, setApprovingIds] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     supabase.from("employees").select("id, name").eq("active", true).order("name").then(({ data }) => setEmployees(data || []));
@@ -251,41 +253,54 @@ export default function TimesheetsPage() {
   };
 
   const toggleApproval = async (entry: TimesheetEntry) => {
-    const newApproved = !entry.approved;
-    const { data: { user } } = await supabase.auth.getUser();
+    const key = `${entry.employee_id}-${entry.raw_date}`;
+    if (approvingIds.has(key)) return;
+    setApprovingIds(prev => new Set(prev).add(key));
+    try {
+      const newApproved = !entry.approved;
+      const { data: { user } } = await supabase.auth.getUser();
 
-    const { error } = await supabase.from("timesheet_approvals").upsert({
-      employee_id: entry.employee_id,
-      date: entry.raw_date,
-      approved: newApproved,
-      approved_by: user?.id || null,
-      approved_at: newApproved ? new Date().toISOString() : null,
-    }, { onConflict: "employee_id,date" });
+      const { error } = await supabase.from("timesheet_approvals").upsert({
+        employee_id: entry.employee_id,
+        date: entry.raw_date,
+        approved: newApproved,
+        approved_by: user?.id || null,
+        approved_at: newApproved ? new Date().toISOString() : null,
+      }, { onConflict: "employee_id,date" });
 
-    if (error) { toast.error("Failed to update approval: " + error.message); return; }
-    await logAudit(newApproved ? "timesheet_approve" : "timesheet_unapprove", { employee_id: entry.employee_id, employee_name: entry.employee_name, date: entry.date });
-    toast.success(newApproved ? "Timesheet approved" : "Approval revoked");
-    fetchTimesheets();
+      if (error) { toast.error("Failed to update approval: " + error.message); return; }
+      await logAudit(newApproved ? "timesheet_approve" : "timesheet_unapprove", { employee_id: entry.employee_id, employee_name: entry.employee_name, date: entry.date });
+      toast.success(newApproved ? "Timesheet approved" : "Approval revoked");
+      fetchTimesheets();
+    } finally {
+      setApprovingIds(prev => { const s = new Set(prev); s.delete(key); return s; });
+    }
   };
 
   const approveAll = async () => {
-    const { data: { user } } = await supabase.auth.getUser();
-    const unapproved = filtered.filter(e => !e.approved);
-    if (unapproved.length === 0) { toast.info("All timesheets already approved"); return; }
+    if (saving) return;
+    setSaving(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      const unapproved = filtered.filter(e => !e.approved);
+      if (unapproved.length === 0) { toast.info("All timesheets already approved"); return; }
 
-    const records = unapproved.map(e => ({
-      employee_id: e.employee_id,
-      date: e.raw_date,
-      approved: true,
-      approved_by: user?.id || null,
-      approved_at: new Date().toISOString(),
-    }));
+      const records = unapproved.map(e => ({
+        employee_id: e.employee_id,
+        date: e.raw_date,
+        approved: true,
+        approved_by: user?.id || null,
+        approved_at: new Date().toISOString(),
+      }));
 
-    const { error } = await supabase.from("timesheet_approvals").upsert(records, { onConflict: "employee_id,date" });
-    if (error) { toast.error("Failed: " + error.message); return; }
-    await logAudit("timesheet_approve_all", { count: unapproved.length, employees: unapproved.map(e => ({ id: e.employee_id, name: e.employee_name, date: e.date })) });
-    toast.success(`Approved ${unapproved.length} timesheets`);
-    fetchTimesheets();
+      const { error } = await supabase.from("timesheet_approvals").upsert(records, { onConflict: "employee_id,date" });
+      if (error) { toast.error("Failed: " + error.message); return; }
+      await logAudit("timesheet_approve_all", { count: unapproved.length, employees: unapproved.map(e => ({ id: e.employee_id, name: e.employee_name, date: e.date })) });
+      toast.success(`Approved ${unapproved.length} timesheets`);
+      fetchTimesheets();
+    } finally {
+      setSaving(false);
+    }
   };
 
   const toTimeInput = (isoTimestamp: string | null) => {
@@ -323,52 +338,68 @@ export default function TimesheetsPage() {
   };
 
   const saveEdit = async () => {
-    if (!editingEntry) return;
+    if (saving || !editingEntry) return;
     if (!editForm.comment.trim()) { toast.error("Comment is required when editing timesheets"); return; }
-    for (const id of editingEntry.event_ids) {
-      await supabase.from("clock_events").delete().eq("id", id);
+    setSaving(true);
+    try {
+      for (const id of editingEntry.event_ids) {
+        await supabase.from("clock_events").delete().eq("id", id);
+      }
+      const events: { employee_id: string; event_type: "clock_in" | "clock_out" | "break_start" | "break_end"; timestamp: string }[] = [];
+      if (editForm.clock_in) events.push({ employee_id: editForm.employee_id, event_type: "clock_in", timestamp: `${editForm.date}T${editForm.clock_in}:00` });
+      if (editForm.break_start) events.push({ employee_id: editForm.employee_id, event_type: "break_start", timestamp: `${editForm.date}T${editForm.break_start}:00` });
+      if (editForm.break_end) events.push({ employee_id: editForm.employee_id, event_type: "break_end", timestamp: `${editForm.date}T${editForm.break_end}:00` });
+      if (editForm.clock_out) events.push({ employee_id: editForm.employee_id, event_type: "clock_out", timestamp: `${editForm.date}T${editForm.clock_out}:00` });
+      if (events.length > 0) {
+        const { error } = await supabase.from("clock_events").insert(events);
+        if (error) { toast.error("Failed to save: " + error.message); return; }
+      }
+      await logAudit("timesheet_edit", { employee_id: editForm.employee_id, employee_name: editingEntry.employee_name, date: editForm.date, comment: editForm.comment.trim() });
+      toast.success("Timesheet updated");
+      setEditDialog(false);
+      fetchTimesheets();
+    } finally {
+      setSaving(false);
     }
-    const events: { employee_id: string; event_type: "clock_in" | "clock_out" | "break_start" | "break_end"; timestamp: string }[] = [];
-    if (editForm.clock_in) events.push({ employee_id: editForm.employee_id, event_type: "clock_in", timestamp: `${editForm.date}T${editForm.clock_in}:00` });
-    if (editForm.break_start) events.push({ employee_id: editForm.employee_id, event_type: "break_start", timestamp: `${editForm.date}T${editForm.break_start}:00` });
-    if (editForm.break_end) events.push({ employee_id: editForm.employee_id, event_type: "break_end", timestamp: `${editForm.date}T${editForm.break_end}:00` });
-    if (editForm.clock_out) events.push({ employee_id: editForm.employee_id, event_type: "clock_out", timestamp: `${editForm.date}T${editForm.clock_out}:00` });
-    if (events.length > 0) {
-      const { error } = await supabase.from("clock_events").insert(events);
-      if (error) { toast.error("Failed to save: " + error.message); return; }
-    }
-    // Log to audit
-    await logAudit("timesheet_edit", { employee_id: editForm.employee_id, employee_name: editingEntry.employee_name, date: editForm.date, comment: editForm.comment.trim() });
-    toast.success("Timesheet updated");
-    setEditDialog(false);
-    fetchTimesheets();
   };
 
   const saveAdd = async () => {
+    if (saving) return;
     if (!editForm.comment.trim()) { toast.error("Comment is required when adding timesheets"); return; }
-    const events: { employee_id: string; event_type: "clock_in" | "clock_out" | "break_start" | "break_end"; timestamp: string }[] = [];
-    if (editForm.clock_in) events.push({ employee_id: editForm.employee_id, event_type: "clock_in", timestamp: `${editForm.date}T${editForm.clock_in}:00` });
-    if (editForm.break_start) events.push({ employee_id: editForm.employee_id, event_type: "break_start", timestamp: `${editForm.date}T${editForm.break_start}:00` });
-    if (editForm.break_end) events.push({ employee_id: editForm.employee_id, event_type: "break_end", timestamp: `${editForm.date}T${editForm.break_end}:00` });
-    if (editForm.clock_out) events.push({ employee_id: editForm.employee_id, event_type: "clock_out", timestamp: `${editForm.date}T${editForm.clock_out}:00` });
-    if (events.length === 0) { toast.error("Enter at least one time"); return; }
-    const { error } = await supabase.from("clock_events").insert(events);
-    if (error) { toast.error("Failed to add: " + error.message); return; }
-    const emp = employees.find(e => e.id === editForm.employee_id);
-    await logAudit("timesheet_add", { employee_id: editForm.employee_id, employee_name: emp?.name || "Unknown", date: editForm.date, comment: editForm.comment.trim() });
-    toast.success("Entry added");
-    setAddDialog(false);
-    fetchTimesheets();
+    setSaving(true);
+    try {
+      const events: { employee_id: string; event_type: "clock_in" | "clock_out" | "break_start" | "break_end"; timestamp: string }[] = [];
+      if (editForm.clock_in) events.push({ employee_id: editForm.employee_id, event_type: "clock_in", timestamp: `${editForm.date}T${editForm.clock_in}:00` });
+      if (editForm.break_start) events.push({ employee_id: editForm.employee_id, event_type: "break_start", timestamp: `${editForm.date}T${editForm.break_start}:00` });
+      if (editForm.break_end) events.push({ employee_id: editForm.employee_id, event_type: "break_end", timestamp: `${editForm.date}T${editForm.break_end}:00` });
+      if (editForm.clock_out) events.push({ employee_id: editForm.employee_id, event_type: "clock_out", timestamp: `${editForm.date}T${editForm.clock_out}:00` });
+      if (events.length === 0) { toast.error("Enter at least one time"); return; }
+      const { error } = await supabase.from("clock_events").insert(events);
+      if (error) { toast.error("Failed to add: " + error.message); return; }
+      const emp = employees.find(e => e.id === editForm.employee_id);
+      await logAudit("timesheet_add", { employee_id: editForm.employee_id, employee_name: emp?.name || "Unknown", date: editForm.date, comment: editForm.comment.trim() });
+      toast.success("Entry added");
+      setAddDialog(false);
+      fetchTimesheets();
+    } finally {
+      setSaving(false);
+    }
   };
 
   const deleteEntry = async (entry: TimesheetEntry) => {
+    if (saving) return;
     if (!confirm(`Delete all timesheet entries for ${entry.employee_name} on ${entry.date}?`)) return;
-    for (const id of entry.event_ids) {
-      await supabase.from("clock_events").delete().eq("id", id);
+    setSaving(true);
+    try {
+      for (const id of entry.event_ids) {
+        await supabase.from("clock_events").delete().eq("id", id);
+      }
+      await logAudit("timesheet_delete", { employee_id: entry.employee_id, employee_name: entry.employee_name, date: entry.date });
+      toast.success("Entry deleted");
+      fetchTimesheets();
+    } finally {
+      setSaving(false);
     }
-    await logAudit("timesheet_delete", { employee_id: entry.employee_id, employee_name: entry.employee_name, date: entry.date });
-    toast.success("Entry deleted");
-    fetchTimesheets();
   };
 
   const filtered = searchQuery
@@ -448,7 +479,7 @@ export default function TimesheetsPage() {
           <DateRangeSelector dateFrom={dateFrom} dateTo={dateTo} onChangeFrom={setDateFrom} onChangeTo={setDateTo} />
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" onClick={approveAll} className="text-green-500 border-green-500/30 hover:bg-green-500/10">
+          <Button variant="outline" onClick={approveAll} disabled={saving} className="text-green-500 border-green-500/30 hover:bg-green-500/10">
             <CheckCircle2 className="mr-2 h-4 w-4" /> Approve All
           </Button>
           <Button onClick={openAdd}>
@@ -506,6 +537,7 @@ export default function TimesheetsPage() {
                         variant="ghost"
                         size="sm"
                         onClick={() => toggleApproval(e)}
+                        disabled={approvingIds.has(`${e.employee_id}-${e.raw_date}`)}
                         className={cn("h-7 px-2", e.approved ? "text-green-500 hover:text-green-400" : "text-muted-foreground hover:text-yellow-500")}
                       >
                         {e.approved ? <CheckCircle2 className="h-4 w-4" /> : <XCircle className="h-4 w-4" />}
@@ -522,10 +554,10 @@ export default function TimesheetsPage() {
                     <TableCell className="font-semibold">{e.net_hours}</TableCell>
                     <TableCell className="text-right">
                       <div className="flex gap-1 justify-end">
-                        <Button variant="ghost" size="sm" onClick={() => openEdit(e)}>
+                        <Button variant="ghost" size="sm" onClick={() => openEdit(e)} disabled={saving}>
                           <Pencil className="h-3.5 w-3.5" />
                         </Button>
-                        <Button variant="ghost" size="sm" onClick={() => deleteEntry(e)} className="text-destructive hover:text-destructive">
+                        <Button variant="ghost" size="sm" onClick={() => deleteEntry(e)} disabled={saving} className="text-destructive hover:text-destructive">
                           <Trash2 className="h-3.5 w-3.5" />
                         </Button>
                       </div>
@@ -554,7 +586,7 @@ export default function TimesheetsPage() {
           {editFormFields}
           <DialogFooter>
             <Button variant="outline" onClick={() => setEditDialog(false)}>Cancel</Button>
-            <Button onClick={saveEdit}>Save Changes</Button>
+            <Button onClick={saveEdit} disabled={saving}>{saving ? "Saving..." : "Save Changes"}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -568,7 +600,7 @@ export default function TimesheetsPage() {
           {editFormFields}
           <DialogFooter>
             <Button variant="outline" onClick={() => setAddDialog(false)}>Cancel</Button>
-            <Button onClick={saveAdd}>Add Entry</Button>
+            <Button onClick={saveAdd} disabled={saving}>{saving ? "Adding..." : "Add Entry"}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
