@@ -1,11 +1,15 @@
 import { useEffect, useState, useMemo } from "react";
+import { format } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Download, DollarSign, Clock as ClockIcon, Users, Coffee, Search, ChevronLeft, ChevronRight, ArrowUpDown } from "lucide-react";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Download, DollarSign, Clock as ClockIcon, Users, Coffee, Search, ChevronLeft, ChevronRight, ArrowUpDown, CalendarIcon } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from "recharts";
 
 const CHART_COLORS = [
@@ -32,12 +36,12 @@ type SortDir = "asc" | "desc";
 export default function PayrollPage() {
   const [entries, setEntries] = useState<PayrollEntry[]>([]);
   const [loading, setLoading] = useState(false);
-  const [dateFrom, setDateFrom] = useState(() => {
+  const [dateFrom, setDateFrom] = useState<Date>(() => {
     const d = new Date();
     d.setDate(d.getDate() - (d.getDay() || 7));
-    return d.toISOString().split("T")[0];
+    return d;
   });
-  const [dateTo, setDateTo] = useState(() => new Date().toISOString().split("T")[0]);
+  const [dateTo, setDateTo] = useState<Date>(() => new Date());
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(0);
   const [sortKey, setSortKey] = useState<SortKey>("gross_pay");
@@ -85,7 +89,7 @@ export default function PayrollPage() {
     setLoading(true);
     const [{ data: employees }, events] = await Promise.all([
       supabase.from("employees").select("*").eq("active", true),
-      fetchAllEvents(dateFrom, dateTo),
+      fetchAllEvents(format(dateFrom, "yyyy-MM-dd"), format(dateTo, "yyyy-MM-dd")),
     ]);
 
     if (!employees) { setLoading(false); return; }
@@ -188,7 +192,7 @@ export default function PayrollPage() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `payroll-${dateFrom}-to-${dateTo}.csv`;
+    a.download = `payroll-${format(dateFrom, "yyyy-MM-dd")}-to-${format(dateTo, "yyyy-MM-dd")}.csv`;
     a.click();
   };
 
@@ -231,8 +235,28 @@ export default function PayrollPage() {
     <div className="space-y-4">
       <div className="flex flex-col sm:flex-row gap-3 justify-between">
         <div className="flex gap-3">
-          <Input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className="w-40" />
-          <Input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className="w-40" />
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="outline" className="w-44 justify-start text-left font-normal">
+                <CalendarIcon className="mr-2 h-4 w-4" />
+                {format(dateFrom, "dd/MM/yyyy")}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="start">
+              <Calendar mode="single" selected={dateFrom} onSelect={(d) => d && setDateFrom(d)} initialFocus className={cn("p-3 pointer-events-auto")} />
+            </PopoverContent>
+          </Popover>
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="outline" className="w-44 justify-start text-left font-normal">
+                <CalendarIcon className="mr-2 h-4 w-4" />
+                {format(dateTo, "dd/MM/yyyy")}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="start">
+              <Calendar mode="single" selected={dateTo} onSelect={(d) => d && setDateTo(d)} initialFocus className={cn("p-3 pointer-events-auto")} />
+            </PopoverContent>
+          </Popover>
         </div>
         <Button variant="outline" onClick={exportCSV}>
           <Download className="mr-2 h-4 w-4" /> Export CSV
