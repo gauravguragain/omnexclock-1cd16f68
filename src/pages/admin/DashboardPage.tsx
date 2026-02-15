@@ -44,7 +44,7 @@ const CHART_COLORS = [
 ];
 
 export default function DashboardPage() {
-  const [stats, setStats] = useState({ totalEmployees: 0, activeToday: 0, totalHoursToday: 0, avgShift: 0 });
+  const [stats, setStats] = useState({ totalEmployees: 0, activeToday: 0, totalHoursToday: "0.00", avgShift: "0.00" });
   const [weeklyData, setWeeklyData] = useState<DailyHours[]>([]);
   const [employeeBreakdown, setEmployeeBreakdown] = useState<EmployeeBreakdown[]>([]);
   const [hourlyActivity, setHourlyActivity] = useState<HourlyActivity[]>([]);
@@ -61,8 +61,8 @@ export default function DashboardPage() {
       })
       .subscribe();
 
-    // Periodic refresh every 30s to keep running hours/charts accurate
-    const interval = setInterval(fetchAll, 30000);
+    // Periodic refresh every 10s to keep running hours accurate for open shifts
+    const interval = setInterval(fetchAll, 10000);
 
     return () => {
       clearInterval(interval);
@@ -181,8 +181,8 @@ export default function DashboardPage() {
     setStats({
       totalEmployees,
       activeToday,
-      totalHoursToday: roundHours(totalHoursToday),
-      avgShift: uniqueToday.size > 0 ? roundHours(totalHoursToday / uniqueToday.size) : 0,
+      totalHoursToday: totalHoursToday.toFixed(2),
+      avgShift: uniqueToday.size > 0 ? (totalHoursToday / uniqueToday.size).toFixed(2) : "0.00",
     });
 
     // Weekly daily hours - use date key for reliable grouping
