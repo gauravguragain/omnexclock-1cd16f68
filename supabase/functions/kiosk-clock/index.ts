@@ -46,6 +46,46 @@ serve(async (req) => {
       });
     }
 
+    // --- Status validation: prevent duplicate/invalid transitions ---
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const { data: todayEvents } = await supabase
+      .from("clock_events")
+      .select("event_type, created_at")
+      .eq("employee_id", employee.id)
+      .gte("created_at", today.toISOString())
+      .order("created_at", { ascending: false });
+
+    const lastEventType = todayEvents && todayEvents.length > 0 ? todayEvents[0].event_type : null;
+
+    // Determine current status from last event
+    let currentStatus: string;
+    switch (lastEventType) {
+      case "clock_in": currentStatus = "clocked_in"; break;
+      case "clock_out": currentStatus = "clocked_out"; break;
+      case "break_start": currentStatus = "on_break"; break;
+      case "break_end": currentStatus = "clocked_in"; break;
+      default: currentStatus = "clocked_out"; break;
+    }
+
+    // Validate transition
+    const validTransitions: Record<string, string[]> = {
+      clocked_out: ["clock_in"],
+      clocked_in: ["clock_out", "break_start"],
+      on_break: ["break_end"],
+    };
+
+    const allowed = validTransitions[currentStatus] || ["clock_in"];
+    if (!allowed.includes(event_type)) {
+      return new Response(JSON.stringify({ 
+        error: `Invalid action. Current status: ${currentStatus}. Allowed: ${allowed.join(", ")}` 
+      }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     let photo_url: string | null = null;
 
     // Upload photo if provided
