@@ -11,7 +11,7 @@ interface TimeDropdownPickerProps {
 }
 
 const HOURS_12 = ["12", "01", "02", "03", "04", "05", "06", "07", "08", "09", "10", "11"];
-const MINUTES = Array.from({ length: 12 }, (_, i) => String(i * 5).padStart(2, "0"));
+const MINUTES = Array.from({ length: 60 }, (_, i) => String(i).padStart(2, "0"));
 const PERIODS = ["AM", "PM"];
 
 function to12Hour(h24: string): { hour12: string; period: string } {
@@ -90,8 +90,7 @@ export function TimeDropdownPicker({ value, onChange, placeholder = "Select time
   const [hour24, minute] = (value || "").split(":");
   const { hour12, period } = to12Hour(hour24);
   const selectedHour = HOURS_12.includes(hour12) ? hour12 : "";
-  const nearestMin = minute ? String(Math.round(parseInt(minute) / 5) * 5).padStart(2, "0") : "";
-  const selectedMinute = MINUTES.includes(nearestMin) ? nearestMin : "";
+  const selectedMinute = minute && MINUTES.includes(minute) ? minute : "";
   const selectedPeriod = PERIODS.includes(period) ? period : "AM";
 
   const displayValue =
