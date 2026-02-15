@@ -2,7 +2,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Navigate, Outlet, Link, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import {
-  Users, Clock, CalendarDays, DollarSign, BarChart3, Monitor, LogOut, Menu, X, Settings, FileText
+  Users, Clock, CalendarDays, DollarSign, BarChart3, Monitor, LogOut, Menu, X, Settings, FileText, UserCog
 } from "lucide-react";
 import { useState } from "react";
 import { useSessionGuard } from "@/hooks/useSessionGuard";
@@ -14,10 +14,11 @@ const navItems = [
   { path: "/admin/timesheets", label: "Timesheets", icon: CalendarDays },
   { path: "/admin/payroll", label: "Payroll", icon: DollarSign },
   { path: "/admin/audit-log", label: "Audit Log", icon: FileText },
+  { path: "/admin/users", label: "User Management", icon: UserCog },
 ];
 
 export default function AdminLayout() {
-  const { user, isAdmin, loading, signOut } = useAuth();
+  const { user, isAdmin, isApproved, loading, signOut } = useAuth();
   const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   useSessionGuard();
@@ -32,12 +33,18 @@ export default function AdminLayout() {
 
   // UX guard only — all data access is protected by RLS policies server-side.
   if (!user) return <Navigate to="/auth" replace />;
-  if (!isAdmin) {
+  if (!isAdmin || !isApproved) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="text-center space-y-4">
-          <h1 className="text-xl font-bold text-foreground">Access Denied</h1>
-          <p className="text-muted-foreground">You don't have admin privileges.</p>
+          <h1 className="text-xl font-bold text-foreground">
+            {!isApproved ? "Account Pending Approval" : "Access Denied"}
+          </h1>
+          <p className="text-muted-foreground">
+            {!isApproved
+              ? "Your account is awaiting approval from an administrator."
+              : "You don't have admin privileges."}
+          </p>
           <Button variant="outline" onClick={signOut}>Sign Out</Button>
         </div>
       </div>
