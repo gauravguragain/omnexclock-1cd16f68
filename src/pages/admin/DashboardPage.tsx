@@ -70,28 +70,25 @@ export default function DashboardPage() {
     };
   }, []);
 
+  // Match timesheet calculation: earliest clock_in, latest clock_out, summed breaks
   const calcHoursFromEvents = (events: any[], allowOpen = false) => {
-    let hours = 0;
-    let clockIn: Date | null = null;
-    let breakStart: Date | null = null;
+    let earliestClockIn: Date | null = null;
+    let latestClockOut: Date | null = null;
     let breakMinutes = 0;
+    let breakStart: Date | null = null;
 
     for (const ev of events) {
       const t = new Date(ev.timestamp);
       switch (ev.event_type) {
         case "clock_in":
-          clockIn = t;
-          breakMinutes = 0;
-          breakStart = null;
+          if (!earliestClockIn || t < earliestClockIn) earliestClockIn = t;
           break;
         case "clock_out":
-          if (clockIn) {
-            hours += (t.getTime() - clockIn.getTime()) / 3600000 - breakMinutes / 60;
-            clockIn = null;
-            breakMinutes = 0;
-          }
+          if (!latestClockOut || t > latestClockOut) latestClockOut = t;
           break;
-        case "break_start": breakStart = t; break;
+        case "break_start":
+          breakStart = t;
+          break;
         case "break_end":
           if (breakStart) {
             breakMinutes += (t.getTime() - breakStart.getTime()) / 60000;
@@ -100,12 +97,22 @@ export default function DashboardPage() {
           break;
       }
     }
-    // Only count open shifts if allowOpen (i.e. for today's stats, not historical)
-    if (clockIn && allowOpen) {
+
+    if (!earliestClockIn) return 0;
+
+    let totalHours: number;
+    if (latestClockOut) {
+      totalHours = (latestClockOut.getTime() - earliestClockIn.getTime()) / 3600000;
+    } else if (allowOpen) {
+      // Open shift: count up to now (minus any active break)
       const endTime = breakStart ? breakStart.getTime() : Date.now();
-      hours += (endTime - clockIn.getTime()) / 3600000 - breakMinutes / 60;
+      totalHours = (endTime - earliestClockIn.getTime()) / 3600000;
+    } else {
+      return 0;
     }
-    return Math.max(0, hours);
+
+    const netHours = totalHours - breakMinutes / 60;
+    return Math.max(0, netHours);
   };
 
   const getCurrentlyClockedIn = async () => {
@@ -240,33 +247,34 @@ export default function DashboardPage() {
       const activeEmps: Set<string> = new Set();
       
       for (const [empId, evs] of todayByEmp) {
-        let clockIn: Date | null = null;
-        let breakStart: Date | null = null;
+        // Match timesheet: earliest clock_in, latest clock_out up to cutoff
+        let earliestIn: Date | null = null;
+        let latestOut: Date | null = null;
         let breakMin = 0;
-        let empHours = 0;
-        
+        let brkStart: Date | null = null;
+
         for (const ev of evs) {
           const t = new Date(ev.timestamp);
-          if (t.getTime() > cutoff) break;
+          if (t.getTime() > cutoff) continue;
           switch (ev.event_type) {
-            case "clock_in": clockIn = t; breakMin = 0; breakStart = null; break;
-            case "clock_out":
-              if (clockIn) {
-                empHours += (t.getTime() - clockIn.getTime()) / 3600000 - breakMin / 60;
-                clockIn = null; breakMin = 0;
-              }
+            case "clock_in":
+              if (!earliestIn || t < earliestIn) earliestIn = t;
               break;
-            case "break_start": breakStart = t; break;
+            case "clock_out":
+              if (!latestOut || t > latestOut) latestOut = t;
+              break;
+            case "break_start": brkStart = t; break;
             case "break_end":
-              if (breakStart) { breakMin += (t.getTime() - breakStart.getTime()) / 60000; breakStart = null; }
+              if (brkStart) { breakMin += (t.getTime() - brkStart.getTime()) / 60000; brkStart = null; }
               break;
           }
         }
-        if (clockIn && cutoff > clockIn.getTime()) {
-          const endT = breakStart ? Math.min(breakStart.getTime(), cutoff) : cutoff;
-          empHours += (endT - clockIn.getTime()) / 3600000 - breakMin / 60;
+
+        let empHours = 0;
+        if (earliestIn) {
+          const endTime = latestOut ? latestOut.getTime() : (brkStart ? Math.min(brkStart.getTime(), cutoff) : cutoff);
+          empHours = Math.max(0, (endTime - earliestIn.getTime()) / 3600000 - breakMin / 60);
         }
-        empHours = Math.max(0, empHours);
         if (empHours > 0) {
           totalHoursUpTo += empHours;
           const empName = empNameMap.get(empId) || "Unknown";
