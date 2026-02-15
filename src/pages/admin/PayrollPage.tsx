@@ -42,6 +42,7 @@ export default function PayrollPage() {
   const [page, setPage] = useState(0);
   const [sortKey, setSortKey] = useState<SortKey>("gross_pay");
   const [sortDir, setSortDir] = useState<SortDir>("desc");
+  const [chartLimit, setChartLimit] = useState(25);
 
   useEffect(() => {
     fetchPayroll();
@@ -195,9 +196,9 @@ export default function PayrollPage() {
   const totalNetHours = entries.reduce((sum, e) => sum + e.net_hours, 0);
   const totalBreakHours = entries.reduce((sum, e) => sum + e.break_hours, 0);
 
-  // Top 10 for charts
-  const topByPay = [...entries].sort((a, b) => b.gross_pay - a.gross_pay).slice(0, 10);
-  const topByHours = [...entries].sort((a, b) => b.net_hours - a.net_hours).slice(0, 10);
+  // Top N for charts
+  const topByPay = [...entries].sort((a, b) => b.gross_pay - a.gross_pay).slice(0, chartLimit);
+  const topByHours = [...entries].sort((a, b) => b.net_hours - a.net_hours).slice(0, chartLimit);
   const othersPayCount = entries.length - topByPay.length;
   const othersPay = entries.reduce((s, e) => s + e.gross_pay, 0) - topByPay.reduce((s, e) => s + e.gross_pay, 0);
   const othersHours = entries.reduce((s, e) => s + e.net_hours, 0) - topByHours.reduce((s, e) => s + e.net_hours, 0);
@@ -206,8 +207,8 @@ export default function PayrollPage() {
     ? [...topByPay, { employee_id: "others", name: `Others (${othersPayCount})`, pay_rate: 0, total_hours: 0, break_hours: 0, net_hours: 0, gross_pay: Math.round(othersPay * 100) / 100 }]
     : topByPay;
 
-  const pieData = entries.length > 10
-    ? [...topByHours, { employee_id: "others", name: `Others (${entries.length - 10})`, pay_rate: 0, total_hours: 0, break_hours: 0, net_hours: Math.round(othersHours * 100) / 100, gross_pay: 0 }]
+  const pieData = entries.length > chartLimit
+    ? [...topByHours, { employee_id: "others", name: `Others (${entries.length - chartLimit})`, pay_rate: 0, total_hours: 0, break_hours: 0, net_hours: Math.round(othersHours * 100) / 100, gross_pay: 0 }]
     : topByHours.length > 0 ? topByHours : entries;
 
   const summaryCards = [
@@ -253,12 +254,26 @@ export default function PayrollPage() {
         ))}
       </div>
 
-      {/* Charts - Top 10 */}
+      {/* Charts */}
+      <div className="flex items-center gap-2 text-sm">
+        <span className="text-muted-foreground">Show top</span>
+        <Select value={String(chartLimit)} onValueChange={(v) => setChartLimit(Number(v))}>
+          <SelectTrigger className="w-20 h-8">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {[10, 25, 50, 100].map((n) => (
+              <SelectItem key={n} value={String(n)}>{n}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <span className="text-muted-foreground">employees in charts</span>
+      </div>
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <Card>
           <CardHeader>
             <CardTitle className="text-sm font-medium text-muted-foreground">
-              Top {Math.min(10, entries.length)} Pay Distribution{entries.length > 10 ? ` (of ${entries.length})` : ""}
+              Top {Math.min(chartLimit, entries.length)} Pay Distribution{entries.length > chartLimit ? ` (of ${entries.length})` : ""}
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -281,7 +296,7 @@ export default function PayrollPage() {
         <Card>
           <CardHeader>
             <CardTitle className="text-sm font-medium text-muted-foreground">
-              Hours Breakdown{entries.length > 10 ? ` (Top 10 of ${entries.length})` : ""}
+              Hours Breakdown{entries.length > chartLimit ? ` (Top ${chartLimit} of ${entries.length})` : ""}
             </CardTitle>
           </CardHeader>
           <CardContent>
