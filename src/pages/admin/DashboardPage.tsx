@@ -52,6 +52,17 @@ export default function DashboardPage() {
 
   useEffect(() => {
     fetchAll();
+
+    const channel = supabase
+      .channel("dashboard-realtime")
+      .on("postgres_changes", { event: "*", schema: "public", table: "clock_events" }, () => {
+        fetchAll();
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   const calcHoursFromEvents = (events: any[], allowOpen = false) => {
