@@ -2,11 +2,13 @@ import { useState, useRef, useCallback, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Camera, Clock, Coffee, LogIn, LogOut, ArrowLeft, Delete } from "lucide-react";
+import { Camera, Clock, Coffee, LogIn, LogOut, ArrowLeft, Delete, User } from "lucide-react";
 
 type KioskStep = "code_entry" | "action_select" | "photo_capture" | "confirmation";
+type EmployeeStatus = "clocked_out" | "clocked_in" | "on_break";
 
 export default function KioskPage() {
   const { toast } = useToast();
@@ -14,6 +16,8 @@ export default function KioskPage() {
   const [code, setCode] = useState("");
   const [selectedAction, setSelectedAction] = useState<string>("");
   const [employeeName, setEmployeeName] = useState("");
+  const [employeeId, setEmployeeId] = useState<string | null>(null);
+  const [employeeStatus, setEmployeeStatus] = useState<EmployeeStatus>("clocked_out");
   const [loading, setLoading] = useState(false);
   const [photoData, setPhotoData] = useState<string | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -25,6 +29,29 @@ export default function KioskPage() {
     const timer = setInterval(() => setCurrentTime(new Date()), 1000);
     return () => clearInterval(timer);
   }, []);
+
+  const getEmployeeStatus = async (empId: string): Promise<EmployeeStatus> => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const { data: events } = await supabase
+      .from("clock_events")
+      .select("event_type, timestamp")
+      .eq("employee_id", empId)
+      .gte("timestamp", today.toISOString())
+      .order("timestamp", { ascending: false });
+
+    if (!events || events.length === 0) return "clocked_out";
+
+    const lastEvent = events[0].event_type;
+    switch (lastEvent) {
+      case "clock_in": return "clocked_in";
+      case "clock_out": return "clocked_out";
+      case "break_start": return "on_break";
+      case "break_end": return "clocked_in";
+      default: return "clocked_out";
+    }
+  };
 
   const startCamera = useCallback(async () => {
     try {
@@ -67,7 +94,7 @@ export default function KioskPage() {
     try {
       const { data, error } = await supabase
         .from("employees")
-        .select("name, active")
+        .select("id, name, active")
         .eq("employee_code", code)
         .maybeSingle();
 
@@ -83,7 +110,11 @@ export default function KioskPage() {
         setLoading(false);
         return;
       }
+
       setEmployeeName(data.name);
+      setEmployeeId(data.id);
+      const status = await getEmployeeStatus(data.id);
+      setEmployeeStatus(status);
       setStep("action_select");
     } catch {
       toast({ title: "Error", description: "Unable to verify employee code.", variant: "destructive" });
@@ -127,8 +158,29 @@ export default function KioskPage() {
     setCode("");
     setSelectedAction("");
     setEmployeeName("");
+    setEmployeeId(null);
+    setEmployeeStatus("clocked_out");
     setPhotoData(null);
     stopCamera();
+  };
+
+  const getAvailableActions = () => {
+    switch (employeeStatus) {
+      case "clocked_out":
+        return ["clock_in"];
+      case "clocked_in":
+        return ["break_start", "clock_out"];
+      case "on_break":
+        return ["break_end"];
+      default:
+        return ["clock_in"];
+    }
+  };
+
+  const statusConfig: Record<EmployeeStatus, { label: string; color: string; icon: React.ReactNode }> = {
+    clocked_out: { label: "Clocked Out", color: "bg-muted text-muted-foreground", icon: <LogOut className="h-4 w-4" /> },
+    clocked_in: { label: "Clocked In", color: "bg-success/20 text-success", icon: <LogIn className="h-4 w-4" /> },
+    on_break: { label: "On Break", color: "bg-warning/20 text-warning", icon: <Coffee className="h-4 w-4" /> },
   };
 
   const actionLabels: Record<string, { label: string; icon: React.ReactNode; color: string }> = {
@@ -137,6 +189,8 @@ export default function KioskPage() {
     break_start: { label: "Start Break", icon: <Coffee className="h-8 w-8" />, color: "bg-warning text-warning-foreground" },
     break_end: { label: "End Break", icon: <Clock className="h-8 w-8" />, color: "bg-primary text-primary-foreground" },
   };
+
+  const availableActions = getAvailableActions();
 
   return (
     <div className="min-h-screen bg-background flex flex-col items-center justify-center p-4">
@@ -182,8 +236,8 @@ export default function KioskPage() {
                 <Delete className="h-6 w-6" />
               </Button>
             </div>
-            <Button className="w-full h-14 text-lg" onClick={handleSubmitCode} disabled={!code}>
-              Continue
+            <Button className="w-full h-14 text-lg" onClick={handleSubmitCode} disabled={!code || loading}>
+              {loading ? "Verifying..." : "Continue"}
             </Button>
           </CardContent>
         </Card>
@@ -192,15 +246,32 @@ export default function KioskPage() {
       {/* Action Select */}
       {step === "action_select" && (
         <Card className="w-full max-w-sm gold-border border">
-          <CardContent className="p-6 space-y-3">
-            <p className="text-center text-sm text-muted-foreground mb-2">Select action</p>
-            <div className="grid grid-cols-2 gap-3">
-              {Object.entries(actionLabels).map(([key, { label, icon, color }]) => (
-                <Button key={key} className={`h-24 flex flex-col gap-2 ${color}`} onClick={() => handleActionSelect(key)}>
-                  {icon}
-                  <span className="text-sm font-semibold">{label}</span>
-                </Button>
-              ))}
+          <CardContent className="p-6 space-y-4">
+            {/* Employee info & status */}
+            <div className="text-center space-y-2">
+              <div className="flex items-center justify-center gap-2">
+                <User className="h-5 w-5 text-primary" />
+                <span className="text-lg font-semibold text-foreground">{employeeName}</span>
+              </div>
+              <div className="flex justify-center">
+                <Badge className={`${statusConfig[employeeStatus].color} gap-1 px-3 py-1`}>
+                  {statusConfig[employeeStatus].icon}
+                  {statusConfig[employeeStatus].label}
+                </Badge>
+              </div>
+            </div>
+
+            <p className="text-center text-sm text-muted-foreground">Select action</p>
+            <div className={`grid gap-3 ${availableActions.length === 1 ? "grid-cols-1" : "grid-cols-2"}`}>
+              {availableActions.map((key) => {
+                const { label, icon, color } = actionLabels[key];
+                return (
+                  <Button key={key} className={`h-24 flex flex-col gap-2 ${color}`} onClick={() => handleActionSelect(key)}>
+                    {icon}
+                    <span className="text-sm font-semibold">{label}</span>
+                  </Button>
+                );
+              })}
             </div>
             <Button variant="outline" className="w-full mt-2" onClick={resetKiosk}>
               Cancel
