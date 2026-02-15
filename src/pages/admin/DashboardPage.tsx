@@ -144,6 +144,16 @@ export default function DashboardPage() {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
+    // Week start (Monday) to end (Sunday)
+    const dayOfWeek = today.getDay();
+    const mondayOffset = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+    const weekStart = new Date(today);
+    weekStart.setDate(today.getDate() + mondayOffset);
+    weekStart.setHours(0, 0, 0, 0);
+
+    const weekEnd = new Date(weekStart);
+    weekEnd.setDate(weekStart.getDate() + 7);
+
     const weekAgo = new Date();
     weekAgo.setDate(weekAgo.getDate() - 7);
     weekAgo.setHours(0, 0, 0, 0);
@@ -151,29 +161,46 @@ export default function DashboardPage() {
     const tomorrow = new Date(today);
     tomorrow.setDate(tomorrow.getDate() + 1);
 
-    const [empRes, todayEventsRes, weekEventsRes, recentRes] = await Promise.all([
+    const [empRes, todayEventsRes, weekEventsRes, thisWeekEventsRes, recentRes] = await Promise.all([
       supabase.from("employees").select("id, name", { count: "exact" }).eq("active", true),
       supabase.from("clock_events").select("*").gte("timestamp", today.toISOString()).lt("timestamp", tomorrow.toISOString()).order("timestamp"),
       supabase.from("clock_events").select("*, employees(name)").gte("timestamp", weekAgo.toISOString()).order("timestamp"),
+      supabase.from("clock_events").select("*, employees(name)").gte("timestamp", weekStart.toISOString()).lt("timestamp", weekEnd.toISOString()).order("timestamp"),
       supabase.from("clock_events").select("*, employees(name)").order("created_at", { ascending: false }).limit(10),
     ]);
 
     const totalEmployees = empRes.count || 0;
     const todayEvents = todayEventsRes.data || [];
     const weekEvents = weekEventsRes.data || [];
+    const thisWeekEvents = thisWeekEventsRes.data || [];
     const employees = empRes.data || [];
     const empNameMap = new Map(employees.map((e) => [e.id, e.name]));
 
-    // Today stats
-    const uniqueToday = new Set(todayEvents.map((e) => e.employee_id));
+    // Today stats for todayByEmp (used by hourly chart)
     const todayByEmp = new Map<string, any[]>();
     for (const ev of todayEvents) {
       if (!todayByEmp.has(ev.employee_id)) todayByEmp.set(ev.employee_id, []);
       todayByEmp.get(ev.employee_id)!.push(ev);
     }
-    let totalHoursToday = 0;
-    for (const evs of todayByEmp.values()) {
-      totalHoursToday += calcHoursFromEvents(evs, true); // allowOpen for today
+
+    // This week stats: group by employee+date, calc hours per shift (matching timesheet)
+    const todayKey = toLocalDateKey(new Date());
+    const weekShiftMap = new Map<string, any[]>();
+    for (const ev of thisWeekEvents) {
+      const dateKey = toLocalDateKey(new Date(ev.timestamp));
+      const key = `${ev.employee_id}-${dateKey}`;
+      if (!weekShiftMap.has(key)) weekShiftMap.set(key, []);
+      weekShiftMap.get(key)!.push(ev);
+    }
+
+    let totalHoursWeek = 0;
+    let shiftCount = 0;
+    for (const [key, evs] of weekShiftMap) {
+      const dateKey = key.split("-").slice(-3).join("-"); // extract YYYY-MM-DD
+      const isToday = dateKey === todayKey;
+      const hours = calcHoursFromEvents(evs, isToday);
+      totalHoursWeek += hours;
+      shiftCount++;
     }
 
     const activeToday = await getCurrentlyClockedIn();
@@ -181,12 +208,12 @@ export default function DashboardPage() {
     setStats({
       totalEmployees,
       activeToday,
-      totalHoursToday: totalHoursToday.toFixed(2),
-      avgShift: uniqueToday.size > 0 ? (totalHoursToday / uniqueToday.size).toFixed(2) : "0.00",
+      totalHoursToday: totalHoursWeek.toFixed(2),
+      avgShift: shiftCount > 0 ? (totalHoursWeek / shiftCount).toFixed(2) : "0.00",
     });
 
     // Weekly daily hours - use date key for reliable grouping
-    const todayKey = toLocalDateKey(new Date());
+    const todayKeyWeekly = todayKey;
     const dailyMap = new Map<string, { events: Map<string, any[]> }>();
     for (const ev of weekEvents) {
       const key = toLocalDateKey(new Date(ev.timestamp));
@@ -202,7 +229,7 @@ export default function DashboardPage() {
       d.setDate(d.getDate() - i);
       const key = toLocalDateKey(d);
       const label = d.toLocaleDateString("en-AU", { weekday: "short", day: "numeric", month: "short" });
-      const isToday = key === todayKey;
+      const isToday = key === todayKeyWeekly;
       const dayData = dailyMap.get(key);
       let dayHours = 0;
       let dayEmps = 0;
@@ -306,8 +333,8 @@ export default function DashboardPage() {
 
   const cards = [
     { title: "Active Employees", value: stats.totalEmployees, icon: Users, color: "text-primary" },
-    { title: "Clocked In Today", value: stats.activeToday, icon: Clock, color: "text-success" },
-    { title: "Hours Today", value: stats.totalHoursToday, icon: TrendingUp, color: "text-warning" },
+    { title: "Clocked In Now", value: stats.activeToday, icon: Clock, color: "text-success" },
+    { title: "Hours This Week", value: stats.totalHoursToday, icon: TrendingUp, color: "text-warning" },
     { title: "Avg Shift (hrs)", value: stats.avgShift, icon: Activity, color: "text-primary" },
   ];
 
