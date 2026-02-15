@@ -1,5 +1,5 @@
 import { useEffect, useState, useMemo } from "react";
-import { format } from "date-fns";
+import { format, startOfWeek, endOfWeek, addWeeks, subWeeks } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -8,9 +8,10 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Download, DollarSign, Clock as ClockIcon, Users, Coffee, Search, ChevronLeft, ChevronRight, ArrowUpDown, CalendarIcon } from "lucide-react";
+import { Download, DollarSign, Clock as ClockIcon, Users, Coffee, Search, ChevronLeft, ChevronRight, ArrowUpDown, CalendarIcon, CheckCircle2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from "recharts";
+import { Badge } from "@/components/ui/badge";
 
 const CHART_COLORS = [
   "hsl(45, 60%, 53%)", "hsl(142, 71%, 45%)", "hsl(217, 91%, 60%)",
@@ -33,21 +34,67 @@ interface PayrollEntry {
 type SortKey = "name" | "net_hours" | "gross_pay" | "total_hours";
 type SortDir = "asc" | "desc";
 
+function DateRangeSelector({ dateFrom, dateTo, onChangeFrom, onChangeTo }: {
+  dateFrom: Date; dateTo: Date; onChangeFrom: (d: Date) => void; onChangeTo: (d: Date) => void;
+}) {
+  const goToPrevWeek = () => {
+    const prev = subWeeks(dateFrom, 1);
+    onChangeFrom(startOfWeek(prev, { weekStartsOn: 1 }));
+    onChangeTo(endOfWeek(prev, { weekStartsOn: 1 }));
+  };
+  const goToNextWeek = () => {
+    const next = addWeeks(dateFrom, 1);
+    onChangeFrom(startOfWeek(next, { weekStartsOn: 1 }));
+    onChangeTo(endOfWeek(next, { weekStartsOn: 1 }));
+  };
+  const goToThisWeek = () => {
+    const now = new Date();
+    onChangeFrom(startOfWeek(now, { weekStartsOn: 1 }));
+    onChangeTo(endOfWeek(now, { weekStartsOn: 1 }));
+  };
+
+  return (
+    <div className="flex items-center gap-2">
+      <Button variant="outline" size="icon" onClick={goToPrevWeek} className="h-9 w-9">
+        <ChevronLeft className="h-4 w-4" />
+      </Button>
+      <Popover>
+        <PopoverTrigger asChild>
+          <Button variant="outline" className="min-w-[220px] justify-center text-left font-normal gap-2">
+            <CalendarIcon className="h-4 w-4 text-primary" />
+            <span>{format(dateFrom, "dd MMM")} — {format(dateTo, "dd MMM yyyy")}</span>
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent className="w-auto p-0" align="center">
+          <Calendar
+            mode="range"
+            selected={{ from: dateFrom, to: dateTo }}
+            onSelect={(range) => {
+              if (range?.from) onChangeFrom(range.from);
+              if (range?.to) onChangeTo(range.to);
+            }}
+            weekStartsOn={1}
+            numberOfMonths={2}
+            initialFocus
+            className={cn("p-3 pointer-events-auto")}
+          />
+        </PopoverContent>
+      </Popover>
+      <Button variant="outline" size="icon" onClick={goToNextWeek} className="h-9 w-9">
+        <ChevronRight className="h-4 w-4" />
+      </Button>
+      <Button variant="ghost" size="sm" onClick={goToThisWeek} className="text-primary text-xs">
+        Today
+      </Button>
+    </div>
+  );
+}
+
 export default function PayrollPage() {
   const [entries, setEntries] = useState<PayrollEntry[]>([]);
   const [loading, setLoading] = useState(false);
-  const [dateFrom, setDateFrom] = useState<Date>(() => {
-    const now = new Date();
-    const day = now.getDay(); // 0=Sun, 1=Mon...
-    const diff = day === 0 ? 6 : day - 1; // days since Monday
-    return new Date(now.getFullYear(), now.getMonth(), now.getDate() - diff);
-  });
-  const [dateTo, setDateTo] = useState<Date>(() => {
-    const now = new Date();
-    const day = now.getDay();
-    const diff = day === 0 ? 0 : 7 - day; // days until Sunday
-    return new Date(now.getFullYear(), now.getMonth(), now.getDate() + diff);
-  });
+  const [dateFrom, setDateFrom] = useState<Date>(() => startOfWeek(new Date(), { weekStartsOn: 1 }));
+  const [dateTo, setDateTo] = useState<Date>(() => endOfWeek(new Date(), { weekStartsOn: 1 }));
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(0);
   const [sortKey, setSortKey] = useState<SortKey>("gross_pay");
@@ -58,7 +105,6 @@ export default function PayrollPage() {
     fetchPayroll();
   }, [dateFrom, dateTo]);
 
-  // Reset page when search changes
   useEffect(() => { setPage(0); }, [search]);
 
   const fetchAllEvents = async (from: string, to: string) => {
@@ -93,17 +139,34 @@ export default function PayrollPage() {
 
   const fetchPayroll = async () => {
     setLoading(true);
-    const [{ data: employees }, events] = await Promise.all([
+    const from = format(dateFrom, "yyyy-MM-dd");
+    const to = format(dateTo, "yyyy-MM-dd");
+
+    const [{ data: employees }, events, { data: approvalData }] = await Promise.all([
       supabase.from("employees").select("*").eq("active", true),
-      fetchAllEvents(format(dateFrom, "yyyy-MM-dd"), format(dateTo, "yyyy-MM-dd")),
+      fetchAllEvents(from, to),
+      supabase.from("timesheet_approvals").select("employee_id, date, approved").gte("date", from).lte("date", to).eq("approved", true),
     ]);
 
     if (!employees) { setLoading(false); return; }
 
+    // Build approved set: "employee_id-YYYY-MM-DD"
+    const approvedSet = new Set<string>();
+    if (approvalData) {
+      for (const a of approvalData) {
+        approvedSet.add(`${a.employee_id}-${a.date}`);
+      }
+    }
+
     const empMap = new Map(employees.map((e) => [e.id, e]));
     const eventsByEmp = new Map<string, typeof events>();
 
+    // Only include events for approved days
     for (const ev of events) {
+      const dayStr = new Date(ev.timestamp).toISOString().split("T")[0];
+      const key = `${ev.employee_id}-${dayStr}`;
+      if (!approvedSet.has(key)) continue; // Skip unapproved
+
       if (!eventsByEmp.has(ev.employee_id)) eventsByEmp.set(ev.employee_id, []);
       eventsByEmp.get(ev.employee_id)!.push(ev);
     }
@@ -206,7 +269,6 @@ export default function PayrollPage() {
   const totalNetHours = entries.reduce((sum, e) => sum + e.net_hours, 0);
   const totalBreakHours = entries.reduce((sum, e) => sum + e.break_hours, 0);
 
-  // Top N for charts
   const topByPay = [...entries].sort((a, b) => b.gross_pay - a.gross_pay).slice(0, chartLimit);
   const topByHours = [...entries].sort((a, b) => b.net_hours - a.net_hours).slice(0, chartLimit);
   const othersPayCount = entries.length - topByPay.length;
@@ -223,8 +285,8 @@ export default function PayrollPage() {
 
   const summaryCards = [
     { title: "Total Payroll", value: `$${totalPayrollAmount.toFixed(2)}`, icon: DollarSign, color: "text-primary" },
-    { title: "Total Net Hours", value: Math.round(totalNetHours * 100) / 100, icon: ClockIcon, color: "text-success" },
-    { title: "Total Break Hours", value: Math.round(totalBreakHours * 100) / 100, icon: Coffee, color: "text-warning" },
+    { title: "Total Net Hours", value: Math.round(totalNetHours * 100) / 100, icon: ClockIcon, color: "text-green-500" },
+    { title: "Total Break Hours", value: Math.round(totalBreakHours * 100) / 100, icon: Coffee, color: "text-yellow-500" },
     { title: "Employees", value: entries.length, icon: Users, color: "text-primary" },
   ];
 
@@ -239,35 +301,17 @@ export default function PayrollPage() {
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-col sm:flex-row gap-3 justify-between">
-        <div className="flex gap-3">
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button variant="outline" className="w-44 justify-start text-left font-normal">
-                <CalendarIcon className="mr-2 h-4 w-4" />
-                {format(dateFrom, "dd/MM/yyyy")}
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-auto p-0" align="start">
-              <Calendar mode="single" selected={dateFrom} onSelect={(d) => d && setDateFrom(d)} weekStartsOn={1} initialFocus className={cn("p-3 pointer-events-auto")} />
-            </PopoverContent>
-          </Popover>
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button variant="outline" className="w-44 justify-start text-left font-normal">
-                <CalendarIcon className="mr-2 h-4 w-4" />
-                {format(dateTo, "dd/MM/yyyy")}
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-auto p-0" align="start">
-              <Calendar mode="single" selected={dateTo} onSelect={(d) => d && setDateTo(d)} weekStartsOn={1} initialFocus className={cn("p-3 pointer-events-auto")} />
-            </PopoverContent>
-          </Popover>
-        </div>
+      <div className="flex flex-col sm:flex-row gap-3 justify-between items-start sm:items-center">
+        <DateRangeSelector dateFrom={dateFrom} dateTo={dateTo} onChangeFrom={setDateFrom} onChangeTo={setDateTo} />
         <Button variant="outline" onClick={exportCSV}>
           <Download className="mr-2 h-4 w-4" /> Export CSV
         </Button>
       </div>
+
+      {/* Approved-only notice */}
+      <Badge variant="outline" className="text-xs px-3 py-1 text-green-500 border-green-500/30">
+        <CheckCircle2 className="mr-1 h-3 w-3" /> Showing approved timesheets only
+      </Badge>
 
       {/* Summary Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -349,7 +393,7 @@ export default function PayrollPage() {
         </Card>
       </div>
 
-      {/* Payroll Table with search + pagination */}
+      {/* Payroll Table */}
       <Card>
         <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
           <CardTitle className="text-sm font-medium text-muted-foreground">
@@ -357,12 +401,7 @@ export default function PayrollPage() {
           </CardTitle>
           <div className="relative w-full sm:w-64">
             <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Search employees..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="pl-8"
-            />
+            <Input placeholder="Search employees..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-8" />
           </div>
         </CardHeader>
         <CardContent className="p-0">
@@ -392,7 +431,7 @@ export default function PayrollPage() {
                 {pageEntries.length === 0 && (
                   <TableRow>
                     <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
-                      {loading ? "Loading..." : "No payroll data for this period."}
+                      {loading ? "Loading..." : "No approved payroll data for this period."}
                     </TableCell>
                   </TableRow>
                 )}
@@ -400,7 +439,6 @@ export default function PayrollPage() {
             </Table>
           </div>
 
-          {/* Pagination */}
           {totalPages > 1 && (
             <div className="flex items-center justify-between px-4 py-3 border-t border-border">
               <p className="text-xs text-muted-foreground">

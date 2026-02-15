@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { format } from "date-fns";
+import { format, startOfWeek, endOfWeek, addWeeks, subWeeks } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -10,15 +10,16 @@ import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import { CalendarIcon, Search, Pencil, Trash2, Plus } from "lucide-react";
+import { CalendarIcon, Search, Pencil, Trash2, Plus, ChevronLeft, ChevronRight, CheckCircle2, XCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { Badge } from "@/components/ui/badge";
 
 interface TimesheetEntry {
   employee_id: string;
   employee_name: string;
   date: string;
-  raw_date: string; // ISO date for editing
+  raw_date: string;
   clock_in: string | null;
   clock_out: string | null;
   break_start: string | null;
@@ -26,12 +27,12 @@ interface TimesheetEntry {
   break_minutes: number;
   total_hours: number;
   net_hours: number;
-  // raw timestamps for editing
   raw_clock_in: string | null;
   raw_clock_out: string | null;
   raw_break_start: string | null;
   raw_break_end: string | null;
-  event_ids: string[]; // all event IDs for this day+employee
+  event_ids: string[];
+  approved: boolean;
 }
 
 interface EditForm {
@@ -43,26 +44,59 @@ interface EditForm {
   break_end: string;
 }
 
-function DatePickerInput({ date, onChange, label }: { date: Date; onChange: (d: Date) => void; label: string }) {
+function DateRangeSelector({ dateFrom, dateTo, onChangeFrom, onChangeTo }: {
+  dateFrom: Date; dateTo: Date; onChangeFrom: (d: Date) => void; onChangeTo: (d: Date) => void;
+}) {
+  const goToPrevWeek = () => {
+    const prev = subWeeks(dateFrom, 1);
+    onChangeFrom(startOfWeek(prev, { weekStartsOn: 1 }));
+    onChangeTo(endOfWeek(prev, { weekStartsOn: 1 }));
+  };
+  const goToNextWeek = () => {
+    const next = addWeeks(dateFrom, 1);
+    onChangeFrom(startOfWeek(next, { weekStartsOn: 1 }));
+    onChangeTo(endOfWeek(next, { weekStartsOn: 1 }));
+  };
+  const goToThisWeek = () => {
+    const now = new Date();
+    onChangeFrom(startOfWeek(now, { weekStartsOn: 1 }));
+    onChangeTo(endOfWeek(now, { weekStartsOn: 1 }));
+  };
+
   return (
-    <Popover>
-      <PopoverTrigger asChild>
-        <Button variant="outline" className={cn("w-full sm:w-44 justify-start text-left font-normal")}>
-          <CalendarIcon className="mr-2 h-4 w-4" />
-          {format(date, "dd/MM/yyyy")}
-        </Button>
-      </PopoverTrigger>
-      <PopoverContent className="w-auto p-0" align="start">
-        <Calendar
-          mode="single"
-          selected={date}
-          onSelect={(d) => d && onChange(d)}
-          weekStartsOn={1}
-          initialFocus
-          className={cn("p-3 pointer-events-auto")}
-        />
-      </PopoverContent>
-    </Popover>
+    <div className="flex items-center gap-2">
+      <Button variant="outline" size="icon" onClick={goToPrevWeek} className="h-9 w-9">
+        <ChevronLeft className="h-4 w-4" />
+      </Button>
+      <Popover>
+        <PopoverTrigger asChild>
+          <Button variant="outline" className="min-w-[220px] justify-center text-left font-normal gap-2">
+            <CalendarIcon className="h-4 w-4 text-primary" />
+            <span>{format(dateFrom, "dd MMM")} — {format(dateTo, "dd MMM yyyy")}</span>
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent className="w-auto p-0" align="center">
+          <Calendar
+            mode="range"
+            selected={{ from: dateFrom, to: dateTo }}
+            onSelect={(range) => {
+              if (range?.from) onChangeFrom(range.from);
+              if (range?.to) onChangeTo(range.to);
+            }}
+            weekStartsOn={1}
+            numberOfMonths={2}
+            initialFocus
+            className={cn("p-3 pointer-events-auto")}
+          />
+        </PopoverContent>
+      </Popover>
+      <Button variant="outline" size="icon" onClick={goToNextWeek} className="h-9 w-9">
+        <ChevronRight className="h-4 w-4" />
+      </Button>
+      <Button variant="ghost" size="sm" onClick={goToThisWeek} className="text-primary text-xs">
+        Today
+      </Button>
+    </div>
   );
 }
 
@@ -70,23 +104,14 @@ export default function TimesheetsPage() {
   const [entries, setEntries] = useState<TimesheetEntry[]>([]);
   const [employees, setEmployees] = useState<{ id: string; name: string }[]>([]);
   const [selectedEmployee, setSelectedEmployee] = useState<string>("all");
-  const [dateFrom, setDateFrom] = useState<Date>(() => {
-    const now = new Date();
-    const day = now.getDay();
-    const diff = day === 0 ? 6 : day - 1;
-    return new Date(now.getFullYear(), now.getMonth(), now.getDate() - diff);
-  });
-  const [dateTo, setDateTo] = useState<Date>(() => {
-    const now = new Date();
-    const day = now.getDay();
-    const diff = day === 0 ? 0 : 7 - day;
-    return new Date(now.getFullYear(), now.getMonth(), now.getDate() + diff);
-  });
+  const [dateFrom, setDateFrom] = useState<Date>(() => startOfWeek(new Date(), { weekStartsOn: 1 }));
+  const [dateTo, setDateTo] = useState<Date>(() => endOfWeek(new Date(), { weekStartsOn: 1 }));
   const [editDialog, setEditDialog] = useState(false);
   const [editForm, setEditForm] = useState<EditForm>({ employee_id: "", date: "", clock_in: "", clock_out: "", break_start: "", break_end: "" });
   const [editingEntry, setEditingEntry] = useState<TimesheetEntry | null>(null);
   const [addDialog, setAddDialog] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [approvals, setApprovals] = useState<Map<string, boolean>>(new Map());
 
   useEffect(() => {
     supabase.from("employees").select("id, name").eq("active", true).order("name").then(({ data }) => setEmployees(data || []));
@@ -111,7 +136,20 @@ export default function TimesheetsPage() {
       query = query.eq("employee_id", selectedEmployee);
     }
 
-    const { data } = await query;
+    const [{ data }, { data: approvalData }] = await Promise.all([
+      query,
+      supabase.from("timesheet_approvals").select("employee_id, date, approved").gte("date", from).lte("date", to),
+    ]);
+
+    // Build approvals map
+    const appMap = new Map<string, boolean>();
+    if (approvalData) {
+      for (const a of approvalData) {
+        appMap.set(`${a.employee_id}-${a.date}`, a.approved);
+      }
+    }
+    setApprovals(appMap);
+
     if (!data) return;
 
     const dailyMap = new Map<string, any>();
@@ -180,6 +218,7 @@ export default function TimesheetsPage() {
         ? (new Date(e.clock_out).getTime() - new Date(e.clock_in).getTime()) / 3600000
         : 0;
       const netHours = Math.max(0, totalHours - e.break_minutes / 60);
+      const approvalKey = `${e.employee_id}-${e.raw_date}`;
 
       return {
         employee_id: e.employee_id,
@@ -198,10 +237,47 @@ export default function TimesheetsPage() {
         raw_break_start: e.raw_break_start,
         raw_break_end: e.raw_break_end,
         event_ids: e.event_ids,
+        approved: appMap.get(approvalKey) || false,
       };
     });
 
     setEntries(result);
+  };
+
+  const toggleApproval = async (entry: TimesheetEntry) => {
+    const newApproved = !entry.approved;
+    const { data: { user } } = await supabase.auth.getUser();
+
+    const { error } = await supabase.from("timesheet_approvals").upsert({
+      employee_id: entry.employee_id,
+      date: entry.raw_date,
+      approved: newApproved,
+      approved_by: user?.id || null,
+      approved_at: newApproved ? new Date().toISOString() : null,
+    }, { onConflict: "employee_id,date" });
+
+    if (error) { toast.error("Failed to update approval: " + error.message); return; }
+    toast.success(newApproved ? "Timesheet approved" : "Approval revoked");
+    fetchTimesheets();
+  };
+
+  const approveAll = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    const unapproved = filtered.filter(e => !e.approved);
+    if (unapproved.length === 0) { toast.info("All timesheets already approved"); return; }
+
+    const records = unapproved.map(e => ({
+      employee_id: e.employee_id,
+      date: e.raw_date,
+      approved: true,
+      approved_by: user?.id || null,
+      approved_at: new Date().toISOString(),
+    }));
+
+    const { error } = await supabase.from("timesheet_approvals").upsert(records, { onConflict: "employee_id,date" });
+    if (error) { toast.error("Failed: " + error.message); return; }
+    toast.success(`Approved ${unapproved.length} timesheets`);
+    fetchTimesheets();
   };
 
   const toTimeInput = (isoTimestamp: string | null) => {
@@ -238,32 +314,18 @@ export default function TimesheetsPage() {
 
   const saveEdit = async () => {
     if (!editingEntry) return;
-
-    // Delete old events for this day+employee
     for (const id of editingEntry.event_ids) {
       await supabase.from("clock_events").delete().eq("id", id);
     }
-
-    // Insert new events
     const events: { employee_id: string; event_type: "clock_in" | "clock_out" | "break_start" | "break_end"; timestamp: string }[] = [];
-    if (editForm.clock_in) {
-      events.push({ employee_id: editForm.employee_id, event_type: "clock_in", timestamp: `${editForm.date}T${editForm.clock_in}:00` });
-    }
-    if (editForm.break_start) {
-      events.push({ employee_id: editForm.employee_id, event_type: "break_start", timestamp: `${editForm.date}T${editForm.break_start}:00` });
-    }
-    if (editForm.break_end) {
-      events.push({ employee_id: editForm.employee_id, event_type: "break_end", timestamp: `${editForm.date}T${editForm.break_end}:00` });
-    }
-    if (editForm.clock_out) {
-      events.push({ employee_id: editForm.employee_id, event_type: "clock_out", timestamp: `${editForm.date}T${editForm.clock_out}:00` });
-    }
-
+    if (editForm.clock_in) events.push({ employee_id: editForm.employee_id, event_type: "clock_in", timestamp: `${editForm.date}T${editForm.clock_in}:00` });
+    if (editForm.break_start) events.push({ employee_id: editForm.employee_id, event_type: "break_start", timestamp: `${editForm.date}T${editForm.break_start}:00` });
+    if (editForm.break_end) events.push({ employee_id: editForm.employee_id, event_type: "break_end", timestamp: `${editForm.date}T${editForm.break_end}:00` });
+    if (editForm.clock_out) events.push({ employee_id: editForm.employee_id, event_type: "clock_out", timestamp: `${editForm.date}T${editForm.clock_out}:00` });
     if (events.length > 0) {
       const { error } = await supabase.from("clock_events").insert(events);
       if (error) { toast.error("Failed to save: " + error.message); return; }
     }
-
     toast.success("Timesheet updated");
     setEditDialog(false);
     fetchTimesheets();
@@ -271,24 +333,13 @@ export default function TimesheetsPage() {
 
   const saveAdd = async () => {
     const events: { employee_id: string; event_type: "clock_in" | "clock_out" | "break_start" | "break_end"; timestamp: string }[] = [];
-    if (editForm.clock_in) {
-      events.push({ employee_id: editForm.employee_id, event_type: "clock_in", timestamp: `${editForm.date}T${editForm.clock_in}:00` });
-    }
-    if (editForm.break_start) {
-      events.push({ employee_id: editForm.employee_id, event_type: "break_start", timestamp: `${editForm.date}T${editForm.break_start}:00` });
-    }
-    if (editForm.break_end) {
-      events.push({ employee_id: editForm.employee_id, event_type: "break_end", timestamp: `${editForm.date}T${editForm.break_end}:00` });
-    }
-    if (editForm.clock_out) {
-      events.push({ employee_id: editForm.employee_id, event_type: "clock_out", timestamp: `${editForm.date}T${editForm.clock_out}:00` });
-    }
-
+    if (editForm.clock_in) events.push({ employee_id: editForm.employee_id, event_type: "clock_in", timestamp: `${editForm.date}T${editForm.clock_in}:00` });
+    if (editForm.break_start) events.push({ employee_id: editForm.employee_id, event_type: "break_start", timestamp: `${editForm.date}T${editForm.break_start}:00` });
+    if (editForm.break_end) events.push({ employee_id: editForm.employee_id, event_type: "break_end", timestamp: `${editForm.date}T${editForm.break_end}:00` });
+    if (editForm.clock_out) events.push({ employee_id: editForm.employee_id, event_type: "clock_out", timestamp: `${editForm.date}T${editForm.clock_out}:00` });
     if (events.length === 0) { toast.error("Enter at least one time"); return; }
-
     const { error } = await supabase.from("clock_events").insert(events);
     if (error) { toast.error("Failed to add: " + error.message); return; }
-
     toast.success("Entry added");
     setAddDialog(false);
     fetchTimesheets();
@@ -306,6 +357,9 @@ export default function TimesheetsPage() {
   const filtered = searchQuery
     ? entries.filter((e) => e.employee_name.toLowerCase().includes(searchQuery.toLowerCase()))
     : entries;
+
+  const approvedCount = filtered.filter(e => e.approved).length;
+  const pendingCount = filtered.length - approvedCount;
 
   const EditFormFields = () => (
     <div className="space-y-4">
@@ -349,8 +403,8 @@ export default function TimesheetsPage() {
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-col sm:flex-row gap-3 justify-between">
-        <div className="flex flex-col sm:flex-row gap-3">
+      <div className="flex flex-col sm:flex-row gap-3 justify-between items-start sm:items-center">
+        <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center">
           <Select value={selectedEmployee} onValueChange={setSelectedEmployee}>
             <SelectTrigger className="w-full sm:w-48">
               <SelectValue placeholder="All employees" />
@@ -362,12 +416,29 @@ export default function TimesheetsPage() {
               ))}
             </SelectContent>
           </Select>
-          <DatePickerInput date={dateFrom} onChange={setDateFrom} label="From" />
-          <DatePickerInput date={dateTo} onChange={setDateTo} label="To" />
+          <DateRangeSelector dateFrom={dateFrom} dateTo={dateTo} onChangeFrom={setDateFrom} onChangeTo={setDateTo} />
         </div>
-        <Button onClick={openAdd}>
-          <Plus className="mr-2 h-4 w-4" /> Add Entry
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={approveAll} className="text-green-500 border-green-500/30 hover:bg-green-500/10">
+            <CheckCircle2 className="mr-2 h-4 w-4" /> Approve All
+          </Button>
+          <Button onClick={openAdd}>
+            <Plus className="mr-2 h-4 w-4" /> Add Entry
+          </Button>
+        </div>
+      </div>
+
+      {/* Summary badges */}
+      <div className="flex gap-3">
+        <Badge variant="outline" className="text-xs px-3 py-1">
+          Total: {filtered.length}
+        </Badge>
+        <Badge variant="outline" className="text-xs px-3 py-1 text-green-500 border-green-500/30">
+          <CheckCircle2 className="mr-1 h-3 w-3" /> Approved: {approvedCount}
+        </Badge>
+        <Badge variant="outline" className="text-xs px-3 py-1 text-yellow-500 border-yellow-500/30">
+          Pending: {pendingCount}
+        </Badge>
       </div>
 
       <Card>
@@ -385,6 +456,7 @@ export default function TimesheetsPage() {
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead>Status</TableHead>
                   <TableHead>Employee</TableHead>
                   <TableHead>Date</TableHead>
                   <TableHead>Clock In</TableHead>
@@ -399,7 +471,17 @@ export default function TimesheetsPage() {
               </TableHeader>
               <TableBody>
                 {filtered.map((e, i) => (
-                  <TableRow key={i}>
+                  <TableRow key={i} className={e.approved ? "bg-green-500/5" : ""}>
+                    <TableCell>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => toggleApproval(e)}
+                        className={cn("h-7 px-2", e.approved ? "text-green-500 hover:text-green-400" : "text-muted-foreground hover:text-yellow-500")}
+                      >
+                        {e.approved ? <CheckCircle2 className="h-4 w-4" /> : <XCircle className="h-4 w-4" />}
+                      </Button>
+                    </TableCell>
                     <TableCell className="font-medium">{e.employee_name}</TableCell>
                     <TableCell>{e.date}</TableCell>
                     <TableCell>{e.clock_in || "-"}</TableCell>
@@ -423,7 +505,7 @@ export default function TimesheetsPage() {
                 ))}
                 {filtered.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={10} className="text-center text-muted-foreground py-8">
+                    <TableCell colSpan={11} className="text-center text-muted-foreground py-8">
                       No timesheet data for this period.
                     </TableCell>
                   </TableRow>
