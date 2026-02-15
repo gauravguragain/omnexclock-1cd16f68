@@ -165,7 +165,8 @@ export default function PayrollPage() {
 
     // Only include events for approved days
     for (const ev of events) {
-      const dayStr = new Date(ev.timestamp).toISOString().split("T")[0];
+      const evDate = new Date(ev.timestamp);
+      const dayStr = `${evDate.getFullYear()}-${String(evDate.getMonth() + 1).padStart(2, "0")}-${String(evDate.getDate()).padStart(2, "0")}`;
       const key = `${ev.employee_id}-${dayStr}`;
       if (!approvedSet.has(key)) continue; // Skip unapproved
 
