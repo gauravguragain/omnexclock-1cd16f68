@@ -13,6 +13,8 @@ interface TimesheetEntry {
   date: string;
   clock_in: string | null;
   clock_out: string | null;
+  break_start: string | null;
+  break_end: string | null;
   break_minutes: number;
   total_hours: number;
   net_hours: number;
@@ -66,6 +68,8 @@ export default function TimesheetsPage() {
           date,
           clock_in: null,
           clock_out: null,
+          first_break_start: null,
+          last_break_end: null,
           break_start: null,
           break_minutes: 0,
         });
@@ -83,11 +87,16 @@ export default function TimesheetsPage() {
           break;
         case "break_start":
           entry.break_start = ev.timestamp;
+          if (!entry.first_break_start) entry.first_break_start = ev.timestamp;
+          break;
           break;
         case "break_end":
           if (entry.break_start) {
             entry.break_minutes += (time.getTime() - new Date(entry.break_start).getTime()) / 60000;
+            entry.last_break_end = ev.timestamp;
             entry.break_start = null;
+          }
+          break;
           }
           break;
       }
@@ -105,6 +114,8 @@ export default function TimesheetsPage() {
         date: e.date,
         clock_in: e.clock_in ? new Date(e.clock_in).toLocaleTimeString("en-AU", { hour: "2-digit", minute: "2-digit", hour12: true }) : null,
         clock_out: e.clock_out ? new Date(e.clock_out).toLocaleTimeString("en-AU", { hour: "2-digit", minute: "2-digit", hour12: true }) : null,
+        break_start: e.first_break_start ? new Date(e.first_break_start).toLocaleTimeString("en-AU", { hour: "2-digit", minute: "2-digit", hour12: true }) : null,
+        break_end: e.last_break_end ? new Date(e.last_break_end).toLocaleTimeString("en-AU", { hour: "2-digit", minute: "2-digit", hour12: true }) : null,
         break_minutes: Math.round(e.break_minutes),
         total_hours: Math.round(totalHours * 100) / 100,
         net_hours: Math.round(netHours * 100) / 100,
@@ -142,6 +153,8 @@ export default function TimesheetsPage() {
                   <TableHead>Date</TableHead>
                   <TableHead>Clock In</TableHead>
                   <TableHead>Clock Out</TableHead>
+                  <TableHead>Break Start</TableHead>
+                  <TableHead>Break End</TableHead>
                   <TableHead>Break (min)</TableHead>
                   <TableHead>Total (hrs)</TableHead>
                   <TableHead>Net (hrs)</TableHead>
@@ -154,6 +167,8 @@ export default function TimesheetsPage() {
                     <TableCell>{e.date}</TableCell>
                     <TableCell>{e.clock_in || "-"}</TableCell>
                     <TableCell>{e.clock_out || "-"}</TableCell>
+                    <TableCell>{e.break_start || "-"}</TableCell>
+                    <TableCell>{e.break_end || "-"}</TableCell>
                     <TableCell>{e.break_minutes}</TableCell>
                     <TableCell>{e.total_hours}</TableCell>
                     <TableCell className="font-semibold">{e.net_hours}</TableCell>
@@ -161,7 +176,7 @@ export default function TimesheetsPage() {
                 ))}
                 {entries.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
+                    <TableCell colSpan={9} className="text-center text-muted-foreground py-8">
                       No timesheet data for this period.
                     </TableCell>
                   </TableRow>
