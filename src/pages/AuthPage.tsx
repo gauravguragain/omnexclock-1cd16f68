@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
+import { Navigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -8,13 +9,16 @@ import { useToast } from "@/hooks/use-toast";
 import { LogIn, UserPlus } from "lucide-react";
 
 export default function AuthPage() {
-  const { signIn, signUp } = useAuth();
+  const { user, isAdmin, signIn, signUp } = useAuth();
   const { toast } = useToast();
   const [isSignUp, setIsSignUp] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
   const [loading, setLoading] = useState(false);
+
+  if (user && isAdmin) return <Navigate to="/admin" replace />;
+  if (user) return <Navigate to="/kiosk" replace />;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
