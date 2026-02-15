@@ -42,6 +42,7 @@ interface EditForm {
   clock_out: string;
   break_start: string;
   break_end: string;
+  comment: string;
 }
 
 function DateRangeSelector({ dateFrom, dateTo, onChangeFrom, onChangeTo }: {
@@ -107,7 +108,7 @@ export default function TimesheetsPage() {
   const [dateFrom, setDateFrom] = useState<Date>(() => startOfWeek(new Date(), { weekStartsOn: 1 }));
   const [dateTo, setDateTo] = useState<Date>(() => endOfWeek(new Date(), { weekStartsOn: 1 }));
   const [editDialog, setEditDialog] = useState(false);
-  const [editForm, setEditForm] = useState<EditForm>({ employee_id: "", date: "", clock_in: "", clock_out: "", break_start: "", break_end: "" });
+  const [editForm, setEditForm] = useState<EditForm>({ employee_id: "", date: "", clock_in: "", clock_out: "", break_start: "", break_end: "", comment: "" });
   const [editingEntry, setEditingEntry] = useState<TimesheetEntry | null>(null);
   const [addDialog, setAddDialog] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -298,6 +299,7 @@ export default function TimesheetsPage() {
       clock_out: toTimeInput(entry.raw_clock_out),
       break_start: toTimeInput(entry.raw_break_start),
       break_end: toTimeInput(entry.raw_break_end),
+      comment: "",
     });
     setEditDialog(true);
   };
@@ -311,12 +313,14 @@ export default function TimesheetsPage() {
       clock_out: "17:00",
       break_start: "",
       break_end: "",
+      comment: "",
     });
     setAddDialog(true);
   };
 
   const saveEdit = async () => {
     if (!editingEntry) return;
+    if (!editForm.comment.trim()) { toast.error("Comment is required when editing timesheets"); return; }
     for (const id of editingEntry.event_ids) {
       await supabase.from("clock_events").delete().eq("id", id);
     }
@@ -329,12 +333,20 @@ export default function TimesheetsPage() {
       const { error } = await supabase.from("clock_events").insert(events);
       if (error) { toast.error("Failed to save: " + error.message); return; }
     }
+    // Log to audit
+    const { data: { user } } = await supabase.auth.getUser();
+    await supabase.from("audit_logs").insert({
+      user_id: user?.id || null,
+      action: "timesheet_edit",
+      details: { employee_id: editForm.employee_id, employee_name: editingEntry.employee_name, date: editForm.date, comment: editForm.comment.trim() },
+    });
     toast.success("Timesheet updated");
     setEditDialog(false);
     fetchTimesheets();
   };
 
   const saveAdd = async () => {
+    if (!editForm.comment.trim()) { toast.error("Comment is required when adding timesheets"); return; }
     const events: { employee_id: string; event_type: "clock_in" | "clock_out" | "break_start" | "break_end"; timestamp: string }[] = [];
     if (editForm.clock_in) events.push({ employee_id: editForm.employee_id, event_type: "clock_in", timestamp: `${editForm.date}T${editForm.clock_in}:00` });
     if (editForm.break_start) events.push({ employee_id: editForm.employee_id, event_type: "break_start", timestamp: `${editForm.date}T${editForm.break_start}:00` });
@@ -343,6 +355,13 @@ export default function TimesheetsPage() {
     if (events.length === 0) { toast.error("Enter at least one time"); return; }
     const { error } = await supabase.from("clock_events").insert(events);
     if (error) { toast.error("Failed to add: " + error.message); return; }
+    const { data: { user } } = await supabase.auth.getUser();
+    const emp = employees.find(e => e.id === editForm.employee_id);
+    await supabase.from("audit_logs").insert({
+      user_id: user?.id || null,
+      action: "timesheet_add",
+      details: { employee_id: editForm.employee_id, employee_name: emp?.name || "Unknown", date: editForm.date, comment: editForm.comment.trim() },
+    });
     toast.success("Entry added");
     setAddDialog(false);
     fetchTimesheets();
@@ -400,6 +419,18 @@ export default function TimesheetsPage() {
           <Label>Break End</Label>
           <Input type="time" value={editForm.break_end} onChange={(e) => setEditForm({ ...editForm, break_end: e.target.value })} />
         </div>
+      </div>
+      <div className="space-y-2">
+        <Label>Reason for change <span className="text-destructive">*</span></Label>
+        <textarea
+          value={editForm.comment}
+          onChange={(e) => setEditForm({ ...editForm, comment: e.target.value })}
+          placeholder="Enter reason for this timesheet change..."
+          className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+          maxLength={500}
+          required
+        />
+        <p className="text-xs text-muted-foreground">{editForm.comment.length}/500 characters</p>
       </div>
     </div>
   );
