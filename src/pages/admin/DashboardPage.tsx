@@ -1,93 +1,213 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Users, Clock, DollarSign, TrendingUp } from "lucide-react";
+import { Users, Clock, DollarSign, TrendingUp, Activity } from "lucide-react";
+import {
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
+  PieChart, Pie, Cell, Legend, AreaChart, Area,
+} from "recharts";
+
+interface DailyHours {
+  date: string;
+  hours: number;
+  employees: number;
+}
+
+interface EmployeeBreakdown {
+  name: string;
+  hours: number;
+}
+
+interface HourlyActivity {
+  hour: string;
+  events: number;
+}
+
+const CHART_COLORS = [
+  "hsl(45, 60%, 53%)", // gold
+  "hsl(142, 71%, 45%)", // green
+  "hsl(217, 91%, 60%)", // blue
+  "hsl(0, 84%, 60%)", // red
+  "hsl(280, 67%, 55%)", // purple
+  "hsl(30, 90%, 55%)", // orange
+];
 
 export default function DashboardPage() {
   const [stats, setStats] = useState({ totalEmployees: 0, activeToday: 0, totalHoursToday: 0, avgShift: 0 });
+  const [weeklyData, setWeeklyData] = useState<DailyHours[]>([]);
+  const [employeeBreakdown, setEmployeeBreakdown] = useState<EmployeeBreakdown[]>([]);
+  const [hourlyActivity, setHourlyActivity] = useState<HourlyActivity[]>([]);
+  const [recentEvents, setRecentEvents] = useState<any[]>([]);
 
   useEffect(() => {
-    const fetchStats = async () => {
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-
-      const [empRes, eventsRes] = await Promise.all([
-        supabase.from("employees").select("id", { count: "exact" }).eq("active", true),
-        supabase.from("clock_events").select("*").gte("timestamp", today.toISOString()),
-      ]);
-
-      const totalEmployees = empRes.count || 0;
-      const todayEvents = eventsRes.data || [];
-      const uniqueEmployees = new Set(todayEvents.map((e) => e.employee_id));
-
-      // Calculate actual hours from clock_in/clock_out pairs per employee
-      let totalHours = 0;
-      const employeeHours = new Map<string, number>();
-
-      for (const empId of uniqueEmployees) {
-        const empEvents = todayEvents
-          .filter((e) => e.employee_id === empId)
-          .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
-
-        let clockIn: Date | null = null;
-        let breakStart: Date | null = null;
-        let hours = 0;
-        let breakMinutes = 0;
-
-        for (const ev of empEvents) {
-          const t = new Date(ev.timestamp);
-          switch (ev.event_type) {
-            case "clock_in":
-              clockIn = t;
-              break;
-            case "clock_out":
-              if (clockIn) {
-                hours += (t.getTime() - clockIn.getTime()) / 3600000 - breakMinutes / 60;
-                clockIn = null;
-                breakMinutes = 0;
-              }
-              break;
-            case "break_start":
-              breakStart = t;
-              break;
-            case "break_end":
-              if (breakStart) {
-                breakMinutes += (t.getTime() - breakStart.getTime()) / 60000;
-                breakStart = null;
-              }
-              break;
-          }
-        }
-
-        // If still clocked in, calculate up to now
-        if (clockIn) {
-          hours += (Date.now() - clockIn.getTime()) / 3600000 - breakMinutes / 60;
-        }
-
-        hours = Math.max(0, hours);
-        employeeHours.set(empId, hours);
-        totalHours += hours;
-      }
-
-      setStats({
-        totalEmployees,
-        activeToday: uniqueEmployees.size,
-        totalHoursToday: Math.round(totalHours * 10) / 10,
-        avgShift: uniqueEmployees.size > 0 ? Math.round((totalHours / uniqueEmployees.size) * 10) / 10 : 0,
-      });
-    };
-    fetchStats();
+    fetchAll();
   }, []);
+
+  const calcHoursFromEvents = (events: any[]) => {
+    let hours = 0;
+    let clockIn: Date | null = null;
+    let breakStart: Date | null = null;
+    let breakMinutes = 0;
+
+    for (const ev of events) {
+      const t = new Date(ev.timestamp);
+      switch (ev.event_type) {
+        case "clock_in": clockIn = t; break;
+        case "clock_out":
+          if (clockIn) {
+            hours += (t.getTime() - clockIn.getTime()) / 3600000 - breakMinutes / 60;
+            clockIn = null;
+            breakMinutes = 0;
+          }
+          break;
+        case "break_start": breakStart = t; break;
+        case "break_end":
+          if (breakStart) {
+            breakMinutes += (t.getTime() - breakStart.getTime()) / 60000;
+            breakStart = null;
+          }
+          break;
+      }
+    }
+    if (clockIn) {
+      hours += (Date.now() - clockIn.getTime()) / 3600000 - breakMinutes / 60;
+    }
+    return Math.max(0, hours);
+  };
+
+  const fetchAll = async () => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const weekAgo = new Date();
+    weekAgo.setDate(weekAgo.getDate() - 7);
+    weekAgo.setHours(0, 0, 0, 0);
+
+    const [empRes, todayEventsRes, weekEventsRes, recentRes] = await Promise.all([
+      supabase.from("employees").select("id, name", { count: "exact" }).eq("active", true),
+      supabase.from("clock_events").select("*").gte("timestamp", today.toISOString()).order("timestamp"),
+      supabase.from("clock_events").select("*, employees(name)").gte("timestamp", weekAgo.toISOString()).order("timestamp"),
+      supabase.from("clock_events").select("*, employees(name)").order("timestamp", { ascending: false }).limit(10),
+    ]);
+
+    const totalEmployees = empRes.count || 0;
+    const todayEvents = todayEventsRes.data || [];
+    const weekEvents = weekEventsRes.data || [];
+    const employees = empRes.data || [];
+    const empNameMap = new Map(employees.map((e) => [e.id, e.name]));
+
+    // Today stats
+    const uniqueToday = new Set(todayEvents.map((e) => e.employee_id));
+    const todayByEmp = new Map<string, any[]>();
+    for (const ev of todayEvents) {
+      if (!todayByEmp.has(ev.employee_id)) todayByEmp.set(ev.employee_id, []);
+      todayByEmp.get(ev.employee_id)!.push(ev);
+    }
+    let totalHoursToday = 0;
+    for (const evs of todayByEmp.values()) {
+      totalHoursToday += calcHoursFromEvents(evs);
+    }
+
+    setStats({
+      totalEmployees,
+      activeToday: uniqueToday.size,
+      totalHoursToday: Math.round(totalHoursToday * 10) / 10,
+      avgShift: uniqueToday.size > 0 ? Math.round((totalHoursToday / uniqueToday.size) * 10) / 10 : 0,
+    });
+
+    // Weekly daily hours
+    const dailyMap = new Map<string, { events: Map<string, any[]> }>();
+    for (const ev of weekEvents) {
+      const day = new Date(ev.timestamp).toLocaleDateString("en-AU", { weekday: "short", day: "numeric", month: "short" });
+      if (!dailyMap.has(day)) dailyMap.set(day, { events: new Map() });
+      const dayData = dailyMap.get(day)!;
+      if (!dayData.events.has(ev.employee_id)) dayData.events.set(ev.employee_id, []);
+      dayData.events.get(ev.employee_id)!.push(ev);
+    }
+
+    const weekly: DailyHours[] = [];
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date();
+      d.setDate(d.getDate() - i);
+      const label = d.toLocaleDateString("en-AU", { weekday: "short", day: "numeric", month: "short" });
+      const dayData = dailyMap.get(label);
+      let dayHours = 0;
+      let dayEmps = 0;
+      if (dayData) {
+        dayEmps = dayData.events.size;
+        for (const evs of dayData.events.values()) {
+          dayHours += calcHoursFromEvents(evs);
+        }
+      }
+      weekly.push({ date: label, hours: Math.round(dayHours * 10) / 10, employees: dayEmps });
+    }
+    setWeeklyData(weekly);
+
+    // Employee breakdown (this week)
+    const empWeekHours = new Map<string, number>();
+    for (const ev of weekEvents) {
+      if (!empWeekHours.has(ev.employee_id)) empWeekHours.set(ev.employee_id, 0);
+    }
+    const weekByEmp = new Map<string, any[]>();
+    for (const ev of weekEvents) {
+      if (!weekByEmp.has(ev.employee_id)) weekByEmp.set(ev.employee_id, []);
+      weekByEmp.get(ev.employee_id)!.push(ev);
+    }
+    const breakdown: EmployeeBreakdown[] = [];
+    for (const [empId, evs] of weekByEmp) {
+      const h = calcHoursFromEvents(evs);
+      breakdown.push({ name: empNameMap.get(empId) || (evs[0] as any).employees?.name || "Unknown", hours: Math.round(h * 10) / 10 });
+    }
+    breakdown.sort((a, b) => b.hours - a.hours);
+    setEmployeeBreakdown(breakdown);
+
+    // Hourly activity (today)
+    const hourCounts = new Array(24).fill(0);
+    for (const ev of todayEvents) {
+      const h = new Date(ev.timestamp).getHours();
+      hourCounts[h]++;
+    }
+    const hourly: HourlyActivity[] = hourCounts.map((count, i) => ({
+      hour: `${i.toString().padStart(2, "0")}:00`,
+      events: count,
+    })).filter((_, i) => i >= 5 && i <= 23);
+    setHourlyActivity(hourly);
+
+    // Recent events
+    setRecentEvents(
+      (recentRes.data || []).map((ev) => ({
+        name: (ev.employees as any)?.name || "Unknown",
+        type: ev.event_type,
+        time: new Date(ev.timestamp).toLocaleTimeString("en-AU", { hour: "2-digit", minute: "2-digit", hour12: true }),
+        date: new Date(ev.timestamp).toLocaleDateString("en-AU"),
+      }))
+    );
+  };
 
   const cards = [
     { title: "Active Employees", value: stats.totalEmployees, icon: Users, color: "text-primary" },
     { title: "Clocked In Today", value: stats.activeToday, icon: Clock, color: "text-success" },
     { title: "Hours Today", value: stats.totalHoursToday, icon: TrendingUp, color: "text-warning" },
-    { title: "Avg Shift (hrs)", value: stats.avgShift, icon: DollarSign, color: "text-primary" },
+    { title: "Avg Shift (hrs)", value: stats.avgShift, icon: Activity, color: "text-primary" },
   ];
+
+  const eventTypeLabels: Record<string, string> = {
+    clock_in: "Clock In",
+    clock_out: "Clock Out",
+    break_start: "Break Start",
+    break_end: "Break End",
+  };
+
+  const eventTypeColors: Record<string, string> = {
+    clock_in: "text-success",
+    clock_out: "text-destructive",
+    break_start: "text-warning",
+    break_end: "text-primary",
+  };
 
   return (
     <div className="space-y-6">
+      {/* Stats Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {cards.map(({ title, value, icon: Icon, color }) => (
           <Card key={title}>
@@ -100,6 +220,98 @@ export default function DashboardPage() {
             </CardContent>
           </Card>
         ))}
+      </div>
+
+      {/* Weekly Hours + Employee Breakdown */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-sm font-medium text-muted-foreground">Weekly Hours</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ResponsiveContainer width="100%" height={250}>
+              <BarChart data={weeklyData}>
+                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                <XAxis dataKey="date" tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} />
+                <YAxis tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} />
+                <Tooltip
+                  contentStyle={{ backgroundColor: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 8, color: "hsl(var(--foreground))" }}
+                />
+                <Bar dataKey="hours" name="Hours" fill="hsl(45, 60%, 53%)" radius={[4, 4, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-sm font-medium text-muted-foreground">Employee Hours (This Week)</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {employeeBreakdown.length > 0 ? (
+              <ResponsiveContainer width="100%" height={250}>
+                <PieChart>
+                  <Pie data={employeeBreakdown} dataKey="hours" nameKey="name" cx="50%" cy="50%" outerRadius={90} label={({ name, hours }) => `${name}: ${hours}h`} labelLine={false}>
+                    {employeeBreakdown.map((_, i) => (
+                      <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />
+                    ))}
+                  </Pie>
+                  <Tooltip contentStyle={{ backgroundColor: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 8, color: "hsl(var(--foreground))" }} />
+                  <Legend />
+                </PieChart>
+              </ResponsiveContainer>
+            ) : (
+              <p className="text-center text-muted-foreground py-16">No data this week</p>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Hourly Activity + Recent Events */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-sm font-medium text-muted-foreground">Today's Activity by Hour</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ResponsiveContainer width="100%" height={250}>
+              <AreaChart data={hourlyActivity}>
+                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                <XAxis dataKey="hour" tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} />
+                <YAxis tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} allowDecimals={false} />
+                <Tooltip contentStyle={{ backgroundColor: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 8, color: "hsl(var(--foreground))" }} />
+                <Area type="monotone" dataKey="events" name="Events" stroke="hsl(45, 60%, 53%)" fill="hsl(45, 60%, 53%)" fillOpacity={0.2} />
+              </AreaChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-sm font-medium text-muted-foreground">Recent Activity</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {recentEvents.length > 0 ? (
+              <div className="space-y-3 max-h-[250px] overflow-y-auto">
+                {recentEvents.map((ev, i) => (
+                  <div key={i} className="flex items-center justify-between text-sm border-b border-border pb-2 last:border-0">
+                    <div className="flex items-center gap-2">
+                      <span className="font-medium text-foreground">{ev.name}</span>
+                      <span className={`text-xs font-semibold ${eventTypeColors[ev.type] || ""}`}>
+                        {eventTypeLabels[ev.type] || ev.type}
+                      </span>
+                    </div>
+                    <div className="text-xs text-muted-foreground">
+                      {ev.time} · {ev.date}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-center text-muted-foreground py-16">No recent activity</p>
+            )}
+          </CardContent>
+        </Card>
       </div>
     </div>
   );
