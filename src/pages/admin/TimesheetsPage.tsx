@@ -15,6 +15,7 @@ import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { TimeDropdownPicker } from "@/components/TimeDropdownPicker";
+import { logAudit } from "@/lib/auditLog";
 
 interface TimesheetEntry {
   employee_id: string;
@@ -262,6 +263,7 @@ export default function TimesheetsPage() {
     }, { onConflict: "employee_id,date" });
 
     if (error) { toast.error("Failed to update approval: " + error.message); return; }
+    await logAudit(newApproved ? "timesheet_approve" : "timesheet_unapprove", { employee_id: entry.employee_id, employee_name: entry.employee_name, date: entry.date });
     toast.success(newApproved ? "Timesheet approved" : "Approval revoked");
     fetchTimesheets();
   };
@@ -281,6 +283,7 @@ export default function TimesheetsPage() {
 
     const { error } = await supabase.from("timesheet_approvals").upsert(records, { onConflict: "employee_id,date" });
     if (error) { toast.error("Failed: " + error.message); return; }
+    await logAudit("timesheet_approve_all", { count: unapproved.length, employees: unapproved.map(e => ({ id: e.employee_id, name: e.employee_name, date: e.date })) });
     toast.success(`Approved ${unapproved.length} timesheets`);
     fetchTimesheets();
   };
@@ -335,12 +338,7 @@ export default function TimesheetsPage() {
       if (error) { toast.error("Failed to save: " + error.message); return; }
     }
     // Log to audit
-    const { data: { user } } = await supabase.auth.getUser();
-    await supabase.from("audit_logs").insert({
-      user_id: user?.id || null,
-      action: "timesheet_edit",
-      details: { employee_id: editForm.employee_id, employee_name: editingEntry.employee_name, date: editForm.date, comment: editForm.comment.trim() },
-    });
+    await logAudit("timesheet_edit", { employee_id: editForm.employee_id, employee_name: editingEntry.employee_name, date: editForm.date, comment: editForm.comment.trim() });
     toast.success("Timesheet updated");
     setEditDialog(false);
     fetchTimesheets();
@@ -356,13 +354,8 @@ export default function TimesheetsPage() {
     if (events.length === 0) { toast.error("Enter at least one time"); return; }
     const { error } = await supabase.from("clock_events").insert(events);
     if (error) { toast.error("Failed to add: " + error.message); return; }
-    const { data: { user } } = await supabase.auth.getUser();
     const emp = employees.find(e => e.id === editForm.employee_id);
-    await supabase.from("audit_logs").insert({
-      user_id: user?.id || null,
-      action: "timesheet_add",
-      details: { employee_id: editForm.employee_id, employee_name: emp?.name || "Unknown", date: editForm.date, comment: editForm.comment.trim() },
-    });
+    await logAudit("timesheet_add", { employee_id: editForm.employee_id, employee_name: emp?.name || "Unknown", date: editForm.date, comment: editForm.comment.trim() });
     toast.success("Entry added");
     setAddDialog(false);
     fetchTimesheets();
@@ -373,6 +366,7 @@ export default function TimesheetsPage() {
     for (const id of entry.event_ids) {
       await supabase.from("clock_events").delete().eq("id", id);
     }
+    await logAudit("timesheet_delete", { employee_id: entry.employee_id, employee_name: entry.employee_name, date: entry.date });
     toast.success("Entry deleted");
     fetchTimesheets();
   };
