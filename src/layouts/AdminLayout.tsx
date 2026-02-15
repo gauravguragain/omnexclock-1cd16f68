@@ -32,7 +32,7 @@ export default function AdminLayout() {
   }
 
   // UX guard only — all data access is protected by RLS policies server-side.
-  if (!user) return <Navigate to="/auth" replace />;
+  if (!user) return <Navigate to="/" replace />;
   if (!isAdmin || !isApproved) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
@@ -85,10 +85,16 @@ export default function AdminLayout() {
         </nav>
 
         <div className="absolute bottom-0 left-0 right-0 p-3 border-t border-border space-y-1">
-          <Link to="/kiosk" className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-muted-foreground hover:text-foreground hover:bg-secondary">
+          <button
+            onClick={async () => {
+              await signOut();
+              window.location.href = "/kiosk";
+            }}
+            className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-muted-foreground hover:text-foreground hover:bg-secondary w-full"
+          >
             <Clock className="h-4 w-4" />
             Launch Kiosk
-          </Link>
+          </button>
           <button onClick={signOut} className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-muted-foreground hover:text-foreground hover:bg-secondary w-full">
             <LogOut className="h-4 w-4" />
             Sign Out
