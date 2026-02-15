@@ -10,7 +10,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import { CalendarIcon, Search, Pencil, Trash2, Plus, ChevronLeft, ChevronRight, CheckCircle2, XCircle } from "lucide-react";
+import { CalendarIcon, Search, Pencil, Trash2, Plus, ChevronLeft, ChevronRight, CheckCircle2, XCircle, Download } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
@@ -409,6 +409,32 @@ export default function TimesheetsPage() {
   const approvedCount = filtered.filter(e => e.approved).length;
   const pendingCount = filtered.length - approvedCount;
 
+  const downloadCSV = () => {
+    if (filtered.length === 0) { toast.info("No data to download"); return; }
+    const headers = ["Status", "Employee", "Date", "Clock In", "Clock Out", "Break Start", "Break End", "Break (min)", "Total (hrs)", "Net (hrs)"];
+    const rows = filtered.map(e => [
+      e.approved ? "Approved" : "Pending",
+      e.employee_name,
+      e.date,
+      e.clock_in || "",
+      e.clock_out || "",
+      e.break_start || "",
+      e.break_end || "",
+      e.break_minutes.toString(),
+      e.total_hours.toString(),
+      e.net_hours.toString(),
+    ]);
+    const csv = [headers, ...rows].map(r => r.map(c => `"${c}"`).join(",")).join("\n");
+    const blob = new Blob([csv], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `timesheets_${format(dateFrom, "yyyy-MM-dd")}_to_${format(dateTo, "yyyy-MM-dd")}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+    toast.success("Downloaded timesheet data");
+  };
+
   const editFormFields = (
     <div className="space-y-4">
       {!editingEntry && (
@@ -479,6 +505,9 @@ export default function TimesheetsPage() {
           <DateRangeSelector dateFrom={dateFrom} dateTo={dateTo} onChangeFrom={setDateFrom} onChangeTo={setDateTo} />
         </div>
         <div className="flex gap-2">
+          <Button variant="outline" onClick={downloadCSV} disabled={filtered.length === 0}>
+            <Download className="mr-2 h-4 w-4" /> Download CSV
+          </Button>
           <Button variant="outline" onClick={approveAll} disabled={saving} className="text-green-500 border-green-500/30 hover:bg-green-500/10">
             <CheckCircle2 className="mr-2 h-4 w-4" /> Approve All
           </Button>
