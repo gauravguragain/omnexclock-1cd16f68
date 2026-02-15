@@ -4,7 +4,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Download } from "lucide-react";
+import { Download, DollarSign, Clock as ClockIcon, Users, Coffee } from "lucide-react";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from "recharts";
+
+const CHART_COLORS = [
+  "hsl(45, 60%, 53%)", "hsl(142, 71%, 45%)", "hsl(217, 91%, 60%)",
+  "hsl(0, 84%, 60%)", "hsl(280, 67%, 55%)", "hsl(30, 90%, 55%)",
+];
 
 interface PayrollEntry {
   employee_id: string;
@@ -102,8 +108,6 @@ export default function PayrollPage() {
     setEntries(result);
   };
 
-  const totalPayroll = entries.reduce((sum, e) => sum + e.gross_pay, 0);
-
   const exportCSV = () => {
     const headers = "Name,Pay Rate,Total Hours,Break Hours,Net Hours,Gross Pay\n";
     const rows = entries.map((e) => `${e.name},${e.pay_rate},${e.total_hours},${e.break_hours},${e.net_hours},${e.gross_pay}`).join("\n");
@@ -114,6 +118,17 @@ export default function PayrollPage() {
     a.download = `payroll-${dateFrom}-to-${dateTo}.csv`;
     a.click();
   };
+
+  const totalPayrollAmount = entries.reduce((sum, e) => sum + e.gross_pay, 0);
+  const totalNetHours = entries.reduce((sum, e) => sum + e.net_hours, 0);
+  const totalBreakHours = entries.reduce((sum, e) => sum + e.break_hours, 0);
+
+  const summaryCards = [
+    { title: "Total Payroll", value: `$${totalPayrollAmount.toFixed(2)}`, icon: DollarSign, color: "text-primary" },
+    { title: "Total Net Hours", value: Math.round(totalNetHours * 10) / 10, icon: ClockIcon, color: "text-success" },
+    { title: "Total Break Hours", value: Math.round(totalBreakHours * 10) / 10, icon: Coffee, color: "text-warning" },
+    { title: "Employees", value: entries.length, icon: Users, color: "text-primary" },
+  ];
 
   return (
     <div className="space-y-4">
@@ -127,12 +142,71 @@ export default function PayrollPage() {
         </Button>
       </div>
 
+      {/* Summary Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        {summaryCards.map(({ title, value, icon: Icon, color }) => (
+          <Card key={title}>
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground">{title}</CardTitle>
+              <Icon className={`h-4 w-4 ${color}`} />
+            </CardHeader>
+            <CardContent>
+              <p className="text-2xl font-bold">{value}</p>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
+      {/* Charts */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-sm font-medium text-muted-foreground">Pay Distribution</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {entries.length > 0 ? (
+              <ResponsiveContainer width="100%" height={250}>
+                <BarChart data={entries}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                  <XAxis dataKey="name" tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} />
+                  <YAxis tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} />
+                  <Tooltip contentStyle={{ backgroundColor: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 8, color: "hsl(var(--foreground))" }} />
+                  <Bar dataKey="gross_pay" name="Gross Pay ($)" fill="hsl(45, 60%, 53%)" radius={[4, 4, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            ) : (
+              <p className="text-center text-muted-foreground py-16">No data</p>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-sm font-medium text-muted-foreground">Hours Breakdown</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {entries.length > 0 ? (
+              <ResponsiveContainer width="100%" height={250}>
+                <PieChart>
+                  <Pie data={entries} dataKey="net_hours" nameKey="name" cx="50%" cy="50%" outerRadius={90} label={({ name, value }) => `${name}: ${value}h`} labelLine={false}>
+                    {entries.map((_, i) => (
+                      <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />
+                    ))}
+                  </Pie>
+                  <Tooltip contentStyle={{ backgroundColor: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 8, color: "hsl(var(--foreground))" }} />
+                  <Legend />
+                </PieChart>
+              </ResponsiveContainer>
+            ) : (
+              <p className="text-center text-muted-foreground py-16">No data</p>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+      {/* Payroll Table */}
       <Card>
         <CardHeader>
-          <CardTitle className="flex justify-between items-center">
-            <span>Payroll Summary</span>
-            <span className="gold-text text-2xl">${totalPayroll.toFixed(2)}</span>
-          </CardTitle>
+          <CardTitle className="text-sm font-medium text-muted-foreground">Payroll Details</CardTitle>
         </CardHeader>
         <CardContent className="p-0">
           <div className="overflow-x-auto">
