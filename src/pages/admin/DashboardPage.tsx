@@ -9,9 +9,19 @@ import {
 
 interface DailyHours {
   date: string;
+  key: string;
   hours: number;
   employees: number;
 }
+
+const toLocalDateKey = (d: Date) => {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+};
+
+const roundHours = (h: number) => Math.round(h * 100) / 100;
 
 interface EmployeeBreakdown {
   name: string;
@@ -130,28 +140,29 @@ export default function DashboardPage() {
     setStats({
       totalEmployees,
       activeToday: getCurrentlyClockedIn(todayEvents),
-      totalHoursToday: Math.round(totalHoursToday * 10) / 10,
-      avgShift: uniqueToday.size > 0 ? Math.round((totalHoursToday / uniqueToday.size) * 10) / 10 : 0,
+      totalHoursToday: roundHours(totalHoursToday),
+      avgShift: uniqueToday.size > 0 ? roundHours(totalHoursToday / uniqueToday.size) : 0,
     });
 
-    // Weekly daily hours
+    // Weekly daily hours - use date key for reliable grouping
+    const todayKey = toLocalDateKey(new Date());
     const dailyMap = new Map<string, { events: Map<string, any[]> }>();
     for (const ev of weekEvents) {
-      const day = new Date(ev.timestamp).toLocaleDateString("en-AU", { weekday: "short", day: "numeric", month: "short" });
-      if (!dailyMap.has(day)) dailyMap.set(day, { events: new Map() });
-      const dayData = dailyMap.get(day)!;
+      const key = toLocalDateKey(new Date(ev.timestamp));
+      if (!dailyMap.has(key)) dailyMap.set(key, { events: new Map() });
+      const dayData = dailyMap.get(key)!;
       if (!dayData.events.has(ev.employee_id)) dayData.events.set(ev.employee_id, []);
       dayData.events.get(ev.employee_id)!.push(ev);
     }
 
     const weekly: DailyHours[] = [];
-    const todayLabel = new Date().toLocaleDateString("en-AU", { weekday: "short", day: "numeric", month: "short" });
     for (let i = 6; i >= 0; i--) {
       const d = new Date();
       d.setDate(d.getDate() - i);
+      const key = toLocalDateKey(d);
       const label = d.toLocaleDateString("en-AU", { weekday: "short", day: "numeric", month: "short" });
-      const isToday = label === todayLabel;
-      const dayData = dailyMap.get(label);
+      const isToday = key === todayKey;
+      const dayData = dailyMap.get(key);
       let dayHours = 0;
       let dayEmps = 0;
       if (dayData) {
@@ -160,7 +171,7 @@ export default function DashboardPage() {
           dayHours += calcHoursFromEvents(evs, isToday);
         }
       }
-      weekly.push({ date: label, hours: Math.round(dayHours * 10) / 10, employees: dayEmps });
+      weekly.push({ date: label, key, hours: roundHours(dayHours), employees: dayEmps });
     }
     setWeeklyData(weekly);
 
@@ -177,7 +188,7 @@ export default function DashboardPage() {
     const breakdown: EmployeeBreakdown[] = [];
     for (const [empId, evs] of weekByEmp) {
       const h = calcHoursFromEvents(evs, true);
-      breakdown.push({ name: empNameMap.get(empId) || (evs[0] as any).employees?.name || "Unknown", hours: Math.round(h * 10) / 10 });
+      breakdown.push({ name: empNameMap.get(empId) || (evs[0] as any).employees?.name || "Unknown", hours: roundHours(h) });
     }
     breakdown.sort((a, b) => b.hours - a.hours);
     setEmployeeBreakdown(breakdown);
