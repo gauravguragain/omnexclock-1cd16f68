@@ -89,14 +89,11 @@ export default function TimesheetsPage() {
           entry.break_start = ev.timestamp;
           if (!entry.first_break_start) entry.first_break_start = ev.timestamp;
           break;
-          break;
         case "break_end":
           if (entry.break_start) {
             entry.break_minutes += (time.getTime() - new Date(entry.break_start).getTime()) / 60000;
             entry.last_break_end = ev.timestamp;
             entry.break_start = null;
-          }
-          break;
           }
           break;
       }
