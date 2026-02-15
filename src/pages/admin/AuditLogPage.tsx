@@ -47,11 +47,17 @@ export default function AuditLogPage() {
 
   const buildTallies = (logsData: AuditLog[], profileMap: Map<string, string>) => {
     const tallyMap = new Map<string, Record<string, number>>();
+    const nameMap = new Map<string, string>();
     for (const log of logsData) {
-      const uid = log.user_id || "unknown";
+      // For kiosk events, use employee_name from details as the identifier
+      const uid = log.user_id || (log.details?.employee_name ? `emp_${log.details.employee_name}` : "unknown");
       if (!tallyMap.has(uid)) tallyMap.set(uid, {});
       const actions = tallyMap.get(uid)!;
       actions[log.action] = (actions[log.action] || 0) + 1;
+      // Store display name
+      if (!nameMap.has(uid)) {
+        nameMap.set(uid, log.user_id ? (profileMap.get(log.user_id) || "Unknown User") : (log.details?.employee_name || "Unknown"));
+      }
     }
 
     const tallyList: UserTally[] = [];
@@ -59,7 +65,7 @@ export default function AuditLogPage() {
       const total = Object.values(actions).reduce((a, b) => a + b, 0);
       tallyList.push({
         user_id: userId,
-        email: profileMap.get(userId) || "Unknown User",
+        email: nameMap.get(userId) || "Unknown User",
         actions,
         total,
       });
@@ -102,7 +108,7 @@ export default function AuditLogPage() {
   const filteredLogs = logs.filter((log) => {
     if (!searchQuery) return true;
     const q = searchQuery.toLowerCase();
-    const userName = profiles.get(log.user_id || "") || "unknown";
+    const userName = log.user_id ? (profiles.get(log.user_id) || "unknown") : (log.details?.employee_name || "unknown");
     const details = JSON.stringify(log.details || {}).toLowerCase();
     return (
       log.action.toLowerCase().includes(q) ||
@@ -189,7 +195,7 @@ export default function AuditLogPage() {
                 {filteredLogs.map((log) => (
                   <TableRow key={log.id}>
                     <TableCell className="font-medium text-sm">
-                      {profiles.get(log.user_id || "") || "Unknown"}
+                      {log.user_id ? (profiles.get(log.user_id) || "Unknown") : (log.details?.employee_name || "Unknown")}
                     </TableCell>
                     <TableCell>
                       <Badge
