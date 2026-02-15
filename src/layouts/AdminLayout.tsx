@@ -2,7 +2,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Navigate, Outlet, Link, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import {
-  Users, Clock, CalendarDays, DollarSign, BarChart3, Monitor, LogOut, Menu, X, Settings
+  Users, Clock, CalendarDays, DollarSign, BarChart3, Monitor, LogOut, Menu, X, Settings, FileText
 } from "lucide-react";
 import { useState } from "react";
 
@@ -12,6 +12,7 @@ const navItems = [
   { path: "/admin/live", label: "Live Monitor", icon: Monitor },
   { path: "/admin/timesheets", label: "Timesheets", icon: CalendarDays },
   { path: "/admin/payroll", label: "Payroll", icon: DollarSign },
+  { path: "/admin/audit-log", label: "Audit Log", icon: FileText },
 ];
 
 export default function AdminLayout() {
