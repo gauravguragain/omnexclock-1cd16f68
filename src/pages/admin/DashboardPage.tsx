@@ -115,9 +115,9 @@ export default function DashboardPage() {
 
     const [empRes, todayEventsRes, weekEventsRes, recentRes] = await Promise.all([
       supabase.from("employees").select("id, name", { count: "exact" }).eq("active", true),
-      supabase.from("clock_events").select("*").gte("timestamp", today.toISOString()).order("timestamp"),
-      supabase.from("clock_events").select("*, employees(name)").gte("timestamp", weekAgo.toISOString()).order("timestamp"),
-      supabase.from("clock_events").select("*, employees(name)").order("timestamp", { ascending: false }).limit(10),
+      supabase.from("clock_events").select("*").gte("created_at", today.toISOString()).order("created_at"),
+      supabase.from("clock_events").select("*, employees(name)").gte("created_at", weekAgo.toISOString()).order("created_at"),
+      supabase.from("clock_events").select("*, employees(name)").order("created_at", { ascending: false }).limit(10),
     ]);
 
     const totalEmployees = empRes.count || 0;
@@ -149,7 +149,7 @@ export default function DashboardPage() {
     const todayKey = toLocalDateKey(new Date());
     const dailyMap = new Map<string, { events: Map<string, any[]> }>();
     for (const ev of weekEvents) {
-      const key = toLocalDateKey(new Date(ev.timestamp));
+      const key = toLocalDateKey(new Date(ev.created_at));
       if (!dailyMap.has(key)) dailyMap.set(key, { events: new Map() });
       const dayData = dailyMap.get(key)!;
       if (!dayData.events.has(ev.employee_id)) dayData.events.set(ev.employee_id, []);
@@ -257,8 +257,8 @@ export default function DashboardPage() {
       (recentRes.data || []).map((ev) => ({
         name: (ev.employees as any)?.name || "Unknown",
         type: ev.event_type,
-        time: new Date(ev.timestamp).toLocaleTimeString("en-AU", { hour: "2-digit", minute: "2-digit", hour12: true }),
-        date: new Date(ev.timestamp).toLocaleDateString("en-AU"),
+        time: new Date(ev.created_at).toLocaleTimeString("en-AU", { hour: "2-digit", minute: "2-digit", hour12: true }),
+        date: new Date(ev.created_at).toLocaleDateString("en-AU"),
       }))
     );
   };
