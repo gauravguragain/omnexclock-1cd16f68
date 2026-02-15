@@ -126,3 +126,11 @@
     box-shadow: 0 0 20px hsl(43 72% 52% / 0.15), 0 0 40px hsl(43 72% 52% / 0.05);
   }
 }
+
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
