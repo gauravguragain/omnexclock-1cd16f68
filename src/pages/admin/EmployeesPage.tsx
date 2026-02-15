@@ -20,6 +20,8 @@ export default function EmployeesPage() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<Employee | null>(null);
   const [form, setForm] = useState({ name: "", employee_code: "", pay_rate: "" });
+  const [saving, setSaving] = useState(false);
+  const [togglingIds, setTogglingIds] = useState<Set<string>>(new Set());
 
   const fetchEmployees = async () => {
     const { data } = await supabase.from("employees").select("*").order("name");
@@ -29,34 +31,46 @@ export default function EmployeesPage() {
   useEffect(() => { fetchEmployees(); }, []);
 
   const handleSave = async () => {
-    const payload = {
-      name: form.name,
-      employee_code: form.employee_code,
-      pay_rate: parseFloat(form.pay_rate) || 0,
-    };
+    if (saving) return;
+    setSaving(true);
+    try {
+      const payload = {
+        name: form.name,
+        employee_code: form.employee_code,
+        pay_rate: parseFloat(form.pay_rate) || 0,
+      };
 
-    if (editing) {
-      const { error } = await supabase.from("employees").update(payload).eq("id", editing.id);
-      if (error) { toast({ title: "Error", description: error.message, variant: "destructive" }); return; }
-      await logAudit("employee_edit", { employee_id: editing.id, name: form.name, employee_code: form.employee_code, pay_rate: form.pay_rate });
-      toast({ title: "Employee updated" });
-    } else {
-      const { data, error } = await supabase.from("employees").insert(payload).select("id").single();
-      if (error) { toast({ title: "Error", description: error.message, variant: "destructive" }); return; }
-      await logAudit("employee_add", { employee_id: data?.id, name: form.name, employee_code: form.employee_code, pay_rate: form.pay_rate });
-      toast({ title: "Employee added" });
+      if (editing) {
+        const { error } = await supabase.from("employees").update(payload).eq("id", editing.id);
+        if (error) { toast({ title: "Error", description: error.message, variant: "destructive" }); return; }
+        await logAudit("employee_edit", { employee_id: editing.id, name: form.name, employee_code: form.employee_code, pay_rate: form.pay_rate });
+        toast({ title: "Employee updated" });
+      } else {
+        const { data, error } = await supabase.from("employees").insert(payload).select("id").single();
+        if (error) { toast({ title: "Error", description: error.message, variant: "destructive" }); return; }
+        await logAudit("employee_add", { employee_id: data?.id, name: form.name, employee_code: form.employee_code, pay_rate: form.pay_rate });
+        toast({ title: "Employee added" });
+      }
+      setDialogOpen(false);
+      setEditing(null);
+      setForm({ name: "", employee_code: "", pay_rate: "" });
+      fetchEmployees();
+    } finally {
+      setSaving(false);
     }
-    setDialogOpen(false);
-    setEditing(null);
-    setForm({ name: "", employee_code: "", pay_rate: "" });
-    fetchEmployees();
   };
 
   const toggleActive = async (emp: Employee) => {
-    const newActive = !emp.active;
-    await supabase.from("employees").update({ active: newActive }).eq("id", emp.id);
-    await logAudit(newActive ? "employee_activate" : "employee_deactivate", { employee_id: emp.id, name: emp.name });
-    fetchEmployees();
+    if (togglingIds.has(emp.id)) return;
+    setTogglingIds(prev => new Set(prev).add(emp.id));
+    try {
+      const newActive = !emp.active;
+      await supabase.from("employees").update({ active: newActive }).eq("id", emp.id);
+      await logAudit(newActive ? "employee_activate" : "employee_deactivate", { employee_id: emp.id, name: emp.name });
+      fetchEmployees();
+    } finally {
+      setTogglingIds(prev => { const s = new Set(prev); s.delete(emp.id); return s; });
+    }
   };
 
   const openEdit = (emp: Employee) => {
@@ -103,7 +117,9 @@ export default function EmployeesPage() {
                 <Label>Pay Rate ($/hr)</Label>
                 <Input type="number" step="0.01" value={form.pay_rate} onChange={(e) => setForm({ ...form, pay_rate: e.target.value })} placeholder="25.00" />
               </div>
-              <Button className="w-full" onClick={handleSave}>{editing ? "Update" : "Add"} Employee</Button>
+              <Button className="w-full" onClick={handleSave} disabled={saving}>
+                {saving ? "Saving..." : editing ? "Update" : "Add"} {!saving && "Employee"}
+              </Button>
             </div>
           </DialogContent>
         </Dialog>
@@ -134,10 +150,10 @@ export default function EmployeesPage() {
                       </span>
                     </TableCell>
                     <TableCell className="text-right space-x-1">
-                      <Button variant="ghost" size="icon" onClick={() => openEdit(emp)}>
+                      <Button variant="ghost" size="icon" onClick={() => openEdit(emp)} disabled={saving}>
                         <Pencil className="h-4 w-4" />
                       </Button>
-                      <Button variant="ghost" size="icon" onClick={() => toggleActive(emp)}>
+                      <Button variant="ghost" size="icon" onClick={() => toggleActive(emp)} disabled={togglingIds.has(emp.id)}>
                         {emp.active ? <UserX className="h-4 w-4" /> : <UserCheck className="h-4 w-4" />}
                       </Button>
                     </TableCell>

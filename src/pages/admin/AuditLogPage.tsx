@@ -4,7 +4,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Search, FileText } from "lucide-react";
+import { Search, FileText, RefreshCw } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 interface AuditLog {
   id: string;
@@ -27,10 +28,6 @@ export default function AuditLogPage() {
   const [profiles, setProfiles] = useState<Map<string, string>>(new Map());
   const [searchQuery, setSearchQuery] = useState("");
 
-  useEffect(() => {
-    fetchData();
-  }, []);
-
   const fetchData = async () => {
     const [logsRes, profilesRes] = await Promise.all([
       supabase.from("audit_logs").select("*").order("timestamp", { ascending: false }).limit(500),
@@ -45,8 +42,10 @@ export default function AuditLogPage() {
       profileMap.set(p.id, p.full_name || p.email);
     }
     setProfiles(profileMap);
+    buildTallies(logsData, profileMap);
+  };
 
-    // Build tallies grouped by user
+  const buildTallies = (logsData: AuditLog[], profileMap: Map<string, string>) => {
     const tallyMap = new Map<string, Record<string, number>>();
     for (const log of logsData) {
       const uid = log.user_id || "unknown";
@@ -68,6 +67,20 @@ export default function AuditLogPage() {
     tallyList.sort((a, b) => b.total - a.total);
     setTallies(tallyList);
   };
+
+  useEffect(() => {
+    fetchData();
+
+    // Realtime subscription for instant updates
+    const channel = supabase
+      .channel("audit-logs-realtime")
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "audit_logs" }, () => {
+        fetchData();
+      })
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
+  }, []);
 
   const actionColors: Record<string, string> = {
     timesheet_edit: "bg-warning/20 text-warning border-warning/30",
@@ -100,6 +113,17 @@ export default function AuditLogPage() {
 
   return (
     <div className="space-y-6">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <div className="h-3 w-3 rounded-full bg-success animate-pulse" />
+          <span className="text-sm text-muted-foreground">Live — updates in real-time</span>
+        </div>
+        <Button variant="outline" size="sm" onClick={fetchData}>
+          <RefreshCw className="mr-2 h-3 w-3" /> Refresh
+        </Button>
+      </div>
+
       {/* Tally Cards by User */}
       <div>
         <h3 className="text-sm font-medium text-muted-foreground mb-3">Actions by User</h3>

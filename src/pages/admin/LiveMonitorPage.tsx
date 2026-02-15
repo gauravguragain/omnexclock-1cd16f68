@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -45,8 +45,22 @@ export default function LiveMonitorPage() {
 
   useEffect(() => {
     fetchLive();
-    const interval = setInterval(fetchLive, 10000);
-    return () => clearInterval(interval);
+
+    // Realtime subscription instead of polling
+    const channel = supabase
+      .channel("live-monitor-realtime")
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "clock_events" }, () => {
+        fetchLive();
+      })
+      .subscribe();
+
+    // Keep a slower fallback poll
+    const interval = setInterval(fetchLive, 30000);
+
+    return () => {
+      clearInterval(interval);
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   const eventIcon = (type: string) => {
@@ -72,8 +86,8 @@ export default function LiveMonitorPage() {
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-2">
-        <div className="h-3 w-3 rounded-full bg-success animate-pulse-gold" />
-        <span className="text-sm text-muted-foreground">Live — refreshes every 10s</span>
+        <div className="h-3 w-3 rounded-full bg-success animate-pulse" />
+        <span className="text-sm text-muted-foreground">Live — updates in real-time</span>
       </div>
 
       {liveData.length === 0 ? (
