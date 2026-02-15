@@ -15,6 +15,8 @@ export default function KioskPage() {
   const [step, setStep] = useState<KioskStep>("code_entry");
   const [code, setCode] = useState("");
   const [selectedAction, setSelectedAction] = useState<string>("");
+  const codeRef = useRef("");
+  const actionRef = useRef("");
   const [employeeName, setEmployeeName] = useState("");
   const [employeeId, setEmployeeId] = useState<string | null>(null);
   const [employeeStatus, setEmployeeStatus] = useState<EmployeeStatus>("clocked_out");
@@ -77,8 +79,8 @@ export default function KioskPage() {
     try {
       const { data, error } = await supabase.functions.invoke("kiosk-clock", {
         body: {
-          employee_code: code,
-          event_type: selectedAction,
+          employee_code: codeRef.current,
+          event_type: actionRef.current,
           photo_base64: photo,
           device_info: { userAgent: navigator.userAgent, screen: `${screen.width}x${screen.height}` },
         },
@@ -97,7 +99,7 @@ export default function KioskPage() {
       resetKiosk();
     }
     setLoading(false);
-  }, [code, selectedAction, toast]);
+  }, [toast]);
 
   const captureAndSubmit = useCallback(() => {
     if (!videoRef.current || !canvasRef.current) return;
@@ -143,6 +145,7 @@ export default function KioskPage() {
       setEmployeeId(data.id);
       const status = await getEmployeeStatus(data.id);
       setEmployeeStatus(status);
+      codeRef.current = code;
       setStep("action_select");
     } catch {
       toast({ title: "Error", description: "Unable to verify employee code.", variant: "destructive" });
@@ -152,10 +155,10 @@ export default function KioskPage() {
 
   const handleActionSelect = (action: string) => {
     setSelectedAction(action);
+    actionRef.current = action;
     setStep("photo_capture");
     setTimeout(() => {
       startCamera().then(() => {
-        // Auto-capture after 2 seconds
         setTimeout(() => captureAndSubmit(), 2000);
       });
     }, 100);
@@ -164,7 +167,9 @@ export default function KioskPage() {
   const resetKiosk = () => {
     setStep("code_entry");
     setCode("");
+    codeRef.current = "";
     setSelectedAction("");
+    actionRef.current = "";
     setEmployeeName("");
     setEmployeeId(null);
     setEmployeeStatus("clocked_out");
