@@ -157,8 +157,9 @@ export default function TimesheetsPage() {
     const dailyMap = new Map<string, any>();
 
     for (const ev of data) {
-      const date = new Date(ev.timestamp).toLocaleDateString("en-AU");
-      const isoDate = new Date(ev.timestamp).toISOString().split("T")[0];
+      const evDate = new Date(ev.timestamp);
+      const date = evDate.toLocaleDateString("en-AU");
+      const localDate = `${evDate.getFullYear()}-${String(evDate.getMonth() + 1).padStart(2, "0")}-${String(evDate.getDate()).padStart(2, "0")}`;
       const key = `${ev.employee_id}-${date}`;
       const empName = (ev.employees as any)?.name || "Unknown";
 
@@ -167,7 +168,7 @@ export default function TimesheetsPage() {
           employee_id: ev.employee_id,
           employee_name: empName,
           date,
-          raw_date: isoDate,
+          raw_date: localDate,
           clock_in: null,
           clock_out: null,
           first_break_start: null,
