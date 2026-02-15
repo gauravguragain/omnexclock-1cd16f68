@@ -107,7 +107,9 @@ export default function PayrollPage() {
 
   useEffect(() => { setPage(0); }, [search]);
 
-  const fetchAllEvents = async (from: string, to: string) => {
+  const fetchAllEvents = async (fromDate: Date, toDate: Date) => {
+    const fromISO = new Date(fromDate.getFullYear(), fromDate.getMonth(), fromDate.getDate(), 0, 0, 0).toISOString();
+    const toISO = new Date(toDate.getFullYear(), toDate.getMonth(), toDate.getDate(), 23, 59, 59).toISOString();
     const allEvents: any[] = [];
     let lastTimestamp: string | null = null;
     let hasMore = true;
@@ -116,8 +118,8 @@ export default function PayrollPage() {
       let query = supabase
         .from("clock_events")
         .select("*")
-        .gte("timestamp", `${from}T00:00:00`)
-        .lte("timestamp", `${to}T23:59:59`)
+        .gte("timestamp", fromISO)
+        .lte("timestamp", toISO)
         .order("timestamp")
         .limit(1000);
 
@@ -144,7 +146,7 @@ export default function PayrollPage() {
 
     const [{ data: employees }, events, { data: approvalData }] = await Promise.all([
       supabase.from("employees").select("*").eq("active", true),
-      fetchAllEvents(from, to),
+      fetchAllEvents(dateFrom, dateTo),
       supabase.from("timesheet_approvals").select("employee_id, date, approved").gte("date", from).lte("date", to).eq("approved", true),
     ]);
 
