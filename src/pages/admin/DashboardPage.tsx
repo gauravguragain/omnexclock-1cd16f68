@@ -108,14 +108,26 @@ export default function DashboardPage() {
     return Math.max(0, hours);
   };
 
-  const getCurrentlyClockedIn = (events: any[]) => {
-    // Track last event per employee
-    const lastEvent = new Map<string, string>();
+  const getCurrentlyClockedIn = async () => {
+    // Match live monitor approach: get today's events DESC, first per employee = current status
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const { data: events } = await supabase
+      .from("clock_events")
+      .select("employee_id, event_type")
+      .gte("created_at", today.toISOString())
+      .order("created_at", { ascending: false });
+
+    if (!events) return 0;
+
+    const seen = new Map<string, string>();
     for (const ev of events) {
-      lastEvent.set(ev.employee_id, ev.event_type);
+      if (!seen.has(ev.employee_id)) {
+        seen.set(ev.employee_id, ev.event_type);
+      }
     }
     let count = 0;
-    for (const type of lastEvent.values()) {
+    for (const type of seen.values()) {
       if (type === "clock_in" || type === "break_start" || type === "break_end") count++;
     }
     return count;
@@ -154,9 +166,11 @@ export default function DashboardPage() {
       totalHoursToday += calcHoursFromEvents(evs, true); // allowOpen for today
     }
 
+    const activeToday = await getCurrentlyClockedIn();
+
     setStats({
       totalEmployees,
-      activeToday: getCurrentlyClockedIn(todayEvents),
+      activeToday,
       totalHoursToday: roundHours(totalHoursToday),
       avgShift: uniqueToday.size > 0 ? roundHours(totalHoursToday / uniqueToday.size) : 0,
     });
