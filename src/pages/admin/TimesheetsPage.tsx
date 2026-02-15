@@ -55,7 +55,7 @@ export default function TimesheetsPage() {
     const dailyMap = new Map<string, any>();
 
     for (const ev of data) {
-      const date = new Date(ev.timestamp).toLocaleDateString();
+      const date = new Date(ev.timestamp).toLocaleDateString("en-AU");
       const key = `${ev.employee_id}-${date}`;
       const empName = (ev.employees as any)?.name || "Unknown";
 
@@ -103,8 +103,8 @@ export default function TimesheetsPage() {
         employee_id: e.employee_id,
         employee_name: e.employee_name,
         date: e.date,
-        clock_in: e.clock_in ? new Date(e.clock_in).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : null,
-        clock_out: e.clock_out ? new Date(e.clock_out).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : null,
+        clock_in: e.clock_in ? new Date(e.clock_in).toLocaleTimeString("en-AU", { hour: "2-digit", minute: "2-digit", hour12: true }) : null,
+        clock_out: e.clock_out ? new Date(e.clock_out).toLocaleTimeString("en-AU", { hour: "2-digit", minute: "2-digit", hour12: true }) : null,
         break_minutes: Math.round(e.break_minutes),
         total_hours: Math.round(totalHours * 100) / 100,
         net_hours: Math.round(netHours * 100) / 100,
