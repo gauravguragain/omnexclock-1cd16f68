@@ -378,7 +378,7 @@ export default function TimesheetsPage() {
   const approvedCount = filtered.filter(e => e.approved).length;
   const pendingCount = filtered.length - approvedCount;
 
-  const EditFormFields = () => (
+  const editFormFields = (
     <div className="space-y-4">
       {!editingEntry && (
         <div className="space-y-2">
@@ -551,7 +551,7 @@ export default function TimesheetsPage() {
           <DialogHeader>
             <DialogTitle>Edit Timesheet — {editingEntry?.employee_name}</DialogTitle>
           </DialogHeader>
-          <EditFormFields />
+          {editFormFields}
           <DialogFooter>
             <Button variant="outline" onClick={() => setEditDialog(false)}>Cancel</Button>
             <Button onClick={saveEdit}>Save Changes</Button>
@@ -565,7 +565,7 @@ export default function TimesheetsPage() {
           <DialogHeader>
             <DialogTitle>Add Manual Entry</DialogTitle>
           </DialogHeader>
-          <EditFormFields />
+          {editFormFields}
           <DialogFooter>
             <Button variant="outline" onClick={() => setAddDialog(false)}>Cancel</Button>
             <Button onClick={saveAdd}>Add Entry</Button>
