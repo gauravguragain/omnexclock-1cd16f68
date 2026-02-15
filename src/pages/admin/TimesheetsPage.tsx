@@ -124,12 +124,14 @@ export default function TimesheetsPage() {
   const fetchTimesheets = async () => {
     const from = format(dateFrom, "yyyy-MM-dd");
     const to = format(dateTo, "yyyy-MM-dd");
+    const fromISO = new Date(dateFrom.getFullYear(), dateFrom.getMonth(), dateFrom.getDate(), 0, 0, 0).toISOString();
+    const toISO = new Date(dateTo.getFullYear(), dateTo.getMonth(), dateTo.getDate(), 23, 59, 59).toISOString();
 
     let query = supabase
       .from("clock_events")
       .select("*, employees(name)")
-      .gte("timestamp", `${from}T00:00:00`)
-      .lte("timestamp", `${to}T23:59:59`)
+      .gte("timestamp", fromISO)
+      .lte("timestamp", toISO)
       .order("timestamp", { ascending: true });
 
     if (selectedEmployee !== "all") {
