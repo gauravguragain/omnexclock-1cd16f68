@@ -38,10 +38,10 @@ export default function KioskPage() {
 
     const { data: events } = await supabase
       .from("clock_events")
-      .select("event_type, timestamp")
+      .select("event_type, created_at")
       .eq("employee_id", empId)
-      .gte("timestamp", today.toISOString())
-      .order("timestamp", { ascending: false });
+      .gte("created_at", today.toISOString())
+      .order("created_at", { ascending: false });
 
     if (!events || events.length === 0) return "clocked_out";
 
@@ -54,6 +54,30 @@ export default function KioskPage() {
       default: return "clocked_out";
     }
   };
+
+  // Realtime: if admin deletes/edits events while kiosk is on action_select, refresh status
+  useEffect(() => {
+    if (!employeeId || step !== "action_select") return;
+
+    const channel = supabase
+      .channel("kiosk-status-sync")
+      .on("postgres_changes", { event: "*", schema: "public", table: "clock_events" }, async (payload) => {
+        // Only react to changes for this employee
+        const row = (payload.new as any) || (payload.old as any);
+        if (row?.employee_id === employeeId || payload.eventType === "DELETE") {
+          const status = await getEmployeeStatus(employeeId);
+          setEmployeeStatus(status);
+          // If all events deleted, go back to code entry
+          if (status === "clocked_out" && employeeStatus !== "clocked_out") {
+            toast({ title: "Status Changed", description: "Your timesheet was updated by an admin." });
+            resetKiosk();
+          }
+        }
+      })
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
+  }, [employeeId, step]);
 
   const startCamera = useCallback(async () => {
     try {
