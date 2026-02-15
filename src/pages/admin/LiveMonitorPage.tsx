@@ -49,7 +49,7 @@ export default function LiveMonitorPage() {
     // Realtime subscription instead of polling
     const channel = supabase
       .channel("live-monitor-realtime")
-      .on("postgres_changes", { event: "INSERT", schema: "public", table: "clock_events" }, () => {
+      .on("postgres_changes", { event: "*", schema: "public", table: "clock_events" }, () => {
         fetchLive();
       })
       .subscribe();
