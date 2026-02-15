@@ -252,7 +252,16 @@ export default function TimesheetsPage() {
     setEntries(result);
   };
 
+  const isShiftActive = (entry: TimesheetEntry): boolean => {
+    // Shift is active if clocked in but not clocked out
+    return !!entry.clock_in && !entry.clock_out;
+  };
+
   const toggleApproval = async (entry: TimesheetEntry) => {
+    if (isShiftActive(entry) && !entry.approved) {
+      toast.error("Cannot approve: shift is still active. Wait for clock out.");
+      return;
+    }
     const key = `${entry.employee_id}-${entry.raw_date}`;
     if (approvingIds.has(key)) return;
     setApprovingIds(prev => new Set(prev).add(key));
@@ -282,8 +291,8 @@ export default function TimesheetsPage() {
     setSaving(true);
     try {
       const { data: { user } } = await supabase.auth.getUser();
-      const unapproved = filtered.filter(e => !e.approved);
-      if (unapproved.length === 0) { toast.info("All timesheets already approved"); return; }
+      const unapproved = filtered.filter(e => !e.approved && !isShiftActive(e));
+      if (unapproved.length === 0) { toast.info("No completed shifts to approve"); setSaving(false); return; }
 
       const records = unapproved.map(e => ({
         employee_id: e.employee_id,
@@ -295,8 +304,11 @@ export default function TimesheetsPage() {
 
       const { error } = await supabase.from("timesheet_approvals").upsert(records, { onConflict: "employee_id,date" });
       if (error) { toast.error("Failed: " + error.message); return; }
+      const skippedCount = filtered.filter(e => !e.approved && isShiftActive(e)).length;
       await logAudit("timesheet_approve_all", { count: unapproved.length, employees: unapproved.map(e => ({ id: e.employee_id, name: e.employee_name, date: e.date })) });
-      toast.success(`Approved ${unapproved.length} timesheets`);
+      let msg = `Approved ${unapproved.length} timesheets`;
+      if (skippedCount > 0) msg += `. Skipped ${skippedCount} active shift(s).`;
+      toast.success(msg);
       fetchTimesheets();
     } finally {
       setSaving(false);
