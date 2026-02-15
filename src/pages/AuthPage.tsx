@@ -6,12 +6,15 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { LogIn, UserPlus } from "lucide-react";
+import { LogIn, UserPlus, KeyRound } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+
+type AuthMode = "signIn" | "signUp" | "forgotPassword";
 
 export default function AuthPage() {
   const { user, isAdmin, signIn, signUp } = useAuth();
   const { toast } = useToast();
-  const [isSignUp, setIsSignUp] = useState(false);
+  const [mode, setMode] = useState<AuthMode>("signIn");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
@@ -24,7 +27,21 @@ export default function AuthPage() {
     e.preventDefault();
     setLoading(true);
 
-    if (isSignUp) {
+    if (mode === "forgotPassword") {
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/auth?mode=reset`,
+      });
+      if (error) {
+        toast({ title: "Error", description: error.message, variant: "destructive" });
+      } else {
+        toast({ title: "Email Sent", description: "Check your inbox for the password reset link." });
+        setMode("signIn");
+      }
+      setLoading(false);
+      return;
+    }
+
+    if (mode === "signUp") {
       const { error } = await signUp(email, password, fullName);
       if (error) {
         toast({ title: "Error", description: error, variant: "destructive" });
@@ -40,6 +57,13 @@ export default function AuthPage() {
     setLoading(false);
   };
 
+  const title = mode === "signIn" ? "Sign In" : mode === "signUp" ? "Create Account" : "Reset Password";
+  const description = mode === "signIn"
+    ? "Sign in to the admin dashboard"
+    : mode === "signUp"
+    ? "Register a new admin account"
+    : "Enter your email to receive a password reset link";
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
       <div className="w-full max-w-md space-y-6">
@@ -51,14 +75,12 @@ export default function AuthPage() {
 
         <Card className="gold-border border">
           <CardHeader>
-            <CardTitle>{isSignUp ? "Create Account" : "Sign In"}</CardTitle>
-            <CardDescription>
-              {isSignUp ? "Register a new admin account" : "Sign in to the admin dashboard"}
-            </CardDescription>
+            <CardTitle>{title}</CardTitle>
+            <CardDescription>{description}</CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
-              {isSignUp && (
+              {mode === "signUp" && (
                 <div className="space-y-2">
                   <Label htmlFor="fullName">Full Name</Label>
                   <Input id="fullName" value={fullName} onChange={(e) => setFullName(e.target.value)} placeholder="John Doe" required />
@@ -68,18 +90,41 @@ export default function AuthPage() {
                 <Label htmlFor="email">Email</Label>
                 <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="admin@proregal.com" required />
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="password">Password</Label>
-                <Input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" required minLength={6} />
-              </div>
+              {mode !== "forgotPassword" && (
+                <div className="space-y-2">
+                  <Label htmlFor="password">Password</Label>
+                  <Input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" required minLength={6} />
+                </div>
+              )}
               <Button type="submit" className="w-full" disabled={loading}>
-                {loading ? "Loading..." : isSignUp ? <><UserPlus className="mr-2 h-4 w-4" /> Create Account</> : <><LogIn className="mr-2 h-4 w-4" /> Sign In</>}
+                {loading ? "Loading..." : mode === "signUp"
+                  ? <><UserPlus className="mr-2 h-4 w-4" /> Create Account</>
+                  : mode === "forgotPassword"
+                  ? <><KeyRound className="mr-2 h-4 w-4" /> Send Reset Link</>
+                  : <><LogIn className="mr-2 h-4 w-4" /> Sign In</>}
               </Button>
             </form>
-            <div className="mt-4 text-center">
-              <button onClick={() => setIsSignUp(!isSignUp)} className="text-sm text-primary hover:underline">
-                {isSignUp ? "Already have an account? Sign In" : "Need an account? Sign Up"}
-              </button>
+            <div className="mt-4 text-center space-y-2">
+              {mode === "signIn" && (
+                <>
+                  <button onClick={() => setMode("forgotPassword")} className="text-sm text-primary hover:underline block w-full">
+                    Forgot password?
+                  </button>
+                  <button onClick={() => setMode("signUp")} className="text-sm text-muted-foreground hover:underline block w-full">
+                    Need an account? Sign Up
+                  </button>
+                </>
+              )}
+              {mode === "signUp" && (
+                <button onClick={() => setMode("signIn")} className="text-sm text-muted-foreground hover:underline">
+                  Already have an account? Sign In
+                </button>
+              )}
+              {mode === "forgotPassword" && (
+                <button onClick={() => setMode("signIn")} className="text-sm text-muted-foreground hover:underline">
+                  Back to Sign In
+                </button>
+              )}
             </div>
           </CardContent>
         </Card>
