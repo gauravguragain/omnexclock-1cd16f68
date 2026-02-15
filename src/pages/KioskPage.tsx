@@ -72,7 +72,34 @@ export default function KioskPage() {
     streamRef.current = null;
   }, []);
 
-  const capturePhoto = useCallback(() => {
+  const submitClock = useCallback(async (photo: string) => {
+    setLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("kiosk-clock", {
+        body: {
+          employee_code: code,
+          event_type: selectedAction,
+          photo_base64: photo,
+          device_info: { userAgent: navigator.userAgent, screen: `${screen.width}x${screen.height}` },
+        },
+      });
+
+      if (error || data?.error) {
+        toast({ title: "Error", description: data?.error || error?.message || "Failed to clock", variant: "destructive" });
+        resetKiosk();
+      } else {
+        setEmployeeName(data.employee_name);
+        setStep("confirmation");
+        setTimeout(resetKiosk, 4000);
+      }
+    } catch {
+      toast({ title: "Error", description: "Network error", variant: "destructive" });
+      resetKiosk();
+    }
+    setLoading(false);
+  }, [code, selectedAction, toast]);
+
+  const captureAndSubmit = useCallback(() => {
     if (!videoRef.current || !canvasRef.current) return;
     const canvas = canvasRef.current;
     canvas.width = 640;
@@ -82,7 +109,8 @@ export default function KioskPage() {
     const data = canvas.toDataURL("image/jpeg", 0.7);
     setPhotoData(data);
     stopCamera();
-  }, [stopCamera]);
+    submitClock(data);
+  }, [stopCamera, submitClock]);
 
   const handleNumpadClick = (num: string) => {
     if (code.length < 8) setCode((prev) => prev + num);
@@ -125,32 +153,12 @@ export default function KioskPage() {
   const handleActionSelect = (action: string) => {
     setSelectedAction(action);
     setStep("photo_capture");
-    setTimeout(startCamera, 100);
-  };
-
-  const handleConfirmClock = async () => {
-    setLoading(true);
-    try {
-      const { data, error } = await supabase.functions.invoke("kiosk-clock", {
-        body: {
-          employee_code: code,
-          event_type: selectedAction,
-          photo_base64: photoData,
-          device_info: { userAgent: navigator.userAgent, screen: `${screen.width}x${screen.height}` },
-        },
+    setTimeout(() => {
+      startCamera().then(() => {
+        // Auto-capture after 2 seconds
+        setTimeout(() => captureAndSubmit(), 2000);
       });
-
-      if (error || data?.error) {
-        toast({ title: "Error", description: data?.error || error?.message || "Failed to clock", variant: "destructive" });
-      } else {
-        setEmployeeName(data.employee_name);
-        setStep("confirmation");
-        setTimeout(resetKiosk, 4000);
-      }
-    } catch {
-      toast({ title: "Error", description: "Network error", variant: "destructive" });
-    }
-    setLoading(false);
+    }, 100);
   };
 
   const resetKiosk = () => {
@@ -284,34 +292,21 @@ export default function KioskPage() {
       {step === "photo_capture" && (
         <Card className="w-full max-w-sm gold-border border">
           <CardContent className="p-6 space-y-4">
-            <p className="text-center text-sm text-muted-foreground">Take your photo</p>
-            {!photoData ? (
-              <>
-                <div className="relative rounded-lg overflow-hidden bg-surface aspect-[4/3]">
-                  <video ref={videoRef} autoPlay playsInline muted className="w-full h-full object-cover" />
+            <p className="text-center text-sm text-muted-foreground">
+              {loading ? "Submitting..." : photoData ? "Photo captured!" : "Hold still — capturing photo..."}
+            </p>
+            <div className="relative rounded-lg overflow-hidden bg-surface aspect-[4/3]">
+              {photoData ? (
+                <img src={photoData} alt="Captured" className="w-full h-full object-cover" />
+              ) : (
+                <video ref={videoRef} autoPlay playsInline muted className="w-full h-full object-cover" />
+              )}
+              {loading && (
+                <div className="absolute inset-0 bg-background/60 flex items-center justify-center">
+                  <div className="animate-spin rounded-full h-10 w-10 border-2 border-primary border-t-transparent" />
                 </div>
-                <Button className="w-full h-14 text-lg" onClick={capturePhoto}>
-                  <Camera className="mr-2 h-5 w-5" /> Capture Photo
-                </Button>
-              </>
-            ) : (
-              <>
-                <div className="rounded-lg overflow-hidden bg-surface aspect-[4/3]">
-                  <img src={photoData} alt="Captured" className="w-full h-full object-cover" />
-                </div>
-                <div className="grid grid-cols-2 gap-2">
-                  <Button variant="outline" onClick={() => { setPhotoData(null); startCamera(); }}>
-                    Retake
-                  </Button>
-                  <Button onClick={handleConfirmClock} disabled={loading}>
-                    {loading ? "Submitting..." : "Confirm"}
-                  </Button>
-                </div>
-              </>
-            )}
-            <Button variant="ghost" className="w-full" onClick={() => { stopCamera(); setPhotoData(null); setStep("action_select"); }}>
-              Back
-            </Button>
+              )}
+            </div>
           </CardContent>
         </Card>
       )}
