@@ -15,6 +15,7 @@ import LiveMonitorPage from "./pages/admin/LiveMonitorPage";
 import TimesheetsPage from "./pages/admin/TimesheetsPage";
 import PayrollPage from "./pages/admin/PayrollPage";
 import AuditLogPage from "./pages/admin/AuditLogPage";
+import UsersPage from "./pages/admin/UsersPage";
 
 const queryClient = new QueryClient();
 
@@ -36,6 +37,7 @@ const App = () => (
               <Route path="timesheets" element={<TimesheetsPage />} />
               <Route path="payroll" element={<PayrollPage />} />
               <Route path="audit-log" element={<AuditLogPage />} />
+              <Route path="users" element={<UsersPage />} />
             </Route>
             <Route path="*" element={<NotFound />} />
           </Routes>

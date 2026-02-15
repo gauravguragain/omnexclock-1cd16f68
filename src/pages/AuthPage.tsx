@@ -12,7 +12,7 @@ import { supabase } from "@/integrations/supabase/client";
 type AuthMode = "signIn" | "signUp" | "forgotPassword";
 
 export default function AuthPage() {
-  const { user, isAdmin, signIn, signUp } = useAuth();
+  const { user, isAdmin, isApproved, signIn, signUp } = useAuth();
   const { toast } = useToast();
   const [mode, setMode] = useState<AuthMode>("signIn");
   const [email, setEmail] = useState("");
@@ -20,8 +20,8 @@ export default function AuthPage() {
   const [fullName, setFullName] = useState("");
   const [loading, setLoading] = useState(false);
 
-  if (user && isAdmin) return <Navigate to="/admin" replace />;
-  if (user) return <Navigate to="/kiosk" replace />;
+  if (user && isAdmin && isApproved) return <Navigate to="/admin" replace />;
+  if (user && isApproved) return <Navigate to="/kiosk" replace />;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
