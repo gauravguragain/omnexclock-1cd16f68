@@ -32,27 +32,15 @@ export default function KioskPage() {
     return () => clearInterval(timer);
   }, []);
 
-  const getEmployeeStatus = async (empId: string): Promise<EmployeeStatus> => {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-
-    const { data: events } = await supabase
-      .from("clock_events")
-      .select("event_type, created_at")
-      .eq("employee_id", empId)
-      .gte("created_at", today.toISOString())
-      .order("created_at", { ascending: false });
-
-    if (!events || events.length === 0) return "clocked_out";
-
-    const lastEvent = events[0].event_type;
-    switch (lastEvent) {
-      case "clock_in": return "clocked_in";
-      case "clock_out": return "clocked_out";
-      case "break_start": return "on_break";
-      case "break_end": return "clocked_in";
-      default: return "clocked_out";
-    }
+  const getEmployeeStatusByCode = async (employeeCode: string): Promise<{ id: string; name: string; status: EmployeeStatus } | null> => {
+    const { data, error } = await supabase.rpc("get_employee_status", { _employee_code: employeeCode });
+    if (error || !data || data.length === 0) return null;
+    const row = data[0];
+    return {
+      id: row.employee_id,
+      name: row.employee_name,
+      status: (row.current_status as EmployeeStatus) || "clocked_out",
+    };
   };
 
   // Realtime: if admin deletes/edits events while kiosk is on action_select, refresh status
@@ -61,16 +49,16 @@ export default function KioskPage() {
 
     const channel = supabase
       .channel("kiosk-status-sync")
-      .on("postgres_changes", { event: "*", schema: "public", table: "clock_events" }, async (payload) => {
-        // Only react to changes for this employee
-        const row = (payload.new as any) || (payload.old as any);
-        if (row?.employee_id === employeeId || payload.eventType === "DELETE") {
-          const status = await getEmployeeStatus(employeeId);
-          setEmployeeStatus(status);
-          // If all events deleted, go back to code entry
-          if (status === "clocked_out" && employeeStatus !== "clocked_out") {
-            toast({ title: "Status Changed", description: "Your timesheet was updated by an admin." });
-            resetKiosk();
+      .on("postgres_changes", { event: "*", schema: "public", table: "clock_events" }, async () => {
+        // Re-check status via secure RPC
+        if (codeRef.current) {
+          const result = await getEmployeeStatusByCode(codeRef.current);
+          if (result) {
+            setEmployeeStatus(result.status);
+            if (result.status === "clocked_out" && employeeStatus !== "clocked_out") {
+              toast({ title: "Status Changed", description: "Your timesheet was updated by an admin." });
+              resetKiosk();
+            }
           }
         }
       })
@@ -144,31 +132,26 @@ export default function KioskPage() {
 
   const handleSubmitCode = async () => {
     if (!code) return;
+    // Validate code format
+    if (!/^[0-9A-Za-z\-]{1,20}$/.test(code)) {
+      toast({ title: "Invalid Code", description: "Please enter a valid employee code.", variant: "destructive" });
+      setCode("");
+      return;
+    }
     setLoading(true);
     try {
-      const { data, error } = await supabase
-        .from("employees")
-        .select("id, name, active")
-        .eq("employee_code", code)
-        .maybeSingle();
+      const result = await getEmployeeStatusByCode(code);
 
-      if (error || !data) {
+      if (!result) {
         toast({ title: "Invalid Code", description: "Employee not found. Please try again.", variant: "destructive" });
         setCode("");
         setLoading(false);
         return;
       }
-      if (!data.active) {
-        toast({ title: "Access Denied", description: "This employee account is deactivated.", variant: "destructive" });
-        setCode("");
-        setLoading(false);
-        return;
-      }
 
-      setEmployeeName(data.name);
-      setEmployeeId(data.id);
-      const status = await getEmployeeStatus(data.id);
-      setEmployeeStatus(status);
+      setEmployeeName(result.name);
+      setEmployeeId(result.id);
+      setEmployeeStatus(result.status);
       codeRef.current = code;
       setStep("action_select");
     } catch {

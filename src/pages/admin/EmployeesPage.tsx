@@ -32,12 +32,31 @@ export default function EmployeesPage() {
 
   const handleSave = async () => {
     if (saving) return;
+
+    // Input validation
+    const trimmedName = form.name.trim();
+    const trimmedCode = form.employee_code.trim();
+    const payRate = parseFloat(form.pay_rate) || 0;
+
+    if (!trimmedName || trimmedName.length > 100) {
+      toast({ title: "Validation Error", description: "Name must be 1-100 characters.", variant: "destructive" });
+      return;
+    }
+    if (!/^[0-9A-Za-z\-]{1,20}$/.test(trimmedCode)) {
+      toast({ title: "Validation Error", description: "Employee code must be 1-20 alphanumeric characters.", variant: "destructive" });
+      return;
+    }
+    if (payRate < 0 || payRate > 10000) {
+      toast({ title: "Validation Error", description: "Pay rate must be between $0 and $10,000/hr.", variant: "destructive" });
+      return;
+    }
+
     setSaving(true);
     try {
       const payload = {
-        name: form.name,
-        employee_code: form.employee_code,
-        pay_rate: parseFloat(form.pay_rate) || 0,
+        name: trimmedName,
+        employee_code: trimmedCode,
+        pay_rate: payRate,
       };
 
       if (editing) {
@@ -107,15 +126,15 @@ export default function EmployeesPage() {
             <div className="space-y-4">
               <div className="space-y-2">
                 <Label>Name</Label>
-                <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="John Doe" />
+                <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="John Doe" maxLength={100} />
               </div>
               <div className="space-y-2">
                 <Label>Employee Code</Label>
-                <Input value={form.employee_code} onChange={(e) => setForm({ ...form, employee_code: e.target.value })} placeholder="1234" />
+                <Input value={form.employee_code} onChange={(e) => setForm({ ...form, employee_code: e.target.value.replace(/[^0-9A-Za-z\-]/g, "").slice(0, 20) })} placeholder="1234" maxLength={20} />
               </div>
               <div className="space-y-2">
                 <Label>Pay Rate ($/hr)</Label>
-                <Input type="number" step="0.01" value={form.pay_rate} onChange={(e) => setForm({ ...form, pay_rate: e.target.value })} placeholder="25.00" />
+                <Input type="number" step="0.01" min="0" max="10000" value={form.pay_rate} onChange={(e) => setForm({ ...form, pay_rate: e.target.value })} placeholder="25.00" />
               </div>
               <Button className="w-full" onClick={handleSave} disabled={saving}>
                 {saving ? "Saving..." : editing ? "Update" : "Add"} {!saving && "Employee"}

@@ -197,6 +197,15 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      get_employee_status: {
+        Args: { _employee_code: string }
+        Returns: {
+          current_status: string
+          employee_id: string
+          employee_name: string
+          last_event_time: string
+        }[]
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
