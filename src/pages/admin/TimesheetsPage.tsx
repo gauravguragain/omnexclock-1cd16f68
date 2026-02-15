@@ -14,7 +14,7 @@ import { CalendarIcon, Search, Pencil, Trash2, Plus, ChevronLeft, ChevronRight, 
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
-import { RollingTimePicker } from "@/components/RollingTimePicker";
+import { TimeDropdownPicker } from "@/components/TimeDropdownPicker";
 
 interface TimesheetEntry {
   employee_id: string;
@@ -406,19 +406,19 @@ export default function TimesheetsPage() {
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-2">
           <Label>Clock In</Label>
-          <RollingTimePicker value={editForm.clock_in} onChange={(v) => setEditForm({ ...editForm, clock_in: v })} />
+          <TimeDropdownPicker value={editForm.clock_in} onChange={(v) => setEditForm({ ...editForm, clock_in: v })} />
         </div>
         <div className="space-y-2">
           <Label>Clock Out</Label>
-          <RollingTimePicker value={editForm.clock_out} onChange={(v) => setEditForm({ ...editForm, clock_out: v })} />
+          <TimeDropdownPicker value={editForm.clock_out} onChange={(v) => setEditForm({ ...editForm, clock_out: v })} />
         </div>
         <div className="space-y-2">
           <Label>Break Start</Label>
-          <RollingTimePicker value={editForm.break_start} onChange={(v) => setEditForm({ ...editForm, break_start: v })} />
+          <TimeDropdownPicker value={editForm.break_start} onChange={(v) => setEditForm({ ...editForm, break_start: v })} />
         </div>
         <div className="space-y-2">
           <Label>Break End</Label>
-          <RollingTimePicker value={editForm.break_end} onChange={(v) => setEditForm({ ...editForm, break_end: v })} />
+          <TimeDropdownPicker value={editForm.break_end} onChange={(v) => setEditForm({ ...editForm, break_end: v })} />
         </div>
       </div>
       <div className="space-y-2">
