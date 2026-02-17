@@ -9,7 +9,8 @@ interface LiveEmployee {
   name: string;
   lastEvent: string;
   lastTime: string;
-  photoUrl?: string;
+  photoPath?: string;
+  signedUrl?: string;
 }
 
 export default function LiveMonitorPage() {
@@ -36,11 +37,24 @@ export default function LiveMonitorPage() {
           name: emp?.name || "Unknown",
           lastEvent: ev.event_type,
           lastTime: new Date(ev.created_at).toLocaleTimeString("en-AU", { hour: "2-digit", minute: "2-digit", hour12: true }),
-          photoUrl: ev.photo_url || undefined,
+          photoPath: ev.photo_url || undefined,
         });
       }
     }
-    setLiveData(Array.from(seen.values()));
+
+    // Generate signed URLs for photos
+    const entries = Array.from(seen.values());
+    for (const entry of entries) {
+      if (entry.photoPath) {
+        const { data } = await supabase.storage
+          .from("clock-photos")
+          .createSignedUrl(entry.photoPath, 3600);
+        if (data?.signedUrl) {
+          entry.signedUrl = data.signedUrl;
+        }
+      }
+    }
+    setLiveData(entries);
   };
 
   useEffect(() => {
@@ -101,8 +115,8 @@ export default function LiveMonitorPage() {
           {liveData.map((emp) => (
             <Card key={emp.id} className="overflow-hidden">
               <CardContent className="p-4 flex items-center gap-4">
-                {emp.photoUrl ? (
-                  <img src={emp.photoUrl} alt={emp.name} className="h-14 w-14 rounded-lg object-cover" />
+                {emp.signedUrl ? (
+                  <img src={emp.signedUrl} alt={emp.name} className="h-14 w-14 rounded-lg object-cover" />
                 ) : (
                   <div className="h-14 w-14 rounded-lg bg-secondary flex items-center justify-center text-muted-foreground font-bold text-lg">
                     {emp.name.charAt(0)}
