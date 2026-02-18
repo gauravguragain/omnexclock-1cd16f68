@@ -8,11 +8,12 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Download, DollarSign, Clock as ClockIcon, Users, Coffee, Search, ChevronLeft, ChevronRight, ArrowUpDown, CalendarIcon, CheckCircle2 } from "lucide-react";
+import { Download, DollarSign, Clock as ClockIcon, Users, Coffee, Search, ChevronLeft, ChevronRight, ArrowUpDown, CalendarIcon, CheckCircle2, Mail } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from "recharts";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { EmailCSVDialog } from "@/components/EmailCSVDialog";
 
 const CHART_COLORS = [
   "hsl(45, 60%, 53%)", "hsl(142, 71%, 45%)", "hsl(217, 91%, 60%)",
@@ -104,6 +105,7 @@ export default function PayrollPage() {
   const [sortDir, setSortDir] = useState<SortDir>("desc");
   const [chartLimit, setChartLimit] = useState(25);
   const [activeTab, setActiveTab] = useState<"employee" | "admin">("employee");
+  const [emailDialogOpen, setEmailDialogOpen] = useState(false);
 
   useEffect(() => {
     fetchPayroll();
@@ -266,7 +268,7 @@ export default function PayrollPage() {
     else { setSortKey(key); setSortDir("desc"); }
   };
 
-  const exportCSV = () => {
+  const buildPayrollCSV = () => {
     const isEmp = activeTab === "employee";
     const headers = isEmp
       ? "Name,Rate ($/hr),Total Hours,Break Hours,Net Hours,Employee Pay\n"
@@ -276,11 +278,19 @@ export default function PayrollPage() {
         ? `${e.name},${e.pay_rate.toFixed(2)},${e.total_hours.toFixed(2)},${e.break_hours.toFixed(2)},${e.net_hours.toFixed(2)},${e.employee_pay.toFixed(2)}`
         : `${e.name},${e.admin_hourly_rate.toFixed(2)},${e.total_hours.toFixed(2)},${e.break_hours.toFixed(2)},${e.net_hours.toFixed(2)},${e.admin_pay.toFixed(2)}`
     ).join("\n");
-    const blob = new Blob([headers + rows], { type: "text/csv" });
+    return headers + rows;
+  };
+
+  const payrollCsvFilename = `${activeTab}-payroll-${format(dateFrom, "yyyy-MM-dd")}-to-${format(dateTo, "yyyy-MM-dd")}.csv`;
+  const payrollCsvSubject = `${activeTab === "employee" ? "Employee" : "Admin"} Payroll Report – ${format(dateFrom, "dd MMM")} to ${format(dateTo, "dd MMM yyyy")}`;
+
+  const exportCSV = () => {
+    const csv = buildPayrollCSV();
+    const blob = new Blob([csv], { type: "text/csv" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `${activeTab}-payroll-${format(dateFrom, "yyyy-MM-dd")}-to-${format(dateTo, "yyyy-MM-dd")}.csv`;
+    a.download = payrollCsvFilename;
     a.click();
   };
 
@@ -483,9 +493,14 @@ export default function PayrollPage() {
     <div className="space-y-4">
       <div className="flex flex-col sm:flex-row gap-3 justify-between items-start sm:items-center">
         <DateRangeSelector dateFrom={dateFrom} dateTo={dateTo} onChangeFrom={setDateFrom} onChangeTo={setDateTo} />
-        <Button variant="outline" onClick={exportCSV}>
-          <Download className="mr-2 h-4 w-4" /> Export CSV
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={exportCSV}>
+            <Download className="mr-2 h-4 w-4" /> Export CSV
+          </Button>
+          <Button variant="outline" onClick={() => setEmailDialogOpen(true)}>
+            <Mail className="mr-2 h-4 w-4" /> Email CSV
+          </Button>
+        </div>
       </div>
 
       {/* Approved-only notice */}
@@ -519,6 +534,14 @@ export default function PayrollPage() {
           {renderTable()}
         </TabsContent>
       </Tabs>
+
+      <EmailCSVDialog
+        open={emailDialogOpen}
+        onOpenChange={setEmailDialogOpen}
+        csvData={buildPayrollCSV()}
+        csvFilename={payrollCsvFilename}
+        subject={payrollCsvSubject}
+      />
     </div>
   );
 }
