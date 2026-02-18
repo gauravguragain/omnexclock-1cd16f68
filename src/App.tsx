@@ -19,6 +19,8 @@ import PayrollPage from "./pages/admin/PayrollPage";
 import AuditLogPage from "./pages/admin/AuditLogPage";
 import UsersPage from "./pages/admin/UsersPage";
 import RosterPage from "./pages/admin/RosterPage";
+import ForumPage from "./pages/admin/ForumPage";
+import RequestsPage from "./pages/admin/RequestsPage";
 
 const queryClient = new QueryClient();
 
@@ -43,6 +45,8 @@ const App = () => (
               <Route path="payroll" element={<PayrollPage />} />
               <Route path="audit-log" element={<AuditLogPage />} />
               <Route path="users" element={<UsersPage />} />
+              <Route path="forum" element={<ForumPage />} />
+              <Route path="requests" element={<RequestsPage />} />
             </Route>
             <Route path="*" element={<NotFound />} />
           </Routes>
