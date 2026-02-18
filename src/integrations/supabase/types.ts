@@ -328,6 +328,29 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      get_employee_clock_history: {
+        Args: { _employee_code: string }
+        Returns: {
+          event_timestamp: string
+          event_type: string
+          id: string
+          photo_url: string
+        }[]
+      }
+      get_employee_shifts: {
+        Args: { _employee_code: string }
+        Returns: {
+          break_minutes: number
+          date: string
+          day_of_week: string
+          end_time: string
+          hours_worked: number
+          id: string
+          notes: string
+          start_time: string
+          week_start_date: string
+        }[]
+      }
       get_employee_status: {
         Args: { _employee_code: string }
         Returns: {
