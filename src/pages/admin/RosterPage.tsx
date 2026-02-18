@@ -498,12 +498,14 @@ export default function RosterPage() {
                                   </div>
                                 </button>
                               ))}
-                              <button
-                                onClick={() => openAddShift(emp.id, dayIdx)}
-                                className="w-full rounded-md border border-dashed border-border hover:border-primary/50 hover:bg-primary/5 text-muted-foreground hover:text-primary text-xs py-1.5 transition-colors flex items-center justify-center gap-1"
-                              >
-                                <Plus className="h-3 w-3" />
-                              </button>
+                              {dayShifts.length === 0 && (
+                                <button
+                                  onClick={() => openAddShift(emp.id, dayIdx)}
+                                  className="w-full rounded-md border border-dashed border-border hover:border-primary/50 hover:bg-primary/5 text-muted-foreground hover:text-primary text-xs py-1.5 transition-colors flex items-center justify-center gap-1"
+                                >
+                                  <Plus className="h-3 w-3" />
+                                </button>
+                              )}
                             </div>
                           </td>
                         );
