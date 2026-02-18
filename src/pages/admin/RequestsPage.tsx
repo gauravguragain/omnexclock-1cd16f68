@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { toAusLocaleString } from "@/lib/dateUtils";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -187,7 +188,7 @@ export default function RequestsPage() {
                       <p className="text-xs text-muted-foreground italic">Admin note: {req.admin_note}</p>
                     )}
                     <p className="text-xs text-muted-foreground">
-                      Submitted {new Date(req.created_at).toLocaleDateString("en-AU", { day: "numeric", month: "short", year: "numeric" })}
+                      Submitted {toAusLocaleString(new Date(req.created_at), { day: "numeric", month: "short", year: "numeric" })}
                     </p>
                   </div>
                   {req.status === "pending" && (

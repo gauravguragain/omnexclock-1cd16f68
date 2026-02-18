@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { toAusLocaleString } from "@/lib/dateUtils";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -164,7 +165,7 @@ export default function ForumPage() {
                     <p className="text-sm text-muted-foreground mt-1 whitespace-pre-wrap">{post.content}</p>
                     <div className="flex items-center gap-3 mt-3 flex-wrap">
                       <span className="text-xs text-muted-foreground">
-                        {new Date(post.created_at).toLocaleDateString("en-AU", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" })}
+                        {toAusLocaleString(new Date(post.created_at), { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" })}
                       </span>
                       <Button variant="ghost" size="sm" className="h-7 text-xs gap-1" onClick={() => viewComments(post)}>
                         <MessageSquare className="h-3.5 w-3.5" /> {post.comment_count} comments
@@ -227,7 +228,7 @@ export default function ForumPage() {
                     <div className="flex items-center gap-2">
                       <span className="text-sm font-medium text-foreground">{c.employee_name}</span>
                       <span className="text-xs text-muted-foreground">
-                        {new Date(c.created_at).toLocaleDateString("en-AU", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}
+                        {toAusLocaleString(new Date(c.created_at), { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}
                       </span>
                     </div>
                     <p className="text-sm text-foreground mt-1">{c.content}</p>

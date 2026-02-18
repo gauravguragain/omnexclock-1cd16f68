@@ -6,7 +6,7 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell, Legend, AreaChart, Area,
 } from "recharts";
-import { toAusDateKey, toAusTime12, toAusFormatted, toAusDisplayDate, ausStartOfToday, ausStartOfTomorrow, ausCurrentHour } from "@/lib/dateUtils";
+import { toAusDateKey, toAusTime12, toAusFormatted, toAusDisplayDate, ausStartOfToday, ausStartOfTomorrow, ausCurrentHour, ausStartOfDay, toAusDate } from "@/lib/dateUtils";
 
 interface DailyHours {
   date: string;
@@ -149,6 +149,7 @@ export default function DashboardPage() {
     const weekAgo = new Date();
     weekAgo.setDate(weekAgo.getDate() - 7);
     const weekAgoKey = toLocalDateKey(weekAgo);
+    const weekAgoISO = ausStartOfDay(toAusDate(weekAgo));
 
     // For this-week events, compute Monday's ISO
     const mondayDate = new Date(now);
@@ -156,12 +157,14 @@ export default function DashboardPage() {
     mondayDate.setHours(0, 0, 0, 0);
     const sundayDate = new Date(mondayDate);
     sundayDate.setDate(mondayDate.getDate() + 7);
+    const mondayISO = ausStartOfDay(toAusDate(mondayDate));
+    const sundayISO = ausStartOfDay(toAusDate(sundayDate));
 
     const [empRes, todayEventsRes, weekEventsRes, thisWeekEventsRes, recentRes] = await Promise.all([
       supabase.from("employees").select("id, name", { count: "exact" }).eq("active", true),
       supabase.from("clock_events").select("*").gte("timestamp", todayISO).lt("timestamp", tomorrowISO).order("timestamp"),
-      supabase.from("clock_events").select("*, employees(name)").gte("timestamp", weekAgo.toISOString()).order("timestamp"),
-      supabase.from("clock_events").select("*, employees(name)").gte("timestamp", mondayDate.toISOString()).lt("timestamp", sundayDate.toISOString()).order("timestamp"),
+      supabase.from("clock_events").select("*, employees(name)").gte("timestamp", weekAgoISO).order("timestamp"),
+      supabase.from("clock_events").select("*, employees(name)").gte("timestamp", mondayISO).lt("timestamp", sundayISO).order("timestamp"),
       supabase.from("clock_events").select("*, employees(name)").order("created_at", { ascending: false }).limit(10),
     ]);
 
