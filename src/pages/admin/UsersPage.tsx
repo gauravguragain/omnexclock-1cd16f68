@@ -113,6 +113,7 @@ export default function UsersPage() {
     setActionLoading((prev) => new Set(prev).add(user.id));
 
     if (user.has_admin_role) {
+      // Remove admin role
       const { error } = await supabase
         .from("user_roles")
         .delete()
@@ -121,8 +122,17 @@ export default function UsersPage() {
       if (error) {
         toast({ title: "Error", description: error.message, variant: "destructive" });
       } else {
+        // Also revoke viewer role if present
+        if (user.has_viewer_role) {
+          await supabase
+            .from("user_roles")
+            .delete()
+            .eq("user_id", user.id)
+            .eq("role", "viewer");
+          await logAudit("viewer_role_removed", { user_id: user.id, email: user.email });
+        }
         await logAudit("admin_role_removed", { user_id: user.id, email: user.email });
-        toast({ title: "Admin role removed" });
+        toast({ title: "Admin role removed", description: user.has_viewer_role ? "Viewer role also removed." : undefined });
         fetchUsers();
       }
     } else {
