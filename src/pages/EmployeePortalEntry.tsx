@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -8,11 +8,35 @@ import { useToast } from "@/hooks/use-toast";
 import { ArrowLeft, Clock, Users } from "lucide-react";
 import { Link } from "react-router-dom";
 
+const STORAGE_KEY = "omnexclock_portal_business_code";
+
 export default function EmployeePortalEntry() {
   const [businessCode, setBusinessCode] = useState("");
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const { toast } = useToast();
   const navigate = useNavigate();
+
+  // Auto-redirect if business code is saved on this device
+  useEffect(() => {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (saved) {
+      supabase
+        .from("businesses")
+        .select("business_code")
+        .eq("business_code", saved)
+        .maybeSingle()
+        .then(({ data }) => {
+          if (data) {
+            navigate(`/b/${data.business_code}/portal`, { replace: true });
+          } else {
+            localStorage.removeItem(STORAGE_KEY);
+            setLoading(false);
+          }
+        });
+    } else {
+      setLoading(false);
+    }
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -35,8 +59,17 @@ export default function EmployeePortalEntry() {
       return;
     }
 
+    localStorage.setItem(STORAGE_KEY, data.business_code);
     navigate(`/b/${data.business_code}/portal`);
   };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <Clock className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-background p-4">
