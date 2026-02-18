@@ -13,6 +13,7 @@ import {
   ChevronLeft, ChevronRight, Plus, Trash2, Copy, Send, Clock, AlertCircle,
 } from "lucide-react";
 import type { Tables } from "@/integrations/supabase/types";
+import { toAusDate, toAusFormatted } from "@/lib/dateUtils";
 
 type Employee = Tables<"employees">;
 type Shift = Tables<"shifts">;
@@ -89,7 +90,7 @@ export default function RosterPage() {
 
   const weekDates = useMemo(() => DAYS.map((_, i) => addDays(weekStart, i)), [weekStart]);
   const weekEnd = addDays(weekStart, 6);
-  const weekLabel = `${weekStart.toLocaleDateString("en-AU", { day: "numeric", month: "short" })} – ${weekEnd.toLocaleDateString("en-AU", { day: "numeric", month: "short", year: "numeric" })}`;
+  const weekLabel = `${toAusFormatted(weekStart, { day: "numeric", month: "short" })} – ${toAusFormatted(weekEnd, { day: "numeric", month: "short", year: "numeric" })}`;
 
   /* ── data fetching ── */
 
@@ -339,7 +340,7 @@ export default function RosterPage() {
                       <th key={i} className={`text-center px-2 py-2.5 min-w-[120px] font-medium ${isToday ? "text-primary" : "text-muted-foreground"}`}>
                         <div>{DAYS[i]}</div>
                         <div className={`text-xs ${isToday ? "text-primary" : "text-muted-foreground/70"}`}>
-                          {d.toLocaleDateString("en-AU", { day: "numeric", month: "short" })}
+                          {toAusFormatted(d, { day: "numeric", month: "short" })}
                         </div>
                       </th>
                     );

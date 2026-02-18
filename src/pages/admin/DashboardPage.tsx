@@ -6,6 +6,7 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell, Legend, AreaChart, Area,
 } from "recharts";
+import { toAusDateKey, toAusTime12, toAusFormatted, toAusDisplayDate, ausStartOfToday, ausStartOfTomorrow, ausCurrentHour } from "@/lib/dateUtils";
 
 interface DailyHours {
   date: string;
@@ -14,12 +15,7 @@ interface DailyHours {
   employees: number;
 }
 
-const toLocalDateKey = (d: Date) => {
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, "0");
-  const day = String(d.getDate()).padStart(2, "0");
-  return `${y}-${m}-${day}`;
-};
+const toLocalDateKey = (d: Date) => toAusDateKey(d);
 
 const roundHours = (h: number) => Math.round(h * 100) / 100;
 
@@ -116,13 +112,11 @@ export default function DashboardPage() {
   };
 
   const getCurrentlyClockedIn = async () => {
-    // Match live monitor approach: get today's events DESC, first per employee = current status
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
+    const todayISO = ausStartOfToday();
     const { data: events } = await supabase
       .from("clock_events")
       .select("employee_id, event_type")
-      .gte("created_at", today.toISOString())
+      .gte("created_at", todayISO)
       .order("created_at", { ascending: false });
 
     if (!events) return 0;
@@ -141,31 +135,33 @@ export default function DashboardPage() {
   };
 
   const fetchAll = async () => {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
+    const todayISO = ausStartOfToday();
+    const tomorrowISO = ausStartOfTomorrow();
 
-    // Week start (Monday) to end (Sunday)
-    const dayOfWeek = today.getDay();
+    // Week start (Monday) — compute from Aus today
+    const now = new Date();
+    const dayOfWeek = now.getDay();
     const mondayOffset = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
-    const weekStart = new Date(today);
-    weekStart.setDate(today.getDate() + mondayOffset);
-    weekStart.setHours(0, 0, 0, 0);
-
-    const weekEnd = new Date(weekStart);
-    weekEnd.setDate(weekStart.getDate() + 7);
+    const weekStartDate = new Date(now);
+    weekStartDate.setDate(now.getDate() + mondayOffset);
+    const weekStartISO = ausStartOfToday(); // We'll use date-key based approach instead
 
     const weekAgo = new Date();
     weekAgo.setDate(weekAgo.getDate() - 7);
-    weekAgo.setHours(0, 0, 0, 0);
+    const weekAgoKey = toLocalDateKey(weekAgo);
 
-    const tomorrow = new Date(today);
-    tomorrow.setDate(tomorrow.getDate() + 1);
+    // For this-week events, compute Monday's ISO
+    const mondayDate = new Date(now);
+    mondayDate.setDate(now.getDate() + mondayOffset);
+    mondayDate.setHours(0, 0, 0, 0);
+    const sundayDate = new Date(mondayDate);
+    sundayDate.setDate(mondayDate.getDate() + 7);
 
     const [empRes, todayEventsRes, weekEventsRes, thisWeekEventsRes, recentRes] = await Promise.all([
       supabase.from("employees").select("id, name", { count: "exact" }).eq("active", true),
-      supabase.from("clock_events").select("*").gte("timestamp", today.toISOString()).lt("timestamp", tomorrow.toISOString()).order("timestamp"),
+      supabase.from("clock_events").select("*").gte("timestamp", todayISO).lt("timestamp", tomorrowISO).order("timestamp"),
       supabase.from("clock_events").select("*, employees(name)").gte("timestamp", weekAgo.toISOString()).order("timestamp"),
-      supabase.from("clock_events").select("*, employees(name)").gte("timestamp", weekStart.toISOString()).lt("timestamp", weekEnd.toISOString()).order("timestamp"),
+      supabase.from("clock_events").select("*, employees(name)").gte("timestamp", mondayDate.toISOString()).lt("timestamp", sundayDate.toISOString()).order("timestamp"),
       supabase.from("clock_events").select("*, employees(name)").order("created_at", { ascending: false }).limit(10),
     ]);
 
@@ -228,7 +224,7 @@ export default function DashboardPage() {
       const d = new Date();
       d.setDate(d.getDate() - i);
       const key = toLocalDateKey(d);
-      const label = d.toLocaleDateString("en-AU", { weekday: "short", day: "numeric", month: "short" });
+      const label = toAusFormatted(d, { weekday: "short", day: "numeric", month: "short" });
       const isToday = key === todayKeyWeekly;
       const dayData = dailyMap.get(key);
       let dayHours = 0;
@@ -265,7 +261,7 @@ export default function DashboardPage() {
     const hourlyData: HourlyActivity[] = [];
     let cumulative = 0;
     for (let h = 5; h <= 23; h++) {
-      const hourEnd = new Date(today);
+      const hourEnd = new Date();
       hourEnd.setHours(h + 1, 0, 0, 0);
       const cutoff = Math.min(hourEnd.getTime(), Date.now());
       
@@ -310,7 +306,7 @@ export default function DashboardPage() {
       }
       
       // Only show hours up to current time
-      if (hourEnd.getTime() <= Date.now() || h <= new Date().getHours()) {
+      if (hourEnd.getTime() <= Date.now() || h <= ausCurrentHour()) {
         hourlyData.push({
           hour: `${h.toString().padStart(2, "0")}:00`,
           cumulativeHours: roundHours(totalHoursUpTo),
@@ -325,8 +321,8 @@ export default function DashboardPage() {
       (recentRes.data || []).map((ev) => ({
         name: (ev.employees as any)?.name || "Unknown",
         type: ev.event_type,
-        time: new Date(ev.created_at).toLocaleTimeString("en-AU", { hour: "2-digit", minute: "2-digit", hour12: true }),
-        date: new Date(ev.created_at).toLocaleDateString("en-AU"),
+        time: toAusTime12(new Date(ev.created_at)),
+        date: toAusDisplayDate(new Date(ev.created_at)),
       }))
     );
   };

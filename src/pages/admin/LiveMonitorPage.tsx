@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Clock, LogIn, LogOut, Coffee } from "lucide-react";
+import { toAusTime12, ausStartOfToday } from "@/lib/dateUtils";
 
 interface LiveEmployee {
   id: string;
@@ -17,13 +18,12 @@ export default function LiveMonitorPage() {
   const [liveData, setLiveData] = useState<LiveEmployee[]>([]);
 
   const fetchLive = async () => {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
+    const todayISO = ausStartOfToday();
 
     const { data: events } = await supabase
       .from("clock_events")
       .select("*, employees(name)")
-      .gte("created_at", today.toISOString())
+      .gte("created_at", todayISO)
       .order("created_at", { ascending: false });
 
     if (!events) return;
@@ -36,7 +36,7 @@ export default function LiveMonitorPage() {
           id: ev.employee_id,
           name: emp?.name || "Unknown",
           lastEvent: ev.event_type,
-          lastTime: new Date(ev.created_at).toLocaleTimeString("en-AU", { hour: "2-digit", minute: "2-digit", hour12: true }),
+          lastTime: toAusTime12(new Date(ev.created_at)),
           photoPath: ev.photo_url || undefined,
         });
       }
@@ -60,7 +60,6 @@ export default function LiveMonitorPage() {
   useEffect(() => {
     fetchLive();
 
-    // Realtime subscription instead of polling
     const channel = supabase
       .channel("live-monitor-realtime")
       .on("postgres_changes", { event: "*", schema: "public", table: "clock_events" }, () => {
@@ -68,7 +67,6 @@ export default function LiveMonitorPage() {
       })
       .subscribe();
 
-    // Keep a slower fallback poll
     const interval = setInterval(fetchLive, 30000);
 
     return () => {
