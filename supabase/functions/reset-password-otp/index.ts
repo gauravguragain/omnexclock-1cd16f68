@@ -40,17 +40,32 @@ serve(async (req) => {
 
       const normalizedEmail = email.trim().toLowerCase();
 
-      // Check user exists
+      // Find user by email
       const { data: userData, error: userError } = await supabaseAdmin.auth.admin.listUsers();
       if (userError) throw userError;
 
-      const userExists = userData.users.some(
+      const targetUser = userData.users.find(
         (u) => u.email?.toLowerCase() === normalizedEmail
       );
-      // Always return success to prevent email enumeration
-      if (!userExists) {
-        return new Response(JSON.stringify({ success: true }), {
-          status: 200,
+
+      if (!targetUser) {
+        return new Response(JSON.stringify({ error: "No admin account found with this email." }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      // Check if user has admin role
+      const { data: roleData } = await supabaseAdmin
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", targetUser.id)
+        .eq("role", "admin")
+        .limit(1);
+
+      if (!roleData || roleData.length === 0) {
+        return new Response(JSON.stringify({ error: "No admin account found with this email." }), {
+          status: 400,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
