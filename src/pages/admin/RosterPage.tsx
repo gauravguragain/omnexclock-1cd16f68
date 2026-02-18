@@ -222,12 +222,31 @@ export default function RosterPage() {
   };
 
   const handleDeleteShift = async (shiftId: string) => {
+    const shift = shifts.find(s => s.id === shiftId);
+    const wasPublished = shift?.status === "published";
+
     const { error } = await supabase.from("shifts").delete().eq("id", shiftId);
     if (error) {
       toast({ title: "Error", description: error.message, variant: "destructive" });
     } else {
-      await logAudit("shift_delete", { shift_id: shiftId });
-      toast({ title: "Shift deleted" });
+      await logAudit("shift_delete", { shift_id: shiftId, was_published: wasPublished });
+      if (wasPublished) {
+        toast({
+          title: "Shift removed — please re-publish",
+          description: "This was a published shift. Publish the week again to notify the employee of the change.",
+          variant: "destructive",
+        });
+        // Mark remaining published shifts for this employee as draft so admin must re-publish
+        const empId = shift.employee_id;
+        const empPublishedIds = shifts
+          .filter(s => s.employee_id === empId && s.status === "published" && s.id !== shiftId)
+          .map(s => s.id);
+        if (empPublishedIds.length > 0) {
+          await supabase.from("shifts").update({ status: "draft" }).in("id", empPublishedIds);
+        }
+      } else {
+        toast({ title: "Shift deleted" });
+      }
       if (editingShift?.id === shiftId) setDialogOpen(false);
       fetchData();
     }
