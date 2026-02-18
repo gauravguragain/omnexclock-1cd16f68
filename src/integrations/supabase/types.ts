@@ -998,7 +998,7 @@ export type Database = {
           }
     }
     Enums: {
-      app_role: "admin" | "user" | "viewer"
+      app_role: "admin" | "user" | "viewer" | "master"
       clock_event_type: "clock_in" | "clock_out" | "break_start" | "break_end"
     }
     CompositeTypes: {
@@ -1127,7 +1127,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["admin", "user", "viewer"],
+      app_role: ["admin", "user", "viewer", "master"],
       clock_event_type: ["clock_in", "clock_out", "break_start", "break_end"],
     },
   },
