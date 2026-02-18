@@ -61,7 +61,7 @@ serve(async (req) => {
       });
     }
 
-    const { employee_code, event_type, photo_base64, device_info } = body;
+    const { employee_code, event_type, photo_base64, device_info, business_code } = body;
 
     // Input validation
     if (!employee_code || typeof employee_code !== "string" || !CODE_REGEX.test(employee_code)) {
@@ -82,12 +82,24 @@ serve(async (req) => {
       });
     }
 
-    // Validate employee
-    const { data: employee, error: empError } = await supabase
+    // Validate employee (scoped to business if business_code provided)
+    let employeeQuery = supabase
       .from("employees")
-      .select("id, name, active")
-      .eq("employee_code", employee_code)
-      .maybeSingle();
+      .select("id, name, active, business_id")
+      .eq("employee_code", employee_code);
+
+    if (business_code && typeof business_code === "string") {
+      const { data: biz } = await supabase
+        .from("businesses")
+        .select("id")
+        .eq("business_code", business_code)
+        .maybeSingle();
+      if (biz) {
+        employeeQuery = employeeQuery.eq("business_id", biz.id);
+      }
+    }
+
+    const { data: employee, error: empError } = await employeeQuery.maybeSingle();
 
     if (empError || !employee) {
       // Log failed attempt

@@ -172,23 +172,24 @@ export default function PortalPage() {
 
     setLoading(true);
     try {
-      const { data: statusData } = await supabase.rpc("get_employee_status", { _employee_code: code });
+      const bizCode = urlBusinessCode?.toUpperCase() || null;
+      const { data: statusData } = await supabase.rpc("get_employee_status", { _employee_code: code, _business_code: bizCode });
       if (!statusData || statusData.length === 0) {
         toast({ title: "Invalid Code", description: "Employee not found.", variant: "destructive" });
-        setCode("");
         setLoading(false);
         return;
       }
 
-      setEmployeeInfo(statusData[0] as EmployeeInfo);
+      const info = statusData[0] as EmployeeInfo;
+      setEmployeeInfo(info);
       setEmployeeCode(code);
 
       const [shiftsRes, tsRes, forumRes, requestsRes, approvalsRes] = await Promise.all([
-        supabase.rpc("get_employee_shifts", { _employee_code: code }),
-        supabase.rpc("get_employee_timesheets", { _employee_code: code }),
-        supabase.rpc("get_forum_posts", { _employee_code: code }),
-        supabase.rpc("get_employee_requests", { _employee_code: code }),
-        supabase.rpc("get_employee_timesheet_approvals", { _employee_code: code }),
+        supabase.rpc("get_employee_shifts", { _employee_code: code, _business_code: bizCode }),
+        supabase.rpc("get_employee_timesheets", { _employee_code: code, _business_code: bizCode }),
+        supabase.rpc("get_forum_posts", { _employee_code: code, _business_code: bizCode }),
+        supabase.rpc("get_employee_requests", { _employee_code: code, _business_code: bizCode }),
+        supabase.rpc("get_employee_timesheet_approvals", { _employee_code: code, _business_code: bizCode }),
       ]);
 
       setShifts((shiftsRes.data as PortalShift[]) || []);
@@ -224,6 +225,7 @@ export default function PortalPage() {
       const { data } = await supabase.rpc("get_employee_timesheet_history", {
         _employee_code: employeeCode,
         _date: workDate,
+        _business_code: urlBusinessCode?.toUpperCase() || null,
       });
       setTsHistoryLogs(data || []);
     } catch {
@@ -237,9 +239,10 @@ export default function PortalPage() {
   const loadForumPost = async (post: any) => {
     setSelectedForumPost(post);
     setCommentLoading(true);
+    const bizCode = urlBusinessCode?.toUpperCase() || null;
     const [commentsRes, reactionsRes] = await Promise.all([
-      supabase.rpc("get_forum_comments", { _employee_code: employeeCode, _post_id: post.id }),
-      supabase.rpc("get_my_reactions", { _employee_code: employeeCode, _post_id: post.id }),
+      supabase.rpc("get_forum_comments", { _employee_code: employeeCode, _post_id: post.id, _business_code: bizCode }),
+      supabase.rpc("get_my_reactions", { _employee_code: employeeCode, _post_id: post.id, _business_code: bizCode }),
     ]);
     setForumComments(commentsRes.data || []);
     setMyReactions(new Set((reactionsRes.data || []).map((r: any) => r.reaction)));
@@ -248,21 +251,23 @@ export default function PortalPage() {
 
   const sendComment = async () => {
     if (!newComment.trim() || !selectedForumPost) return;
-    await supabase.rpc("add_forum_comment", { _employee_code: employeeCode, _post_id: selectedForumPost.id, _content: newComment.trim() });
+    const bizCode = urlBusinessCode?.toUpperCase() || null;
+    await supabase.rpc("add_forum_comment", { _employee_code: employeeCode, _post_id: selectedForumPost.id, _content: newComment.trim(), _business_code: bizCode });
     setNewComment("");
     loadForumPost(selectedForumPost);
     // Refresh post counts
-    const { data } = await supabase.rpc("get_forum_posts", { _employee_code: employeeCode });
+    const { data } = await supabase.rpc("get_forum_posts", { _employee_code: employeeCode, _business_code: bizCode });
     setForumPosts(data || []);
   };
 
   const toggleReaction = async (emoji: string) => {
     if (!selectedForumPost) return;
-    await supabase.rpc("toggle_forum_reaction", { _employee_code: employeeCode, _post_id: selectedForumPost.id, _reaction: emoji });
+    const bizCode = urlBusinessCode?.toUpperCase() || null;
+    await supabase.rpc("toggle_forum_reaction", { _employee_code: employeeCode, _post_id: selectedForumPost.id, _reaction: emoji, _business_code: bizCode });
     // Refresh
     const [reactionsRes, postsRes] = await Promise.all([
-      supabase.rpc("get_my_reactions", { _employee_code: employeeCode, _post_id: selectedForumPost.id }),
-      supabase.rpc("get_forum_posts", { _employee_code: employeeCode }),
+      supabase.rpc("get_my_reactions", { _employee_code: employeeCode, _post_id: selectedForumPost.id, _business_code: bizCode }),
+      supabase.rpc("get_forum_posts", { _employee_code: employeeCode, _business_code: bizCode }),
     ]);
     setMyReactions(new Set((reactionsRes.data || []).map((r: any) => r.reaction)));
     setForumPosts(postsRes.data || []);
@@ -276,9 +281,11 @@ export default function PortalPage() {
 
   const submitRequest = async () => {
     setReqSaving(true);
+    const bizCode = urlBusinessCode?.toUpperCase() || null;
     const params: any = {
       _employee_code: employeeCode,
       _request_type: reqType,
+      _business_code: bizCode,
       _is_recurring: reqIsRecurring,
       _reason: reqReason.trim() || null,
       _start_time: reqType === "unavailability" && reqStartTime && reqStartTime !== "none" ? reqStartTime : null,
@@ -302,7 +309,7 @@ export default function PortalPage() {
         toast({ title: "Request Updated" });
         setRequestOpen(false);
         resetRequestForm();
-        const { data: updated } = await supabase.rpc("get_employee_requests", { _employee_code: employeeCode });
+        const { data: updated } = await supabase.rpc("get_employee_requests", { _employee_code: employeeCode, _business_code: bizCode });
         setMyRequests(updated || []);
       } else {
         toast({ title: "Error", description: "Failed to update request.", variant: "destructive" });
@@ -313,7 +320,7 @@ export default function PortalPage() {
         toast({ title: "Request Submitted", description: "Your request has been sent for admin approval." });
         setRequestOpen(false);
         resetRequestForm();
-        const { data: updated } = await supabase.rpc("get_employee_requests", { _employee_code: employeeCode });
+        const { data: updated } = await supabase.rpc("get_employee_requests", { _employee_code: employeeCode, _business_code: bizCode });
         setMyRequests(updated || []);
       } else {
         toast({ title: "Error", description: "Failed to submit request.", variant: "destructive" });
@@ -337,10 +344,11 @@ export default function PortalPage() {
   };
 
   const deleteRequest = async (requestId: string) => {
-    const { data } = await supabase.rpc("delete_employee_request", { _employee_code: employeeCode, _request_id: requestId });
+    const bizCode = urlBusinessCode?.toUpperCase() || null;
+    const { data } = await supabase.rpc("delete_employee_request", { _employee_code: employeeCode, _request_id: requestId, _business_code: bizCode });
     if (data) {
       toast({ title: "Request deleted" });
-      const { data: updated } = await supabase.rpc("get_employee_requests", { _employee_code: employeeCode });
+      const { data: updated } = await supabase.rpc("get_employee_requests", { _employee_code: employeeCode, _business_code: bizCode });
       setMyRequests(updated || []);
     } else {
       toast({ title: "Error", description: "Failed to delete request.", variant: "destructive" });
