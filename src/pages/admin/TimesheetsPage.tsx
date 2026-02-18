@@ -442,7 +442,11 @@ export default function TimesheetsPage() {
       e.total_hours.toString(),
       e.net_hours.toString(),
     ]);
-    return [headers, ...rows].map(r => r.map(c => `"${c}"`).join(",")).join("\n");
+    const totBreakMin = filtered.reduce((s, e) => s + e.break_minutes, 0);
+    const totTotalHrs = filtered.reduce((s, e) => s + e.total_hours, 0);
+    const totNetHrs = filtered.reduce((s, e) => s + e.net_hours, 0);
+    const totalRow = ["", "TOTAL", "", "", "", "", "", totBreakMin.toString(), totTotalHrs.toFixed(2), totNetHrs.toFixed(2)];
+    return [headers, ...rows, totalRow].map(r => r.map(c => `"${c}"`).join(",")).join("\n");
   };
 
   const downloadCSV = () => {
