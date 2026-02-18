@@ -8,6 +8,7 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import NotFound from "./pages/NotFound";
 import Index from "./pages/Index";
 import AuthPage from "./pages/AuthPage";
+import ResetPasswordPage from "./pages/ResetPasswordPage";
 import KioskPage from "./pages/KioskPage";
 import PortalPage from "./pages/PortalPage";
 import AdminLayout from "./layouts/AdminLayout";
@@ -34,6 +35,7 @@ const App = () => (
           <Routes>
             <Route path="/" element={<Index />} />
             <Route path="/auth" element={<AuthPage />} />
+            <Route path="/reset-password" element={<ResetPasswordPage />} />
             <Route path="/kiosk" element={<KioskPage />} />
             <Route path="/portal" element={<PortalPage />} />
             <Route path="/admin" element={<AdminLayout />}>
