@@ -311,38 +311,38 @@ export default function PayrollPage() {
     a.click();
   };
 
-  const totalEmployeePay = entries.reduce((sum, e) => sum + e.employee_pay, 0);
-  const totalAdminPay = entries.reduce((sum, e) => sum + e.admin_pay, 0);
-  const totalNetHours = entries.reduce((sum, e) => sum + e.net_hours, 0);
-  const totalBreakHours = entries.reduce((sum, e) => sum + e.break_hours, 0);
+  const totalEmployeePay = filtered.reduce((sum, e) => sum + e.employee_pay, 0);
+  const totalAdminPay = filtered.reduce((sum, e) => sum + e.admin_pay, 0);
+  const totalNetHours = filtered.reduce((sum, e) => sum + e.net_hours, 0);
+  const totalBreakHours = filtered.reduce((sum, e) => sum + e.break_hours, 0);
 
   const payKey = activeTab === "employee" ? "employee_pay" : "admin_pay";
-  const topByPay = [...entries].sort((a, b) => (b[payKey] as number) - (a[payKey] as number)).slice(0, chartLimit);
-  const topByHours = [...entries].sort((a, b) => b.net_hours - a.net_hours).slice(0, chartLimit);
-  const othersPayCount = entries.length - topByPay.length;
-  const othersPay = entries.reduce((s, e) => s + (e[payKey] as number), 0) - topByPay.reduce((s, e) => s + (e[payKey] as number), 0);
-  const othersHours = entries.reduce((s, e) => s + e.net_hours, 0) - topByHours.reduce((s, e) => s + e.net_hours, 0);
+  const topByPay = [...filtered].sort((a, b) => (b[payKey] as number) - (a[payKey] as number)).slice(0, chartLimit);
+  const topByHours = [...filtered].sort((a, b) => b.net_hours - a.net_hours).slice(0, chartLimit);
+  const othersPayCount = filtered.length - topByPay.length;
+  const othersPay = filtered.reduce((s, e) => s + (e[payKey] as number), 0) - topByPay.reduce((s, e) => s + (e[payKey] as number), 0);
+  const othersHours = filtered.reduce((s, e) => s + e.net_hours, 0) - topByHours.reduce((s, e) => s + e.net_hours, 0);
 
   const barData = othersPayCount > 0
     ? [...topByPay.map(e => ({ name: e.name, pay: e[payKey] as number })), { name: `Others (${othersPayCount})`, pay: Math.round(othersPay * 100) / 100 }]
     : topByPay.map(e => ({ name: e.name, pay: e[payKey] as number }));
 
-  const pieData = entries.length > chartLimit
-    ? [...topByHours.map(e => ({ name: e.name, net_hours: e.net_hours })), { name: `Others (${entries.length - chartLimit})`, net_hours: Math.round(othersHours * 100) / 100 }]
-    : (topByHours.length > 0 ? topByHours : entries).map(e => ({ name: e.name, net_hours: e.net_hours }));
+  const pieData = filtered.length > chartLimit
+    ? [...topByHours.map(e => ({ name: e.name, net_hours: e.net_hours })), { name: `Others (${filtered.length - chartLimit})`, net_hours: Math.round(othersHours * 100) / 100 }]
+    : (topByHours.length > 0 ? topByHours : filtered).map(e => ({ name: e.name, net_hours: e.net_hours }));
 
   const empSummaryCards = [
     { title: "Total Employee Pay", value: `$${totalEmployeePay.toFixed(2)}`, icon: DollarSign, color: "text-primary" },
     { title: "Total Net Hours", value: totalNetHours.toFixed(2), icon: ClockIcon, color: "text-green-500" },
     { title: "Total Break Hours", value: totalBreakHours.toFixed(2), icon: Coffee, color: "text-yellow-500" },
-    { title: "Employees", value: entries.length, icon: Users, color: "text-primary" },
+    { title: "Employees", value: filtered.length, icon: Users, color: "text-primary" },
   ];
 
   const adminSummaryCards = [
     { title: "Total Admin Cost (ex GST)", value: `$${totalAdminPay.toFixed(2)}`, icon: DollarSign, color: "text-primary" },
     { title: "Total Net Hours", value: totalNetHours.toFixed(2), icon: ClockIcon, color: "text-green-500" },
     { title: "Total Break Hours", value: totalBreakHours.toFixed(2), icon: Coffee, color: "text-yellow-500" },
-    { title: "Employees", value: entries.length, icon: Users, color: "text-primary" },
+    { title: "Employees", value: filtered.length, icon: Users, color: "text-primary" },
   ];
 
   const summaryCards = activeTab === "employee" ? empSummaryCards : adminSummaryCards;
