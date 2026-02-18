@@ -141,3 +141,20 @@ function getAusOffset(dateStr: string): string {
 export function toAusLocaleString(d: Date, options: Intl.DateTimeFormatOptions): string {
   return d.toLocaleString("en-AU", { timeZone: TIMEZONE, ...options });
 }
+
+/** Convert a time string (HH:MM 24h or "hh:mm am/pm") to 12-hour format.
+ *  If already in 12h format (contains am/pm), returns as-is. */
+export function ensureTime12(timeStr: string): string {
+  if (!timeStr) return timeStr;
+  // Already 12h format
+  if (/[ap]m/i.test(timeStr)) return timeStr.toLowerCase();
+  // Parse HH:MM
+  const match = timeStr.match(/^(\d{1,2}):(\d{2})$/);
+  if (!match) return timeStr;
+  let h = parseInt(match[1]);
+  const m = match[2];
+  const ampm = h >= 12 ? "pm" : "am";
+  if (h === 0) h = 12;
+  else if (h > 12) h -= 12;
+  return `${h}:${m} ${ampm}`;
+}
