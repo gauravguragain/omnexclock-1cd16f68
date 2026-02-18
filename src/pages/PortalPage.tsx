@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import {
-  ArrowLeft, Delete, CalendarRange, Clock, LogIn, LogOut, Coffee, User,
+  ArrowLeft, Delete, CalendarRange, Clock, LogIn, LogOut, Coffee, User, FileText,
 } from "lucide-react";
 
 /* ── types ───────────────────────────────────────────────── */
@@ -24,11 +24,15 @@ interface PortalShift {
   week_start_date: string;
 }
 
-interface ClockEvent {
-  id: string;
-  event_type: string;
-  event_timestamp: string;
-  photo_url: string | null;
+interface TimesheetEntry {
+  work_date: string;
+  clock_in: string | null;
+  clock_out: string | null;
+  break_start: string | null;
+  break_end: string | null;
+  break_minutes: number;
+  total_hours: number;
+  net_hours: number;
 }
 
 interface EmployeeInfo {
@@ -67,12 +71,10 @@ function getMonday(d: Date): Date {
   return mon;
 }
 
-const EVENT_CONFIG: Record<string, { label: string; icon: React.ReactNode; color: string }> = {
-  clock_in: { label: "Clock In", icon: <LogIn className="h-4 w-4" />, color: "bg-success/15 text-success" },
-  clock_out: { label: "Clock Out", icon: <LogOut className="h-4 w-4" />, color: "bg-destructive/15 text-destructive" },
-  break_start: { label: "Break Start", icon: <Coffee className="h-4 w-4" />, color: "bg-warning/15 text-warning" },
-  break_end: { label: "Break End", icon: <Clock className="h-4 w-4" />, color: "bg-primary/15 text-primary" },
-};
+function fmtTimestamp(ts: string | null): string {
+  if (!ts) return "—";
+  return new Date(ts).toLocaleTimeString("en-AU", { hour: "2-digit", minute: "2-digit", hour12: true });
+}
 
 /* ── component ───────────────────────────────────────────── */
 
@@ -83,7 +85,7 @@ export default function PortalPage() {
   const [employeeCode, setEmployeeCode] = useState("");
   const [employeeInfo, setEmployeeInfo] = useState<EmployeeInfo | null>(null);
   const [shifts, setShifts] = useState<PortalShift[]>([]);
-  const [clockHistory, setClockHistory] = useState<ClockEvent[]>([]);
+  const [timesheets, setTimesheets] = useState<TimesheetEntry[]>([]);
   const [loading, setLoading] = useState(false);
   const [currentTime, setCurrentTime] = useState(new Date());
 
@@ -116,14 +118,14 @@ export default function PortalPage() {
       setEmployeeInfo(statusData[0] as EmployeeInfo);
       setEmployeeCode(code);
 
-      // Fetch shifts and clock history in parallel
-      const [shiftsRes, clockRes] = await Promise.all([
+      // Fetch shifts and timesheets in parallel
+      const [shiftsRes, tsRes] = await Promise.all([
         supabase.rpc("get_employee_shifts", { _employee_code: code }),
-        supabase.rpc("get_employee_clock_history", { _employee_code: code }),
+        supabase.rpc("get_employee_timesheets", { _employee_code: code }),
       ]);
 
       setShifts((shiftsRes.data as PortalShift[]) || []);
-      setClockHistory((clockRes.data as ClockEvent[]) || []);
+      setTimesheets((tsRes.data as TimesheetEntry[]) || []);
       setAuthenticated(true);
     } catch {
       toast({ title: "Error", description: "Unable to load portal.", variant: "destructive" });
@@ -137,7 +139,7 @@ export default function PortalPage() {
     setEmployeeCode("");
     setEmployeeInfo(null);
     setShifts([]);
-    setClockHistory([]);
+    setTimesheets([]);
   };
 
   // Auto-logout after 5 minutes of inactivity
@@ -169,16 +171,10 @@ export default function PortalPage() {
     return Object.entries(weeks).sort(([a], [b]) => a.localeCompare(b));
   }, [shifts]);
 
-  /* ── group clock events by date ── */
-  const clockByDate = useMemo(() => {
-    const dates: Record<string, ClockEvent[]> = {};
-    for (const e of clockHistory) {
-      const dateKey = new Date(e.event_timestamp).toLocaleDateString("en-AU");
-      if (!dates[dateKey]) dates[dateKey] = [];
-      dates[dateKey].push(e);
-    }
-    return Object.entries(dates);
-  }, [clockHistory]);
+  /* ── timesheet totals ── */
+  const timesheetTotalHours = useMemo(() => {
+    return timesheets.reduce((sum, t) => sum + (t.net_hours || 0), 0);
+  }, [timesheets]);
 
   /* ── total scheduled hours this week ── */
   const thisWeekHours = useMemo(() => {
@@ -304,8 +300,8 @@ export default function PortalPage() {
             <TabsTrigger value="roster" className="gap-1.5">
               <CalendarRange className="h-3.5 w-3.5" /> Roster
             </TabsTrigger>
-            <TabsTrigger value="history" className="gap-1.5">
-              <Clock className="h-3.5 w-3.5" /> Clock History
+            <TabsTrigger value="timesheets" className="gap-1.5">
+              <FileText className="h-3.5 w-3.5" /> Timesheets
             </TabsTrigger>
           </TabsList>
 
@@ -363,42 +359,83 @@ export default function PortalPage() {
             )}
           </TabsContent>
 
-          {/* CLOCK HISTORY TAB */}
-          <TabsContent value="history" className="space-y-4 mt-4">
-            {clockByDate.length === 0 ? (
+          {/* TIMESHEETS TAB */}
+          <TabsContent value="timesheets" className="space-y-3 mt-4">
+            {timesheets.length === 0 ? (
               <Card>
                 <CardContent className="p-8 text-center text-muted-foreground">
-                  <Clock className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                  <p>No clock events in the last 14 days.</p>
+                  <FileText className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                  <p>No timesheet entries in the last 14 days.</p>
                 </CardContent>
               </Card>
             ) : (
-              clockByDate.map(([dateStr, events]) => (
-                <Card key={dateStr}>
-                  <CardHeader className="pb-2 px-4 pt-4">
-                    <CardTitle className="text-sm font-medium text-muted-foreground">{dateStr}</CardTitle>
-                  </CardHeader>
-                  <CardContent className="px-4 pb-4 space-y-1.5">
-                    {events.map(ev => {
-                      const cfg = EVENT_CONFIG[ev.event_type] || EVENT_CONFIG.clock_in;
-                      const time = new Date(ev.event_timestamp);
-                      return (
-                        <div key={ev.id} className="flex items-center gap-3 rounded-lg bg-secondary/50 px-3 py-2">
-                          <div className={`flex items-center justify-center h-8 w-8 rounded-full ${cfg.color}`}>
-                            {cfg.icon}
-                          </div>
-                          <div className="flex-1">
-                            <p className="text-sm font-medium text-foreground">{cfg.label}</p>
-                          </div>
-                          <p className="text-sm font-mono text-muted-foreground">
-                            {time.toLocaleTimeString("en-AU", { hour: "2-digit", minute: "2-digit", hour12: true })}
-                          </p>
-                        </div>
-                      );
-                    })}
+              <>
+                {/* Summary */}
+                <Card>
+                  <CardContent className="p-3 flex items-center justify-between">
+                    <span className="text-sm text-muted-foreground">Total worked (14 days)</span>
+                    <span className="font-mono font-bold text-foreground">{timesheetTotalHours.toFixed(1)}h</span>
                   </CardContent>
                 </Card>
-              ))
+
+                {/* Timesheet rows */}
+                {timesheets.map((ts) => {
+                  const d = new Date(ts.work_date + "T00:00:00");
+                  const dayName = d.toLocaleDateString("en-AU", { weekday: "short" });
+                  const dateLabel = d.toLocaleDateString("en-AU", { day: "numeric", month: "short" });
+                  const isActive = ts.clock_in && !ts.clock_out;
+
+                  return (
+                    <Card key={ts.work_date} className={isActive ? "border-warning/40" : ""}>
+                      <CardContent className="p-3">
+                        <div className="flex items-center justify-between mb-2">
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm font-medium text-foreground">{dayName}</span>
+                            <span className="text-xs text-muted-foreground">{dateLabel}</span>
+                            {isActive && (
+                              <Badge className="bg-warning/15 text-warning text-[10px] px-1.5 py-0">Active</Badge>
+                            )}
+                          </div>
+                          <span className="font-mono font-semibold text-foreground text-sm">
+                            {ts.net_hours.toFixed(1)}h
+                          </span>
+                        </div>
+                        <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
+                          <div className="flex items-center gap-1.5">
+                            <LogIn className="h-3 w-3 text-success" />
+                            <span className="text-muted-foreground">In:</span>
+                            <span className="text-foreground font-mono">{fmtTimestamp(ts.clock_in)}</span>
+                          </div>
+                          <div className="flex items-center gap-1.5">
+                            <LogOut className="h-3 w-3 text-destructive" />
+                            <span className="text-muted-foreground">Out:</span>
+                            <span className="text-foreground font-mono">{fmtTimestamp(ts.clock_out)}</span>
+                          </div>
+                          {(ts.break_start || ts.break_end) && (
+                            <>
+                              <div className="flex items-center gap-1.5">
+                                <Coffee className="h-3 w-3 text-warning" />
+                                <span className="text-muted-foreground">Break:</span>
+                                <span className="text-foreground font-mono">{fmtTimestamp(ts.break_start)}</span>
+                              </div>
+                              <div className="flex items-center gap-1.5">
+                                <Clock className="h-3 w-3 text-primary" />
+                                <span className="text-muted-foreground">Resume:</span>
+                                <span className="text-foreground font-mono">{fmtTimestamp(ts.break_end)}</span>
+                              </div>
+                            </>
+                          )}
+                        </div>
+                        {ts.break_minutes > 0 && (
+                          <p className="text-[10px] text-muted-foreground mt-1.5">
+                            {ts.break_minutes}m break · {ts.total_hours.toFixed(1)}h gross
+                          </p>
+                        )}
+                      </CardContent>
+                    </Card>
+                  );
+                })}
+              </>
             )}
           </TabsContent>
         </Tabs>
