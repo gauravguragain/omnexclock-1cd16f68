@@ -10,7 +10,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import { CalendarIcon, Search, Pencil, Trash2, Plus, ChevronLeft, ChevronRight, CheckCircle2, XCircle, Download, Mail } from "lucide-react";
+import { CalendarIcon, Search, Pencil, Trash2, Plus, ChevronLeft, ChevronRight, CheckCircle2, XCircle, Download, Mail, History } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
@@ -128,6 +128,32 @@ export default function TimesheetsPage() {
   const [saving, setSaving] = useState(false);
   const [approvingIds, setApprovingIds] = useState<Set<string>>(new Set());
   const [emailDialogOpen, setEmailDialogOpen] = useState(false);
+  const [historyDialog, setHistoryDialog] = useState(false);
+  const [historyEntry, setHistoryEntry] = useState<{ employee_name: string; date: string } | null>(null);
+  const [historyLogs, setHistoryLogs] = useState<any[]>([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
+
+  const openHistory = async (entry: TimesheetEntry) => {
+    setHistoryEntry({ employee_name: entry.employee_name, date: entry.date });
+    setHistoryDialog(true);
+    setHistoryLoading(true);
+    try {
+      const { data } = await supabase
+        .from("audit_logs")
+        .select("*")
+        .in("action", ["timesheet_edit", "timesheet_add", "timesheet_delete", "timesheet_approve", "timesheet_unapprove"])
+        .order("timestamp", { ascending: false });
+      const filtered = (data || []).filter((log: any) => {
+        const d = log.details as any;
+        return d?.employee_name === entry.employee_name && (d?.date === entry.raw_date || d?.date === entry.date);
+      });
+      setHistoryLogs(filtered);
+    } catch {
+      setHistoryLogs([]);
+    } finally {
+      setHistoryLoading(false);
+    }
+  };
 
   useEffect(() => {
     supabase.from("employees").select("id, name, department").eq("active", true).order("name").then(({ data }) => setEmployees(data || []));
@@ -686,16 +712,21 @@ export default function TimesheetsPage() {
                     )}
                     <span className="font-medium text-foreground">{e.employee_name}</span>
                   </div>
-                  {!isViewer && (
-                    <div className="flex gap-1">
-                      <Button variant="ghost" size="sm" onClick={() => openEdit(e)} disabled={saving || e.approved} className="h-7 w-7 p-0">
-                        <Pencil className="h-3.5 w-3.5" />
-                      </Button>
-                      <Button variant="ghost" size="sm" onClick={() => deleteEntry(e)} disabled={saving || e.approved} className="h-7 w-7 p-0 text-destructive hover:text-destructive">
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </Button>
-                    </div>
-                  )}
+                  <div className="flex gap-1">
+                    <Button variant="ghost" size="sm" onClick={() => openHistory(e)} className="h-7 w-7 p-0 text-muted-foreground hover:text-primary">
+                      <History className="h-3.5 w-3.5" />
+                    </Button>
+                    {!isViewer && (
+                      <>
+                        <Button variant="ghost" size="sm" onClick={() => openEdit(e)} disabled={saving || e.approved} className="h-7 w-7 p-0">
+                          <Pencil className="h-3.5 w-3.5" />
+                        </Button>
+                        <Button variant="ghost" size="sm" onClick={() => deleteEntry(e)} disabled={saving || e.approved} className="h-7 w-7 p-0 text-destructive hover:text-destructive">
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
+                      </>
+                    )}
+                  </div>
                 </div>
                 <div className="grid grid-cols-3 gap-x-4 gap-y-1 text-xs text-muted-foreground">
                   <span>Date</span><span>Clock In</span><span>Clock Out</span>
@@ -764,16 +795,21 @@ export default function TimesheetsPage() {
                     <TableCell>{e.total_hours}h</TableCell>
                     <TableCell className="font-semibold">{e.net_hours}h</TableCell>
                     <TableCell className="text-right">
-                      {!isViewer && (
-                        <div className="flex gap-1 justify-end">
-                          <Button variant="ghost" size="sm" onClick={() => openEdit(e)} disabled={saving || e.approved} className="h-7 w-7 p-0">
-                            <Pencil className="h-3.5 w-3.5" />
-                          </Button>
-                          <Button variant="ghost" size="sm" onClick={() => deleteEntry(e)} disabled={saving || e.approved} className="h-7 w-7 p-0 text-destructive hover:text-destructive">
-                            <Trash2 className="h-3.5 w-3.5" />
-                          </Button>
-                        </div>
-                      )}
+                      <div className="flex gap-1 justify-end">
+                        <Button variant="ghost" size="sm" onClick={() => openHistory(e)} className="h-7 w-7 p-0 text-muted-foreground hover:text-primary">
+                          <History className="h-3.5 w-3.5" />
+                        </Button>
+                        {!isViewer && (
+                          <>
+                            <Button variant="ghost" size="sm" onClick={() => openEdit(e)} disabled={saving || e.approved} className="h-7 w-7 p-0">
+                              <Pencil className="h-3.5 w-3.5" />
+                            </Button>
+                            <Button variant="ghost" size="sm" onClick={() => deleteEntry(e)} disabled={saving || e.approved} className="h-7 w-7 p-0 text-destructive hover:text-destructive">
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </Button>
+                          </>
+                        )}
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))}
@@ -825,6 +861,86 @@ export default function TimesheetsPage() {
         csvFilename={csvFilename}
         subject={csvSubject}
       />
+
+      {/* History Dialog */}
+      <Dialog open={historyDialog} onOpenChange={setHistoryDialog}>
+        <DialogContent className="sm:max-w-lg max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <History className="h-5 w-5 text-primary" />
+              Edit History — {historyEntry?.employee_name}
+            </DialogTitle>
+            <p className="text-sm text-muted-foreground">{historyEntry?.date}</p>
+          </DialogHeader>
+          {historyLoading ? (
+            <p className="text-sm text-muted-foreground text-center py-4">Loading...</p>
+          ) : historyLogs.length === 0 ? (
+            <p className="text-sm text-muted-foreground text-center py-4">No edit history found for this entry.</p>
+          ) : (
+            <div className="space-y-3">
+              {historyLogs.map((log) => {
+                const d = log.details as any;
+                const actionLabels: Record<string, string> = {
+                  timesheet_edit: "Edited",
+                  timesheet_add: "Added",
+                  timesheet_delete: "Deleted",
+                  timesheet_approve: "Approved",
+                  timesheet_unapprove: "Approval Revoked",
+                };
+                return (
+                  <div key={log.id} className="border border-border rounded-lg p-3 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <Badge variant="outline" className="text-xs">{actionLabels[log.action] || log.action}</Badge>
+                      <span className="text-xs text-muted-foreground">
+                        {new Date(log.timestamp).toLocaleString("en-AU", { dateStyle: "medium", timeStyle: "short" })}
+                      </span>
+                    </div>
+                    {d?.comment && (
+                      <p className="text-sm text-foreground"><span className="text-muted-foreground">Comment:</span> {d.comment}</p>
+                    )}
+                    {d?.previous && d?.updated && (
+                      <div className="grid grid-cols-2 gap-2 text-xs">
+                        <div className="space-y-1">
+                          <p className="font-medium text-muted-foreground">Before</p>
+                          {d.previous.clock_in && <p>In: {d.previous.clock_in}</p>}
+                          {d.previous.clock_out && <p>Out: {d.previous.clock_out}</p>}
+                          {d.previous.break_start && <p>Break Start: {d.previous.break_start}</p>}
+                          {d.previous.break_end && <p>Break End: {d.previous.break_end}</p>}
+                        </div>
+                        <div className="space-y-1">
+                          <p className="font-medium text-muted-foreground">After</p>
+                          {d.updated.clock_in && <p>In: {d.updated.clock_in}</p>}
+                          {d.updated.clock_out && <p>Out: {d.updated.clock_out}</p>}
+                          {d.updated.break_start && <p>Break Start: {d.updated.break_start}</p>}
+                          {d.updated.break_end && <p>Break End: {d.updated.break_end}</p>}
+                        </div>
+                      </div>
+                    )}
+                    {d?.times && (
+                      <div className="text-xs space-y-1">
+                        <p className="font-medium text-muted-foreground">Times</p>
+                        {d.times.clock_in && <p>In: {d.times.clock_in}</p>}
+                        {d.times.clock_out && <p>Out: {d.times.clock_out}</p>}
+                        {d.times.break_start && <p>Break Start: {d.times.break_start}</p>}
+                        {d.times.break_end && <p>Break End: {d.times.break_end}</p>}
+                      </div>
+                    )}
+                    {d?.deleted_times && (
+                      <div className="text-xs space-y-1">
+                        <p className="font-medium text-muted-foreground">Deleted Times</p>
+                        {d.deleted_times.clock_in && <p>In: {d.deleted_times.clock_in}</p>}
+                        {d.deleted_times.clock_out && <p>Out: {d.deleted_times.clock_out}</p>}
+                        {d.deleted_times.break_start && <p>Break Start: {d.deleted_times.break_start}</p>}
+                        {d.deleted_times.break_end && <p>Break End: {d.deleted_times.break_end}</p>}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
