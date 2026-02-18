@@ -273,8 +273,8 @@ export default function PayrollPage() {
       : "Name,Admin Rate ($/hr),Total Hours,Break Hours,Net Hours,Admin Cost (ex GST)\n";
     const rows = filtered.map((e) =>
       isEmp
-        ? `${e.name},${e.pay_rate},${e.total_hours},${e.break_hours},${e.net_hours},${e.employee_pay}`
-        : `${e.name},${e.admin_hourly_rate},${e.total_hours},${e.break_hours},${e.net_hours},${e.admin_pay}`
+        ? `${e.name},${e.pay_rate.toFixed(2)},${e.total_hours.toFixed(2)},${e.break_hours.toFixed(2)},${e.net_hours.toFixed(2)},${e.employee_pay.toFixed(2)}`
+        : `${e.name},${e.admin_hourly_rate.toFixed(2)},${e.total_hours.toFixed(2)},${e.break_hours.toFixed(2)},${e.net_hours.toFixed(2)},${e.admin_pay.toFixed(2)}`
     ).join("\n");
     const blob = new Blob([headers + rows], { type: "text/csv" });
     const url = URL.createObjectURL(blob);
@@ -306,15 +306,15 @@ export default function PayrollPage() {
 
   const empSummaryCards = [
     { title: "Total Employee Pay", value: `$${totalEmployeePay.toFixed(2)}`, icon: DollarSign, color: "text-primary" },
-    { title: "Total Net Hours", value: Math.round(totalNetHours * 100) / 100, icon: ClockIcon, color: "text-green-500" },
-    { title: "Total Break Hours", value: Math.round(totalBreakHours * 100) / 100, icon: Coffee, color: "text-yellow-500" },
+    { title: "Total Net Hours", value: totalNetHours.toFixed(2), icon: ClockIcon, color: "text-green-500" },
+    { title: "Total Break Hours", value: totalBreakHours.toFixed(2), icon: Coffee, color: "text-yellow-500" },
     { title: "Employees", value: entries.length, icon: Users, color: "text-primary" },
   ];
 
   const adminSummaryCards = [
     { title: "Total Admin Cost (ex GST)", value: `$${totalAdminPay.toFixed(2)}`, icon: DollarSign, color: "text-primary" },
-    { title: "Total Net Hours", value: Math.round(totalNetHours * 100) / 100, icon: ClockIcon, color: "text-green-500" },
-    { title: "Total Break Hours", value: Math.round(totalBreakHours * 100) / 100, icon: Coffee, color: "text-yellow-500" },
+    { title: "Total Net Hours", value: totalNetHours.toFixed(2), icon: ClockIcon, color: "text-green-500" },
+    { title: "Total Break Hours", value: totalBreakHours.toFixed(2), icon: Coffee, color: "text-yellow-500" },
     { title: "Employees", value: entries.length, icon: Users, color: "text-primary" },
   ];
 
@@ -363,9 +363,9 @@ export default function PayrollPage() {
                 <TableRow key={e.employee_id}>
                   <TableCell className="font-medium">{e.name}</TableCell>
                   <TableCell>${(isEmployee ? e.pay_rate : e.admin_hourly_rate).toFixed(2)}</TableCell>
-                  <TableCell>{e.total_hours}</TableCell>
-                  <TableCell>{e.break_hours}</TableCell>
-                  <TableCell>{e.net_hours}</TableCell>
+                  <TableCell>{e.total_hours.toFixed(2)}</TableCell>
+                  <TableCell>{e.break_hours.toFixed(2)}</TableCell>
+                  <TableCell>{e.net_hours.toFixed(2)}</TableCell>
                   <TableCell className="text-right font-semibold">${(isEmployee ? e.employee_pay : e.admin_pay).toFixed(2)}</TableCell>
                 </TableRow>
               ))}
