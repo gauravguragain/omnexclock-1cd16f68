@@ -1,13 +1,18 @@
 import { useAuth } from "@/contexts/AuthContext";
+import { useBusiness } from "@/contexts/BusinessContext";
 import { Navigate, Outlet, Link, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Building2, LogOut, Menu, X, Shield, LayoutDashboard } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 export default function MasterLayout() {
   const { user, isMaster, loading, signOut } = useAuth();
+  const { resetTheme } = useBusiness();
   const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  // Always use default OmnexClock theme
+  useEffect(() => { resetTheme(); }, []);
 
   const navItems = [
     { path: "/master", label: "Dashboard", icon: LayoutDashboard },
