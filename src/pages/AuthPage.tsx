@@ -139,25 +139,32 @@ export default function AuthPage() {
                     : <><LogIn className="mr-2 h-4 w-4" /> Sign In</>}
               </Button>
             </form>
-            {!isMasterLogin && (
-              <div className="mt-4 text-center space-y-2">
-                {mode === "signIn" && (
-                  <>
-                    <Link to="/reset-password" className="text-sm text-primary hover:underline block w-full">
-                      Forgot password?
-                    </Link>
-                    <button onClick={() => setMode("signUp")} className="text-sm text-muted-foreground hover:underline block w-full">
-                      Need an account? Sign Up
+            <div className="mt-4 text-center space-y-2">
+              {isMasterLogin && (
+                <Link to="/reset-password?master=true" className="text-sm text-primary hover:underline block w-full">
+                  Forgot password?
+                </Link>
+              )}
+              {!isMasterLogin && (
+                <>
+                  {mode === "signIn" && (
+                    <>
+                      <Link to="/reset-password" className="text-sm text-primary hover:underline block w-full">
+                        Forgot password?
+                      </Link>
+                      <button onClick={() => setMode("signUp")} className="text-sm text-muted-foreground hover:underline block w-full">
+                        Need an account? Sign Up
+                      </button>
+                    </>
+                  )}
+                  {mode === "signUp" && (
+                    <button onClick={() => setMode("signIn")} className="text-sm text-muted-foreground hover:underline">
+                      Already have an account? Sign In
                     </button>
-                  </>
-                )}
-                {mode === "signUp" && (
-                  <button onClick={() => setMode("signIn")} className="text-sm text-muted-foreground hover:underline">
-                    Already have an account? Sign In
-                  </button>
-                )}
-              </div>
-            )}
+                  )}
+                </>
+              )}
+            </div>
           </CardContent>
         </Card>
 
