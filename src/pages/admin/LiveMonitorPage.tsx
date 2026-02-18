@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Clock, LogIn, LogOut, Coffee, MapPin } from "lucide-react";
 import { toAusTime12, ausStartOfToday } from "@/lib/dateUtils";
-import { reverseGeocode } from "@/lib/geocode";
+import { formatLocation, googleMapsUrl } from "@/lib/geocode";
 
 interface LiveEmployee {
   id: string;
@@ -46,7 +46,7 @@ export default function LiveMonitorPage() {
       }
     }
 
-    // Generate signed URLs for photos and resolve location names
+    // Generate signed URLs for photos
     const entries = Array.from(seen.values());
     await Promise.all(entries.map(async (entry) => {
       if (entry.photoPath) {
@@ -58,7 +58,7 @@ export default function LiveMonitorPage() {
         }
       }
       if (entry.geolocation) {
-        entry.locationName = await reverseGeocode(entry.geolocation.latitude, entry.geolocation.longitude);
+        entry.locationName = formatLocation(entry.geolocation.latitude, entry.geolocation.longitude);
       }
     }));
     setLiveData(entries);
@@ -136,11 +136,10 @@ export default function LiveMonitorPage() {
                   <p className="text-xs text-muted-foreground mt-0.5">{emp.lastTime}</p>
                   {emp.geolocation && (
                     <a
-                      href={`https://www.google.com/maps?q=${emp.geolocation.latitude},${emp.geolocation.longitude}`}
+                      href={googleMapsUrl(emp.geolocation.latitude, emp.geolocation.longitude)}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="flex items-center gap-1 text-xs text-primary hover:underline mt-0.5"
-                      title={`${emp.geolocation.latitude.toFixed(4)}, ${emp.geolocation.longitude.toFixed(4)}`}
                     >
                       <MapPin className="h-3 w-3" />
                       {emp.locationName || "Location"}
