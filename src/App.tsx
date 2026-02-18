@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 
 import NotFound from "./pages/NotFound";
+import Index from "./pages/Index";
 import AuthPage from "./pages/AuthPage";
 import KioskPage from "./pages/KioskPage";
 import PortalPage from "./pages/PortalPage";
@@ -29,7 +30,7 @@ const App = () => (
         <Sonner />
         <BrowserRouter>
           <Routes>
-            <Route path="/" element={<AuthPage />} />
+            <Route path="/" element={<Index />} />
             <Route path="/auth" element={<AuthPage />} />
             <Route path="/kiosk" element={<KioskPage />} />
             <Route path="/portal" element={<PortalPage />} />
