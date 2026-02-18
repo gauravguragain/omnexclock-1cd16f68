@@ -278,7 +278,12 @@ export default function PayrollPage() {
         ? `${e.name},${e.pay_rate.toFixed(2)},${e.total_hours.toFixed(2)},${e.break_hours.toFixed(2)},${e.net_hours.toFixed(2)},${e.employee_pay.toFixed(2)}`
         : `${e.name},${e.admin_hourly_rate.toFixed(2)},${e.total_hours.toFixed(2)},${e.break_hours.toFixed(2)},${e.net_hours.toFixed(2)},${e.admin_pay.toFixed(2)}`
     ).join("\n");
-    return headers + rows;
+    const totTotalHrs = filtered.reduce((s, e) => s + e.total_hours, 0);
+    const totBreakHrs = filtered.reduce((s, e) => s + e.break_hours, 0);
+    const totNetHrs = filtered.reduce((s, e) => s + e.net_hours, 0);
+    const totPay = filtered.reduce((s, e) => s + (isEmp ? e.employee_pay : e.admin_pay), 0);
+    const totalRow = `\nTOTAL,,${totTotalHrs.toFixed(2)},${totBreakHrs.toFixed(2)},${totNetHrs.toFixed(2)},${totPay.toFixed(2)}`;
+    return headers + rows + totalRow;
   };
 
   const payrollCsvFilename = `${activeTab}-payroll-${format(dateFrom, "yyyy-MM-dd")}-to-${format(dateTo, "yyyy-MM-dd")}.csv`;
