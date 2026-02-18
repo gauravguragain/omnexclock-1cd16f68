@@ -16,7 +16,7 @@ import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { TimeDropdownPicker } from "@/components/TimeDropdownPicker";
 import { logAudit, getDeviceInfo } from "@/lib/auditLog";
-import { toAusDate, toAusDisplayDate, toAusTime24, toAusTime12, buildAusTimestamp, ausToday, ausNow, ausStartOfDay, ausEndOfDay } from "@/lib/dateUtils";
+import { toAusDate, toAusDisplayDate, toAusTime24, toAusTime12, buildAusTimestamp, ausToday, ausNow, ausStartOfDay, ausEndOfDay, ensureTime12 } from "@/lib/dateUtils";
 import { useAuth } from "@/contexts/AuthContext";
 import { EmailCSVDialog } from "@/components/EmailCSVDialog";
 
@@ -902,17 +902,17 @@ export default function TimesheetsPage() {
                       <div className="grid grid-cols-2 gap-2 text-xs">
                         <div className="space-y-1">
                           <p className="font-medium text-muted-foreground">Before</p>
-                          {d.previous.clock_in && <p>In: {d.previous.clock_in}</p>}
-                          {d.previous.clock_out && <p>Out: {d.previous.clock_out}</p>}
-                          {d.previous.break_start && <p>Break Start: {d.previous.break_start}</p>}
-                          {d.previous.break_end && <p>Break End: {d.previous.break_end}</p>}
+                          {d.previous.clock_in && <p>In: {ensureTime12(d.previous.clock_in)}</p>}
+                          {d.previous.clock_out && <p>Out: {ensureTime12(d.previous.clock_out)}</p>}
+                          {d.previous.break_start && <p>Break Start: {ensureTime12(d.previous.break_start)}</p>}
+                          {d.previous.break_end && <p>Break End: {ensureTime12(d.previous.break_end)}</p>}
                         </div>
                         <div className="space-y-1">
                           <p className="font-medium text-muted-foreground">After</p>
-                          {d.updated.clock_in && <p>In: {d.updated.clock_in}</p>}
-                          {d.updated.clock_out && <p>Out: {d.updated.clock_out}</p>}
-                          {d.updated.break_start && <p>Break Start: {d.updated.break_start}</p>}
-                          {d.updated.break_end && <p>Break End: {d.updated.break_end}</p>}
+                          {d.updated.clock_in && <p>In: {ensureTime12(d.updated.clock_in)}</p>}
+                          {d.updated.clock_out && <p>Out: {ensureTime12(d.updated.clock_out)}</p>}
+                          {d.updated.break_start && <p>Break Start: {ensureTime12(d.updated.break_start)}</p>}
+                          {d.updated.break_end && <p>Break End: {ensureTime12(d.updated.break_end)}</p>}
                         </div>
                       </div>
                     )}

@@ -19,7 +19,7 @@ import {
   History, CheckCircle2, XCircle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { ausToday, toAusFormatted, toAusTime12, toAusDate, toAusLocaleString } from "@/lib/dateUtils";
+import { ausToday, toAusFormatted, toAusTime12, toAusDate, toAusLocaleString, ensureTime12 } from "@/lib/dateUtils";
 import { format } from "date-fns";
 
 /* ── types ───────────────────────────────────────────────── */
@@ -1027,17 +1027,17 @@ export default function PortalPage() {
                       <div className="grid grid-cols-2 gap-2 text-xs">
                         <div className="space-y-1">
                           <p className="font-medium text-muted-foreground">Before</p>
-                          {d.previous.clock_in && <p>In: {d.previous.clock_in}</p>}
-                          {d.previous.clock_out && <p>Out: {d.previous.clock_out}</p>}
-                          {d.previous.break_start && <p>Break: {d.previous.break_start}</p>}
-                          {d.previous.break_end && <p>Resume: {d.previous.break_end}</p>}
+                          {d.previous.clock_in && <p>In: {ensureTime12(d.previous.clock_in)}</p>}
+                          {d.previous.clock_out && <p>Out: {ensureTime12(d.previous.clock_out)}</p>}
+                          {d.previous.break_start && <p>Break: {ensureTime12(d.previous.break_start)}</p>}
+                          {d.previous.break_end && <p>Resume: {ensureTime12(d.previous.break_end)}</p>}
                         </div>
                         <div className="space-y-1">
                           <p className="font-medium text-muted-foreground">After</p>
-                          {d.updated.clock_in && <p>In: {d.updated.clock_in}</p>}
-                          {d.updated.clock_out && <p>Out: {d.updated.clock_out}</p>}
-                          {d.updated.break_start && <p>Break: {d.updated.break_start}</p>}
-                          {d.updated.break_end && <p>Resume: {d.updated.break_end}</p>}
+                          {d.updated.clock_in && <p>In: {ensureTime12(d.updated.clock_in)}</p>}
+                          {d.updated.clock_out && <p>Out: {ensureTime12(d.updated.clock_out)}</p>}
+                          {d.updated.break_start && <p>Break: {ensureTime12(d.updated.break_start)}</p>}
+                          {d.updated.break_end && <p>Resume: {ensureTime12(d.updated.break_end)}</p>}
                         </div>
                       </div>
                     )}
