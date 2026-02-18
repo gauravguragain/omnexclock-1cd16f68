@@ -4,8 +4,8 @@ import { logAudit } from "@/lib/auditLog";
 import type { User } from "@supabase/supabase-js";
 
 interface UserBusinessRole {
-  business_id: string;
-  role: "admin" | "viewer" | "user";
+  business_id: string | null;
+  role: "admin" | "viewer" | "user" | "master";
 }
 
 interface AuthContextType {
@@ -20,6 +20,8 @@ interface AuthContextType {
   isViewerOf: (businessId: string) => boolean;
   /** Check if user has any access (admin or viewer) to a business */
   hasAccessTo: (businessId: string) => boolean;
+  /** Check if user is a platform master admin */
+  isMaster: boolean;
   /** Legacy: true if user is admin of ANY business */
   isAdmin: boolean;
   /** Legacy: true if user is viewer of ANY business */
@@ -44,7 +46,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     ]);
 
     const roles: UserBusinessRole[] = (rolesResult.data || [])
-      .filter((r: any) => r.business_id)
       .map((r: any) => ({ business_id: r.business_id, role: r.role }));
 
     setBusinessRoles(roles);
@@ -89,7 +90,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return businessRoles.some(r => r.business_id === businessId && (r.role === "admin" || r.role === "viewer"));
   }, [businessRoles]);
 
-  // Legacy global checks
+  // Global checks
+  const isMaster = businessRoles.some(r => r.role === "master" && !r.business_id);
   const isAdmin = businessRoles.some(r => r.role === "admin");
   const isViewer = businessRoles.some(r => r.role === "viewer");
 
@@ -120,7 +122,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   return (
     <AuthContext.Provider value={{
       user, isApproved, loading, businessRoles,
-      isAdminOf, isViewerOf, hasAccessTo,
+      isAdminOf, isViewerOf, hasAccessTo, isMaster,
       isAdmin, isViewer,
       signIn, signUp, signOut,
     }}>

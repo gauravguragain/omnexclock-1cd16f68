@@ -900,6 +900,7 @@ export type Database = {
       is_admin: { Args: never; Returns: boolean }
       is_admin_of_business: { Args: { _business_id: string }; Returns: boolean }
       is_approved: { Args: { _user_id: string }; Returns: boolean }
+      is_master: { Args: never; Returns: boolean }
       is_viewer_of_business: {
         Args: { _business_id: string }
         Returns: boolean

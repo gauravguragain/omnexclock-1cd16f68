@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { ShieldCheck, User, Clock, LogOut, Building2 } from "lucide-react";
 
 export default function BusinessHubPage() {
-  const { user, isApproved, isAdminOf, isViewerOf, hasAccessTo, loading, signOut } = useAuth();
+  const { user, isApproved, isMaster, isAdminOf, isViewerOf, hasAccessTo, loading, signOut } = useAuth();
   const { business, businesses, loading: bizLoading, setBusiness, applyTheme } = useBusiness();
 
   if (loading || bizLoading) {
@@ -18,6 +18,7 @@ export default function BusinessHubPage() {
   }
 
   if (!user) return <Navigate to="/auth" replace />;
+  if (isMaster) return <Navigate to="/master" replace />;
 
   if (!isApproved) {
     return (
