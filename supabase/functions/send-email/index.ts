@@ -77,7 +77,7 @@ serve(async (req) => {
       `;
 
       emailPayload = {
-        from: "Roster <onboarding@resend.dev>",
+        from: "Roster <noreply@omnexventures.com>",
         to: [body.to],
         subject: `Roster Updated – ${body.weekLabel}`,
         html,
@@ -91,7 +91,7 @@ serve(async (req) => {
       const csvBase64 = btoa(unescape(encodeURIComponent(body.csvData)));
 
       emailPayload = {
-        from: "Reports <onboarding@resend.dev>",
+        from: "Reports <noreply@omnexventures.com>",
         to: [body.recipientEmail],
         subject: body.subject,
         html: `
