@@ -365,7 +365,7 @@ export default function PortalPage() {
               <Card>
                 <CardContent className="p-8 text-center text-muted-foreground">
                   <FileText className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                  <p>No timesheet entries in the last 14 days.</p>
+                  <p>No timesheet entries found.</p>
                 </CardContent>
               </Card>
             ) : (
@@ -373,7 +373,7 @@ export default function PortalPage() {
                 {/* Summary */}
                 <Card>
                   <CardContent className="p-3 flex items-center justify-between">
-                    <span className="text-sm text-muted-foreground">Total worked (14 days)</span>
+                    <span className="text-sm text-muted-foreground">Total worked</span>
                     <span className="font-mono font-bold text-foreground">{timesheetTotalHours.toFixed(1)}h</span>
                   </CardContent>
                 </Card>
