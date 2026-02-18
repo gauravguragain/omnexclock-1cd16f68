@@ -1,0 +1,579 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OmnexClock – Induction Guide</title>
+<style>
+  @media print { body { font-size: 11pt; } .no-print { display: none; } .page-break { page-break-before: always; } }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Segoe UI', Arial, sans-serif; color: #1a1a1a; line-height: 1.7; max-width: 900px; margin: 0 auto; padding: 40px 30px; }
+  h1 { font-size: 28pt; color: #c9a227; margin-bottom: 6px; }
+  h2 { font-size: 18pt; color: #c9a227; margin-top: 40px; margin-bottom: 12px; border-bottom: 2px solid #c9a227; padding-bottom: 6px; }
+  h3 { font-size: 14pt; color: #333; margin-top: 20px; margin-bottom: 8px; }
+  p, li { margin-bottom: 8px; }
+  ul, ol { padding-left: 24px; }
+  .cover { text-align: center; padding: 100px 0 60px; }
+  .cover img { width: 120px; height: 120px; border-radius: 50%; object-fit: cover; margin-bottom: 20px; }
+  .cover .subtitle { color: #555; font-size: 14pt; margin-top: 8px; }
+  .cover .version { color: #888; font-size: 10pt; margin-top: 24px; }
+  .badge { display: inline-block; background: #c9a227; color: #000; padding: 2px 10px; border-radius: 12px; font-size: 10pt; font-weight: bold; }
+  .note { background: #fef9e7; border-left: 4px solid #c9a227; padding: 12px 16px; margin: 16px 0; border-radius: 0 8px 8px 0; }
+  .warning { background: #fef2f2; border-left: 4px solid #dc2626; padding: 12px 16px; margin: 16px 0; border-radius: 0 8px 8px 0; }
+  table { width: 100%; border-collapse: collapse; margin: 16px 0; }
+  th, td { border: 1px solid #ddd; padding: 10px 14px; text-align: left; }
+  th { background: #1a1a1a; color: #c9a227; }
+  tr:nth-child(even) { background: #f9f9f9; }
+  .toc a { color: #c9a227; text-decoration: none; }
+  .toc a:hover { text-decoration: underline; }
+  .toc li { margin-bottom: 4px; }
+  code { background: #f1f1f1; padding: 2px 6px; border-radius: 4px; font-size: 10pt; }
+  .btn-print { position: fixed; bottom: 20px; right: 20px; background: #c9a227; color: #000; border: none; padding: 12px 24px; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 12pt; box-shadow: 0 4px 12px rgba(0,0,0,0.2); }
+  .btn-print:hover { background: #b8941f; }
+  .step { counter-increment: step; margin-bottom: 12px; padding-left: 8px; }
+  .step::before { content: counter(step) ". "; font-weight: bold; color: #c9a227; }
+  .steps { counter-reset: step; }
+</style>
+</head>
+<body>
+
+<button class="btn-print no-print" onclick="window.print()">📄 Save as PDF / Print</button>
+
+<!-- COVER PAGE -->
+<div class="cover">
+  <img src="/omnex-logo.jpg" alt="OmnexClock Logo">
+  <h1>OmnexClock</h1>
+  <p class="subtitle">Time & Workforce Management Platform</p>
+  <p style="font-size: 16pt; color: #333; margin-top: 30px; font-weight: bold;">Induction & User Guide</p>
+  <p class="version">Version 1.0 — June 2025<br>Prepared by Omnex Ventures Pty. Ltd.</p>
+</div>
+
+<div class="page-break"></div>
+
+<!-- TABLE OF CONTENTS -->
+<h2>Table of Contents</h2>
+<ol class="toc">
+  <li><a href="#overview">Platform Overview</a></li>
+  <li><a href="#roles">User Roles & Access Levels</a></li>
+  <li><a href="#landing">Landing Page & Navigation</a></li>
+  <li><a href="#register">Registering a New Business</a></li>
+  <li><a href="#admin-login">Business Admin Login</a></li>
+  <li><a href="#admin-dashboard">Admin Dashboard</a></li>
+  <li><a href="#employees">Employee Management</a></li>
+  <li><a href="#roster">Roster Management</a></li>
+  <li><a href="#kiosk">Kiosk – Clock In/Out</a></li>
+  <li><a href="#live">Live Monitor</a></li>
+  <li><a href="#timesheets">Timesheets</a></li>
+  <li><a href="#payroll">Payroll</a></li>
+  <li><a href="#requests">Employee Requests</a></li>
+  <li><a href="#forum">Forum / Noticeboard</a></li>
+  <li><a href="#audit">Audit Log</a></li>
+  <li><a href="#users">User Management</a></li>
+  <li><a href="#mybusiness">My Business Settings</a></li>
+  <li><a href="#portal">Employee Portal</a></li>
+  <li><a href="#master">Master Admin Panel</a></li>
+  <li><a href="#security">Security & Best Practices</a></li>
+  <li><a href="#faq">Frequently Asked Questions</a></li>
+</ol>
+
+<div class="page-break"></div>
+
+<!-- 1. OVERVIEW -->
+<h2 id="overview">1. Platform Overview</h2>
+<p>OmnexClock is a cloud-based workforce management platform designed for small-to-medium businesses. It provides:</p>
+<ul>
+  <li><strong>Time Tracking</strong> — Clock in/out with photo verification via an on-site Kiosk</li>
+  <li><strong>Roster Scheduling</strong> — Create, publish, and manage weekly employee schedules</li>
+  <li><strong>Timesheet Management</strong> — Automatic timesheet generation from clock events with approval workflows</li>
+  <li><strong>Payroll Calculation</strong> — Generate payroll entries based on approved timesheets</li>
+  <li><strong>Employee Self-Service</strong> — Employees can view rosters, timesheets, submit leave requests, and participate in forums via their own portal</li>
+  <li><strong>Multi-Business Support</strong> — A single platform supporting multiple businesses with isolated data</li>
+</ul>
+
+<h3>How It Works</h3>
+<p>The platform is accessible via any web browser. There is no app to download. The URL is:</p>
+<p style="text-align:center; font-size: 14pt;"><code>https://omnexclock.lovable.app</code></p>
+
+<div class="page-break"></div>
+
+<!-- 2. ROLES -->
+<h2 id="roles">2. User Roles & Access Levels</h2>
+<table>
+  <tr><th>Role</th><th>Description</th><th>Access</th></tr>
+  <tr><td><span class="badge">Master Admin</span></td><td>Platform-level super administrator</td><td>View all businesses, delete businesses, manage the entire platform</td></tr>
+  <tr><td><span class="badge">Admin</span></td><td>Business owner/manager</td><td>Full access to their business: employees, roster, kiosk, timesheets, payroll, forum, requests, audit logs, user management, business settings</td></tr>
+  <tr><td><span class="badge">Viewer</span></td><td>Read-only business access</td><td>Can view all admin pages but cannot make changes. Cannot launch Kiosk</td></tr>
+  <tr><td><span class="badge">Employee</span></td><td>Staff member</td><td>Access via 4-digit code only. View roster, timesheets, submit requests, forum participation</td></tr>
+</table>
+
+<div class="note">
+  <strong>Note:</strong> Employees do not need an email account or password. They authenticate using their unique 4-digit employee code.
+</div>
+
+<div class="page-break"></div>
+
+<!-- 3. LANDING PAGE -->
+<h2 id="landing">3. Landing Page & Navigation</h2>
+<p>The landing page at <code>/</code> is the main entry point for all users. It provides three options:</p>
+
+<table>
+  <tr><th>Card</th><th>Purpose</th><th>Who Uses It</th></tr>
+  <tr><td><strong>Business Admin</strong></td><td>Sign in to manage your business</td><td>Admins, Viewers</td></tr>
+  <tr><td><strong>Employee Portal</strong></td><td>Access roster, timesheets & requests</td><td>Employees (remote access)</td></tr>
+  <tr><td><strong>Register Business</strong></td><td>Set up a new business account</td><td>New business owners</td></tr>
+</table>
+
+<p>Additionally, a <strong>"Master Login"</strong> button appears in the top-right corner for platform administrators.</p>
+
+<div class="page-break"></div>
+
+<!-- 4. REGISTER -->
+<h2 id="register">4. Registering a New Business</h2>
+<p>To register a new business on the platform:</p>
+<div class="steps">
+  <p class="step">Click <strong>"Register Business"</strong> on the landing page</p>
+  <p class="step">If you don't have an account, create one by entering your full name, email, and password</p>
+  <p class="step">Verify your email address by clicking the confirmation link sent to your inbox</p>
+  <p class="step">Return to the registration page and sign in</p>
+  <p class="step">Enter your <strong>Business Name</strong> (e.g., "Pro Regal Pavilion")</p>
+  <p class="step">Enter a unique <strong>Business Code</strong> (e.g., "PRP") — this is used in all URLs and by employees</p>
+  <p class="step">Click <strong>Register Business</strong></p>
+</div>
+
+<div class="note">
+  <strong>Important:</strong> The business code must be at least 3 characters. It will be converted to uppercase. Choose something short and memorable as employees will use it to access their portal.
+</div>
+
+<p>After registration, you become the Admin of that business and are redirected to the Admin Dashboard.</p>
+
+<div class="page-break"></div>
+
+<!-- 5. ADMIN LOGIN -->
+<h2 id="admin-login">5. Business Admin Login</h2>
+<div class="steps">
+  <p class="step">Click <strong>"Business Admin"</strong> on the landing page</p>
+  <p class="step">Enter your email and password</p>
+  <p class="step">Click <strong>"Sign In"</strong></p>
+  <p class="step">You'll be taken to the <strong>Business Hub</strong> showing all businesses you have access to</p>
+  <p class="step">Click <strong>"Admin Panel"</strong> next to the desired business</p>
+</div>
+
+<h3>Password Recovery</h3>
+<div class="steps">
+  <p class="step">On the sign-in page, click <strong>"Forgot password?"</strong></p>
+  <p class="step">Enter your admin email address</p>
+  <p class="step">Check your email for a <strong>6-digit verification code</strong></p>
+  <p class="step">Enter the code on the verification screen</p>
+  <p class="step">Set your new password (minimum 6 characters)</p>
+</div>
+
+<div class="warning">
+  <strong>Security:</strong> OTP codes expire after 10 minutes. You can only request a new code every 60 seconds.
+</div>
+
+<div class="page-break"></div>
+
+<!-- 6. DASHBOARD -->
+<h2 id="admin-dashboard">6. Admin Dashboard</h2>
+<p>The dashboard provides a real-time overview of your business operations:</p>
+
+<h3>Key Metrics</h3>
+<ul>
+  <li><strong>Total Employees</strong> — Number of active employees</li>
+  <li><strong>Active Today</strong> — Employees who have clocked in today</li>
+  <li><strong>Total Hours Today</strong> — Combined hours worked across all employees</li>
+  <li><strong>Average Shift</strong> — Average shift duration for the day</li>
+</ul>
+
+<h3>Charts & Visualisations</h3>
+<ul>
+  <li><strong>Weekly Hours Chart</strong> — Bar chart showing daily hours for the past 7 days</li>
+  <li><strong>Employee Breakdown</strong> — Pie chart of hours by employee</li>
+  <li><strong>Hourly Activity</strong> — Area chart showing cumulative hours throughout the day</li>
+  <li><strong>Recent Events</strong> — Live feed of clock-in/out and break events</li>
+</ul>
+
+<p>The dashboard updates in <strong>real-time</strong> — no need to refresh the page.</p>
+
+<div class="page-break"></div>
+
+<!-- 7. EMPLOYEES -->
+<h2 id="employees">7. Employee Management</h2>
+<p>Navigate to <strong>Employees</strong> in the sidebar to manage your workforce.</p>
+
+<h3>Adding an Employee</h3>
+<div class="steps">
+  <p class="step">Click the <strong>"Add Employee"</strong> button</p>
+  <p class="step">Enter the employee's <strong>Name</strong> (required)</p>
+  <p class="step">A unique <strong>4-digit Employee Code</strong> is auto-generated</p>
+  <p class="step">Optionally fill in: Email, Phone, Job Title, Department</p>
+  <p class="step">Set the <strong>Employee Pay Rate</strong> (visible to employees) and <strong>Admin Hourly Rate</strong> (internal only)</p>
+  <p class="step">Click <strong>Save</strong></p>
+</div>
+
+<div class="note">
+  <strong>Employee Code:</strong> This 4-digit code is what employees use to clock in/out at the Kiosk and to access their Employee Portal. Share this code with the employee securely.
+</div>
+
+<h3>Managing Employees</h3>
+<ul>
+  <li><strong>Edit</strong> — Update employee details, pay rates, or department</li>
+  <li><strong>Deactivate</strong> — Soft-delete an employee (they can no longer clock in or access the portal)</li>
+  <li><strong>Search/Filter</strong> — Use the search bar to find employees by name or code</li>
+  <li><strong>Export CSV</strong> — Download employee data as a spreadsheet</li>
+</ul>
+
+<div class="page-break"></div>
+
+<!-- 8. ROSTER -->
+<h2 id="roster">8. Roster Management</h2>
+<p>Navigate to <strong>Roster</strong> in the sidebar to schedule shifts.</p>
+
+<h3>Creating Shifts</h3>
+<div class="steps">
+  <p class="step">Select the <strong>week</strong> using the week navigator at the top</p>
+  <p class="step">Click <strong>"Add Shift"</strong> or click on an empty cell in the roster grid</p>
+  <p class="step">Select the <strong>Employee</strong>, <strong>Day</strong>, <strong>Start Time</strong>, <strong>End Time</strong>, and <strong>Break Duration</strong></p>
+  <p class="step">Optionally add shift notes</p>
+  <p class="step">Click <strong>Save</strong></p>
+</div>
+
+<h3>Publishing Shifts</h3>
+<p>Shifts are created in <strong>Draft</strong> status. Employees cannot see draft shifts.</p>
+<div class="steps">
+  <p class="step">Review all shifts for the week</p>
+  <p class="step">Click <strong>"Publish Week"</strong> to make all shifts visible to employees</p>
+</div>
+
+<div class="note">
+  <strong>Tip:</strong> You can copy the previous week's roster to save time. Use the <strong>"Copy Previous Week"</strong> button.
+</div>
+
+<div class="page-break"></div>
+
+<!-- 9. KIOSK -->
+<h2 id="kiosk">9. Kiosk – Clock In/Out</h2>
+<p>The Kiosk is a dedicated time-clock interface designed for on-site use (e.g., a tablet at the front desk).</p>
+
+<h3>Accessing the Kiosk</h3>
+<p>The Kiosk URL for your business is:</p>
+<p style="text-align:center;"><code>https://omnexclock.lovable.app/b/YOUR_CODE/kiosk</code></p>
+<p>For example, Pro Regal Pavilion's Kiosk is at: <code>/b/PRP/kiosk</code></p>
+
+<h3>How Employees Use the Kiosk</h3>
+<div class="steps">
+  <p class="step">The Kiosk displays the business name, logo, and current time</p>
+  <p class="step">Employee enters their <strong>4-digit code</strong> using the on-screen numpad</p>
+  <p class="step">The system shows the employee's name and current status (Clocked Out / Clocked In / On Break)</p>
+  <p class="step">Available actions are shown based on status:
+    <ul style="margin-top: 8px;">
+      <li><strong>Clock In</strong> — Available when clocked out</li>
+      <li><strong>Start Break</strong> — Available when clocked in</li>
+      <li><strong>End Break</strong> — Available when on break</li>
+      <li><strong>Clock Out</strong> — Available when clocked in or on break</li>
+    </ul>
+  </p>
+  <p class="step">Employee selects an action and takes a <strong>photo</strong> (selfie) for verification</p>
+  <p class="step">A confirmation message appears, and the Kiosk resets for the next employee</p>
+</div>
+
+<div class="warning">
+  <strong>Important:</strong> The Kiosk requires camera access. Ensure the device's browser has camera permissions enabled.
+</div>
+
+<h3>Admin Login from Kiosk</h3>
+<p>There is an <strong>"Admin Login"</strong> button on the Kiosk page. Clicking it will:</p>
+<ol>
+  <li>Sign out any existing admin session (for security)</li>
+  <li>Redirect to the business admin login page</li>
+</ol>
+<p>This ensures the Kiosk cannot be used to access a previously logged-in admin session.</p>
+
+<div class="page-break"></div>
+
+<!-- 10. LIVE MONITOR -->
+<h2 id="live">10. Live Monitor</h2>
+<p>The <strong>Live Monitor</strong> shows a real-time view of all employee statuses:</p>
+<ul>
+  <li>Who is currently <strong>Clocked In</strong></li>
+  <li>Who is <strong>On Break</strong></li>
+  <li>Who is <strong>Clocked Out</strong></li>
+  <li>Last clock event time for each employee</li>
+</ul>
+<p>The monitor updates automatically as employees clock in/out. It is ideal for display on a wall-mounted screen in the office.</p>
+
+<div class="page-break"></div>
+
+<!-- 11. TIMESHEETS -->
+<h2 id="timesheets">11. Timesheets</h2>
+<p>Timesheets are <strong>automatically generated</strong> from clock events. Navigate to <strong>Timesheets</strong> in the sidebar.</p>
+
+<h3>What You'll See</h3>
+<table>
+  <tr><th>Column</th><th>Description</th></tr>
+  <tr><td>Date</td><td>The work date</td></tr>
+  <tr><td>Employee</td><td>Employee name and code</td></tr>
+  <tr><td>Clock In</td><td>First clock-in time of the day</td></tr>
+  <tr><td>Clock Out</td><td>Last clock-out time of the day</td></tr>
+  <tr><td>Break</td><td>Total break duration in minutes</td></tr>
+  <tr><td>Total Hours</td><td>Clock-out minus clock-in</td></tr>
+  <tr><td>Net Hours</td><td>Total hours minus break time</td></tr>
+  <tr><td>Status</td><td>Approved / Pending approval</td></tr>
+</table>
+
+<h3>Editing Timesheets</h3>
+<p>Admins can manually edit timesheet entries (e.g., if an employee forgot to clock out). All edits are recorded in the <strong>Audit Log</strong>.</p>
+
+<h3>Approving Timesheets</h3>
+<div class="steps">
+  <p class="step">Review the timesheet entries for accuracy</p>
+  <p class="step">Click the <strong>Approve</strong> button for each day</p>
+  <p class="step">Approved timesheets can be used for payroll generation</p>
+</div>
+
+<div class="page-break"></div>
+
+<!-- 12. PAYROLL -->
+<h2 id="payroll">12. Payroll</h2>
+<p>Navigate to <strong>Payroll</strong> to generate pay summaries based on approved timesheets.</p>
+
+<h3>Payroll Entries Include</h3>
+<ul>
+  <li><strong>Employee Name</strong></li>
+  <li><strong>Period</strong> — Date range</li>
+  <li><strong>Hours Worked</strong> — Total net hours</li>
+  <li><strong>Employee Pay</strong> — Calculated from the employee-visible pay rate</li>
+  <li><strong>Admin Pay</strong> — Calculated from the admin-only hourly rate (for internal cost tracking)</li>
+  <li><strong>Status</strong> — Unpaid / Paid</li>
+</ul>
+
+<h3>Marking as Paid</h3>
+<p>Once you have processed payment externally (bank transfer, etc.), mark the payroll entry as <strong>"Paid"</strong> to keep records up to date.</p>
+
+<div class="page-break"></div>
+
+<!-- 13. REQUESTS -->
+<h2 id="requests">13. Employee Requests</h2>
+<p>Navigate to <strong>Requests</strong> to view and manage employee leave and unavailability requests.</p>
+
+<h3>Request Types</h3>
+<table>
+  <tr><th>Type</th><th>Description</th></tr>
+  <tr><td><strong>Leave</strong></td><td>Time off request for specific dates (e.g., annual leave, sick leave)</td></tr>
+  <tr><td><strong>Unavailability</strong></td><td>Ongoing schedule restrictions (e.g., "not available on Mondays")</td></tr>
+</table>
+
+<h3>Recurring Requests</h3>
+<p>Employees can submit recurring unavailability requests specifying specific days of the week and a date range.</p>
+
+<h3>Admin Actions</h3>
+<ul>
+  <li><strong>Approve</strong> — Accept the request</li>
+  <li><strong>Reject</strong> — Deny the request (with an optional admin note)</li>
+  <li>Add notes visible to the employee</li>
+</ul>
+
+<div class="page-break"></div>
+
+<!-- 14. FORUM -->
+<h2 id="forum">14. Forum / Noticeboard</h2>
+<p>The <strong>Forum</strong> is a business-internal noticeboard for announcements, discussions, and team communication.</p>
+
+<h3>Admin Features</h3>
+<ul>
+  <li>Create new posts with a title and content</li>
+  <li>View all posts with comment and reaction counts</li>
+  <li>Delete inappropriate posts</li>
+</ul>
+
+<h3>Employee Features (via Portal)</h3>
+<ul>
+  <li>View all posts</li>
+  <li>Add comments to posts</li>
+  <li>React to posts with emojis (👍 ❤️ 😂 😮 😢)</li>
+</ul>
+
+<div class="page-break"></div>
+
+<!-- 15. AUDIT LOG -->
+<h2 id="audit">15. Audit Log</h2>
+<p>The <strong>Audit Log</strong> records all significant actions taken within the business:</p>
+<ul>
+  <li>User sign-ins</li>
+  <li>Employee additions and edits</li>
+  <li>Timesheet edits, approvals, and unapprovals</li>
+  <li>Shift changes</li>
+  <li>Request approvals/rejections</li>
+  <li>All admin actions are timestamped with the performing user's ID</li>
+</ul>
+
+<div class="note">
+  <strong>Compliance:</strong> The audit log cannot be edited or deleted. It provides a complete, tamper-proof record of all business operations.
+</div>
+
+<div class="page-break"></div>
+
+<!-- 16. USER MANAGEMENT -->
+<h2 id="users">16. User Management</h2>
+<p>Navigate to <strong>User Management</strong> to control who has admin or viewer access to your business.</p>
+
+<h3>Granting Access</h3>
+<div class="steps">
+  <p class="step">The user must first create an account on OmnexClock (via <strong>Business Admin → Sign Up</strong>)</p>
+  <p class="step">Once registered, they appear in your User Management page</p>
+  <p class="step">Click <strong>"Grant Admin"</strong> or <strong>"Grant Viewer"</strong> to give them access</p>
+</div>
+
+<h3>Revoking Access</h3>
+<p>Click <strong>"Revoke"</strong> next to any user to remove their access. Revoking Admin also removes Viewer access.</p>
+
+<div class="warning">
+  <strong>Important:</strong> Users are scoped to each business. A user with admin access to Business A does NOT automatically have access to Business B.
+</div>
+
+<div class="page-break"></div>
+
+<!-- 17. MY BUSINESS -->
+<h2 id="mybusiness">17. My Business Settings</h2>
+<p>Navigate to <strong>My Business</strong> to manage your business profile and branding.</p>
+
+<h3>Business Profile</h3>
+<ul>
+  <li><strong>Business Name</strong></li>
+  <li><strong>Email, Phone, Address</strong></li>
+  <li><strong>Industry</strong></li>
+  <li><strong>Description</strong></li>
+</ul>
+
+<h3>Logo Upload</h3>
+<p>Upload your business logo. It appears on the Kiosk, Employee Portal, and Admin sidebar.</p>
+
+<h3>Theme Customisation</h3>
+<p>OmnexClock supports dynamic theming per business. You can:</p>
+<ul>
+  <li>Let the AI <strong>analyse your logo</strong> and suggest matching colours</li>
+  <li>Manually adjust the colour palette (Primary, Background, Foreground, Card, Accent, Muted, Border)</li>
+  <li>Save the theme — it applies immediately across the Kiosk, Employee Portal, and Admin Panel for your business</li>
+</ul>
+
+<div class="page-break"></div>
+
+<!-- 18. EMPLOYEE PORTAL -->
+<h2 id="portal">18. Employee Portal</h2>
+<p>The Employee Portal is a self-service interface for employees to access their work information remotely.</p>
+
+<h3>Accessing the Portal</h3>
+<div class="steps">
+  <p class="step">Go to <code>https://omnexclock.lovable.app/portal</code></p>
+  <p class="step">Enter the <strong>Business Code</strong> (e.g., PRP) — this is only required once per device</p>
+  <p class="step">Enter your <strong>4-digit Employee Code</strong></p>
+  <p class="step">You're now in your personal portal</p>
+</div>
+
+<h3>Portal Features</h3>
+<table>
+  <tr><th>Feature</th><th>Description</th></tr>
+  <tr><td><strong>My Roster</strong></td><td>View upcoming published shifts grouped by week</td></tr>
+  <tr><td><strong>My Timesheets</strong></td><td>View daily clock-in/out times, break durations, and net hours</td></tr>
+  <tr><td><strong>Requests</strong></td><td>Submit leave or unavailability requests; view status of existing requests</td></tr>
+  <tr><td><strong>Forum</strong></td><td>Read announcements, comment on posts, react with emojis</td></tr>
+  <tr><td><strong>Status</strong></td><td>See your current clock status (Clocked In/Out/On Break)</td></tr>
+</table>
+
+<h3>Changing Business</h3>
+<p>If an employee works for multiple businesses, they can click <strong>"Change Business"</strong> on the portal login screen to enter a different business code.</p>
+
+<h3>Session Timeout</h3>
+<div class="warning">
+  <strong>Security:</strong> The Employee Portal automatically logs out after <strong>5 minutes of inactivity</strong>. This protects employee data on shared devices.
+</div>
+
+<div class="page-break"></div>
+
+<!-- 19. MASTER ADMIN -->
+<h2 id="master">19. Master Admin Panel</h2>
+<p>The Master Admin has platform-level oversight across all businesses.</p>
+
+<h3>Accessing Master Admin</h3>
+<div class="steps">
+  <p class="step">Click <strong>"Master Login"</strong> in the top-right corner of the landing page</p>
+  <p class="step">Sign in with master admin credentials</p>
+</div>
+
+<div class="note">
+  <strong>Note:</strong> Master Admin login is separate from Business Admin login. Master credentials do not work on the Business Admin sign-in page, and vice versa.
+</div>
+
+<h3>Master Features</h3>
+<ul>
+  <li><strong>Dashboard</strong> — Overview of all registered businesses and platform statistics</li>
+  <li><strong>Businesses</strong> — View all businesses with their codes, owners, and employee counts</li>
+  <li><strong>Delete Business</strong> — Permanently remove a business and all associated data (employees, shifts, clock events, payroll, forum posts, audit logs, and user roles)</li>
+</ul>
+
+<div class="warning">
+  <strong>Caution:</strong> Deleting a business is <strong>permanent and irreversible</strong>. All data will be lost. A confirmation dialog is required before deletion.
+</div>
+
+<div class="page-break"></div>
+
+<!-- 20. SECURITY -->
+<h2 id="security">20. Security & Best Practices</h2>
+
+<h3>For Admins</h3>
+<ul>
+  <li>Use a <strong>strong, unique password</strong> (minimum 6 characters, recommended 12+)</li>
+  <li>Never share your admin credentials</li>
+  <li>Regularly review the <strong>Audit Log</strong> for suspicious activity</li>
+  <li>Revoke access for employees or admins who no longer need it</li>
+  <li>Log out after each session, especially on shared devices</li>
+</ul>
+
+<h3>For Kiosk Setup</h3>
+<ul>
+  <li>Use a <strong>dedicated tablet</strong> for the Kiosk</li>
+  <li>Enable <strong>Guided Access</strong> (iOS) or <strong>Kiosk Mode</strong> (Android/Chrome) to lock the browser to the Kiosk page</li>
+  <li>Ensure the tablet has a <strong>front-facing camera</strong> for photo verification</li>
+  <li>Position the tablet at eye level near the workplace entrance</li>
+</ul>
+
+<h3>For Employees</h3>
+<ul>
+  <li>Keep your 4-digit employee code <strong>confidential</strong></li>
+  <li>Report any suspected misuse to your manager immediately</li>
+  <li>Always clock in/out honestly — photo verification is stored</li>
+</ul>
+
+<div class="page-break"></div>
+
+<!-- 21. FAQ -->
+<h2 id="faq">21. Frequently Asked Questions</h2>
+
+<h3>Q: An employee forgot to clock out. What do I do?</h3>
+<p>Go to <strong>Timesheets</strong>, find the employee's entry for that day, and manually edit the clock-out time. The change will be recorded in the Audit Log.</p>
+
+<h3>Q: How do I give someone read-only access to my business?</h3>
+<p>Go to <strong>User Management</strong> and grant them the <strong>Viewer</strong> role. They can see all pages but cannot make any changes.</p>
+
+<h3>Q: Can an employee work for two businesses?</h3>
+<p>Yes. Each business has separate employee records. The employee will have a different 4-digit code for each business. They can use the <strong>"Change Business"</strong> button on the portal to switch.</p>
+
+<h3>Q: What happens if the internet goes down at the Kiosk?</h3>
+<p>The Kiosk requires an internet connection to record clock events. If the connection is down, employees should note their times manually, and an admin can enter them via the Timesheets page later.</p>
+
+<h3>Q: How do I change my business theme?</h3>
+<p>Go to <strong>My Business</strong> in the admin panel. Upload a logo, and click <strong>"Analyse Theme"</strong> to get AI-suggested colours, or manually set your preferred palette.</p>
+
+<h3>Q: Can I export data?</h3>
+<p>Yes. Employee lists, timesheets, and payroll can be exported as CSV files using the export button on each respective page.</p>
+
+<hr style="margin: 40px 0; border-color: #c9a227;">
+
+<div style="text-align: center; color: #888; font-size: 10pt;">
+  <p>© 2024 Omnex Ventures Pty. Ltd. All rights reserved.</p>
+  <p>OmnexClock — Time & Workforce Management</p>
+  <p>For support, contact your platform administrator.</p>
+</div>
+
+</body>
+</html>
