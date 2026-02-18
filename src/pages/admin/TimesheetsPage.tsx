@@ -708,6 +708,23 @@ export default function TimesheetsPage() {
                     </TableCell>
                   </TableRow>
                 )}
+              {filtered.length > 0 && (
+                <tfoot>
+                  <TableRow className="bg-muted/50 font-bold border-t-2 border-primary/20">
+                    <TableCell />
+                    <TableCell className="font-bold">TOTAL</TableCell>
+                    <TableCell />
+                    <TableCell />
+                    <TableCell />
+                    <TableCell className="hidden lg:table-cell" />
+                    <TableCell className="hidden lg:table-cell" />
+                    <TableCell className="font-bold">{filtered.reduce((s, e) => s + e.break_minutes, 0)}m</TableCell>
+                    <TableCell className="font-bold">{filtered.reduce((s, e) => s + e.total_hours, 0).toFixed(2)}h</TableCell>
+                    <TableCell className="font-bold">{filtered.reduce((s, e) => s + e.net_hours, 0).toFixed(2)}h</TableCell>
+                    <TableCell />
+                  </TableRow>
+                </tfoot>
+              )}
               </TableBody>
             </Table>
           </div>
