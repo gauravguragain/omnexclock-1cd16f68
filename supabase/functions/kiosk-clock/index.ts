@@ -107,15 +107,18 @@ serve(async (req) => {
       });
     }
 
-    // Status validation
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
+    // Status validation — use Australian time (AEST/AEDT = UTC+11) for "today"
+    const now = new Date();
+    const ausOffsetMs = 11 * 60 * 60 * 1000; // UTC+11
+    const ausNow = new Date(now.getTime() + ausOffsetMs);
+    const ausToday = new Date(Date.UTC(ausNow.getUTCFullYear(), ausNow.getUTCMonth(), ausNow.getUTCDate()));
+    const ausTodayUtc = new Date(ausToday.getTime() - ausOffsetMs); // midnight AEDT in UTC
 
     const { data: todayEvents } = await supabase
       .from("clock_events")
       .select("event_type, created_at")
       .eq("employee_id", employee.id)
-      .gte("created_at", today.toISOString())
+      .gte("created_at", ausTodayUtc.toISOString())
       .order("created_at", { ascending: false });
 
     const lastEventType = todayEvents && todayEvents.length > 0 ? todayEvents[0].event_type : null;
