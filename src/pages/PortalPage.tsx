@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { useBusiness } from "@/contexts/BusinessContext";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -94,6 +95,7 @@ function fmtTimestamp(ts: string | null): string {
 export default function PortalPage() {
   const { toast } = useToast();
   const { businessCode: urlBusinessCode } = useParams();
+  const { applyTheme, resetTheme } = useBusiness();
   const [code, setCode] = useState("");
   const [authenticated, setAuthenticated] = useState(false);
   const [employeeCode, setEmployeeCode] = useState("");
@@ -148,15 +150,19 @@ export default function PortalPage() {
     const loadBusiness = async () => {
       const { data } = await supabase
         .from("businesses")
-        .select("name, logo_url")
+        .select("name, logo_url, theme")
         .eq("business_code", urlBusinessCode.toUpperCase())
         .maybeSingle();
       if (data) {
         setBusinessName(data.name);
         setBusinessLogo(data.logo_url);
+        if (data.theme) {
+          applyTheme(data.theme as any);
+        }
       }
     };
     loadBusiness();
+    return () => { resetTheme(); };
   }, [urlBusinessCode]);
 
   const handleNumpadClick = (num: string) => {
