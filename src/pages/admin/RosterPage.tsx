@@ -10,8 +10,9 @@ import { useToast } from "@/hooks/use-toast";
 import { TimeDropdownPicker } from "@/components/TimeDropdownPicker";
 import { logAudit } from "@/lib/auditLog";
 import {
-  ChevronLeft, ChevronRight, Plus, Trash2, Copy, Send, Clock, AlertCircle,
+  ChevronLeft, ChevronRight, Plus, Trash2, Copy, Send, Clock, AlertCircle, CalendarOff,
 } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import type { Tables } from "@/integrations/supabase/types";
 import { toAusDate, toAusFormatted } from "@/lib/dateUtils";
 
@@ -81,6 +82,7 @@ export default function RosterPage() {
   const [weekStart, setWeekStart] = useState(() => getMonday(new Date()));
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [shifts, setShifts] = useState<Shift[]>([]);
+  const [approvedRequests, setApprovedRequests] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingShift, setEditingShift] = useState<Shift | null>(null);
@@ -97,12 +99,15 @@ export default function RosterPage() {
   const fetchData = useCallback(async () => {
     setLoading(true);
     const ws = fmtDate(weekStart);
-    const [empRes, shiftRes] = await Promise.all([
+    const we = fmtDate(addDays(weekStart, 6));
+    const [empRes, shiftRes, reqRes] = await Promise.all([
       supabase.from("employees").select("*").eq("active", true).order("name"),
       supabase.from("shifts").select("*").eq("week_start_date", ws).order("start_time"),
+      supabase.from("employee_requests").select("*, employees(name)").eq("status", "approved"),
     ]);
     setEmployees(empRes.data || []);
     setShifts(shiftRes.data || []);
+    setApprovedRequests(reqRes.data || []);
     setLoading(false);
   }, [weekStart]);
 
@@ -451,11 +456,31 @@ export default function RosterPage() {
                         <div className="font-medium text-foreground truncate">{emp.name}</div>
                         <div className="text-xs text-muted-foreground">{emp.job_title || emp.department || emp.employee_code}</div>
                       </td>
-                      {weekDates.map((_, dayIdx) => {
+                      {weekDates.map((wd, dayIdx) => {
                         const dayShifts = shiftMap[emp.id]?.[dayIdx] || [];
+                        const dayStr = fmtDate(wd);
+                        const dayName = FULL_DAYS[dayIdx];
+                        const dayRequests = approvedRequests.filter(r => {
+                          if (r.employee_id !== emp.id) return false;
+                          if (r.is_recurring) {
+                            if (!(r.recurring_days || []).includes(dayName)) return false;
+                            if (r.recurring_start_date && dayStr < r.recurring_start_date) return false;
+                            if (r.recurring_end_date && dayStr > r.recurring_end_date) return false;
+                            return true;
+                          }
+                          if (r.start_date && r.end_date) return dayStr >= r.start_date && dayStr <= r.end_date;
+                          if (r.start_date) return dayStr === r.start_date;
+                          return false;
+                        });
                         return (
                           <td key={dayIdx} className="px-1 py-1.5 align-top">
                             <div className="space-y-1 min-h-[48px]">
+                              {dayRequests.map(req => (
+                                <div key={req.id} className={`w-full rounded-md px-2 py-1 text-[10px] border ${req.request_type === "leave" ? "bg-destructive/10 text-destructive border-destructive/20" : "bg-yellow-500/10 text-yellow-600 border-yellow-500/20"}`}>
+                                  <CalendarOff className="h-2.5 w-2.5 inline mr-0.5" />
+                                  {req.request_type === "leave" ? "Leave" : "Unavailable"}
+                                </div>
+                              ))}
                               {dayShifts.map(shift => (
                                 <button
                                   key={shift.id}

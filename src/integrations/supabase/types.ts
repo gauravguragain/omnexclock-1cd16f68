@@ -76,6 +76,71 @@ export type Database = {
           },
         ]
       }
+      employee_requests: {
+        Row: {
+          admin_note: string | null
+          approved_at: string | null
+          approved_by: string | null
+          created_at: string
+          employee_id: string
+          end_date: string | null
+          id: string
+          is_recurring: boolean
+          reason: string | null
+          recurring_days: string[] | null
+          recurring_end_date: string | null
+          recurring_start_date: string | null
+          request_type: string
+          start_date: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          admin_note?: string | null
+          approved_at?: string | null
+          approved_by?: string | null
+          created_at?: string
+          employee_id: string
+          end_date?: string | null
+          id?: string
+          is_recurring?: boolean
+          reason?: string | null
+          recurring_days?: string[] | null
+          recurring_end_date?: string | null
+          recurring_start_date?: string | null
+          request_type?: string
+          start_date?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          admin_note?: string | null
+          approved_at?: string | null
+          approved_by?: string | null
+          created_at?: string
+          employee_id?: string
+          end_date?: string | null
+          id?: string
+          is_recurring?: boolean
+          reason?: string | null
+          recurring_days?: string[] | null
+          recurring_end_date?: string | null
+          recurring_start_date?: string | null
+          request_type?: string
+          start_date?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "employee_requests_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       employees: {
         Row: {
           active: boolean
@@ -120,6 +185,111 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      forum_comments: {
+        Row: {
+          content: string
+          created_at: string
+          employee_id: string
+          id: string
+          post_id: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          employee_id: string
+          id?: string
+          post_id: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          employee_id?: string
+          id?: string
+          post_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "forum_comments_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "forum_comments_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "forum_posts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      forum_posts: {
+        Row: {
+          author_id: string | null
+          content: string
+          created_at: string
+          id: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          author_id?: string | null
+          content: string
+          created_at?: string
+          id?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          author_id?: string | null
+          content?: string
+          created_at?: string
+          id?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      forum_reactions: {
+        Row: {
+          created_at: string
+          employee_id: string
+          id: string
+          post_id: string
+          reaction: string
+        }
+        Insert: {
+          created_at?: string
+          employee_id: string
+          id?: string
+          post_id: string
+          reaction: string
+        }
+        Update: {
+          created_at?: string
+          employee_id?: string
+          id?: string
+          post_id?: string
+          reaction?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "forum_reactions_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "forum_reactions_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "forum_posts"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       payroll_entries: {
         Row: {
@@ -328,6 +498,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      add_forum_comment: {
+        Args: { _content: string; _employee_code: string; _post_id: string }
+        Returns: boolean
+      }
       get_employee_clock_history: {
         Args: { _employee_code: string }
         Returns: {
@@ -335,6 +509,23 @@ export type Database = {
           event_type: string
           id: string
           photo_url: string
+        }[]
+      }
+      get_employee_requests: {
+        Args: { _employee_code: string }
+        Returns: {
+          admin_note: string
+          created_at: string
+          end_date: string
+          id: string
+          is_recurring: boolean
+          reason: string
+          recurring_days: string[]
+          recurring_end_date: string
+          recurring_start_date: string
+          request_type: string
+          start_date: string
+          status: string
         }[]
       }
       get_employee_shifts: {
@@ -373,6 +564,32 @@ export type Database = {
           work_date: string
         }[]
       }
+      get_forum_comments: {
+        Args: { _employee_code: string; _post_id: string }
+        Returns: {
+          content: string
+          created_at: string
+          employee_name: string
+          id: string
+        }[]
+      }
+      get_forum_posts: {
+        Args: { _employee_code: string }
+        Returns: {
+          comment_count: number
+          content: string
+          created_at: string
+          id: string
+          reaction_counts: Json
+          title: string
+        }[]
+      }
+      get_my_reactions: {
+        Args: { _employee_code: string; _post_id: string }
+        Returns: {
+          reaction: string
+        }[]
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -382,6 +599,24 @@ export type Database = {
       }
       is_admin: { Args: never; Returns: boolean }
       is_approved: { Args: { _user_id: string }; Returns: boolean }
+      submit_employee_request: {
+        Args: {
+          _employee_code: string
+          _end_date?: string
+          _is_recurring?: boolean
+          _reason?: string
+          _recurring_days?: string[]
+          _recurring_end_date?: string
+          _recurring_start_date?: string
+          _request_type: string
+          _start_date?: string
+        }
+        Returns: boolean
+      }
+      toggle_forum_reaction: {
+        Args: { _employee_code: string; _post_id: string; _reaction: string }
+        Returns: boolean
+      }
     }
     Enums: {
       app_role: "admin" | "user"

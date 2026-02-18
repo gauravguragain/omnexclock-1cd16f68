@@ -3,13 +3,23 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import {
   ArrowLeft, Delete, CalendarRange, Clock, LogIn, LogOut, Coffee, User, FileText,
+  MessageSquare, CalendarOff, Send, Plus, RefreshCw, CalendarIcon,
 } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { ausToday, toAusFormatted, toAusTime12 } from "@/lib/dateUtils";
+import { format } from "date-fns";
 
 /* ── types ───────────────────────────────────────────────── */
 
@@ -90,6 +100,27 @@ export default function PortalPage() {
   const [loading, setLoading] = useState(false);
   const [currentTime, setCurrentTime] = useState(new Date());
 
+  // Forum state
+  const [forumPosts, setForumPosts] = useState<any[]>([]);
+  const [selectedForumPost, setSelectedForumPost] = useState<any | null>(null);
+  const [forumComments, setForumComments] = useState<any[]>([]);
+  const [newComment, setNewComment] = useState("");
+  const [myReactions, setMyReactions] = useState<Set<string>>(new Set());
+  const [commentLoading, setCommentLoading] = useState(false);
+
+  // Request state
+  const [myRequests, setMyRequests] = useState<any[]>([]);
+  const [requestOpen, setRequestOpen] = useState(false);
+  const [reqType, setReqType] = useState<"leave" | "unavailability">("leave");
+  const [reqStartDate, setReqStartDate] = useState<Date | undefined>();
+  const [reqEndDate, setReqEndDate] = useState<Date | undefined>();
+  const [reqIsRecurring, setReqIsRecurring] = useState(false);
+  const [reqDays, setReqDays] = useState<string[]>([]);
+  const [reqRecurringStart, setReqRecurringStart] = useState<Date | undefined>();
+  const [reqRecurringEnd, setReqRecurringEnd] = useState<Date | undefined>();
+  const [reqReason, setReqReason] = useState("");
+  const [reqSaving, setReqSaving] = useState(false);
+
   useEffect(() => {
     const timer = setInterval(() => setCurrentTime(new Date()), 1000);
     return () => clearInterval(timer);
@@ -119,13 +150,17 @@ export default function PortalPage() {
       setEmployeeInfo(statusData[0] as EmployeeInfo);
       setEmployeeCode(code);
 
-      const [shiftsRes, tsRes] = await Promise.all([
+      const [shiftsRes, tsRes, forumRes, requestsRes] = await Promise.all([
         supabase.rpc("get_employee_shifts", { _employee_code: code }),
         supabase.rpc("get_employee_timesheets", { _employee_code: code }),
+        supabase.rpc("get_forum_posts", { _employee_code: code }),
+        supabase.rpc("get_employee_requests", { _employee_code: code }),
       ]);
 
       setShifts((shiftsRes.data as PortalShift[]) || []);
       setTimesheets((tsRes.data as TimesheetEntry[]) || []);
+      setForumPosts(forumRes.data || []);
+      setMyRequests(requestsRes.data || []);
       setAuthenticated(true);
     } catch {
       toast({ title: "Error", description: "Unable to load portal.", variant: "destructive" });
@@ -140,6 +175,96 @@ export default function PortalPage() {
     setEmployeeInfo(null);
     setShifts([]);
     setTimesheets([]);
+  };
+
+  // Forum helpers
+  const loadForumPost = async (post: any) => {
+    setSelectedForumPost(post);
+    setCommentLoading(true);
+    const [commentsRes, reactionsRes] = await Promise.all([
+      supabase.rpc("get_forum_comments", { _employee_code: employeeCode, _post_id: post.id }),
+      supabase.rpc("get_my_reactions", { _employee_code: employeeCode, _post_id: post.id }),
+    ]);
+    setForumComments(commentsRes.data || []);
+    setMyReactions(new Set((reactionsRes.data || []).map((r: any) => r.reaction)));
+    setCommentLoading(false);
+  };
+
+  const sendComment = async () => {
+    if (!newComment.trim() || !selectedForumPost) return;
+    await supabase.rpc("add_forum_comment", { _employee_code: employeeCode, _post_id: selectedForumPost.id, _content: newComment.trim() });
+    setNewComment("");
+    loadForumPost(selectedForumPost);
+    // Refresh post counts
+    const { data } = await supabase.rpc("get_forum_posts", { _employee_code: employeeCode });
+    setForumPosts(data || []);
+  };
+
+  const toggleReaction = async (emoji: string) => {
+    if (!selectedForumPost) return;
+    await supabase.rpc("toggle_forum_reaction", { _employee_code: employeeCode, _post_id: selectedForumPost.id, _reaction: emoji });
+    // Refresh
+    const [reactionsRes, postsRes] = await Promise.all([
+      supabase.rpc("get_my_reactions", { _employee_code: employeeCode, _post_id: selectedForumPost.id }),
+      supabase.rpc("get_forum_posts", { _employee_code: employeeCode }),
+    ]);
+    setMyReactions(new Set((reactionsRes.data || []).map((r: any) => r.reaction)));
+    setForumPosts(postsRes.data || []);
+    // Update selected post reaction counts
+    const updated = (postsRes.data || []).find((p: any) => p.id === selectedForumPost.id);
+    if (updated) setSelectedForumPost(updated);
+  };
+
+  // Request helpers
+  const DAYS_OF_WEEK = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
+
+  const submitRequest = async () => {
+    setReqSaving(true);
+    const params: any = {
+      _employee_code: employeeCode,
+      _request_type: reqType,
+      _is_recurring: reqIsRecurring,
+      _reason: reqReason.trim() || null,
+    };
+    if (reqIsRecurring) {
+      params._recurring_days = reqDays;
+      params._recurring_start_date = reqRecurringStart ? format(reqRecurringStart, "yyyy-MM-dd") : null;
+      params._recurring_end_date = reqRecurringEnd ? format(reqRecurringEnd, "yyyy-MM-dd") : null;
+    } else {
+      params._start_date = reqStartDate ? format(reqStartDate, "yyyy-MM-dd") : null;
+      params._end_date = reqEndDate ? format(reqEndDate, "yyyy-MM-dd") : null;
+    }
+    const { data } = await supabase.rpc("submit_employee_request", params);
+    if (data) {
+      toast({ title: "Request Submitted", description: "Your request has been sent for admin approval." });
+      setRequestOpen(false);
+      resetRequestForm();
+      const { data: updated } = await supabase.rpc("get_employee_requests", { _employee_code: employeeCode });
+      setMyRequests(updated || []);
+    } else {
+      toast({ title: "Error", description: "Failed to submit request.", variant: "destructive" });
+    }
+    setReqSaving(false);
+  };
+
+  const resetRequestForm = () => {
+    setReqType("leave");
+    setReqStartDate(undefined);
+    setReqEndDate(undefined);
+    setReqIsRecurring(false);
+    setReqDays([]);
+    setReqRecurringStart(undefined);
+    setReqRecurringEnd(undefined);
+    setReqReason("");
+  };
+
+  const statusBadge = (status: string) => {
+    switch (status) {
+      case "pending": return <Badge variant="outline" className="text-yellow-500 border-yellow-500/30 text-[10px] px-1.5 py-0">Pending</Badge>;
+      case "approved": return <Badge variant="outline" className="text-green-500 border-green-500/30 text-[10px] px-1.5 py-0">Approved</Badge>;
+      case "rejected": return <Badge variant="outline" className="text-destructive border-destructive/30 text-[10px] px-1.5 py-0">Rejected</Badge>;
+      default: return <Badge variant="outline" className="text-[10px] px-1.5 py-0">{status}</Badge>;
+    }
   };
 
   useEffect(() => {
@@ -295,12 +420,18 @@ export default function PortalPage() {
 
         {/* Tabs */}
         <Tabs defaultValue="roster" className="w-full">
-          <TabsList className="w-full grid grid-cols-2">
-            <TabsTrigger value="roster" className="gap-1.5">
+          <TabsList className="w-full grid grid-cols-4">
+            <TabsTrigger value="roster" className="gap-1 text-xs">
               <CalendarRange className="h-3.5 w-3.5" /> Roster
             </TabsTrigger>
-            <TabsTrigger value="timesheets" className="gap-1.5">
+            <TabsTrigger value="timesheets" className="gap-1 text-xs">
               <FileText className="h-3.5 w-3.5" /> Timesheets
+            </TabsTrigger>
+            <TabsTrigger value="forum" className="gap-1 text-xs">
+              <MessageSquare className="h-3.5 w-3.5" /> Forum
+            </TabsTrigger>
+            <TabsTrigger value="requests" className="gap-1 text-xs">
+              <CalendarOff className="h-3.5 w-3.5" /> Requests
             </TabsTrigger>
           </TabsList>
 
@@ -437,7 +568,251 @@ export default function PortalPage() {
               </>
             )}
           </TabsContent>
+
+          {/* FORUM TAB */}
+          <TabsContent value="forum" className="space-y-3 mt-4">
+            {forumPosts.length === 0 ? (
+              <Card>
+                <CardContent className="p-8 text-center text-muted-foreground">
+                  <MessageSquare className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                  <p>No announcements yet.</p>
+                </CardContent>
+              </Card>
+            ) : (
+              forumPosts.map((post: any) => (
+                <Card key={post.id} className="cursor-pointer hover:border-primary/30 transition-colors" onClick={() => loadForumPost(post)}>
+                  <CardContent className="p-4">
+                    <h3 className="font-semibold text-foreground text-sm">{post.title}</h3>
+                    <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{post.content}</p>
+                    <div className="flex items-center gap-2 mt-2 flex-wrap">
+                      <span className="text-[10px] text-muted-foreground">
+                        {new Date(post.created_at).toLocaleDateString("en-AU", { day: "numeric", month: "short" })}
+                      </span>
+                      <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
+                        <MessageSquare className="h-2.5 w-2.5 mr-0.5" /> {post.comment_count}
+                      </Badge>
+                      {post.reaction_counts && Object.entries(post.reaction_counts as Record<string, number>).map(([emoji, count]) => (
+                        <Badge key={emoji} variant="secondary" className="text-[10px] px-1.5 py-0">
+                          {emoji} {count}
+                        </Badge>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              ))
+            )}
+          </TabsContent>
+
+          {/* REQUESTS TAB */}
+          <TabsContent value="requests" className="space-y-3 mt-4">
+            <Button size="sm" className="w-full" onClick={() => { resetRequestForm(); setRequestOpen(true); }}>
+              <Plus className="mr-1.5 h-4 w-4" /> Submit Request
+            </Button>
+            {myRequests.length === 0 ? (
+              <Card>
+                <CardContent className="p-8 text-center text-muted-foreground">
+                  <CalendarOff className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                  <p>No requests submitted yet.</p>
+                </CardContent>
+              </Card>
+            ) : (
+              myRequests.map((req: any) => (
+                <Card key={req.id}>
+                  <CardContent className="p-3 space-y-1">
+                    <div className="flex items-center gap-2">
+                      {statusBadge(req.status)}
+                      <Badge variant="secondary" className="text-[10px] px-1.5 py-0 capitalize">
+                        {req.is_recurring && <RefreshCw className="h-2.5 w-2.5 mr-0.5" />}
+                        {req.request_type}
+                      </Badge>
+                    </div>
+                    <p className="text-sm text-foreground">
+                      {req.is_recurring
+                        ? `Every ${(req.recurring_days || []).join(", ")}${req.recurring_start_date ? ` (${new Date(req.recurring_start_date + "T00:00:00").toLocaleDateString("en-AU", { day: "numeric", month: "short" })} – ${new Date(req.recurring_end_date + "T00:00:00").toLocaleDateString("en-AU", { day: "numeric", month: "short" })})` : ""}`
+                        : req.start_date
+                          ? `${new Date(req.start_date + "T00:00:00").toLocaleDateString("en-AU", { day: "numeric", month: "short", year: "numeric" })}${req.end_date && req.end_date !== req.start_date ? ` – ${new Date(req.end_date + "T00:00:00").toLocaleDateString("en-AU", { day: "numeric", month: "short", year: "numeric" })}` : ""}`
+                          : "—"}
+                    </p>
+                    {req.reason && <p className="text-xs text-muted-foreground">{req.reason}</p>}
+                    {req.admin_note && <p className="text-xs text-muted-foreground italic">Admin: {req.admin_note}</p>}
+                  </CardContent>
+                </Card>
+              ))
+            )}
+          </TabsContent>
         </Tabs>
+
+        {/* Forum Post Detail Dialog */}
+        <Dialog open={!!selectedForumPost} onOpenChange={(open) => { if (!open) setSelectedForumPost(null); }}>
+          <DialogContent className="max-w-lg max-h-[80vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle className="text-base">{selectedForumPost?.title}</DialogTitle>
+            </DialogHeader>
+            <p className="text-sm text-foreground whitespace-pre-wrap">{selectedForumPost?.content}</p>
+
+            {/* Reactions */}
+            <div className="flex gap-2 flex-wrap">
+              {["👍", "❤️", "😂", "🎉"].map(emoji => (
+                <Button
+                  key={emoji}
+                  variant={myReactions.has(emoji) ? "default" : "outline"}
+                  size="sm"
+                  className="h-8 text-base"
+                  onClick={() => toggleReaction(emoji)}
+                >
+                  {emoji} {selectedForumPost?.reaction_counts?.[emoji] || 0}
+                </Button>
+              ))}
+            </div>
+
+            {/* Comments */}
+            <div className="space-y-2">
+              <Label className="text-xs text-muted-foreground">Comments</Label>
+              {commentLoading ? (
+                <p className="text-xs text-muted-foreground text-center py-4">Loading...</p>
+              ) : forumComments.length === 0 ? (
+                <p className="text-xs text-muted-foreground text-center py-4">No comments yet. Be the first!</p>
+              ) : (
+                forumComments.map((c: any) => (
+                  <div key={c.id} className="rounded-lg bg-secondary/50 px-3 py-2">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-medium text-foreground">{c.employee_name}</span>
+                      <span className="text-[10px] text-muted-foreground">
+                        {new Date(c.created_at).toLocaleDateString("en-AU", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}
+                      </span>
+                    </div>
+                    <p className="text-sm text-foreground mt-0.5">{c.content}</p>
+                  </div>
+                ))
+              )}
+              <div className="flex gap-2">
+                <Input
+                  placeholder="Write a comment..."
+                  value={newComment}
+                  onChange={e => setNewComment(e.target.value)}
+                  onKeyDown={e => e.key === "Enter" && sendComment()}
+                  className="flex-1"
+                />
+                <Button size="sm" onClick={sendComment} disabled={!newComment.trim()}>
+                  <Send className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        {/* Submit Request Dialog */}
+        <Dialog open={requestOpen} onOpenChange={setRequestOpen}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle>Submit Request</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label>Type</Label>
+                <Select value={reqType} onValueChange={(v) => setReqType(v as "leave" | "unavailability")}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="leave">Leave</SelectItem>
+                    <SelectItem value="unavailability">Unavailability</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {reqType === "unavailability" && (
+                <div className="flex items-center gap-2">
+                  <Checkbox checked={reqIsRecurring} onCheckedChange={(c) => setReqIsRecurring(!!c)} id="recurring" />
+                  <Label htmlFor="recurring" className="text-sm cursor-pointer">Recurring (weekly)</Label>
+                </div>
+              )}
+
+              {reqIsRecurring ? (
+                <>
+                  <div className="space-y-2">
+                    <Label>Days of Week</Label>
+                    <div className="flex flex-wrap gap-2">
+                      {DAYS_OF_WEEK.map(day => (
+                        <Button
+                          key={day}
+                          variant={reqDays.includes(day) ? "default" : "outline"}
+                          size="sm"
+                          className="text-xs h-7"
+                          onClick={() => setReqDays(prev => prev.includes(day) ? prev.filter(d => d !== day) : [...prev, day])}
+                        >
+                          {day.slice(0, 3)}
+                        </Button>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-2">
+                      <Label className="text-xs">From Date</Label>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <Button variant="outline" className={cn("w-full justify-start text-left font-normal", !reqRecurringStart && "text-muted-foreground")}>
+                            <CalendarIcon className="mr-2 h-4 w-4" />
+                            {reqRecurringStart ? format(reqRecurringStart, "dd MMM yyyy") : "Pick date"}
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0"><Calendar mode="single" selected={reqRecurringStart} onSelect={setReqRecurringStart} /></PopoverContent>
+                      </Popover>
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-xs">To Date</Label>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <Button variant="outline" className={cn("w-full justify-start text-left font-normal", !reqRecurringEnd && "text-muted-foreground")}>
+                            <CalendarIcon className="mr-2 h-4 w-4" />
+                            {reqRecurringEnd ? format(reqRecurringEnd, "dd MMM yyyy") : "Pick date"}
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0"><Calendar mode="single" selected={reqRecurringEnd} onSelect={setReqRecurringEnd} /></PopoverContent>
+                      </Popover>
+                    </div>
+                  </div>
+                </>
+              ) : (
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-2">
+                    <Label className="text-xs">Start Date</Label>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button variant="outline" className={cn("w-full justify-start text-left font-normal", !reqStartDate && "text-muted-foreground")}>
+                          <CalendarIcon className="mr-2 h-4 w-4" />
+                          {reqStartDate ? format(reqStartDate, "dd MMM yyyy") : "Pick date"}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0"><Calendar mode="single" selected={reqStartDate} onSelect={setReqStartDate} /></PopoverContent>
+                    </Popover>
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-xs">End Date</Label>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button variant="outline" className={cn("w-full justify-start text-left font-normal", !reqEndDate && "text-muted-foreground")}>
+                          <CalendarIcon className="mr-2 h-4 w-4" />
+                          {reqEndDate ? format(reqEndDate, "dd MMM yyyy") : "Same as start"}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0"><Calendar mode="single" selected={reqEndDate} onSelect={setReqEndDate} /></PopoverContent>
+                    </Popover>
+                  </div>
+                </div>
+              )}
+
+              <div className="space-y-2">
+                <Label>Reason (optional)</Label>
+                <Textarea placeholder="Reason for your request..." value={reqReason} onChange={e => setReqReason(e.target.value)} rows={2} />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setRequestOpen(false)}>Cancel</Button>
+              <Button onClick={submitRequest} disabled={reqSaving}>{reqSaving ? "Submitting..." : "Submit"}</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </main>
 
       <footer className="text-center py-6">
