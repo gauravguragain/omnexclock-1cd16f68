@@ -360,6 +360,19 @@ export type Database = {
           last_event_time: string
         }[]
       }
+      get_employee_timesheets: {
+        Args: { _employee_code: string }
+        Returns: {
+          break_end: string
+          break_minutes: number
+          break_start: string
+          clock_in: string
+          clock_out: string
+          net_hours: number
+          total_hours: number
+          work_date: string
+        }[]
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
