@@ -61,6 +61,23 @@ function calcNetHours(start: string, end: string, breakMin: number): number {
   return Math.max(0, (mins - breakMin) / 60);
 }
 
+function timeToMinutes(t: string): number {
+  const [h, m] = t.split(":").map(Number);
+  return h * 60 + m;
+}
+
+function isAllDayUnavailability(req: any): boolean {
+  return !req.start_time || !req.end_time;
+}
+
+function timesOverlap(startA: string, endA: string, startB: string, endB: string): boolean {
+  const a0 = timeToMinutes(startA);
+  const a1 = timeToMinutes(endA);
+  const b0 = timeToMinutes(startB);
+  const b1 = timeToMinutes(endB);
+  return a0 < b1 && b0 < a1;
+}
+
 /* ── component ───────────────────────────────────────────── */
 
 interface ShiftForm {
@@ -205,6 +222,44 @@ export default function RosterPage() {
         week_start_date: fmtDate(weekStart),
         status: "draft" as const,
       };
+
+      // Check for overlap with approved unavailability requests
+      const dayName = form.day_of_week;
+      const dayStr = form.date;
+      const dayRequests = approvedRequests.filter(r => {
+        if (r.employee_id !== form.employee_id) return false;
+        if (r.is_recurring) {
+          if (!(r.recurring_days || []).includes(dayName)) return false;
+          if (r.recurring_start_date && dayStr < r.recurring_start_date) return false;
+          if (r.recurring_end_date && dayStr > r.recurring_end_date) return false;
+          return true;
+        }
+        if (r.start_date && r.end_date) return dayStr >= r.start_date && dayStr <= r.end_date;
+        if (r.start_date) return dayStr === r.start_date;
+        return false;
+      });
+
+      const overlappingReq = dayRequests.find(r => {
+        if (isAllDayUnavailability(r)) return true;
+        return timesOverlap(form.start_time, form.end_time, r.start_time, r.end_time);
+      });
+
+      if (overlappingReq) {
+        const label = overlappingReq.request_type === "leave" ? "leave" : "unavailability";
+        if (isAllDayUnavailability(overlappingReq)) {
+          toast({ title: "Cannot roster", description: `This employee has an approved all-day ${label} on this date.`, variant: "destructive" });
+          setSaving(false);
+          return;
+        } else {
+          toast({
+            title: "Shift overlaps unavailability",
+            description: `This shift overlaps with approved ${label} (${formatTime12(overlappingReq.start_time)} – ${formatTime12(overlappingReq.end_time)}). Please adjust the shift times.`,
+            variant: "destructive",
+          });
+          setSaving(false);
+          return;
+        }
+      }
 
       if (editingShift) {
         const { error } = await supabase.from("shifts").update(payload).eq("id", editingShift.id);
@@ -501,14 +556,18 @@ export default function RosterPage() {
                                   </div>
                                 </button>
                               ))}
-                              {dayShifts.length === 0 && dayRequests.length === 0 && (
-                                <button
-                                  onClick={() => openAddShift(emp.id, dayIdx)}
-                                  className="w-full rounded-md border border-dashed border-border hover:border-primary/50 hover:bg-primary/5 text-muted-foreground hover:text-primary text-xs py-1.5 transition-colors flex items-center justify-center gap-1"
-                                >
-                                  <Plus className="h-3 w-3" />
-                                </button>
-                              )}
+                              {(() => {
+                                const hasAllDayBlock = dayRequests.some(r => isAllDayUnavailability(r));
+                                if (!hasAllDayBlock) return (
+                                  <button
+                                    onClick={() => openAddShift(emp.id, dayIdx)}
+                                    className="w-full rounded-md border border-dashed border-border hover:border-primary/50 hover:bg-primary/5 text-muted-foreground hover:text-primary text-xs py-1.5 transition-colors flex items-center justify-center gap-1"
+                                  >
+                                    <Plus className="h-3 w-3" />
+                                  </button>
+                                );
+                                return null;
+                              })()}
                             </div>
                           </td>
                         );
@@ -543,6 +602,41 @@ export default function RosterPage() {
                 {form.day_of_week} — {new Date(form.date + "T00:00:00").toLocaleDateString("en-AU", { day: "numeric", month: "short", year: "numeric" })}
               </p>
             </div>
+
+            {/* Unavailability warning for this day */}
+            {(() => {
+              const dayReqs = approvedRequests.filter(r => {
+                if (r.employee_id !== form.employee_id) return false;
+                if (r.is_recurring) {
+                  if (!(r.recurring_days || []).includes(form.day_of_week)) return false;
+                  if (r.recurring_start_date && form.date < r.recurring_start_date) return false;
+                  if (r.recurring_end_date && form.date > r.recurring_end_date) return false;
+                  return true;
+                }
+                if (r.start_date && r.end_date) return form.date >= r.start_date && form.date <= r.end_date;
+                if (r.start_date) return form.date === r.start_date;
+                return false;
+              });
+              if (dayReqs.length === 0) return null;
+              return dayReqs.map(r => (
+                <div key={r.id} className="flex items-start gap-2 rounded-md border border-yellow-500/30 bg-yellow-500/10 px-3 py-2 text-xs text-yellow-700 dark:text-yellow-400">
+                  <AlertCircle className="h-3.5 w-3.5 mt-0.5 shrink-0" />
+                  <div>
+                    <span className="font-medium">
+                      {r.request_type === "leave" ? "Leave" : "Unavailable"}
+                      {r.start_time && r.end_time
+                        ? `: ${formatTime12(r.start_time)} – ${formatTime12(r.end_time)}`
+                        : " (all day)"}
+                    </span>
+                    <div className="text-[10px] opacity-80 mt-0.5">
+                      {r.start_time && r.end_time
+                        ? "Schedule outside these hours only."
+                        : "Cannot roster on this day."}
+                    </div>
+                  </div>
+                </div>
+              ));
+            })()}
 
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-2">
