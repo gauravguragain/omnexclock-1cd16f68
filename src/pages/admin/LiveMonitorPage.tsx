@@ -13,7 +13,7 @@ interface LiveEmployee {
   lastTime: string;
   photoPath?: string;
   signedUrl?: string;
-  geolocation?: { latitude: number; longitude: number; accuracy: number } | null;
+  geolocation?: { latitude: number; longitude: number; accuracy: number; location_name?: string } | null;
   locationName?: string;
 }
 
@@ -58,7 +58,7 @@ export default function LiveMonitorPage() {
         }
       }
       if (entry.geolocation) {
-        entry.locationName = formatLocation(entry.geolocation.latitude, entry.geolocation.longitude);
+        entry.locationName = entry.geolocation.location_name || formatLocation(entry.geolocation.latitude, entry.geolocation.longitude);
       }
     }));
     setLiveData(entries);
