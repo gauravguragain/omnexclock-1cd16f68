@@ -70,7 +70,7 @@ export default function AdminLayout() {
               : "You don't have access to this business."}
           </p>
           <div className="flex gap-3 justify-center">
-            <Link to="/auth"><Button variant="outline">Back</Button></Link>
+            <Link to="/hub"><Button variant="outline">Back to Hub</Button></Link>
             <Button variant="outline" onClick={signOut}>Sign Out</Button>
           </div>
         </div>
@@ -136,15 +136,13 @@ export default function AdminLayout() {
               Launch Kiosk
             </Link>
           )}
-          {businesses.length > 1 && (
-            <Link
-              to="/auth"
-              className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-muted-foreground hover:text-foreground hover:bg-secondary w-full"
-            >
-              <Building2 className="h-4 w-4 flex-shrink-0" />
-              Switch Business
-            </Link>
-          )}
+          <Link
+            to="/hub"
+            className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-muted-foreground hover:text-foreground hover:bg-secondary w-full"
+          >
+            <Building2 className="h-4 w-4 flex-shrink-0" />
+            Business Hub
+          </Link>
           <button onClick={signOut} className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-muted-foreground hover:text-foreground hover:bg-secondary w-full">
             <LogOut className="h-4 w-4 flex-shrink-0" />
             Sign Out
