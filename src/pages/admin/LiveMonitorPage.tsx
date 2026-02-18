@@ -1,9 +1,10 @@
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Clock, LogIn, LogOut, Coffee, MapPin } from "lucide-react";
 import { toAusTime12, ausStartOfToday } from "@/lib/dateUtils";
+import { reverseGeocode } from "@/lib/geocode";
 
 interface LiveEmployee {
   id: string;
@@ -13,6 +14,7 @@ interface LiveEmployee {
   photoPath?: string;
   signedUrl?: string;
   geolocation?: { latitude: number; longitude: number; accuracy: number } | null;
+  locationName?: string;
 }
 
 export default function LiveMonitorPage() {
@@ -44,9 +46,9 @@ export default function LiveMonitorPage() {
       }
     }
 
-    // Generate signed URLs for photos
+    // Generate signed URLs for photos and resolve location names
     const entries = Array.from(seen.values());
-    for (const entry of entries) {
+    await Promise.all(entries.map(async (entry) => {
       if (entry.photoPath) {
         const { data } = await supabase.storage
           .from("clock-photos")
@@ -55,7 +57,10 @@ export default function LiveMonitorPage() {
           entry.signedUrl = data.signedUrl;
         }
       }
-    }
+      if (entry.geolocation) {
+        entry.locationName = await reverseGeocode(entry.geolocation.latitude, entry.geolocation.longitude);
+      }
+    }));
     setLiveData(entries);
   };
 
@@ -135,9 +140,10 @@ export default function LiveMonitorPage() {
                       target="_blank"
                       rel="noopener noreferrer"
                       className="flex items-center gap-1 text-xs text-primary hover:underline mt-0.5"
+                      title={`${emp.geolocation.latitude.toFixed(4)}, ${emp.geolocation.longitude.toFixed(4)}`}
                     >
                       <MapPin className="h-3 w-3" />
-                      {emp.geolocation.latitude.toFixed(4)}, {emp.geolocation.longitude.toFixed(4)}
+                      {emp.locationName || "Location"}
                     </a>
                   )}
                 </div>
