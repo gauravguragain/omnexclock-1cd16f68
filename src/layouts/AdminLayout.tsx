@@ -8,10 +8,9 @@ import {
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useSessionGuard } from "@/hooks/useSessionGuard";
-import { supabase } from "@/integrations/supabase/client";
 
 export default function AdminLayout() {
-  const { user, isAdmin, isViewer, isApproved, loading, signOut } = useAuth();
+  const { user, isAdminOf, isViewerOf, hasAccessTo, isApproved, loading, signOut } = useAuth();
   const { business, businesses, setBusiness } = useBusiness();
   const location = useLocation();
   const { businessCode } = useParams();
@@ -27,6 +26,11 @@ export default function AdminLayout() {
       }
     }
   }, [businessCode, businesses]);
+
+  const currentBusinessId = business?.id || "";
+  const isAdmin = isAdminOf(currentBusinessId);
+  const isViewer = isViewerOf(currentBusinessId);
+  const hasAccess = hasAccessTo(currentBusinessId);
 
   const basePath = `/b/${businessCode}/admin`;
 
@@ -53,7 +57,7 @@ export default function AdminLayout() {
   }
 
   if (!user) return <Navigate to="/auth" replace />;
-  if ((!isAdmin && !isViewer) || !isApproved) {
+  if (!isApproved || !hasAccess) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="text-center space-y-4">
@@ -63,9 +67,12 @@ export default function AdminLayout() {
           <p className="text-muted-foreground">
             {!isApproved
               ? "Your account is awaiting approval from an administrator."
-              : "You don't have admin privileges."}
+              : "You don't have access to this business."}
           </p>
-          <Button variant="outline" onClick={signOut}>Sign Out</Button>
+          <div className="flex gap-3 justify-center">
+            <Link to="/hub"><Button variant="outline">Back to Hub</Button></Link>
+            <Button variant="outline" onClick={signOut}>Sign Out</Button>
+          </div>
         </div>
       </div>
     );
@@ -117,7 +124,7 @@ export default function AdminLayout() {
             </p>
             <p className="text-xs text-muted-foreground truncate">{user?.email}</p>
           </div>
-          {!isViewer && (
+          {isAdmin && (
             <Link
               to={`/b/${businessCode}/kiosk`}
               onClick={async () => {

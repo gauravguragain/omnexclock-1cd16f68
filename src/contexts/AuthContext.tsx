@@ -1,14 +1,29 @@
-import React, { createContext, useContext, useEffect, useState } from "react";
+import React, { createContext, useContext, useEffect, useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { logAudit } from "@/lib/auditLog";
 import type { User } from "@supabase/supabase-js";
 
+interface UserBusinessRole {
+  business_id: string;
+  role: "admin" | "viewer" | "user";
+}
+
 interface AuthContextType {
   user: User | null;
-  isAdmin: boolean;
-  isViewer: boolean;
   isApproved: boolean;
   loading: boolean;
+  /** All business roles for this user */
+  businessRoles: UserBusinessRole[];
+  /** Check if user is admin of a specific business */
+  isAdminOf: (businessId: string) => boolean;
+  /** Check if user is viewer of a specific business */
+  isViewerOf: (businessId: string) => boolean;
+  /** Check if user has any access (admin or viewer) to a business */
+  hasAccessTo: (businessId: string) => boolean;
+  /** Legacy: true if user is admin of ANY business */
+  isAdmin: boolean;
+  /** Legacy: true if user is viewer of ANY business */
+  isViewer: boolean;
   signIn: (email: string, password: string) => Promise<{ error: string | null }>;
   signUp: (email: string, password: string, fullName: string) => Promise<{ error: string | null }>;
   signOut: () => Promise<void>;
@@ -18,33 +33,34 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
-  const [isAdmin, setIsAdmin] = useState(false);
-  const [isViewer, setIsViewer] = useState(false);
   const [isApproved, setIsApproved] = useState(false);
+  const [businessRoles, setBusinessRoles] = useState<UserBusinessRole[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const checkRoles = async (userId: string) => {
-    const [roleResult, viewerResult, approvedResult] = await Promise.all([
-      supabase.rpc("has_role", { _user_id: userId, _role: "admin" }),
-      supabase.rpc("has_role", { _user_id: userId, _role: "viewer" }),
+  const fetchRoles = useCallback(async (userId: string) => {
+    const [rolesResult, approvedResult] = await Promise.all([
+      supabase.from("user_roles").select("business_id, role").eq("user_id", userId),
       supabase.rpc("is_approved", { _user_id: userId }),
     ]);
-    setIsAdmin(!!roleResult.data);
-    setIsViewer(!!viewerResult.data);
+
+    const roles: UserBusinessRole[] = (rolesResult.data || [])
+      .filter((r: any) => r.business_id)
+      .map((r: any) => ({ business_id: r.business_id, role: r.role }));
+
+    setBusinessRoles(roles);
     setIsApproved(!!approvedResult.data);
-  };
+  }, []);
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       setUser(session?.user ?? null);
       if (session?.user) {
         setTimeout(async () => {
-          await checkRoles(session.user.id);
+          await fetchRoles(session.user.id);
           setLoading(false);
         }, 0);
       } else {
-        setIsAdmin(false);
-        setIsViewer(false);
+        setBusinessRoles([]);
         setIsApproved(false);
         setLoading(false);
       }
@@ -53,13 +69,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     supabase.auth.getSession().then(async ({ data: { session } }) => {
       setUser(session?.user ?? null);
       if (session?.user) {
-        await checkRoles(session.user.id);
+        await fetchRoles(session.user.id);
       }
       setLoading(false);
     });
 
     return () => subscription.unsubscribe();
   }, []);
+
+  const isAdminOf = useCallback((businessId: string) => {
+    return businessRoles.some(r => r.business_id === businessId && r.role === "admin");
+  }, [businessRoles]);
+
+  const isViewerOf = useCallback((businessId: string) => {
+    return businessRoles.some(r => r.business_id === businessId && r.role === "viewer");
+  }, [businessRoles]);
+
+  const hasAccessTo = useCallback((businessId: string) => {
+    return businessRoles.some(r => r.business_id === businessId && (r.role === "admin" || r.role === "viewer"));
+  }, [businessRoles]);
+
+  // Legacy global checks
+  const isAdmin = businessRoles.some(r => r.role === "admin");
+  const isViewer = businessRoles.some(r => r.role === "viewer");
 
   const signIn = async (email: string, password: string) => {
     const { data, error } = await supabase.auth.signInWithPassword({ email, password });
@@ -86,7 +118,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, isAdmin, isViewer, isApproved, loading, signIn, signUp, signOut }}>
+    <AuthContext.Provider value={{
+      user, isApproved, loading, businessRoles,
+      isAdminOf, isViewerOf, hasAccessTo,
+      isAdmin, isViewer,
+      signIn, signUp, signOut,
+    }}>
       {children}
     </AuthContext.Provider>
   );
