@@ -88,7 +88,13 @@ export default function AdminLayout() {
           ))}
         </nav>
 
-        <div className="absolute bottom-0 left-0 right-0 p-3 border-t border-border space-y-1">
+        <div className="absolute bottom-0 left-0 right-0 p-3 border-t border-border space-y-2">
+          <div className="px-3 py-2">
+            <p className="text-sm font-medium text-foreground truncate">
+              {user?.user_metadata?.full_name || "Admin"}
+            </p>
+            <p className="text-xs text-muted-foreground truncate">{user?.email}</p>
+          </div>
           {!isViewer && (
             <button
               onClick={async () => {
