@@ -23,31 +23,13 @@ export default function KioskPage() {
   const [employeeStatus, setEmployeeStatus] = useState<EmployeeStatus>("clocked_out");
   const [loading, setLoading] = useState(false);
   const [photoData, setPhotoData] = useState<string | null>(null);
-  const geoRef = useRef<{ latitude: number; longitude: number; accuracy: number } | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const [currentTime, setCurrentTime] = useState(new Date());
-  const [geoReady, setGeoReady] = useState(false);
 
-  // Warm up geolocation on mount — triggers permission prompt early & caches position
   useEffect(() => {
     const timer = setInterval(() => setCurrentTime(new Date()), 1000);
-
-    // Pre-request geolocation so permission is granted once and cached
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        (pos) => {
-          geoRef.current = { latitude: pos.coords.latitude, longitude: pos.coords.longitude, accuracy: pos.coords.accuracy };
-          setGeoReady(true);
-        },
-        () => setGeoReady(true), // even if denied, mark as ready so flow isn't blocked
-        { timeout: 10000, enableHighAccuracy: true }
-      );
-    } else {
-      setGeoReady(true);
-    }
-
     return () => clearInterval(timer);
   }, []);
 
@@ -105,28 +87,15 @@ export default function KioskPage() {
     streamRef.current = null;
   }, []);
 
-  const getGeolocation = (): Promise<{ latitude: number; longitude: number; accuracy: number } | null> => {
-    return new Promise((resolve) => {
-      if (!navigator.geolocation) { resolve(null); return; }
-      navigator.geolocation.getCurrentPosition(
-        (pos) => resolve({ latitude: pos.coords.latitude, longitude: pos.coords.longitude, accuracy: pos.coords.accuracy }),
-        () => resolve(null),
-        { timeout: 5000, enableHighAccuracy: true }
-      );
-    });
-  };
-
   const submitClock = useCallback(async (photo: string) => {
     setLoading(true);
     try {
-      const geolocation = geoRef.current;
       const { data, error } = await supabase.functions.invoke("kiosk-clock", {
         body: {
           employee_code: codeRef.current,
           event_type: actionRef.current,
           photo_base64: photo,
           device_info: { userAgent: navigator.userAgent, screen: `${screen.width}x${screen.height}` },
-          geolocation,
         },
       });
 
@@ -197,18 +166,11 @@ export default function KioskPage() {
     actionRef.current = action;
     setStep("photo_capture");
 
-    // If we already have cached geo from warmup, use it; otherwise fetch fresh
-    const geoPromise = geoRef.current ? Promise.resolve(geoRef.current) : getGeolocation();
-
-    const [geo] = await Promise.all([
-      geoPromise,
-      new Promise<void>((resolve) => {
-        setTimeout(() => {
-          startCamera().then(() => resolve());
-        }, 100);
-      }),
-    ]);
-    geoRef.current = geo;
+    await new Promise<void>((resolve) => {
+      setTimeout(() => {
+        startCamera().then(() => resolve());
+      }, 100);
+    });
     // Small delay for camera to render, then capture
     setTimeout(() => captureAndSubmit(), 1500);
   };
@@ -221,7 +183,6 @@ export default function KioskPage() {
     actionRef.current = "";
     setEmployeeName("");
     setEmployeeId(null);
-    geoRef.current = null;
     setEmployeeStatus("clocked_out");
     setPhotoData(null);
     stopCamera();

@@ -61,7 +61,7 @@ serve(async (req) => {
       });
     }
 
-    const { employee_code, event_type, photo_base64, device_info, geolocation } = body;
+    const { employee_code, event_type, photo_base64, device_info } = body;
 
     // Input validation
     if (!employee_code || typeof employee_code !== "string" || !CODE_REGEX.test(employee_code)) {
@@ -164,17 +164,6 @@ serve(async (req) => {
       }
     }
 
-    // Validate and sanitize geolocation
-    let sanitizedGeo: { latitude: number; longitude: number; accuracy: number } | null = null;
-    if (geolocation && typeof geolocation === "object" &&
-        typeof geolocation.latitude === "number" && typeof geolocation.longitude === "number") {
-      sanitizedGeo = {
-        latitude: geolocation.latitude,
-        longitude: geolocation.longitude,
-        accuracy: typeof geolocation.accuracy === "number" ? geolocation.accuracy : 0,
-      };
-    }
-
     const { data: clockEvent, error: clockError } = await supabase
       .from("clock_events")
       .insert({
@@ -182,7 +171,6 @@ serve(async (req) => {
         event_type,
         photo_url,
         device_info: device_info || null,
-        geolocation: sanitizedGeo,
       })
       .select()
       .single();
@@ -196,31 +184,6 @@ serve(async (req) => {
       return new Response(JSON.stringify({ error: getSafeErrorMessage(clockError) }), {
         status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
-    }
-
-    // Reverse geocode if we have coordinates — fire-and-forget, don't block response
-    if (sanitizedGeo) {
-      (async () => {
-        try {
-          const geoRes = await fetch(
-            `https://nominatim.openstreetmap.org/reverse?format=json&lat=${sanitizedGeo.latitude}&lon=${sanitizedGeo.longitude}&zoom=18&addressdetails=1`,
-            { headers: { "User-Agent": "OmnexClock/1.0" } }
-          );
-          if (geoRes.ok) {
-            const geoData = await geoRes.json();
-            const addr = geoData.address || {};
-            const locationName = addr.road || addr.suburb || addr.city || geoData.display_name || null;
-            if (locationName) {
-              await supabase
-                .from("clock_events")
-                .update({ geolocation: { ...sanitizedGeo, location_name: locationName } })
-                .eq("id", clockEvent.id);
-            }
-          }
-        } catch (e) {
-          console.error("Reverse geocode failed:", e);
-        }
-      })();
     }
 
     await supabase.from("audit_logs").insert({

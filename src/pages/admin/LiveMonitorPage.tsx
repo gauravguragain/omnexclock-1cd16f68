@@ -1,10 +1,8 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Clock, LogIn, LogOut, Coffee, MapPin } from "lucide-react";
+import { Card, CardContent } from "@/components/ui/card";
+import { Clock, LogIn, LogOut, Coffee } from "lucide-react";
 import { toAusTime12, ausStartOfToday } from "@/lib/dateUtils";
-import { formatLocation, googleMapsUrl } from "@/lib/geocode";
 
 interface LiveEmployee {
   id: string;
@@ -13,8 +11,6 @@ interface LiveEmployee {
   lastTime: string;
   photoPath?: string;
   signedUrl?: string;
-  geolocation?: { latitude: number; longitude: number; accuracy: number; location_name?: string } | null;
-  locationName?: string;
 }
 
 export default function LiveMonitorPage() {
@@ -41,12 +37,10 @@ export default function LiveMonitorPage() {
           lastEvent: ev.event_type,
           lastTime: toAusTime12(new Date(ev.created_at)),
           photoPath: ev.photo_url || undefined,
-          geolocation: (ev as any).geolocation || null,
         });
       }
     }
 
-    // Generate signed URLs for photos
     const entries = Array.from(seen.values());
     await Promise.all(entries.map(async (entry) => {
       if (entry.photoPath) {
@@ -56,9 +50,6 @@ export default function LiveMonitorPage() {
         if (data?.signedUrl) {
           entry.signedUrl = data.signedUrl;
         }
-      }
-      if (entry.geolocation) {
-        entry.locationName = entry.geolocation.location_name || formatLocation(entry.geolocation.latitude, entry.geolocation.longitude);
       }
     }));
     setLiveData(entries);
@@ -134,17 +125,6 @@ export default function LiveMonitorPage() {
                     <span className="text-sm text-muted-foreground">{eventLabel(emp.lastEvent)}</span>
                   </div>
                   <p className="text-xs text-muted-foreground mt-0.5">{emp.lastTime}</p>
-                  {emp.geolocation && (
-                    <a
-                      href={googleMapsUrl(emp.geolocation.latitude, emp.geolocation.longitude)}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex items-center gap-1 text-xs text-primary hover:underline mt-0.5"
-                    >
-                      <MapPin className="h-3 w-3" />
-                      {emp.locationName || "Location"}
-                    </a>
-                  )}
                 </div>
               </CardContent>
             </Card>
