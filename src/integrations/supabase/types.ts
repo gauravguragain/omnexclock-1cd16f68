@@ -634,6 +634,10 @@ export type Database = {
         Args: { _employee_code: string; _request_id: string }
         Returns: boolean
       }
+      get_employee_business_id: {
+        Args: { _employee_id: string }
+        Returns: string
+      }
       get_employee_clock_history: {
         Args: { _employee_code: string }
         Returns: {
@@ -739,6 +743,7 @@ export type Database = {
           reaction: string
         }[]
       }
+      has_business_access: { Args: { _business_id: string }; Returns: boolean }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -747,7 +752,12 @@ export type Database = {
         Returns: boolean
       }
       is_admin: { Args: never; Returns: boolean }
+      is_admin_of_business: { Args: { _business_id: string }; Returns: boolean }
       is_approved: { Args: { _user_id: string }; Returns: boolean }
+      is_viewer_of_business: {
+        Args: { _business_id: string }
+        Returns: boolean
+      }
       register_business: {
         Args: { _business_code: string; _business_name: string }
         Returns: string

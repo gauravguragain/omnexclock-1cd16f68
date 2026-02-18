@@ -6,8 +6,8 @@ import { Button } from "@/components/ui/button";
 import { ShieldCheck, User, Clock, LogOut, Building2 } from "lucide-react";
 
 export default function BusinessHubPage() {
-  const { user, isAdmin, isViewer, isApproved, loading, signOut } = useAuth();
-  const { business, businesses, loading: bizLoading } = useBusiness();
+  const { user, isApproved, isAdminOf, isViewerOf, hasAccessTo, loading, signOut } = useAuth();
+  const { business, businesses, loading: bizLoading, setBusiness, applyTheme } = useBusiness();
 
   if (loading || bizLoading) {
     return (
@@ -48,7 +48,60 @@ export default function BusinessHubPage() {
     );
   }
 
+  // If user has multiple businesses, show a selection
+  if (businesses.length > 1) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-background p-4">
+        <div className="text-center space-y-2 mb-8">
+          <h1 className="text-2xl font-bold text-foreground">Your Businesses</h1>
+          <p className="text-muted-foreground text-sm">Select a business to manage</p>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 w-full max-w-xl mb-8">
+          {businesses.map((biz) => {
+            const isAdmin = isAdminOf(biz.id);
+            const isViewerOnly = isViewerOf(biz.id) && !isAdmin;
+            return (
+              <Link
+                key={biz.id}
+                to={`/b/${biz.business_code}/admin`}
+                onClick={() => { setBusiness(biz); applyTheme(biz.theme); }}
+                className="block"
+              >
+                <Card className="border border-border cursor-pointer hover:border-primary/50 transition-all duration-300 group h-full">
+                  <CardContent className="p-6 flex flex-col items-center text-center space-y-3">
+                    {biz.logo_url ? (
+                      <img src={biz.logo_url} alt={biz.name} className="h-14 w-14 rounded-full object-cover" />
+                    ) : (
+                      <div className="h-14 w-14 rounded-full bg-primary/15 flex items-center justify-center group-hover:bg-primary/25 transition-colors">
+                        <Building2 className="h-7 w-7 text-primary" />
+                      </div>
+                    )}
+                    <div>
+                      <h2 className="text-lg font-semibold text-foreground">{biz.name}</h2>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        {isAdmin ? "Admin" : isViewerOnly ? "Viewer" : "Member"}
+                      </p>
+                    </div>
+                  </CardContent>
+                </Card>
+              </Link>
+            );
+          })}
+        </div>
+
+        <Button variant="ghost" className="text-muted-foreground" onClick={signOut}>
+          <LogOut className="h-4 w-4 mr-2" />
+          Sign Out
+        </Button>
+      </div>
+    );
+  }
+
+  // Single business - show hub for that business
   const businessCode = business.business_code;
+  const isAdmin = isAdminOf(business.id);
+  const isViewerOnly = isViewerOf(business.id) && !isAdmin;
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-background p-4">
@@ -65,7 +118,7 @@ export default function BusinessHubPage() {
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 w-full max-w-2xl">
-        {(isAdmin || isViewer) && (
+        {(isAdmin || isViewerOnly) && (
           <Link to={`/b/${businessCode}/admin`} className="block">
             <Card className="border border-border cursor-pointer hover:border-primary/50 transition-all duration-300 group h-full">
               <CardContent className="p-6 flex flex-col items-center text-center space-y-3">
@@ -95,7 +148,7 @@ export default function BusinessHubPage() {
           </Card>
         </Link>
 
-        {(isAdmin && !isViewer) && (
+        {isAdmin && (
           <Link to={`/b/${businessCode}/kiosk`} className="block">
             <Card className="border border-border cursor-pointer hover:border-primary/50 transition-all duration-300 group h-full">
               <CardContent className="p-6 flex flex-col items-center text-center space-y-3">
