@@ -10,7 +10,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import { CalendarIcon, Search, Pencil, Trash2, Plus, ChevronLeft, ChevronRight, CheckCircle2, XCircle, Download, Mail } from "lucide-react";
+import { CalendarIcon, Search, Pencil, Trash2, Plus, ChevronLeft, ChevronRight, CheckCircle2, XCircle, Download, Mail, MapPin } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
@@ -38,6 +38,7 @@ interface TimesheetEntry {
   raw_break_end: string | null;
   event_ids: string[];
   approved: boolean;
+  geolocation?: { latitude: number; longitude: number; accuracy: number } | null;
 }
 
 interface EditForm {
@@ -195,6 +196,7 @@ export default function TimesheetsPage() {
           raw_break_start: null,
           raw_break_end: null,
           event_ids: [],
+          geolocation: ev.geolocation as any || null,
         });
       }
 
@@ -257,6 +259,7 @@ export default function TimesheetsPage() {
         raw_break_end: e.raw_break_end,
         event_ids: e.event_ids,
         approved: appMap.get(approvalKey) || false,
+        geolocation: e.geolocation || null,
       };
     });
 
@@ -677,6 +680,7 @@ export default function TimesheetsPage() {
                   <TableHead>Break</TableHead>
                   <TableHead>Total</TableHead>
                   <TableHead>Net</TableHead>
+                  <TableHead className="hidden xl:table-cell">Location</TableHead>
                   <TableHead className="text-right w-20">Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -703,6 +707,21 @@ export default function TimesheetsPage() {
                     <TableCell>{e.break_minutes}m</TableCell>
                     <TableCell>{e.total_hours}h</TableCell>
                     <TableCell className="font-semibold">{e.net_hours}h</TableCell>
+                    <TableCell className="hidden xl:table-cell">
+                      {e.geolocation ? (
+                        <a
+                          href={`https://www.google.com/maps?q=${e.geolocation.latitude},${e.geolocation.longitude}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center gap-1 text-xs text-primary hover:underline"
+                        >
+                          <MapPin className="h-3 w-3" />
+                          <span>{e.geolocation.latitude.toFixed(4)}, {e.geolocation.longitude.toFixed(4)}</span>
+                        </a>
+                      ) : (
+                        <span className="text-xs text-muted-foreground">—</span>
+                      )}
+                    </TableCell>
                     <TableCell className="text-right">
                       <div className="flex gap-1 justify-end">
                         <Button variant="ghost" size="sm" onClick={() => openEdit(e)} disabled={saving || e.approved} className="h-7 w-7 p-0">
@@ -717,7 +736,7 @@ export default function TimesheetsPage() {
                 ))}
                 {filtered.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={11} className="text-center text-muted-foreground py-8">
+                    <TableCell colSpan={12} className="text-center text-muted-foreground py-8">
                       No timesheet data for this period.
                     </TableCell>
                   </TableRow>
