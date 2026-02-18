@@ -1,15 +1,14 @@
 import { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
-import { Navigate } from "react-router-dom";
+import { Navigate, Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { LogIn, UserPlus, KeyRound } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { LogIn, UserPlus } from "lucide-react";
 
-type AuthMode = "signIn" | "signUp" | "forgotPassword";
+type AuthMode = "signIn" | "signUp";
 
 export default function AuthPage() {
   const { user, isAdmin, isApproved, signIn, signUp } = useAuth();
@@ -27,20 +26,6 @@ export default function AuthPage() {
     e.preventDefault();
     setLoading(true);
 
-    if (mode === "forgotPassword") {
-      const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/auth?mode=reset`,
-      });
-      if (error) {
-        toast({ title: "Error", description: error.message, variant: "destructive" });
-      } else {
-        toast({ title: "Email Sent", description: "Check your inbox for the password reset link." });
-        setMode("signIn");
-      }
-      setLoading(false);
-      return;
-    }
-
     if (mode === "signUp") {
       const { error } = await signUp(email, password, fullName);
       if (error) {
@@ -57,12 +42,10 @@ export default function AuthPage() {
     setLoading(false);
   };
 
-  const title = mode === "signIn" ? "Sign In" : mode === "signUp" ? "Create Account" : "Reset Password";
+  const title = mode === "signIn" ? "Sign In" : "Create Account";
   const description = mode === "signIn"
     ? "Sign in to the admin dashboard"
-    : mode === "signUp"
-    ? "Register a new admin account"
-    : "Enter your email to receive a password reset link";
+    : "Register a new admin account";
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
@@ -90,26 +73,22 @@ export default function AuthPage() {
                 <Label htmlFor="email">Email</Label>
                 <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="admin@proregal.com" required />
               </div>
-              {mode !== "forgotPassword" && (
-                <div className="space-y-2">
-                  <Label htmlFor="password">Password</Label>
-                  <Input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" required minLength={6} />
-                </div>
-              )}
+              <div className="space-y-2">
+                <Label htmlFor="password">Password</Label>
+                <Input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" required minLength={6} />
+              </div>
               <Button type="submit" className="w-full" disabled={loading}>
                 {loading ? "Loading..." : mode === "signUp"
                   ? <><UserPlus className="mr-2 h-4 w-4" /> Create Account</>
-                  : mode === "forgotPassword"
-                  ? <><KeyRound className="mr-2 h-4 w-4" /> Send Reset Link</>
                   : <><LogIn className="mr-2 h-4 w-4" /> Sign In</>}
               </Button>
             </form>
             <div className="mt-4 text-center space-y-2">
               {mode === "signIn" && (
                 <>
-                  <button onClick={() => setMode("forgotPassword")} className="text-sm text-primary hover:underline block w-full">
+                  <Link to="/reset-password" className="text-sm text-primary hover:underline block w-full">
                     Forgot password?
-                  </button>
+                  </Link>
                   <button onClick={() => setMode("signUp")} className="text-sm text-muted-foreground hover:underline block w-full">
                     Need an account? Sign Up
                   </button>
@@ -118,11 +97,6 @@ export default function AuthPage() {
               {mode === "signUp" && (
                 <button onClick={() => setMode("signIn")} className="text-sm text-muted-foreground hover:underline">
                   Already have an account? Sign In
-                </button>
-              )}
-              {mode === "forgotPassword" && (
-                <button onClick={() => setMode("signIn")} className="text-sm text-muted-foreground hover:underline">
-                  Back to Sign In
                 </button>
               )}
             </div>
