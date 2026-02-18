@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useBusiness } from "@/contexts/BusinessContext";
 import { format, startOfWeek, endOfWeek, addWeeks, subWeeks } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -113,6 +114,7 @@ function DateRangeSelector({ dateFrom, dateTo, onChangeFrom, onChangeTo }: {
 
 export default function TimesheetsPage() {
   const { isViewer } = useAuth();
+  const { business } = useBusiness();
   const [entries, setEntries] = useState<TimesheetEntry[]>([]);
   const [employees, setEmployees] = useState<{ id: string; name: string; department: string | null }[]>([]);
   const [selectedEmployee, setSelectedEmployee] = useState<string>("all");
@@ -156,12 +158,13 @@ export default function TimesheetsPage() {
   };
 
   useEffect(() => {
-    supabase.from("employees").select("id, name, department").eq("active", true).order("name").then(({ data }) => setEmployees(data || []));
-  }, []);
+    if (!business) return;
+    supabase.from("employees").select("id, name, department").eq("active", true).eq("business_id", business.id).order("name").then(({ data }) => setEmployees(data || []));
+  }, [business]);
 
   useEffect(() => {
-    fetchTimesheets();
-  }, [selectedEmployee, dateFrom, dateTo]);
+    if (business) fetchTimesheets();
+  }, [selectedEmployee, dateFrom, dateTo, business]);
 
   const fetchTimesheets = async () => {
     const from = format(dateFrom, "yyyy-MM-dd");
@@ -171,7 +174,8 @@ export default function TimesheetsPage() {
 
     let query = supabase
       .from("clock_events")
-      .select("*, employees(name, department)")
+      .select("*, employees!inner(name, department, business_id)")
+      .eq("employees.business_id", business!.id)
       .gte("timestamp", fromISO)
       .lte("timestamp", toISO)
       .order("timestamp", { ascending: true });

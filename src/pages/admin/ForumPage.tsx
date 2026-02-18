@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { toAusLocaleString } from "@/lib/dateUtils";
 import { useAuth } from "@/contexts/AuthContext";
+import { useBusiness } from "@/contexts/BusinessContext";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -31,6 +32,7 @@ interface Comment {
 
 export default function ForumPage() {
   const { isViewer } = useAuth();
+  const { business } = useBusiness();
   const [posts, setPosts] = useState<ForumPost[]>([]);
   const [loading, setLoading] = useState(true);
   const [createOpen, setCreateOpen] = useState(false);
@@ -42,10 +44,12 @@ export default function ForumPage() {
   const [commentsLoading, setCommentsLoading] = useState(false);
 
   const fetchPosts = async () => {
+    if (!business) return;
     setLoading(true);
     const { data } = await supabase
       .from("forum_posts")
       .select("*")
+      .eq("business_id", business.id)
       .order("created_at", { ascending: false });
 
     if (data) {
@@ -71,7 +75,7 @@ export default function ForumPage() {
     setLoading(false);
   };
 
-  useEffect(() => { fetchPosts(); }, []);
+  useEffect(() => { if (business) fetchPosts(); }, [business]);
 
   const handleCreate = async () => {
     if (!title.trim() || !content.trim()) {

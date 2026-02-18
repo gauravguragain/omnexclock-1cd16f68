@@ -8,12 +8,15 @@ import { supabase } from "@/integrations/supabase/client";
 import { Camera, Clock, Coffee, LogIn, LogOut, ArrowLeft, Delete, User } from "lucide-react";
 import { toAusTime12, toAusTime12WithSeconds, toAusFormatted } from "@/lib/dateUtils";
 
-type KioskStep = "code_entry" | "action_select" | "photo_capture" | "confirmation";
+type KioskStep = "business_entry" | "code_entry" | "action_select" | "photo_capture" | "confirmation";
 type EmployeeStatus = "clocked_out" | "clocked_in" | "on_break";
 
 export default function KioskPage() {
   const { toast } = useToast();
-  const [step, setStep] = useState<KioskStep>("code_entry");
+  const [step, setStep] = useState<KioskStep>("business_entry");
+  const [businessCode, setBusinessCode] = useState("");
+  const [businessName, setBusinessName] = useState("");
+  const [businessLogo, setBusinessLogo] = useState<string | null>(null);
   const [code, setCode] = useState("");
   const [selectedAction, setSelectedAction] = useState<string>("");
   const codeRef = useRef("");
@@ -175,6 +178,26 @@ export default function KioskPage() {
     setTimeout(() => captureAndSubmit(), 1500);
   };
 
+  const handleBusinessCodeSubmit = async () => {
+    if (!businessCode.trim()) return;
+    setLoading(true);
+    const { data, error } = await supabase
+      .from("businesses")
+      .select("name, logo_url, business_code")
+      .eq("business_code", businessCode.trim().toUpperCase())
+      .maybeSingle();
+
+    if (error || !data) {
+      toast({ title: "Invalid Code", description: "Business not found.", variant: "destructive" });
+      setBusinessCode("");
+    } else {
+      setBusinessName(data.name);
+      setBusinessLogo(data.logo_url);
+      setStep("code_entry");
+    }
+    setLoading(false);
+  };
+
   const resetKiosk = () => {
     setStep("code_entry");
     setCode("");
@@ -186,6 +209,14 @@ export default function KioskPage() {
     setEmployeeStatus("clocked_out");
     setPhotoData(null);
     stopCamera();
+  };
+
+  const resetToBusiness = () => {
+    resetKiosk();
+    setStep("business_entry");
+    setBusinessCode("");
+    setBusinessName("");
+    setBusinessLogo(null);
   };
 
   const getAvailableActions = () => {
@@ -220,8 +251,16 @@ export default function KioskPage() {
     <div className="min-h-screen bg-background flex flex-col items-center justify-center p-4">
       {/* Header */}
       <div className="text-center mb-6">
-        <img src="/logo.jpeg" alt="Pro Regal Pavilion" className="h-16 w-16 mx-auto rounded-lg object-cover mb-2" />
-        <h1 className="text-xl font-bold gold-text">Pro Regal Pavilion</h1>
+        {businessLogo ? (
+          <img src={businessLogo} alt={businessName} className="h-16 w-16 mx-auto rounded-lg object-cover mb-2" />
+        ) : step !== "business_entry" ? (
+          <div className="h-16 w-16 mx-auto rounded-lg bg-primary/15 flex items-center justify-center mb-2">
+            <Clock className="h-8 w-8 text-primary" />
+          </div>
+        ) : null}
+        {step !== "business_entry" && (
+          <h1 className="text-xl font-bold text-primary">{businessName}</h1>
+        )}
         <p className="text-3xl font-mono text-foreground mt-2">
           {toAusTime12WithSeconds(currentTime)}
         </p>
@@ -231,6 +270,26 @@ export default function KioskPage() {
       </div>
 
       <canvas ref={canvasRef} className="hidden" />
+
+      {/* Business Code Entry */}
+      {step === "business_entry" && (
+        <Card className="w-full max-w-sm border border-border">
+          <CardContent className="p-6 space-y-4">
+            <p className="text-center text-lg font-semibold text-foreground">Enter Business Code</p>
+            <p className="text-center text-sm text-muted-foreground">Ask your manager for the business code</p>
+            <Input
+              value={businessCode}
+              onChange={(e) => setBusinessCode(e.target.value.toUpperCase())}
+              className="text-center text-2xl tracking-wider font-mono h-14"
+              placeholder="e.g. PRP"
+              onKeyDown={(e) => e.key === "Enter" && handleBusinessCodeSubmit()}
+            />
+            <Button className="w-full h-12 text-lg" onClick={handleBusinessCodeSubmit} disabled={!businessCode.trim() || loading}>
+              {loading ? "Verifying..." : "Continue"}
+            </Button>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Code Entry */}
       {step === "code_entry" && (

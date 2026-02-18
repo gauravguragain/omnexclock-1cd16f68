@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { useBusiness } from "@/contexts/BusinessContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -42,6 +43,7 @@ function generateEmployeeCode(existing: string[]): string {
 
 export default function EmployeesPage() {
   const { isViewer } = useAuth();
+  const { business } = useBusiness();
   const { toast } = useToast();
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [search, setSearch] = useState("");
@@ -53,11 +55,12 @@ export default function EmployeesPage() {
   const [togglingIds, setTogglingIds] = useState<Set<string>>(new Set());
 
   const fetchEmployees = async () => {
-    const { data } = await supabase.from("employees").select("*").order("name");
+    if (!business) return;
+    const { data } = await supabase.from("employees").select("*").eq("business_id", business.id).order("name");
     setEmployees(data || []);
   };
 
-  useEffect(() => { fetchEmployees(); }, []);
+  useEffect(() => { fetchEmployees(); }, [business]);
 
   const validateStep = (s: number): boolean => {
     if (s === 0) {
@@ -121,6 +124,7 @@ export default function EmployeesPage() {
         pay_rate: parseFloat(form.pay_rate) || 0,
         admin_hourly_rate: parseFloat(form.admin_hourly_rate) || 0,
         employee_code: form.employee_code.trim(),
+        business_id: business?.id || null,
       };
 
       if (editing) {

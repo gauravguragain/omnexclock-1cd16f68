@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { toAusLocaleString } from "@/lib/dateUtils";
 import { supabase } from "@/integrations/supabase/client";
+import { useBusiness } from "@/contexts/BusinessContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
@@ -24,14 +25,16 @@ interface UserTally {
 }
 
 export default function AuditLogPage() {
+  const { business } = useBusiness();
   const [logs, setLogs] = useState<AuditLog[]>([]);
   const [tallies, setTallies] = useState<UserTally[]>([]);
   const [profiles, setProfiles] = useState<Map<string, string>>(new Map());
   const [searchQuery, setSearchQuery] = useState("");
 
   const fetchData = async () => {
+    if (!business) return;
     const [logsRes, profilesRes] = await Promise.all([
-      supabase.from("audit_logs").select("*").order("timestamp", { ascending: false }).limit(500),
+      supabase.from("audit_logs").select("*").eq("business_id", business.id).order("timestamp", { ascending: false }).limit(500),
       supabase.from("profiles").select("id, email, full_name"),
     ]);
 
@@ -87,7 +90,7 @@ export default function AuditLogPage() {
       .subscribe();
 
     return () => { supabase.removeChannel(channel); };
-  }, []);
+  }, [business]);
 
   const actionColors: Record<string, string> = {
     timesheet_edit: "bg-warning/20 text-warning border-warning/30",

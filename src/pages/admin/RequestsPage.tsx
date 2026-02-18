@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { toAusLocaleString } from "@/lib/dateUtils";
 import { useAuth } from "@/contexts/AuthContext";
+import { useBusiness } from "@/contexts/BusinessContext";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -34,6 +35,7 @@ interface EmployeeRequest {
 
 export default function RequestsPage() {
   const { isViewer } = useAuth();
+  const { business } = useBusiness();
   const [requests, setRequests] = useState<EmployeeRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<string>("pending");
@@ -43,10 +45,12 @@ export default function RequestsPage() {
   const [saving, setSaving] = useState(false);
 
   const fetchRequests = async () => {
+    if (!business) return;
     setLoading(true);
     let query = supabase
       .from("employee_requests")
-      .select("*, employees(name)")
+      .select("*, employees!inner(name, business_id)")
+      .eq("employees.business_id", business.id)
       .order("created_at", { ascending: false });
 
     if (filter !== "all") {
@@ -63,7 +67,7 @@ export default function RequestsPage() {
     setLoading(false);
   };
 
-  useEffect(() => { fetchRequests(); }, [filter]);
+  useEffect(() => { if (business) fetchRequests(); }, [filter, business]);
 
   const openReview = (req: EmployeeRequest) => {
     setReviewReq(req);
