@@ -114,7 +114,7 @@ export default function AdminLayout() {
       )}
 
       {/* Main */}
-      <main className="flex-1 lg:ml-64">
+      <main className="flex-1 lg:ml-64 min-w-0">
         <header className="sticky top-0 z-30 bg-card/80 backdrop-blur border-b border-border px-4 py-3 flex items-center gap-3 lg:px-6">
           <Button variant="ghost" size="icon" className="lg:hidden" onClick={() => setSidebarOpen(true)}>
             <Menu className="h-5 w-5" />
