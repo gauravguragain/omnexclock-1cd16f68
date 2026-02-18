@@ -62,24 +62,7 @@ export default function AuthPage() {
       }
     } else {
       const { error } = await signIn(email, password);
-      if (!error) {
-        // Block master-only accounts from business admin login
-        const { data: { user: signedInUser } } = await supabase.auth.getUser();
-        if (signedInUser) {
-          const { data: roles } = await supabase
-            .from("user_roles")
-            .select("role, business_id")
-            .eq("user_id", signedInUser.id);
-          const hasMaster = roles?.some(r => r.role === "master");
-          const hasBusinessRole = roles?.some(r => r.role !== "master" && r.business_id);
-          if (hasMaster && !hasBusinessRole) {
-            await supabase.auth.signOut();
-            toast({ title: "Access Denied", description: "Master admin cannot sign in here. Use the Master Login on the home page.", variant: "destructive" });
-            setLoading(false);
-            return;
-          }
-        }
-      } else {
+      if (error) {
         toast({ title: "Error", description: error, variant: "destructive" });
       }
     }
