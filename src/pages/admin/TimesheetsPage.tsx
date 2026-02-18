@@ -196,7 +196,7 @@ export default function TimesheetsPage() {
           raw_break_start: null,
           raw_break_end: null,
           event_ids: [],
-          geolocation: ev.geolocation as any || null,
+          geolocation: (ev as any).geolocation || null,
         });
       }
 

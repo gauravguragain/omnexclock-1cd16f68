@@ -39,7 +39,7 @@ export default function LiveMonitorPage() {
           lastEvent: ev.event_type,
           lastTime: toAusTime12(new Date(ev.created_at)),
           photoPath: ev.photo_url || undefined,
-          geolocation: ev.geolocation as any || null,
+          geolocation: (ev as any).geolocation || null,
         });
       }
     }
