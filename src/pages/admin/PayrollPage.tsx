@@ -1,4 +1,5 @@
 import { useEffect, useState, useMemo } from "react";
+import { ausNow, toAusDate, ausStartOfDay, ausEndOfDay } from "@/lib/dateUtils";
 import { format, startOfWeek, endOfWeek, addWeeks, subWeeks } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -53,7 +54,7 @@ function DateRangeSelector({ dateFrom, dateTo, onChangeFrom, onChangeTo }: {
     onChangeTo(endOfWeek(next, { weekStartsOn: 1 }));
   };
   const goToThisWeek = () => {
-    const now = new Date();
+    const now = ausNow();
     onChangeFrom(startOfWeek(now, { weekStartsOn: 1 }));
     onChangeTo(endOfWeek(now, { weekStartsOn: 1 }));
   };
@@ -99,8 +100,8 @@ export default function PayrollPage() {
   const [entries, setEntries] = useState<PayrollEntry[]>([]);
   const [allEmployees, setAllEmployees] = useState<{ id: string; name: string; department: string | null }[]>([]);
   const [loading, setLoading] = useState(false);
-  const [dateFrom, setDateFrom] = useState<Date>(() => startOfWeek(new Date(), { weekStartsOn: 1 }));
-  const [dateTo, setDateTo] = useState<Date>(() => endOfWeek(new Date(), { weekStartsOn: 1 }));
+  const [dateFrom, setDateFrom] = useState<Date>(() => startOfWeek(ausNow(), { weekStartsOn: 1 }));
+  const [dateTo, setDateTo] = useState<Date>(() => endOfWeek(ausNow(), { weekStartsOn: 1 }));
   const [search, setSearch] = useState("");
   const [selectedEmployee, setSelectedEmployee] = useState<string>("all");
   const [selectedDepartment, setSelectedDepartment] = useState<string>("all");
@@ -118,8 +119,8 @@ export default function PayrollPage() {
   useEffect(() => { setPage(0); }, [search]);
 
   const fetchAllEvents = async (fromDate: Date, toDate: Date) => {
-    const fromISO = new Date(fromDate.getFullYear(), fromDate.getMonth(), fromDate.getDate(), 0, 0, 0).toISOString();
-    const toISO = new Date(toDate.getFullYear(), toDate.getMonth(), toDate.getDate(), 23, 59, 59).toISOString();
+    const fromISO = ausStartOfDay(format(fromDate, "yyyy-MM-dd"));
+    const toISO = ausEndOfDay(format(toDate, "yyyy-MM-dd"));
     const allEvents: any[] = [];
     let lastTimestamp: string | null = null;
     let hasMore = true;
@@ -175,8 +176,7 @@ export default function PayrollPage() {
 
     // Only include events for approved days
     for (const ev of events) {
-      const evDate = new Date(ev.timestamp);
-      const dayStr = `${evDate.getFullYear()}-${String(evDate.getMonth() + 1).padStart(2, "0")}-${String(evDate.getDate()).padStart(2, "0")}`;
+      const dayStr = toAusDate(new Date(ev.timestamp));
       const key = `${ev.employee_id}-${dayStr}`;
       if (!approvedSet.has(key)) continue; // Skip unapproved
 
@@ -192,7 +192,7 @@ export default function PayrollPage() {
 
       const days = new Map<string, any[]>();
       for (const ev of empEvents) {
-        const day = new Date(ev.timestamp).toDateString();
+        const day = toAusDate(new Date(ev.timestamp));
         if (!days.has(day)) days.set(day, []);
         days.get(day)!.push(ev);
       }

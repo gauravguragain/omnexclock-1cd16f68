@@ -87,3 +87,57 @@ export function ausStartOfTomorrow(): string {
 export function toAusDateKey(d: Date): string {
   return toAusDate(d);
 }
+
+/** Get current Australia/Sydney Date object (with correct local year/month/day).
+ *  Useful for date-fns startOfWeek / endOfWeek which need a Date input. */
+export function ausNow(): Date {
+  // Returns a Date whose local Y/M/D matches the current Aus Y/M/D
+  const parts = new Intl.DateTimeFormat("en-AU", {
+    timeZone: TIMEZONE,
+    year: "numeric", month: "2-digit", day: "2-digit",
+    hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false,
+  }).formatToParts(new Date());
+  const get = (t: string) => parts.find(p => p.type === t)?.value || "0";
+  return new Date(
+    parseInt(get("year")),
+    parseInt(get("month")) - 1,
+    parseInt(get("day")),
+    parseInt(get("hour")),
+    parseInt(get("minute")),
+    parseInt(get("second")),
+  );
+}
+
+/** Build an ISO timestamp for the START of a given YYYY-MM-DD in Australia/Sydney */
+export function ausStartOfDay(dateStr: string): string {
+  return buildAusTimestamp(dateStr, "00:00");
+}
+
+/** Build an ISO timestamp for the END of a given YYYY-MM-DD in Australia/Sydney (23:59:59) */
+export function ausEndOfDay(dateStr: string): string {
+  return `${dateStr}T23:59:59${getAusOffset(dateStr)}`;
+}
+
+/** Get Australia/Sydney UTC offset string for a given date (e.g. "+11:00" or "+10:00") */
+function getAusOffset(dateStr: string): string {
+  const naive = new Date(`${dateStr}T12:00:00`);
+  const formatter = new Intl.DateTimeFormat("en-AU", {
+    timeZone: TIMEZONE,
+    timeZoneName: "shortOffset",
+  });
+  const parts = formatter.formatToParts(naive);
+  const tzPart = parts.find(p => p.type === "timeZoneName")?.value || "+11";
+  const offsetMatch = tzPart.match(/GMT([+-]?\d+)(?::(\d+))?/);
+  if (offsetMatch) {
+    const hrs = parseInt(offsetMatch[1]);
+    const mins = offsetMatch[2] ? parseInt(offsetMatch[2]) : 0;
+    const sign = hrs >= 0 ? "+" : "-";
+    return `${sign}${String(Math.abs(hrs)).padStart(2, "0")}:${String(mins).padStart(2, "0")}`;
+  }
+  return "+10:00";
+}
+
+/** Format a Date to a locale string in Australia/Sydney timezone */
+export function toAusLocaleString(d: Date, options: Intl.DateTimeFormatOptions): string {
+  return d.toLocaleString("en-AU", { timeZone: TIMEZONE, ...options });
+}

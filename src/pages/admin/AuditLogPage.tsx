@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { toAusLocaleString } from "@/lib/dateUtils";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -209,7 +210,7 @@ export default function AuditLogPage() {
                       {log.details?.comment || log.details?.employee_name || JSON.stringify(log.details)}
                     </TableCell>
                     <TableCell className="text-xs text-muted-foreground whitespace-nowrap">
-                      {new Date(log.timestamp).toLocaleString("en-AU", {
+                      {toAusLocaleString(new Date(log.timestamp), {
                         day: "2-digit", month: "short", year: "numeric",
                         hour: "2-digit", minute: "2-digit", hour12: true,
                       })}

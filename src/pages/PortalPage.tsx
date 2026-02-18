@@ -18,7 +18,7 @@ import {
   MessageSquare, CalendarOff, Send, Plus, RefreshCw, CalendarIcon, Trash2, Pencil,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { ausToday, toAusFormatted, toAusTime12 } from "@/lib/dateUtils";
+import { ausToday, toAusFormatted, toAusTime12, toAusDate, toAusLocaleString } from "@/lib/dateUtils";
 import { format } from "date-fns";
 
 /* ── types ───────────────────────────────────────────────── */
@@ -362,8 +362,13 @@ export default function PortalPage() {
 
   /* ── total scheduled hours this week ── */
   const thisWeekHours = useMemo(() => {
-    const monday = getMonday(new Date());
-    const mondayStr = monday.toISOString().slice(0, 10);
+    const mondayStr = (() => {
+      const todayStr = ausToday();
+      const [y, m, d] = todayStr.split("-").map(Number);
+      const today = new Date(y, m - 1, d);
+      const mon = getMonday(today);
+      return `${mon.getFullYear()}-${String(mon.getMonth() + 1).padStart(2, "0")}-${String(mon.getDate()).padStart(2, "0")}`;
+    })();
     return shifts
       .filter(s => s.week_start_date === mondayStr)
       .reduce((sum, s) => sum + (s.hours_worked ?? calcNetHours(s.start_time, s.end_time, s.break_minutes)), 0);
@@ -646,7 +651,7 @@ export default function PortalPage() {
                     <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{post.content}</p>
                     <div className="flex items-center gap-2 mt-2 flex-wrap">
                       <span className="text-[10px] text-muted-foreground">
-                        {new Date(post.created_at).toLocaleDateString("en-AU", { day: "numeric", month: "short" })}
+                        {toAusLocaleString(new Date(post.created_at), { day: "numeric", month: "short" })}
                       </span>
                       <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
                         <MessageSquare className="h-2.5 w-2.5 mr-0.5" /> {post.comment_count}
@@ -751,7 +756,7 @@ export default function PortalPage() {
                     <div className="flex items-center gap-2">
                       <span className="text-xs font-medium text-foreground">{c.employee_name}</span>
                       <span className="text-[10px] text-muted-foreground">
-                        {new Date(c.created_at).toLocaleDateString("en-AU", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}
+                        {toAusLocaleString(new Date(c.created_at), { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}
                       </span>
                     </div>
                     <p className="text-sm text-foreground mt-0.5">{c.content}</p>

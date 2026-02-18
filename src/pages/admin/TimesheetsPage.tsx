@@ -16,7 +16,7 @@ import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { TimeDropdownPicker } from "@/components/TimeDropdownPicker";
 import { logAudit } from "@/lib/auditLog";
-import { toAusDate, toAusDisplayDate, toAusTime24, toAusTime12, buildAusTimestamp } from "@/lib/dateUtils";
+import { toAusDate, toAusDisplayDate, toAusTime24, toAusTime12, buildAusTimestamp, ausToday, ausNow, ausStartOfDay, ausEndOfDay } from "@/lib/dateUtils";
 import { EmailCSVDialog } from "@/components/EmailCSVDialog";
 
 
@@ -65,7 +65,7 @@ function DateRangeSelector({ dateFrom, dateTo, onChangeFrom, onChangeTo }: {
     onChangeTo(endOfWeek(next, { weekStartsOn: 1 }));
   };
   const goToThisWeek = () => {
-    const now = new Date();
+    const now = ausNow();
     onChangeFrom(startOfWeek(now, { weekStartsOn: 1 }));
     onChangeTo(endOfWeek(now, { weekStartsOn: 1 }));
   };
@@ -115,8 +115,8 @@ export default function TimesheetsPage() {
   const [employees, setEmployees] = useState<{ id: string; name: string; department: string | null }[]>([]);
   const [selectedEmployee, setSelectedEmployee] = useState<string>("all");
   const [selectedDepartment, setSelectedDepartment] = useState<string>("all");
-  const [dateFrom, setDateFrom] = useState<Date>(() => startOfWeek(new Date(), { weekStartsOn: 1 }));
-  const [dateTo, setDateTo] = useState<Date>(() => endOfWeek(new Date(), { weekStartsOn: 1 }));
+  const [dateFrom, setDateFrom] = useState<Date>(() => startOfWeek(ausNow(), { weekStartsOn: 1 }));
+  const [dateTo, setDateTo] = useState<Date>(() => endOfWeek(ausNow(), { weekStartsOn: 1 }));
   const [editDialog, setEditDialog] = useState(false);
   const [editForm, setEditForm] = useState<EditForm>({ employee_id: "", date: "", clock_in: "", clock_out: "", break_start: "", break_end: "", comment: "" });
   const [editingEntry, setEditingEntry] = useState<TimesheetEntry | null>(null);
@@ -138,8 +138,8 @@ export default function TimesheetsPage() {
   const fetchTimesheets = async () => {
     const from = format(dateFrom, "yyyy-MM-dd");
     const to = format(dateTo, "yyyy-MM-dd");
-    const fromISO = new Date(dateFrom.getFullYear(), dateFrom.getMonth(), dateFrom.getDate(), 0, 0, 0).toISOString();
-    const toISO = new Date(dateTo.getFullYear(), dateTo.getMonth(), dateTo.getDate(), 23, 59, 59).toISOString();
+    const fromISO = ausStartOfDay(from);
+    const toISO = ausEndOfDay(to);
 
     let query = supabase
       .from("clock_events")
@@ -352,7 +352,7 @@ export default function TimesheetsPage() {
     setEditingEntry(null);
     setEditForm({
       employee_id: employees[0]?.id || "",
-      date: format(new Date(), "yyyy-MM-dd"),
+      date: ausToday(),
       clock_in: "09:00",
       clock_out: "17:00",
       break_start: "",
