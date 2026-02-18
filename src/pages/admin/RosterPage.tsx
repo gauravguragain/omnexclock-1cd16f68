@@ -481,7 +481,7 @@ export default function RosterPage() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-border">
-                  <th className="text-left px-3 py-2.5 text-muted-foreground font-medium w-[160px] min-w-[160px] sticky left-0 bg-card z-20 after:absolute after:right-0 after:top-0 after:bottom-0 after:w-px after:bg-border">Employee</th>
+                  <th className="text-left px-3 py-2.5 text-muted-foreground font-medium w-[160px] min-w-[160px] sticky left-0 bg-card z-20">Employee</th>
                   {weekDates.map((d, i) => {
                     const isToday = fmtDate(d) === fmtDate(new Date());
                     return (
@@ -514,7 +514,7 @@ export default function RosterPage() {
                 ) : (
                   employees.map(emp => (
                     <tr key={emp.id} className="border-b border-border hover:bg-secondary/30 transition-colors">
-                      <td className="px-3 py-2 sticky left-0 bg-card z-20 after:absolute after:right-0 after:top-0 after:bottom-0 after:w-px after:bg-border"  >
+                      <td className="px-3 py-2 sticky left-0 bg-card z-20">
                         <div className="font-medium text-foreground truncate">{emp.name}</div>
                         <div className="text-xs text-muted-foreground">{emp.job_title || emp.department || emp.employee_code}</div>
                       </td>
