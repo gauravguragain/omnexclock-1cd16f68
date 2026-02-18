@@ -89,16 +89,18 @@ export default function AdminLayout() {
         </nav>
 
         <div className="absolute bottom-0 left-0 right-0 p-3 border-t border-border space-y-1">
-          <button
-            onClick={async () => {
-              await signOut();
-              window.location.href = "/kiosk";
-            }}
-            className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-muted-foreground hover:text-foreground hover:bg-secondary w-full"
-          >
-            <Clock className="h-4 w-4" />
-            Launch Kiosk
-          </button>
+          {!isViewer && (
+            <button
+              onClick={async () => {
+                await signOut();
+                window.location.href = "/kiosk";
+              }}
+              className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-muted-foreground hover:text-foreground hover:bg-secondary w-full"
+            >
+              <Clock className="h-4 w-4" />
+              Launch Kiosk
+            </button>
+          )}
           <button onClick={signOut} className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-muted-foreground hover:text-foreground hover:bg-secondary w-full">
             <LogOut className="h-4 w-4" />
             Sign Out
