@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft, Clock, Users } from "lucide-react";
+import { ArrowLeft, Clock, Users, RefreshCw } from "lucide-react";
 import { Link } from "react-router-dom";
 
 const STORAGE_KEY = "omnexclock_portal_business_code";
@@ -16,10 +16,13 @@ export default function EmployeePortalEntry() {
   const { toast } = useToast();
   const navigate = useNavigate();
 
+  const [hasSaved, setHasSaved] = useState(false);
+
   // Auto-redirect if business code is saved on this device
   useEffect(() => {
     const saved = localStorage.getItem(STORAGE_KEY);
     if (saved) {
+      setHasSaved(true);
       supabase
         .from("businesses")
         .select("business_code")
@@ -30,6 +33,7 @@ export default function EmployeePortalEntry() {
             navigate(`/b/${data.business_code}/portal`, { replace: true });
           } else {
             localStorage.removeItem(STORAGE_KEY);
+            setHasSaved(false);
             setLoading(false);
           }
         });
@@ -37,6 +41,12 @@ export default function EmployeePortalEntry() {
       setLoading(false);
     }
   }, []);
+
+  const handleChangeBusiness = () => {
+    localStorage.removeItem(STORAGE_KEY);
+    setHasSaved(false);
+    setLoading(false);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -74,9 +84,7 @@ export default function EmployeePortalEntry() {
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-background p-4">
       <div className="text-center space-y-2 mb-8">
-        <div className="h-20 w-20 mx-auto rounded-full bg-primary/15 flex items-center justify-center">
-          <Users className="h-10 w-10 text-primary" />
-        </div>
+        <img src="/omnex-logo.jpg" alt="OmnexClock" className="h-20 w-20 mx-auto rounded-full object-cover" />
         <h1 className="text-2xl font-bold text-foreground">Employee Portal</h1>
         <p className="text-muted-foreground text-sm">Enter your business code to access your portal</p>
       </div>
@@ -98,11 +106,18 @@ export default function EmployeePortalEntry() {
         </CardContent>
       </Card>
 
-      <Link to="/" className="mt-6">
-        <Button variant="ghost" className="text-muted-foreground">
-          <ArrowLeft className="h-4 w-4 mr-2" /> Back to Home
-        </Button>
-      </Link>
+      <div className="mt-6 flex flex-col items-center gap-2">
+        {hasSaved && (
+          <Button variant="outline" size="sm" onClick={handleChangeBusiness} className="gap-1.5">
+            <RefreshCw className="h-3.5 w-3.5" /> Change Business
+          </Button>
+        )}
+        <Link to="/">
+          <Button variant="ghost" className="text-muted-foreground">
+            <ArrowLeft className="h-4 w-4 mr-2" /> Back to Home
+          </Button>
+        </Link>
+      </div>
     </div>
   );
 }

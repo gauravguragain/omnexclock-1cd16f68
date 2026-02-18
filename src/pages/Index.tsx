@@ -17,9 +17,7 @@ const Index = () => {
         </Button>
       </Link>
       <div className="text-center space-y-2 mb-8">
-        <div className="h-20 w-20 mx-auto rounded-full bg-primary/15 flex items-center justify-center">
-          <Clock className="h-10 w-10 text-primary" />
-        </div>
+        <img src="/omnex-logo.jpg" alt="OmnexClock" className="h-20 w-20 mx-auto rounded-full object-cover" />
         <h1 className="text-2xl font-bold text-foreground">OmnexClock</h1>
         <p className="text-muted-foreground text-sm">Time & Workforce Management</p>
       </div>
