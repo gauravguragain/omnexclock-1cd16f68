@@ -1,4 +1,5 @@
 import { useState, useRef, useCallback, useEffect } from "react";
+import { useParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
@@ -8,13 +9,13 @@ import { supabase } from "@/integrations/supabase/client";
 import { Camera, Clock, Coffee, LogIn, LogOut, ArrowLeft, Delete, User } from "lucide-react";
 import { toAusTime12, toAusTime12WithSeconds, toAusFormatted } from "@/lib/dateUtils";
 
-type KioskStep = "business_entry" | "code_entry" | "action_select" | "photo_capture" | "confirmation";
+type KioskStep = "loading" | "code_entry" | "action_select" | "photo_capture" | "confirmation";
 type EmployeeStatus = "clocked_out" | "clocked_in" | "on_break";
 
 export default function KioskPage() {
   const { toast } = useToast();
-  const [step, setStep] = useState<KioskStep>("business_entry");
-  const [businessCode, setBusinessCode] = useState("");
+  const { businessCode: urlBusinessCode } = useParams();
+  const [step, setStep] = useState<KioskStep>("loading");
   const [businessName, setBusinessName] = useState("");
   const [businessLogo, setBusinessLogo] = useState<string | null>(null);
   const [code, setCode] = useState("");
@@ -35,6 +36,24 @@ export default function KioskPage() {
     const timer = setInterval(() => setCurrentTime(new Date()), 1000);
     return () => clearInterval(timer);
   }, []);
+
+  // Load business from URL param
+  useEffect(() => {
+    if (!urlBusinessCode) return;
+    const loadBusiness = async () => {
+      const { data } = await supabase
+        .from("businesses")
+        .select("name, logo_url")
+        .eq("business_code", urlBusinessCode.toUpperCase())
+        .maybeSingle();
+      if (data) {
+        setBusinessName(data.name);
+        setBusinessLogo(data.logo_url);
+        setStep("code_entry");
+      }
+    };
+    loadBusiness();
+  }, [urlBusinessCode]);
 
   const getEmployeeStatusByCode = async (employeeCode: string): Promise<{ id: string; name: string; status: EmployeeStatus } | null> => {
     const { data, error } = await supabase.rpc("get_employee_status", { _employee_code: employeeCode });
@@ -178,26 +197,6 @@ export default function KioskPage() {
     setTimeout(() => captureAndSubmit(), 1500);
   };
 
-  const handleBusinessCodeSubmit = async () => {
-    if (!businessCode.trim()) return;
-    setLoading(true);
-    const { data, error } = await supabase
-      .from("businesses")
-      .select("name, logo_url, business_code")
-      .eq("business_code", businessCode.trim().toUpperCase())
-      .maybeSingle();
-
-    if (error || !data) {
-      toast({ title: "Invalid Code", description: "Business not found.", variant: "destructive" });
-      setBusinessCode("");
-    } else {
-      setBusinessName(data.name);
-      setBusinessLogo(data.logo_url);
-      setStep("code_entry");
-    }
-    setLoading(false);
-  };
-
   const resetKiosk = () => {
     setStep("code_entry");
     setCode("");
@@ -209,14 +208,6 @@ export default function KioskPage() {
     setEmployeeStatus("clocked_out");
     setPhotoData(null);
     stopCamera();
-  };
-
-  const resetToBusiness = () => {
-    resetKiosk();
-    setStep("business_entry");
-    setBusinessCode("");
-    setBusinessName("");
-    setBusinessLogo(null);
   };
 
   const getAvailableActions = () => {
@@ -253,14 +244,12 @@ export default function KioskPage() {
       <div className="text-center mb-6">
         {businessLogo ? (
           <img src={businessLogo} alt={businessName} className="h-16 w-16 mx-auto rounded-lg object-cover mb-2" />
-        ) : step !== "business_entry" ? (
+        ) : (
           <div className="h-16 w-16 mx-auto rounded-lg bg-primary/15 flex items-center justify-center mb-2">
             <Clock className="h-8 w-8 text-primary" />
           </div>
-        ) : null}
-        {step !== "business_entry" && (
-          <h1 className="text-xl font-bold text-primary">{businessName}</h1>
         )}
+        <h1 className="text-xl font-bold text-primary">{businessName}</h1>
         <p className="text-3xl font-mono text-foreground mt-2">
           {toAusTime12WithSeconds(currentTime)}
         </p>
@@ -271,24 +260,11 @@ export default function KioskPage() {
 
       <canvas ref={canvasRef} className="hidden" />
 
-      {/* Business Code Entry */}
-      {step === "business_entry" && (
-        <Card className="w-full max-w-sm border border-border">
-          <CardContent className="p-6 space-y-4">
-            <p className="text-center text-lg font-semibold text-foreground">Enter Business Code</p>
-            <p className="text-center text-sm text-muted-foreground">Ask your manager for the business code</p>
-            <Input
-              value={businessCode}
-              onChange={(e) => setBusinessCode(e.target.value.toUpperCase())}
-              className="text-center text-2xl tracking-wider font-mono h-14"
-              placeholder="e.g. PRP"
-              onKeyDown={(e) => e.key === "Enter" && handleBusinessCodeSubmit()}
-            />
-            <Button className="w-full h-12 text-lg" onClick={handleBusinessCodeSubmit} disabled={!businessCode.trim() || loading}>
-              {loading ? "Verifying..." : "Continue"}
-            </Button>
-          </CardContent>
-        </Card>
+      {/* Loading */}
+      {step === "loading" && (
+        <div className="flex items-center justify-center">
+          <Clock className="h-8 w-8 animate-spin text-primary" />
+        </div>
       )}
 
       {/* Code Entry */}

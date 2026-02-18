@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
+import { useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -92,6 +93,7 @@ function fmtTimestamp(ts: string | null): string {
 
 export default function PortalPage() {
   const { toast } = useToast();
+  const { businessCode: urlBusinessCode } = useParams();
   const [code, setCode] = useState("");
   const [authenticated, setAuthenticated] = useState(false);
   const [employeeCode, setEmployeeCode] = useState("");
@@ -100,6 +102,8 @@ export default function PortalPage() {
   const [timesheets, setTimesheets] = useState<TimesheetEntry[]>([]);
   const [loading, setLoading] = useState(false);
   const [currentTime, setCurrentTime] = useState(new Date());
+  const [businessName, setBusinessName] = useState("");
+  const [businessLogo, setBusinessLogo] = useState<string | null>(null);
 
   // Forum state
   const [forumPosts, setForumPosts] = useState<any[]>([]);
@@ -137,6 +141,23 @@ export default function PortalPage() {
     const timer = setInterval(() => setCurrentTime(new Date()), 1000);
     return () => clearInterval(timer);
   }, []);
+
+  // Load business from URL param
+  useEffect(() => {
+    if (!urlBusinessCode) return;
+    const loadBusiness = async () => {
+      const { data } = await supabase
+        .from("businesses")
+        .select("name, logo_url")
+        .eq("business_code", urlBusinessCode.toUpperCase())
+        .maybeSingle();
+      if (data) {
+        setBusinessName(data.name);
+        setBusinessLogo(data.logo_url);
+      }
+    };
+    loadBusiness();
+  }, [urlBusinessCode]);
 
   const handleNumpadClick = (num: string) => {
     if (code.length < 4) setCode(prev => prev + num);
@@ -410,8 +431,14 @@ export default function PortalPage() {
     return (
       <div className="min-h-screen bg-background flex flex-col items-center justify-center p-4">
         <div className="text-center mb-6">
-          <img src="/logo.jpeg" alt="Pro Regal Pavilion" className="h-16 w-16 mx-auto rounded-lg object-cover mb-2" />
-          <h1 className="text-xl font-bold gold-text">Employee Portal</h1>
+          {businessLogo ? (
+            <img src={businessLogo} alt={businessName} className="h-16 w-16 mx-auto rounded-lg object-cover mb-2" />
+          ) : (
+            <div className="h-16 w-16 mx-auto rounded-lg bg-primary/15 flex items-center justify-center mb-2">
+              <User className="h-8 w-8 text-primary" />
+            </div>
+          )}
+          <h1 className="text-xl font-bold gold-text">{businessName || "Employee Portal"}</h1>
           <p className="text-sm text-muted-foreground mt-1">
             {toAusFormatted(currentTime, { weekday: "long", day: "numeric", month: "long", year: "numeric" })}
           </p>

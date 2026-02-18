@@ -92,10 +92,23 @@ export function BusinessProvider({ children }: { children: React.ReactNode }) {
   const fetchBusinesses = async () => {
     if (!user) return;
     setLoading(true);
-    const { data } = await supabase
-      .from("businesses")
-      .select("*")
-      .or(`owner_id.eq.${user.id}`);
+
+    // Fetch businesses where user is owner OR has a role
+    const { data: roleData } = await supabase
+      .from("user_roles")
+      .select("business_id")
+      .eq("user_id", user.id);
+
+    const businessIds = [...new Set((roleData || []).map(r => r.business_id).filter(Boolean))];
+
+    let data: any[] = [];
+    if (businessIds.length > 0) {
+      const { data: bizData } = await supabase
+        .from("businesses")
+        .select("*")
+        .in("id", businessIds);
+      data = bizData || [];
+    }
 
     if (data && data.length > 0) {
       const mapped = data.map((b: any) => ({

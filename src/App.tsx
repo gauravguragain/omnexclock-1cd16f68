@@ -11,6 +11,7 @@ import Index from "./pages/Index";
 import AuthPage from "./pages/AuthPage";
 import ResetPasswordPage from "./pages/ResetPasswordPage";
 import RegisterBusinessPage from "./pages/RegisterBusinessPage";
+import BusinessHubPage from "./pages/BusinessHubPage";
 import KioskPage from "./pages/KioskPage";
 import PortalPage from "./pages/PortalPage";
 import AdminLayout from "./layouts/AdminLayout";
@@ -41,9 +42,12 @@ const App = () => (
               <Route path="/auth" element={<AuthPage />} />
               <Route path="/reset-password" element={<ResetPasswordPage />} />
               <Route path="/register-business" element={<RegisterBusinessPage />} />
-              <Route path="/kiosk" element={<KioskPage />} />
-              <Route path="/portal" element={<PortalPage />} />
-              <Route path="/admin" element={<AdminLayout />}>
+              <Route path="/hub" element={<BusinessHubPage />} />
+
+              {/* Business-scoped routes */}
+              <Route path="/b/:businessCode/kiosk" element={<KioskPage />} />
+              <Route path="/b/:businessCode/portal" element={<PortalPage />} />
+              <Route path="/b/:businessCode/admin" element={<AdminLayout />}>
                 <Route index element={<DashboardPage />} />
                 <Route path="employees" element={<EmployeesPage />} />
                 <Route path="roster" element={<RosterPage />} />
@@ -56,6 +60,12 @@ const App = () => (
                 <Route path="requests" element={<RequestsPage />} />
                 <Route path="my-business" element={<MyBusinessPage />} />
               </Route>
+
+              {/* Legacy redirects */}
+              <Route path="/admin/*" element={<BusinessHubPage />} />
+              <Route path="/kiosk" element={<BusinessHubPage />} />
+              <Route path="/portal" element={<BusinessHubPage />} />
+
               <Route path="*" element={<NotFound />} />
             </Routes>
           </BrowserRouter>
