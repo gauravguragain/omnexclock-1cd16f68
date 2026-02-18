@@ -489,7 +489,20 @@ export default function PortalPage() {
           </CardContent>
         </Card>
 
-        <p className="mt-8 text-xs text-muted-foreground">© 2024 Omnex Ventures Pty. Ltd. All rights reserved.</p>
+        <div className="mt-6 flex flex-col items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            className="gap-1.5"
+            onClick={() => {
+              localStorage.removeItem("omnexclock_portal_business_code");
+              window.location.href = "/portal";
+            }}
+          >
+            <RefreshCw className="h-3.5 w-3.5" /> Change Business
+          </Button>
+          <p className="text-xs text-muted-foreground">© 2024 Omnex Ventures Pty. Ltd.</p>
+        </div>
       </div>
     );
   }
@@ -501,7 +514,11 @@ export default function PortalPage() {
       <header className="sticky top-0 z-30 bg-card/80 backdrop-blur border-b border-border px-4 py-3">
         <div className="max-w-3xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <img src="/logo.jpeg" alt="Logo" className="h-8 w-8 rounded-lg object-cover" />
+            {businessLogo ? (
+              <img src={businessLogo} alt={businessName} className="h-8 w-8 rounded-lg object-cover" />
+            ) : (
+              <img src="/omnex-logo.jpg" alt="Logo" className="h-8 w-8 rounded-full object-cover" />
+            )}
             <div>
               <div className="flex items-center gap-2">
                 <User className="h-4 w-4 text-primary" />
