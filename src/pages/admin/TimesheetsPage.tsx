@@ -10,13 +10,14 @@ import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import { CalendarIcon, Search, Pencil, Trash2, Plus, ChevronLeft, ChevronRight, CheckCircle2, XCircle, Download } from "lucide-react";
+import { CalendarIcon, Search, Pencil, Trash2, Plus, ChevronLeft, ChevronRight, CheckCircle2, XCircle, Download, Mail } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { TimeDropdownPicker } from "@/components/TimeDropdownPicker";
 import { logAudit } from "@/lib/auditLog";
 import { toAusDate, toAusDisplayDate, toAusTime24, toAusTime12, buildAusTimestamp } from "@/lib/dateUtils";
+import { EmailCSVDialog } from "@/components/EmailCSVDialog";
 
 interface TimesheetEntry {
   employee_id: string;
@@ -121,6 +122,7 @@ export default function TimesheetsPage() {
   const [approvals, setApprovals] = useState<Map<string, boolean>>(new Map());
   const [saving, setSaving] = useState(false);
   const [approvingIds, setApprovingIds] = useState<Set<string>>(new Set());
+  const [emailDialogOpen, setEmailDialogOpen] = useState(false);
 
   useEffect(() => {
     supabase.from("employees").select("id, name").eq("active", true).order("name").then(({ data }) => setEmployees(data || []));
@@ -426,8 +428,7 @@ export default function TimesheetsPage() {
   const approvedCount = filtered.filter(e => e.approved).length;
   const pendingCount = filtered.length - approvedCount;
 
-  const downloadCSV = () => {
-    if (filtered.length === 0) { toast.info("No data to download"); return; }
+  const buildCSV = () => {
     const headers = ["Status", "Employee", "Date", "Clock In", "Clock Out", "Break Start", "Break End", "Break (min)", "Total (hrs)", "Net (hrs)"];
     const rows = filtered.map(e => [
       e.approved ? "Approved" : "Pending",
@@ -441,16 +442,24 @@ export default function TimesheetsPage() {
       e.total_hours.toString(),
       e.net_hours.toString(),
     ]);
-    const csv = [headers, ...rows].map(r => r.map(c => `"${c}"`).join(",")).join("\n");
+    return [headers, ...rows].map(r => r.map(c => `"${c}"`).join(",")).join("\n");
+  };
+
+  const downloadCSV = () => {
+    if (filtered.length === 0) { toast.info("No data to download"); return; }
+    const csv = buildCSV();
     const blob = new Blob([csv], { type: "text/csv" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `timesheets_${format(dateFrom, "yyyy-MM-dd")}_to_${format(dateTo, "yyyy-MM-dd")}.csv`;
+    a.download = csvFilename;
     a.click();
     URL.revokeObjectURL(url);
     toast.success("Downloaded timesheet data");
   };
+
+  const csvFilename = `timesheets_${format(dateFrom, "yyyy-MM-dd")}_to_${format(dateTo, "yyyy-MM-dd")}.csv`;
+  const csvSubject = `Timesheet Report – ${format(dateFrom, "dd MMM")} to ${format(dateTo, "dd MMM yyyy")}`;
 
   const editFormFields = (
     <div className="space-y-4">
@@ -551,6 +560,9 @@ export default function TimesheetsPage() {
         <div className="flex flex-wrap gap-2">
           <Button variant="outline" size="sm" onClick={downloadCSV} disabled={filtered.length === 0}>
             <Download className="mr-1.5 h-4 w-4" /> <span className="hidden xs:inline">Download</span> CSV
+          </Button>
+          <Button variant="outline" size="sm" onClick={() => setEmailDialogOpen(true)} disabled={filtered.length === 0}>
+            <Mail className="mr-1.5 h-4 w-4" /> Email CSV
           </Button>
           <Button variant="outline" size="sm" onClick={approveAll} disabled={saving} className="text-green-500 border-green-500/30 hover:bg-green-500/10">
             <CheckCircle2 className="mr-1.5 h-4 w-4" /> Approve All
@@ -725,6 +737,14 @@ export default function TimesheetsPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <EmailCSVDialog
+        open={emailDialogOpen}
+        onOpenChange={setEmailDialogOpen}
+        csvData={buildCSV()}
+        csvFilename={csvFilename}
+        subject={csvSubject}
+      />
     </div>
   );
 }

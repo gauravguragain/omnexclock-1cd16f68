@@ -241,15 +241,77 @@ export default function RosterPage() {
     }
     setPublishing(true);
     try {
+      // Capture the draft shifts before publishing (these are the changed ones)
+      const draftShifts = shifts.filter(s => s.status === "draft");
+
       const { error } = await supabase.from("shifts").update({ status: "published" }).in("id", draftIds);
       if (error) throw error;
       await logAudit("roster_publish", { week_start: fmtDate(weekStart), count: draftIds.length });
       toast({ title: "Roster published", description: `${draftIds.length} shift(s) are now visible to employees.` });
       fetchData();
+
+      // Email affected employees (non-blocking)
+      sendRosterEmails(draftShifts);
     } catch (err: any) {
       toast({ title: "Error", description: err.message, variant: "destructive" });
     } finally {
       setPublishing(false);
+    }
+  };
+
+  const sendRosterEmails = async (changedShifts: Shift[]) => {
+    // Group changed shifts by employee
+    const byEmployee = new Map<string, Shift[]>();
+    for (const s of changedShifts) {
+      if (!byEmployee.has(s.employee_id)) byEmployee.set(s.employee_id, []);
+      byEmployee.get(s.employee_id)!.push(s);
+    }
+
+    // Get all shifts for affected employees this week (so email shows full roster)
+    const affectedEmployeeIds = Array.from(byEmployee.keys());
+    const allShiftsThisWeek = shifts.filter(s => affectedEmployeeIds.includes(s.employee_id));
+
+    // Group all shifts by employee
+    const allByEmployee = new Map<string, Shift[]>();
+    for (const s of allShiftsThisWeek) {
+      if (!allByEmployee.has(s.employee_id)) allByEmployee.set(s.employee_id, []);
+      allByEmployee.get(s.employee_id)!.push(s);
+    }
+
+    let sentCount = 0;
+    for (const [empId, empShifts] of allByEmployee) {
+      const emp = employees.find(e => e.id === empId);
+      if (!emp?.email) continue;
+
+      const shiftData = empShifts
+        .sort((a, b) => a.date.localeCompare(b.date))
+        .map(s => ({
+          day: s.day_of_week,
+          date: new Date(s.date + "T00:00:00").toLocaleDateString("en-AU", { day: "numeric", month: "short" }),
+          start: formatTime12(s.start_time),
+          end: formatTime12(s.end_time),
+          breakMin: s.break_minutes,
+          notes: s.notes || undefined,
+        }));
+
+      try {
+        await supabase.functions.invoke("send-email", {
+          body: {
+            type: "roster_notification",
+            to: emp.email,
+            employeeName: emp.name,
+            weekLabel: weekLabel,
+            shifts: shiftData,
+          },
+        });
+        sentCount++;
+      } catch (err) {
+        console.error(`Failed to email ${emp.name}:`, err);
+      }
+    }
+
+    if (sentCount > 0) {
+      toast({ title: "Emails sent", description: `Roster notifications sent to ${sentCount} employee(s).` });
     }
   };
 
