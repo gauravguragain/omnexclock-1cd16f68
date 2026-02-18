@@ -32,11 +32,11 @@ const EMPTY_FORM: EmployeeForm = {
 const STEPS = ["Personal Details", "Payroll Setup", "System Access"];
 
 function generateEmployeeCode(existing: string[]): string {
-  for (let i = 1; i <= 999; i++) {
-    const code = `EMP${String(i).padStart(3, "0")}`;
+  for (let i = 1; i <= 9999; i++) {
+    const code = String(i).padStart(4, "0");
     if (!existing.includes(code)) return code;
   }
-  return `EMP${Date.now().toString().slice(-4)}`;
+  return String(Date.now()).slice(-4);
 }
 
 export default function EmployeesPage() {
@@ -87,8 +87,8 @@ export default function EmployeesPage() {
     }
     if (s === 2) {
       const trimmedCode = form.employee_code.trim();
-      if (!/^[0-9A-Za-z\-]{1,20}$/.test(trimmedCode)) {
-        toast({ title: "Validation Error", description: "Employee code must be 1-20 alphanumeric characters.", variant: "destructive" });
+      if (!/^\d{4}$/.test(trimmedCode)) {
+        toast({ title: "Validation Error", description: "Employee code must be exactly 4 digits.", variant: "destructive" });
         return false;
       }
       const duplicate = employees.find(
@@ -279,13 +279,13 @@ export default function EmployeesPage() {
               <div className="space-y-4">
                 <div className="space-y-2">
                   <Label>Employee Code *</Label>
-                  <p className="text-xs text-muted-foreground">Auto-generated unique code. You can override it if needed.</p>
+                   <p className="text-xs text-muted-foreground">4-digit code used for kiosk access and employee portal.</p>
                   <div className="flex gap-2">
                     <Input
                       value={form.employee_code}
-                      onChange={(e) => setForm({ ...form, employee_code: e.target.value.replace(/[^0-9A-Za-z\-]/g, "").slice(0, 20) })}
-                      placeholder="EMP001"
-                      maxLength={20}
+                      onChange={(e) => setForm({ ...form, employee_code: e.target.value.replace(/[^0-9]/g, "").slice(0, 4) })}
+                      placeholder="0001"
+                      maxLength={4}
                       className="font-mono text-lg tracking-wider"
                     />
                     {!editing && (
