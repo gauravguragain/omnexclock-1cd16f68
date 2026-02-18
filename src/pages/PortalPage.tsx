@@ -119,6 +119,8 @@ export default function PortalPage() {
   const [reqRecurringStart, setReqRecurringStart] = useState<Date | undefined>();
   const [reqRecurringEnd, setReqRecurringEnd] = useState<Date | undefined>();
   const [reqReason, setReqReason] = useState("");
+  const [reqStartTime, setReqStartTime] = useState("");
+  const [reqEndTime, setReqEndTime] = useState("");
   const [reqSaving, setReqSaving] = useState(false);
 
   useEffect(() => {
@@ -225,6 +227,8 @@ export default function PortalPage() {
       _request_type: reqType,
       _is_recurring: reqIsRecurring,
       _reason: reqReason.trim() || null,
+      _start_time: reqType === "unavailability" && reqStartTime && reqStartTime !== "none" ? reqStartTime : null,
+      _end_time: reqType === "unavailability" && reqEndTime && reqEndTime !== "none" ? reqEndTime : null,
     };
     if (reqIsRecurring) {
       params._recurring_days = reqDays;
@@ -256,6 +260,8 @@ export default function PortalPage() {
     setReqRecurringStart(undefined);
     setReqRecurringEnd(undefined);
     setReqReason("");
+    setReqStartTime("");
+    setReqEndTime("");
   };
 
   const statusBadge = (status: string) => {
@@ -798,6 +804,45 @@ export default function PortalPage() {
                       </PopoverTrigger>
                       <PopoverContent className="w-auto p-0"><Calendar mode="single" selected={reqEndDate} onSelect={setReqEndDate} /></PopoverContent>
                     </Popover>
+                  </div>
+                </div>
+              )}
+
+              {reqType === "unavailability" && (
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-2">
+                    <Label className="text-xs">Start Time (optional)</Label>
+                    <Select value={reqStartTime} onValueChange={setReqStartTime}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="All day" />
+                      </SelectTrigger>
+                      <SelectContent className="max-h-48">
+                        <SelectItem value="none">All day</SelectItem>
+                        {Array.from({ length: 48 }, (_, i) => {
+                          const h = Math.floor(i / 2);
+                          const m = i % 2 === 0 ? "00" : "30";
+                          const val = `${String(h).padStart(2, "0")}:${m}`;
+                          return <SelectItem key={val} value={val}>{formatTime12(val)}</SelectItem>;
+                        })}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-xs">End Time (optional)</Label>
+                    <Select value={reqEndTime} onValueChange={setReqEndTime}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="All day" />
+                      </SelectTrigger>
+                      <SelectContent className="max-h-48">
+                        <SelectItem value="none">All day</SelectItem>
+                        {Array.from({ length: 48 }, (_, i) => {
+                          const h = Math.floor(i / 2);
+                          const m = i % 2 === 0 ? "00" : "30";
+                          const val = `${String(h).padStart(2, "0")}:${m}`;
+                          return <SelectItem key={val} value={val}>{formatTime12(val)}</SelectItem>;
+                        })}
+                      </SelectContent>
+                    </Select>
                   </div>
                 </div>
               )}

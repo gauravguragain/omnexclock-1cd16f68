@@ -479,6 +479,9 @@ export default function RosterPage() {
                                 <div key={req.id} className={`w-full rounded-md px-2 py-1 text-[10px] border ${req.request_type === "leave" ? "bg-destructive/10 text-destructive border-destructive/20" : "bg-yellow-500/10 text-yellow-600 border-yellow-500/20"}`}>
                                   <CalendarOff className="h-2.5 w-2.5 inline mr-0.5" />
                                   {req.request_type === "leave" ? "Leave" : "Unavailable"}
+                                  {req.start_time && req.end_time && (
+                                    <div className="text-[9px] opacity-80 mt-0.5">{formatTime12(req.start_time)} – {formatTime12(req.end_time)}</div>
+                                  )}
                                 </div>
                               ))}
                               {dayShifts.map(shift => (
@@ -498,7 +501,7 @@ export default function RosterPage() {
                                   </div>
                                 </button>
                               ))}
-                              {dayShifts.length === 0 && (
+                              {dayShifts.length === 0 && dayRequests.length === 0 && (
                                 <button
                                   onClick={() => openAddShift(emp.id, dayIdx)}
                                   className="w-full rounded-md border border-dashed border-border hover:border-primary/50 hover:bg-primary/5 text-muted-foreground hover:text-primary text-xs py-1.5 transition-colors flex items-center justify-center gap-1"
