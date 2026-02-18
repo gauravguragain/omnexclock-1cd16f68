@@ -23,6 +23,7 @@ export default function KioskPage() {
   const [employeeStatus, setEmployeeStatus] = useState<EmployeeStatus>("clocked_out");
   const [loading, setLoading] = useState(false);
   const [photoData, setPhotoData] = useState<string | null>(null);
+  const geoRef = useRef<{ latitude: number; longitude: number; accuracy: number } | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -101,7 +102,7 @@ export default function KioskPage() {
   const submitClock = useCallback(async (photo: string) => {
     setLoading(true);
     try {
-      const geolocation = await getGeolocation();
+      const geolocation = geoRef.current;
       const { data, error } = await supabase.functions.invoke("kiosk-clock", {
         body: {
           employee_code: codeRef.current,
@@ -178,6 +179,8 @@ export default function KioskPage() {
     setSelectedAction(action);
     actionRef.current = action;
     setStep("photo_capture");
+    // Start geolocation acquisition in parallel with camera
+    getGeolocation().then((geo) => { geoRef.current = geo; });
     setTimeout(() => {
       startCamera().then(() => {
         setTimeout(() => captureAndSubmit(), 2000);
@@ -193,6 +196,7 @@ export default function KioskPage() {
     actionRef.current = "";
     setEmployeeName("");
     setEmployeeId(null);
+    geoRef.current = null;
     setEmployeeStatus("clocked_out");
     setPhotoData(null);
     stopCamera();
