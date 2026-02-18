@@ -1,14 +1,21 @@
 import { useEffect } from "react";
 import { Link } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
-import { ShieldCheck, Building2, Clock, Users } from "lucide-react";
+import { ShieldCheck, Building2, Clock, Users, LogIn } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { useBusiness } from "@/contexts/BusinessContext";
 
 const Index = () => {
   const { resetTheme } = useBusiness();
   useEffect(() => { resetTheme(); }, []);
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-background p-4">
+    <div className="min-h-screen flex flex-col items-center justify-center bg-background p-4 relative">
+      <Link to="/auth?master=true" className="absolute top-4 right-4">
+        <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground gap-1.5">
+          <LogIn className="h-4 w-4" />
+          Master Login
+        </Button>
+      </Link>
       <div className="text-center space-y-2 mb-8">
         <div className="h-20 w-20 mx-auto rounded-full bg-primary/15 flex items-center justify-center">
           <Clock className="h-10 w-10 text-primary" />
