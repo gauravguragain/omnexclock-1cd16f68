@@ -79,32 +79,104 @@ export type Database = {
       employees: {
         Row: {
           active: boolean
+          admin_hourly_rate: number
           created_at: string
+          department: string | null
+          email: string | null
           employee_code: string
           id: string
+          job_title: string | null
           name: string
           pay_rate: number
+          phone: string | null
           updated_at: string
         }
         Insert: {
           active?: boolean
+          admin_hourly_rate?: number
           created_at?: string
+          department?: string | null
+          email?: string | null
           employee_code: string
           id?: string
+          job_title?: string | null
           name: string
           pay_rate?: number
+          phone?: string | null
           updated_at?: string
         }
         Update: {
           active?: boolean
+          admin_hourly_rate?: number
           created_at?: string
+          department?: string | null
+          email?: string | null
           employee_code?: string
           id?: string
+          job_title?: string | null
           name?: string
           pay_rate?: number
+          phone?: string | null
           updated_at?: string
         }
         Relationships: []
+      }
+      payroll_entries: {
+        Row: {
+          admin_pay: number
+          created_at: string
+          employee_hours: number
+          employee_id: string
+          employee_pay: number
+          id: string
+          paid_at: string | null
+          period: string
+          status: string
+          timesheet_approval_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          admin_pay?: number
+          created_at?: string
+          employee_hours?: number
+          employee_id: string
+          employee_pay?: number
+          id?: string
+          paid_at?: string | null
+          period: string
+          status?: string
+          timesheet_approval_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          admin_pay?: number
+          created_at?: string
+          employee_hours?: number
+          employee_id?: string
+          employee_pay?: number
+          id?: string
+          paid_at?: string | null
+          period?: string
+          status?: string
+          timesheet_approval_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payroll_entries_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payroll_entries_timesheet_approval_id_fkey"
+            columns: ["timesheet_approval_id"]
+            isOneToOne: false
+            referencedRelation: "timesheet_approvals"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       profiles: {
         Row: {
@@ -132,6 +204,62 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      shifts: {
+        Row: {
+          break_minutes: number
+          created_at: string
+          date: string
+          day_of_week: string
+          employee_id: string
+          end_time: string
+          hours_worked: number | null
+          id: string
+          notes: string | null
+          start_time: string
+          status: string
+          updated_at: string
+          week_start_date: string
+        }
+        Insert: {
+          break_minutes?: number
+          created_at?: string
+          date: string
+          day_of_week: string
+          employee_id: string
+          end_time: string
+          hours_worked?: number | null
+          id?: string
+          notes?: string | null
+          start_time: string
+          status?: string
+          updated_at?: string
+          week_start_date: string
+        }
+        Update: {
+          break_minutes?: number
+          created_at?: string
+          date?: string
+          day_of_week?: string
+          employee_id?: string
+          end_time?: string
+          hours_worked?: number | null
+          id?: string
+          notes?: string | null
+          start_time?: string
+          status?: string
+          updated_at?: string
+          week_start_date?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shifts_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       timesheet_approvals: {
         Row: {
