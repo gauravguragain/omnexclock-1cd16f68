@@ -2,7 +2,9 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Building2, Mail, Phone, MapPin, Calendar, Users } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { useToast } from "@/hooks/use-toast";
+import { Building2, Mail, Phone, MapPin, Calendar, Users, Trash2 } from "lucide-react";
 import { format } from "date-fns";
 
 interface BusinessInfo {
@@ -22,33 +24,50 @@ interface BusinessInfo {
 export default function MasterBusinessesPage() {
   const [businesses, setBusinesses] = useState<BusinessInfo[]>([]);
   const [loading, setLoading] = useState(true);
+  const [deleting, setDeleting] = useState<string | null>(null);
+  const { toast } = useToast();
 
-  useEffect(() => {
-    const load = async () => {
-      const { data } = await supabase
-        .from("businesses")
-        .select("id, name, business_code, email, phone, address, industry, description, logo_url, created_at, owner_id")
-        .order("created_at", { ascending: false });
+  const load = async () => {
+    const { data } = await supabase
+      .from("businesses")
+      .select("id, name, business_code, email, phone, address, industry, description, logo_url, created_at, owner_id")
+      .order("created_at", { ascending: false });
 
-      if (data) {
-        // Get owner emails from profiles
-        const ownerIds = [...new Set(data.map(b => b.owner_id))];
-        const { data: profiles } = await supabase
-          .from("profiles")
-          .select("id, email")
-          .in("id", ownerIds);
+    if (data) {
+      const ownerIds = [...new Set(data.map(b => b.owner_id))];
+      const { data: profiles } = await supabase
+        .from("profiles")
+        .select("id, email")
+        .in("id", ownerIds);
 
-        const profileMap = new Map(profiles?.map(p => [p.id, p.email]) || []);
+      const profileMap = new Map(profiles?.map(p => [p.id, p.email]) || []);
 
-        setBusinesses(data.map(b => ({
-          ...b,
-          owner_email: profileMap.get(b.owner_id) || "Unknown",
-        })));
-      }
-      setLoading(false);
-    };
-    load();
-  }, []);
+      setBusinesses(data.map(b => ({
+        ...b,
+        owner_email: profileMap.get(b.owner_id) || "Unknown",
+      })));
+    }
+    setLoading(false);
+  };
+
+  useEffect(() => { load(); }, []);
+
+  const deleteBusiness = async (biz: BusinessInfo) => {
+    if (!confirm(`⚠️ PERMANENTLY DELETE "${biz.name}" (${biz.business_code}) and ALL its data (employees, timesheets, shifts, payroll, forum posts, etc.)?\n\nThis cannot be undone!`)) return;
+
+    setDeleting(biz.id);
+    const { data, error } = await supabase.functions.invoke("delete-business", {
+      body: { business_id: biz.id },
+    });
+
+    if (error || data?.error) {
+      toast({ title: "Error", description: data?.error || error?.message || "Failed to delete business", variant: "destructive" });
+    } else {
+      toast({ title: "Business deleted", description: `${biz.name} and all its data have been permanently removed.` });
+      load();
+    }
+    setDeleting(null);
+  };
 
   if (loading) {
     return (
@@ -84,7 +103,7 @@ export default function MasterBusinessesPage() {
                       <Building2 className="h-6 w-6 text-primary" />
                     </div>
                   )}
-                  <div className="min-w-0">
+                  <div className="min-w-0 flex-1">
                     <CardTitle className="text-base text-foreground">{biz.name}</CardTitle>
                     <div className="flex items-center gap-2 mt-1">
                       <Badge variant="outline" className="text-xs text-primary border-primary/30">{biz.business_code}</Badge>
@@ -93,6 +112,16 @@ export default function MasterBusinessesPage() {
                       )}
                     </div>
                   </div>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="text-destructive hover:text-destructive hover:bg-destructive/10 flex-shrink-0"
+                    onClick={() => deleteBusiness(biz)}
+                    disabled={deleting === biz.id}
+                    title="Delete business and all data"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
                 </div>
               </CardHeader>
               <CardContent className="space-y-2 text-sm">
