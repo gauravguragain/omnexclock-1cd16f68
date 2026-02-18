@@ -9,6 +9,7 @@ import { UserCheck, UserX, Shield, ShieldOff, Search, Eye, EyeOff } from "lucide
 import { Input } from "@/components/ui/input";
 import { logAudit } from "@/lib/auditLog";
 import { useAuth } from "@/contexts/AuthContext";
+import { useBusiness } from "@/contexts/BusinessContext";
 
 interface UserProfile {
   id: string;
@@ -21,18 +22,41 @@ interface UserProfile {
 }
 
 export default function UsersPage() {
-  const { isViewer } = useAuth();
+  const { isViewerOf, isAdminOf } = useAuth();
+  const { business } = useBusiness();
   const { toast } = useToast();
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState<Set<string>>(new Set());
 
+  const businessId = business?.id || "";
+  const isViewer = isViewerOf(businessId) && !isAdminOf(businessId);
+
   const fetchUsers = async () => {
-    // Get profiles
+    if (!businessId) { setLoading(false); return; }
+
+    // Get user_roles for THIS business only
+    const { data: roles } = await supabase
+      .from("user_roles")
+      .select("user_id, role")
+      .eq("business_id", businessId);
+
+    if (!roles || roles.length === 0) {
+      setUsers([]);
+      setLoading(false);
+      return;
+    }
+
+    const userIds = [...new Set(roles.map(r => r.user_id))];
+    const adminUserIds = new Set(roles.filter(r => r.role === "admin").map(r => r.user_id));
+    const viewerUserIds = new Set(roles.filter(r => r.role === "viewer").map(r => r.user_id));
+
+    // Get profiles for those users only
     const { data: profiles, error } = await supabase
       .from("profiles")
       .select("id, email, full_name, approved, created_at")
+      .in("id", userIds)
       .order("created_at", { ascending: false });
 
     if (error) {
@@ -40,18 +64,6 @@ export default function UsersPage() {
       setLoading(false);
       return;
     }
-
-    // Get user roles
-    const { data: roles } = await supabase
-      .from("user_roles")
-      .select("user_id, role");
-
-    const adminUserIds = new Set(
-      (roles || []).filter((r) => r.role === "admin").map((r) => r.user_id)
-    );
-    const viewerUserIds = new Set(
-      (roles || []).filter((r) => r.role === "viewer").map((r) => r.user_id)
-    );
 
     setUsers(
       (profiles || []).map((p) => ({
@@ -63,21 +75,24 @@ export default function UsersPage() {
     setLoading(false);
   };
 
-  useEffect(() => { fetchUsers(); }, []);
+  useEffect(() => { fetchUsers(); }, [businessId]);
 
   const revokeAndDelete = async (user: UserProfile) => {
-    if (!confirm(`Revoke access and permanently delete ${user.email}? This cannot be undone.`)) return;
+    if (!confirm(`Remove ${user.email} from this business? This will revoke their roles for this business only.`)) return;
     setActionLoading((prev) => new Set(prev).add(user.id));
 
-    const { data, error } = await supabase.functions.invoke("delete-user", {
-      body: { user_id: user.id },
-    });
+    // Only remove roles for THIS business
+    const { error } = await supabase
+      .from("user_roles")
+      .delete()
+      .eq("user_id", user.id)
+      .eq("business_id", businessId);
 
-    if (error || data?.error) {
-      toast({ title: "Error", description: data?.error || error?.message || "Failed to delete user", variant: "destructive" });
+    if (error) {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
     } else {
-      await logAudit("user_deleted", { user_id: user.id, email: user.email });
-      toast({ title: "User deleted", description: `${user.email} has been removed.` });
+      await logAudit("user_removed_from_business", { user_id: user.id, email: user.email, business_id: businessId });
+      toast({ title: "User removed", description: `${user.email} has been removed from this business.` });
       fetchUsers();
     }
 
@@ -113,36 +128,36 @@ export default function UsersPage() {
     setActionLoading((prev) => new Set(prev).add(user.id));
 
     if (user.has_admin_role) {
-      // Remove admin role
       const { error } = await supabase
         .from("user_roles")
         .delete()
         .eq("user_id", user.id)
-        .eq("role", "admin");
+        .eq("role", "admin")
+        .eq("business_id", businessId);
       if (error) {
         toast({ title: "Error", description: error.message, variant: "destructive" });
       } else {
-        // Also revoke viewer role if present
         if (user.has_viewer_role) {
           await supabase
             .from("user_roles")
             .delete()
             .eq("user_id", user.id)
-            .eq("role", "viewer");
-          await logAudit("viewer_role_removed", { user_id: user.id, email: user.email });
+            .eq("role", "viewer")
+            .eq("business_id", businessId);
+          await logAudit("viewer_role_removed", { user_id: user.id, email: user.email, business_id: businessId });
         }
-        await logAudit("admin_role_removed", { user_id: user.id, email: user.email });
+        await logAudit("admin_role_removed", { user_id: user.id, email: user.email, business_id: businessId });
         toast({ title: "Admin role removed", description: user.has_viewer_role ? "Viewer role also removed." : undefined });
         fetchUsers();
       }
     } else {
       const { error } = await supabase
         .from("user_roles")
-        .insert({ user_id: user.id, role: "admin" });
+        .insert({ user_id: user.id, role: "admin", business_id: businessId });
       if (error) {
         toast({ title: "Error", description: error.message, variant: "destructive" });
       } else {
-        await logAudit("admin_role_granted", { user_id: user.id, email: user.email });
+        await logAudit("admin_role_granted", { user_id: user.id, email: user.email, business_id: businessId });
         toast({ title: "Admin role granted" });
         fetchUsers();
       }
@@ -163,22 +178,23 @@ export default function UsersPage() {
         .from("user_roles")
         .delete()
         .eq("user_id", user.id)
-        .eq("role", "viewer");
+        .eq("role", "viewer")
+        .eq("business_id", businessId);
       if (error) {
         toast({ title: "Error", description: error.message, variant: "destructive" });
       } else {
-        await logAudit("viewer_role_removed", { user_id: user.id, email: user.email });
+        await logAudit("viewer_role_removed", { user_id: user.id, email: user.email, business_id: businessId });
         toast({ title: "Viewer role removed" });
         fetchUsers();
       }
     } else {
       const { error } = await supabase
         .from("user_roles")
-        .insert({ user_id: user.id, role: "viewer" });
+        .insert({ user_id: user.id, role: "viewer", business_id: businessId });
       if (error) {
         toast({ title: "Error", description: error.message, variant: "destructive" });
       } else {
-        await logAudit("viewer_role_granted", { user_id: user.id, email: user.email });
+        await logAudit("viewer_role_granted", { user_id: user.id, email: user.email, business_id: businessId });
         toast({ title: "Viewer role granted" });
         fetchUsers();
       }
@@ -224,7 +240,7 @@ export default function UsersPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">User Management</CardTitle>
+          <CardTitle className="text-base">User Management — {business?.name}</CardTitle>
         </CardHeader>
         <CardContent className="p-0">
           <div className="overflow-x-auto">
@@ -249,7 +265,7 @@ export default function UsersPage() {
                 ) : filtered.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
-                      No users found
+                      No users found for this business
                     </TableCell>
                   </TableRow>
                 ) : (
@@ -292,19 +308,18 @@ export default function UsersPage() {
                           <span className="text-xs text-muted-foreground">View only</span>
                         ) : (
                           <>
-                            {user.approved ? (
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => revokeAndDelete(user)}
-                                disabled={actionLoading.has(user.id)}
-                                title="Revoke access & delete user"
-                                className="text-destructive hover:text-destructive"
-                              >
-                                <UserX className="h-4 w-4 mr-1" />
-                                Delete
-                              </Button>
-                            ) : (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => revokeAndDelete(user)}
+                              disabled={actionLoading.has(user.id)}
+                              title="Remove from business"
+                              className="text-destructive hover:text-destructive"
+                            >
+                              <UserX className="h-4 w-4 mr-1" />
+                              Remove
+                            </Button>
+                            {!user.approved && (
                               <Button
                                 variant="ghost"
                                 size="sm"
