@@ -74,7 +74,7 @@ export default function AdminLayout() {
   return (
     <div className="min-h-screen bg-background flex">
       {/* Sidebar */}
-      <aside className={`fixed inset-y-0 left-0 z-50 w-64 bg-card border-r border-border transform transition-transform lg:translate-x-0 ${sidebarOpen ? "translate-x-0" : "-translate-x-full"}`}>
+      <aside className={`fixed inset-y-0 left-0 z-50 w-64 bg-card border-r border-border transform transition-transform lg:translate-x-0 flex flex-col ${sidebarOpen ? "translate-x-0" : "-translate-x-full"}`}>
         <div className="flex items-center gap-3 p-4 border-b border-border">
           {business?.logo_url ? (
             <img src={business.logo_url} alt="Logo" className="h-10 w-10 rounded-lg object-cover" />
@@ -92,26 +92,26 @@ export default function AdminLayout() {
           </Button>
         </div>
 
-        <nav className="p-3 space-y-1">
+        <nav className="p-3 space-y-1 overflow-y-auto flex-1">
           {navItems.map(({ path, label, icon: Icon }) => (
             <Link
               key={path}
               to={path}
               onClick={() => setSidebarOpen(false)}
-              className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors ${
+              className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors ${
                 location.pathname === path
                   ? "bg-primary/10 text-primary font-medium"
                   : "text-muted-foreground hover:text-foreground hover:bg-secondary"
               }`}
             >
-              <Icon className="h-4 w-4" />
+              <Icon className="h-4 w-4 flex-shrink-0" />
               {label}
             </Link>
           ))}
         </nav>
 
-        <div className="absolute bottom-0 left-0 right-0 p-3 border-t border-border space-y-2">
-          <div className="px-3 py-2">
+        <div className="p-3 border-t border-border space-y-1 flex-shrink-0">
+          <div className="px-3 py-1.5">
             <p className="text-sm font-medium text-foreground truncate">
               {user?.user_metadata?.full_name || "Admin"}
             </p>
@@ -123,21 +123,21 @@ export default function AdminLayout() {
               onClick={async () => {
                 await signOut();
               }}
-              className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-muted-foreground hover:text-foreground hover:bg-secondary w-full"
+              className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-muted-foreground hover:text-foreground hover:bg-secondary w-full"
             >
-              <Clock className="h-4 w-4" />
+              <Clock className="h-4 w-4 flex-shrink-0" />
               Launch Kiosk
             </Link>
           )}
           <Link
             to="/hub"
-            className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-muted-foreground hover:text-foreground hover:bg-secondary w-full"
+            className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-muted-foreground hover:text-foreground hover:bg-secondary w-full"
           >
-            <Building2 className="h-4 w-4" />
+            <Building2 className="h-4 w-4 flex-shrink-0" />
             Business Hub
           </Link>
-          <button onClick={signOut} className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-muted-foreground hover:text-foreground hover:bg-secondary w-full">
-            <LogOut className="h-4 w-4" />
+          <button onClick={signOut} className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-muted-foreground hover:text-foreground hover:bg-secondary w-full">
+            <LogOut className="h-4 w-4 flex-shrink-0" />
             Sign Out
           </button>
         </div>
