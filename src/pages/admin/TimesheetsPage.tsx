@@ -18,7 +18,7 @@ import { TimeDropdownPicker } from "@/components/TimeDropdownPicker";
 import { logAudit } from "@/lib/auditLog";
 import { toAusDate, toAusDisplayDate, toAusTime24, toAusTime12, buildAusTimestamp } from "@/lib/dateUtils";
 import { EmailCSVDialog } from "@/components/EmailCSVDialog";
-import { reverseGeocode } from "@/lib/geocode";
+import { formatLocation, googleMapsUrl } from "@/lib/geocode";
 
 interface TimesheetEntry {
   employee_id: string;
@@ -269,12 +269,12 @@ export default function TimesheetsPage() {
       };
     });
 
-    // Resolve location names in parallel
-    await Promise.all(result.map(async (entry) => {
+    // Set location names directly from coordinates (no external API)
+    for (const entry of result) {
       if (entry.geolocation) {
-        entry.locationName = await reverseGeocode(entry.geolocation.latitude, entry.geolocation.longitude);
+        entry.locationName = formatLocation(entry.geolocation.latitude, entry.geolocation.longitude);
       }
-    }));
+    }
 
     setEntries(result);
   };
@@ -671,7 +671,7 @@ export default function TimesheetsPage() {
                 </div>
                 {e.geolocation && (
                   <a
-                    href={`https://www.google.com/maps?q=${e.geolocation.latitude},${e.geolocation.longitude}`}
+                    href={googleMapsUrl(e.geolocation.latitude, e.geolocation.longitude)}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="flex items-center gap-1 text-xs text-primary hover:underline"
@@ -734,11 +734,10 @@ export default function TimesheetsPage() {
                     <TableCell>
                       {e.geolocation ? (
                         <a
-                          href={`https://www.google.com/maps?q=${e.geolocation.latitude},${e.geolocation.longitude}`}
+                          href={googleMapsUrl(e.geolocation.latitude, e.geolocation.longitude)}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="inline-flex items-center gap-1 text-xs text-primary hover:underline max-w-[150px] truncate"
-                          title={`${e.geolocation.latitude.toFixed(4)}, ${e.geolocation.longitude.toFixed(4)}`}
                         >
                           <MapPin className="h-3.5 w-3.5 shrink-0" />
                           <span className="truncate">{e.locationName || "Location"}</span>
