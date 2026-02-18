@@ -26,6 +26,7 @@ const PAGE_SIZE = 20;
 interface PayrollEntry {
   employee_id: string;
   name: string;
+  department: string | null;
   pay_rate: number;
   admin_hourly_rate: number;
   total_hours: number;
@@ -96,10 +97,13 @@ function DateRangeSelector({ dateFrom, dateTo, onChangeFrom, onChangeTo }: {
 
 export default function PayrollPage() {
   const [entries, setEntries] = useState<PayrollEntry[]>([]);
+  const [allEmployees, setAllEmployees] = useState<{ id: string; name: string; department: string | null }[]>([]);
   const [loading, setLoading] = useState(false);
   const [dateFrom, setDateFrom] = useState<Date>(() => startOfWeek(new Date(), { weekStartsOn: 1 }));
   const [dateTo, setDateTo] = useState<Date>(() => endOfWeek(new Date(), { weekStartsOn: 1 }));
   const [search, setSearch] = useState("");
+  const [selectedEmployee, setSelectedEmployee] = useState<string>("all");
+  const [selectedDepartment, setSelectedDepartment] = useState<string>("all");
   const [page, setPage] = useState(0);
   const [sortKey, setSortKey] = useState<SortKey>("employee_pay");
   const [sortDir, setSortDir] = useState<SortDir>("desc");
@@ -228,6 +232,7 @@ export default function PayrollPage() {
       result.push({
         employee_id: empId,
         name: emp.name,
+        department: emp.department,
         pay_rate: emp.pay_rate,
         admin_hourly_rate: emp.admin_hourly_rate,
         total_hours: Math.round(totalHours * 100) / 100,
@@ -238,6 +243,7 @@ export default function PayrollPage() {
       });
     }
 
+    setAllEmployees((employees || []).map(e => ({ id: e.id, name: e.name, department: e.department })));
     setEntries(result);
     setLoading(false);
   };
@@ -249,6 +255,12 @@ export default function PayrollPage() {
       const q = search.toLowerCase();
       list = list.filter((e) => e.name.toLowerCase().includes(q));
     }
+    if (selectedEmployee !== "all") {
+      list = list.filter((e) => e.employee_id === selectedEmployee);
+    }
+    if (selectedDepartment !== "all") {
+      list = list.filter((e) => e.department === selectedDepartment);
+    }
     list = [...list].sort((a, b) => {
       const av = a[sortKey];
       const bv = b[sortKey];
@@ -258,7 +270,7 @@ export default function PayrollPage() {
       return sortDir === "asc" ? (av as number) - (bv as number) : (bv as number) - (av as number);
     });
     return list;
-  }, [entries, search, sortKey, sortDir]);
+  }, [entries, search, selectedEmployee, selectedDepartment, sortKey, sortDir]);
 
   const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
   const pageEntries = filtered.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
@@ -496,8 +508,32 @@ export default function PayrollPage() {
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-col sm:flex-row gap-3 justify-between items-start sm:items-center">
-        <DateRangeSelector dateFrom={dateFrom} dateTo={dateTo} onChangeFrom={setDateFrom} onChangeTo={setDateTo} />
+      <div className="flex flex-col gap-3">
+        <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center flex-wrap">
+          <Select value={selectedEmployee} onValueChange={setSelectedEmployee}>
+            <SelectTrigger className="w-full sm:w-48">
+              <SelectValue placeholder="All employees" />
+            </SelectTrigger>
+            <SelectContent className="bg-card border-border z-50">
+              <SelectItem value="all">All Employees</SelectItem>
+              {allEmployees.map((e) => (
+                <SelectItem key={e.id} value={e.id}>{e.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select value={selectedDepartment} onValueChange={setSelectedDepartment}>
+            <SelectTrigger className="w-full sm:w-48">
+              <SelectValue placeholder="All departments" />
+            </SelectTrigger>
+            <SelectContent className="bg-card border-border z-50">
+              <SelectItem value="all">All Departments</SelectItem>
+              {[...new Set(allEmployees.map(e => e.department).filter(Boolean))].sort().map((dept) => (
+                <SelectItem key={dept!} value={dept!}>{dept}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <DateRangeSelector dateFrom={dateFrom} dateTo={dateTo} onChangeFrom={setDateFrom} onChangeTo={setDateTo} />
+        </div>
         <div className="flex gap-2">
           <Button variant="outline" onClick={exportCSV}>
             <Download className="mr-2 h-4 w-4" /> Export CSV
