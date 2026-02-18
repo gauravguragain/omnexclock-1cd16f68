@@ -21,9 +21,10 @@ export default function AuthPage() {
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
   const [loading, setLoading] = useState(false);
+  const [denied, setDenied] = useState(false);
 
-  // Redirect based on login type
-  if (user && isApproved) {
+  // Redirect based on login type - but not if access was just denied
+  if (user && isApproved && !denied) {
     if (isMasterLogin && isMaster) return <Navigate to="/master" replace />;
     if (!isMasterLogin) return <Navigate to="/hub" replace />;
   }
@@ -71,6 +72,7 @@ export default function AuthPage() {
             .eq("user_id", signedInUser.id);
           const hasBusinessRole = roles?.some(r => r.business_id !== null);
           if (!hasBusinessRole) {
+            setDenied(true);
             await supabase.auth.signOut();
             toast({ title: "Access Denied", description: "No business access found for this account.", variant: "destructive" });
             setLoading(false);
