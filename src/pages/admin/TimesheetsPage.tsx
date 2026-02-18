@@ -202,6 +202,10 @@ export default function TimesheetsPage() {
 
       const entry = dailyMap.get(key)!;
       entry.event_ids.push(ev.id);
+      // Pick first non-null geolocation from any event in the day
+      if (!entry.geolocation && (ev as any).geolocation) {
+        entry.geolocation = (ev as any).geolocation;
+      }
       const time = new Date(ev.timestamp);
 
       switch (ev.event_type) {
@@ -656,6 +660,17 @@ export default function TimesheetsPage() {
                   <span className="text-foreground">{e.total_hours}h</span>
                   <span className="text-foreground font-semibold">{e.net_hours}h</span>
                 </div>
+                {e.geolocation && (
+                  <a
+                    href={`https://www.google.com/maps?q=${e.geolocation.latitude},${e.geolocation.longitude}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-1 text-xs text-primary hover:underline"
+                  >
+                    <MapPin className="h-3 w-3" />
+                    Location
+                  </a>
+                )}
               </div>
             ))}
             {filtered.length === 0 && (
@@ -680,7 +695,7 @@ export default function TimesheetsPage() {
                   <TableHead>Break</TableHead>
                   <TableHead>Total</TableHead>
                   <TableHead>Net</TableHead>
-                  <TableHead className="hidden xl:table-cell">Location</TableHead>
+                  <TableHead>Location</TableHead>
                   <TableHead className="text-right w-20">Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -707,16 +722,16 @@ export default function TimesheetsPage() {
                     <TableCell>{e.break_minutes}m</TableCell>
                     <TableCell>{e.total_hours}h</TableCell>
                     <TableCell className="font-semibold">{e.net_hours}h</TableCell>
-                    <TableCell className="hidden xl:table-cell">
+                    <TableCell>
                       {e.geolocation ? (
                         <a
                           href={`https://www.google.com/maps?q=${e.geolocation.latitude},${e.geolocation.longitude}`}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="flex items-center gap-1 text-xs text-primary hover:underline"
+                          className="inline-flex items-center gap-1 text-xs text-primary hover:underline"
+                          title={`${e.geolocation.latitude.toFixed(4)}, ${e.geolocation.longitude.toFixed(4)}`}
                         >
-                          <MapPin className="h-3 w-3" />
-                          <span>{e.geolocation.latitude.toFixed(4)}, {e.geolocation.longitude.toFixed(4)}</span>
+                          <MapPin className="h-3.5 w-3.5" />
                         </a>
                       ) : (
                         <span className="text-xs text-muted-foreground">—</span>
