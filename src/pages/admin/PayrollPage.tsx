@@ -15,6 +15,7 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContaine
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { EmailCSVDialog } from "@/components/EmailCSVDialog";
+import { logAudit, getDeviceInfo } from "@/lib/auditLog";
 
 const CHART_COLORS = [
   "hsl(45, 60%, 53%)", "hsl(142, 71%, 45%)", "hsl(217, 91%, 60%)",
@@ -309,6 +310,12 @@ export default function PayrollPage() {
     a.href = url;
     a.download = payrollCsvFilename;
     a.click();
+    logAudit("csv_download", {
+      source: "payroll",
+      tab: activeTab,
+      filename: payrollCsvFilename,
+      device: getDeviceInfo(),
+    });
   };
 
   const totalEmployeePay = filtered.reduce((sum, e) => sum + e.employee_pay, 0);
