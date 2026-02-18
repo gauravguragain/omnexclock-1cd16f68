@@ -8,6 +8,7 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import NotFound from "./pages/NotFound";
 import AuthPage from "./pages/AuthPage";
 import KioskPage from "./pages/KioskPage";
+import PortalPage from "./pages/PortalPage";
 import AdminLayout from "./layouts/AdminLayout";
 import DashboardPage from "./pages/admin/DashboardPage";
 import EmployeesPage from "./pages/admin/EmployeesPage";
@@ -31,6 +32,7 @@ const App = () => (
             <Route path="/" element={<AuthPage />} />
             <Route path="/auth" element={<AuthPage />} />
             <Route path="/kiosk" element={<KioskPage />} />
+            <Route path="/portal" element={<PortalPage />} />
             <Route path="/admin" element={<AdminLayout />}>
               <Route index element={<DashboardPage />} />
               <Route path="employees" element={<EmployeesPage />} />
