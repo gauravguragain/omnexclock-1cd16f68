@@ -18,6 +18,7 @@ import { TimeDropdownPicker } from "@/components/TimeDropdownPicker";
 import { logAudit } from "@/lib/auditLog";
 import { toAusDate, toAusDisplayDate, toAusTime24, toAusTime12, buildAusTimestamp } from "@/lib/dateUtils";
 import { EmailCSVDialog } from "@/components/EmailCSVDialog";
+import { reverseGeocode } from "@/lib/geocode";
 
 interface TimesheetEntry {
   employee_id: string;
@@ -39,6 +40,7 @@ interface TimesheetEntry {
   event_ids: string[];
   approved: boolean;
   geolocation?: { latitude: number; longitude: number; accuracy: number } | null;
+  locationName?: string;
 }
 
 interface EditForm {
@@ -266,6 +268,13 @@ export default function TimesheetsPage() {
         geolocation: e.geolocation || null,
       };
     });
+
+    // Resolve location names in parallel
+    await Promise.all(result.map(async (entry) => {
+      if (entry.geolocation) {
+        entry.locationName = await reverseGeocode(entry.geolocation.latitude, entry.geolocation.longitude);
+      }
+    }));
 
     setEntries(result);
   };
@@ -668,7 +677,7 @@ export default function TimesheetsPage() {
                     className="flex items-center gap-1 text-xs text-primary hover:underline"
                   >
                     <MapPin className="h-3 w-3" />
-                    Location
+                    {e.locationName || "Location"}
                   </a>
                 )}
               </div>
@@ -728,10 +737,11 @@ export default function TimesheetsPage() {
                           href={`https://www.google.com/maps?q=${e.geolocation.latitude},${e.geolocation.longitude}`}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="inline-flex items-center gap-1 text-xs text-primary hover:underline"
+                          className="inline-flex items-center gap-1 text-xs text-primary hover:underline max-w-[150px] truncate"
                           title={`${e.geolocation.latitude.toFixed(4)}, ${e.geolocation.longitude.toFixed(4)}`}
                         >
-                          <MapPin className="h-3.5 w-3.5" />
+                          <MapPin className="h-3.5 w-3.5 shrink-0" />
+                          <span className="truncate">{e.locationName || "Location"}</span>
                         </a>
                       ) : (
                         <span className="text-xs text-muted-foreground">—</span>
