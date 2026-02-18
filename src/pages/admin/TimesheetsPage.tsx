@@ -398,11 +398,11 @@ export default function TimesheetsPage() {
       for (const id of editingEntry.event_ids) {
         await supabase.from("clock_events").delete().eq("id", id);
       }
-      const events: { employee_id: string; event_type: "clock_in" | "clock_out" | "break_start" | "break_end"; timestamp: string }[] = [];
-      if (editForm.clock_in) events.push({ employee_id: editForm.employee_id, event_type: "clock_in", timestamp: buildAusTimestamp(editForm.date, editForm.clock_in) });
-      if (editForm.break_start) events.push({ employee_id: editForm.employee_id, event_type: "break_start", timestamp: buildAusTimestamp(editForm.date, editForm.break_start) });
-      if (editForm.break_end) events.push({ employee_id: editForm.employee_id, event_type: "break_end", timestamp: buildAusTimestamp(editForm.date, editForm.break_end) });
-      if (editForm.clock_out) events.push({ employee_id: editForm.employee_id, event_type: "clock_out", timestamp: buildAusTimestamp(editForm.date, editForm.clock_out) });
+      const events: { employee_id: string; event_type: "clock_in" | "clock_out" | "break_start" | "break_end"; timestamp: string; created_at: string }[] = [];
+      if (editForm.clock_in) events.push({ employee_id: editForm.employee_id, event_type: "clock_in", timestamp: buildAusTimestamp(editForm.date, editForm.clock_in), created_at: buildAusTimestamp(editForm.date, editForm.clock_in) });
+      if (editForm.break_start) events.push({ employee_id: editForm.employee_id, event_type: "break_start", timestamp: buildAusTimestamp(editForm.date, editForm.break_start), created_at: buildAusTimestamp(editForm.date, editForm.break_start) });
+      if (editForm.break_end) events.push({ employee_id: editForm.employee_id, event_type: "break_end", timestamp: buildAusTimestamp(editForm.date, editForm.break_end), created_at: buildAusTimestamp(editForm.date, editForm.break_end) });
+      if (editForm.clock_out) events.push({ employee_id: editForm.employee_id, event_type: "clock_out", timestamp: buildAusTimestamp(editForm.date, editForm.clock_out), created_at: buildAusTimestamp(editForm.date, editForm.clock_out) });
       if (events.length > 0) {
         const { error } = await supabase.from("clock_events").insert(events);
         if (error) { toast.error("Failed to save: " + error.message); return; }
@@ -438,11 +438,11 @@ export default function TimesheetsPage() {
     if (!editForm.comment.trim()) { toast.error("Comment is required when adding timesheets"); return; }
     setSaving(true);
     try {
-      const events: { employee_id: string; event_type: "clock_in" | "clock_out" | "break_start" | "break_end"; timestamp: string }[] = [];
-      if (editForm.clock_in) events.push({ employee_id: editForm.employee_id, event_type: "clock_in", timestamp: buildAusTimestamp(editForm.date, editForm.clock_in) });
-      if (editForm.break_start) events.push({ employee_id: editForm.employee_id, event_type: "break_start", timestamp: buildAusTimestamp(editForm.date, editForm.break_start) });
-      if (editForm.break_end) events.push({ employee_id: editForm.employee_id, event_type: "break_end", timestamp: buildAusTimestamp(editForm.date, editForm.break_end) });
-      if (editForm.clock_out) events.push({ employee_id: editForm.employee_id, event_type: "clock_out", timestamp: buildAusTimestamp(editForm.date, editForm.clock_out) });
+      const events: { employee_id: string; event_type: "clock_in" | "clock_out" | "break_start" | "break_end"; timestamp: string; created_at: string }[] = [];
+      if (editForm.clock_in) events.push({ employee_id: editForm.employee_id, event_type: "clock_in", timestamp: buildAusTimestamp(editForm.date, editForm.clock_in), created_at: buildAusTimestamp(editForm.date, editForm.clock_in) });
+      if (editForm.break_start) events.push({ employee_id: editForm.employee_id, event_type: "break_start", timestamp: buildAusTimestamp(editForm.date, editForm.break_start), created_at: buildAusTimestamp(editForm.date, editForm.break_start) });
+      if (editForm.break_end) events.push({ employee_id: editForm.employee_id, event_type: "break_end", timestamp: buildAusTimestamp(editForm.date, editForm.break_end), created_at: buildAusTimestamp(editForm.date, editForm.break_end) });
+      if (editForm.clock_out) events.push({ employee_id: editForm.employee_id, event_type: "clock_out", timestamp: buildAusTimestamp(editForm.date, editForm.clock_out), created_at: buildAusTimestamp(editForm.date, editForm.clock_out) });
       if (events.length === 0) { toast.error("Enter at least one time"); return; }
       const { error } = await supabase.from("clock_events").insert(events);
       if (error) { toast.error("Failed to add: " + error.message); return; }
