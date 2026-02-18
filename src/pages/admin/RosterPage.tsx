@@ -549,8 +549,11 @@ export default function RosterPage() {
                               {dayShifts.map(shift => (
                                 <button
                                   key={shift.id}
-                                  onClick={() => openEditShift(shift)}
+                                  onClick={() => !isViewer && openEditShift(shift)}
+                                  disabled={isViewer}
                                   className={`w-full rounded-md px-2 py-1.5 text-left text-xs transition-colors ${
+                                    isViewer ? "cursor-default" : ""
+                                  } ${
                                     shift.status === "published"
                                       ? "bg-primary/15 text-primary hover:bg-primary/25 border border-primary/20"
                                       : "bg-muted text-muted-foreground hover:bg-muted/80 border border-border border-dashed"
