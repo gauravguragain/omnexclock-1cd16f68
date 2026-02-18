@@ -15,6 +15,7 @@ import BusinessHubPage from "./pages/BusinessHubPage";
 import KioskPage from "./pages/KioskPage";
 import PortalPage from "./pages/PortalPage";
 import AdminLayout from "./layouts/AdminLayout";
+import MasterLayout from "./layouts/MasterLayout";
 import DashboardPage from "./pages/admin/DashboardPage";
 import EmployeesPage from "./pages/admin/EmployeesPage";
 import LiveMonitorPage from "./pages/admin/LiveMonitorPage";
@@ -26,6 +27,8 @@ import RosterPage from "./pages/admin/RosterPage";
 import ForumPage from "./pages/admin/ForumPage";
 import RequestsPage from "./pages/admin/RequestsPage";
 import MyBusinessPage from "./pages/admin/MyBusinessPage";
+import MasterDashboardPage from "./pages/master/MasterDashboardPage";
+import MasterBusinessesPage from "./pages/master/MasterBusinessesPage";
 
 const queryClient = new QueryClient();
 
@@ -59,6 +62,12 @@ const App = () => (
                 <Route path="forum" element={<ForumPage />} />
                 <Route path="requests" element={<RequestsPage />} />
                 <Route path="my-business" element={<MyBusinessPage />} />
+              </Route>
+
+              {/* Master admin routes */}
+              <Route path="/master" element={<MasterLayout />}>
+                <Route index element={<MasterDashboardPage />} />
+                <Route path="businesses" element={<MasterBusinessesPage />} />
               </Route>
 
               {/* Legacy redirects */}
