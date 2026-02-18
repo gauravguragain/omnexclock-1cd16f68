@@ -12,10 +12,12 @@ export function getDeviceInfo() {
 export async function logAudit(action: string, details: Record<string, any>) {
   try {
     const { data: { user } } = await supabase.auth.getUser();
+    const businessId = localStorage.getItem("current_business_id");
     await supabase.from("audit_logs").insert({
       user_id: user?.id || null,
       action,
       details,
+      business_id: businessId || null,
     });
   } catch (e) {
     console.error("Audit log failed:", e);

@@ -1,5 +1,6 @@
 import { useEffect, useState, useMemo, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useBusiness } from "@/contexts/BusinessContext";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -100,6 +101,7 @@ const EMPTY_SHIFT: ShiftForm = {
 
 export default function RosterPage() {
   const { isViewer } = useAuth();
+  const { business } = useBusiness();
   const { toast } = useToast();
   const [weekStart, setWeekStart] = useState(() => getMonday(new Date()));
   const [employees, setEmployees] = useState<Employee[]>([]);
@@ -119,19 +121,20 @@ export default function RosterPage() {
   /* ── data fetching ── */
 
   const fetchData = useCallback(async () => {
+    if (!business) return;
     setLoading(true);
     const ws = fmtDate(weekStart);
     const we = fmtDate(addDays(weekStart, 6));
     const [empRes, shiftRes, reqRes] = await Promise.all([
-      supabase.from("employees").select("*").eq("active", true).order("name"),
-      supabase.from("shifts").select("*").eq("week_start_date", ws).order("start_time"),
-      supabase.from("employee_requests").select("*, employees(name)").eq("status", "approved"),
+      supabase.from("employees").select("*").eq("active", true).eq("business_id", business.id).order("name"),
+      supabase.from("shifts").select("*, employees!inner(business_id)").eq("employees.business_id", business.id).eq("week_start_date", ws).order("start_time"),
+      supabase.from("employee_requests").select("*, employees!inner(name, business_id)").eq("employees.business_id", business.id).eq("status", "approved"),
     ]);
     setEmployees(empRes.data || []);
     setShifts(shiftRes.data || []);
     setApprovedRequests(reqRes.data || []);
     setLoading(false);
-  }, [weekStart]);
+  }, [weekStart, business]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
 

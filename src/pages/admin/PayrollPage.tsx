@@ -1,4 +1,5 @@
 import { useEffect, useState, useMemo } from "react";
+import { useBusiness } from "@/contexts/BusinessContext";
 import { ausNow, toAusDate, ausStartOfDay, ausEndOfDay } from "@/lib/dateUtils";
 import { format, startOfWeek, endOfWeek, addWeeks, subWeeks } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
@@ -98,6 +99,7 @@ function DateRangeSelector({ dateFrom, dateTo, onChangeFrom, onChangeTo }: {
 }
 
 export default function PayrollPage() {
+  const { business } = useBusiness();
   const [entries, setEntries] = useState<PayrollEntry[]>([]);
   const [allEmployees, setAllEmployees] = useState<{ id: string; name: string; department: string | null }[]>([]);
   const [loading, setLoading] = useState(false);
@@ -114,8 +116,8 @@ export default function PayrollPage() {
   const [emailDialogOpen, setEmailDialogOpen] = useState(false);
 
   useEffect(() => {
-    fetchPayroll();
-  }, [dateFrom, dateTo]);
+    if (business) fetchPayroll();
+  }, [dateFrom, dateTo, business]);
 
   useEffect(() => { setPage(0); }, [search]);
 
@@ -157,7 +159,7 @@ export default function PayrollPage() {
     const to = format(dateTo, "yyyy-MM-dd");
 
     const [{ data: employees }, events, { data: approvalData }] = await Promise.all([
-      supabase.from("employees").select("*").eq("active", true),
+      supabase.from("employees").select("*").eq("active", true).eq("business_id", business!.id),
       fetchAllEvents(dateFrom, dateTo),
       supabase.from("timesheet_approvals").select("employee_id, date, approved").gte("date", from).lte("date", to).eq("approved", true),
     ]);

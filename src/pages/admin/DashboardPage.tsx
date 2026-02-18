@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useBusiness } from "@/contexts/BusinessContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Users, Clock, DollarSign, TrendingUp, Activity } from "lucide-react";
 import {
@@ -40,6 +41,7 @@ const CHART_COLORS = [
 ];
 
 export default function DashboardPage() {
+  const { business } = useBusiness();
   const [stats, setStats] = useState({ totalEmployees: 0, activeToday: 0, totalHoursToday: "0.00", avgShift: "0.00" });
   const [weeklyData, setWeeklyData] = useState<DailyHours[]>([]);
   const [employeeBreakdown, setEmployeeBreakdown] = useState<EmployeeBreakdown[]>([]);
@@ -47,9 +49,9 @@ export default function DashboardPage() {
   const [recentEvents, setRecentEvents] = useState<any[]>([]);
 
   useEffect(() => {
+    if (!business) return;
     fetchAll();
 
-    // Realtime: refresh on any clock_events change
     const channel = supabase
       .channel("dashboard-realtime")
       .on("postgres_changes", { event: "*", schema: "public", table: "clock_events" }, () => {
@@ -57,14 +59,13 @@ export default function DashboardPage() {
       })
       .subscribe();
 
-    // Periodic refresh every 10s to keep running hours accurate for open shifts
     const interval = setInterval(fetchAll, 10000);
 
     return () => {
       clearInterval(interval);
       supabase.removeChannel(channel);
     };
-  }, []);
+  }, [business]);
 
   // Match timesheet calculation: earliest clock_in, latest clock_out, summed breaks
   const calcHoursFromEvents = (events: any[], allowOpen = false) => {
@@ -112,10 +113,17 @@ export default function DashboardPage() {
   };
 
   const getCurrentlyClockedIn = async () => {
+    if (!business) return 0;
     const todayISO = ausStartOfToday();
+    // Get employee IDs for this business
+    const { data: empData } = await supabase.from("employees").select("id").eq("business_id", business.id).eq("active", true);
+    const empIds = (empData || []).map(e => e.id);
+    if (empIds.length === 0) return 0;
+
     const { data: events } = await supabase
       .from("clock_events")
       .select("employee_id, event_type")
+      .in("employee_id", empIds)
       .gte("created_at", todayISO)
       .order("created_at", { ascending: false });
 
@@ -161,11 +169,11 @@ export default function DashboardPage() {
     const sundayISO = ausStartOfDay(toAusDate(sundayDate));
 
     const [empRes, todayEventsRes, weekEventsRes, thisWeekEventsRes, recentRes] = await Promise.all([
-      supabase.from("employees").select("id, name", { count: "exact" }).eq("active", true),
+      supabase.from("employees").select("id, name", { count: "exact" }).eq("active", true).eq("business_id", business!.id),
       supabase.from("clock_events").select("*").gte("timestamp", todayISO).lt("timestamp", tomorrowISO).order("timestamp"),
-      supabase.from("clock_events").select("*, employees(name)").gte("timestamp", weekAgoISO).order("timestamp"),
-      supabase.from("clock_events").select("*, employees(name)").gte("timestamp", mondayISO).lt("timestamp", sundayISO).order("timestamp"),
-      supabase.from("clock_events").select("*, employees(name)").order("created_at", { ascending: false }).limit(10),
+      supabase.from("clock_events").select("*, employees!inner(name, business_id)").eq("employees.business_id", business!.id).gte("timestamp", weekAgoISO).order("timestamp"),
+      supabase.from("clock_events").select("*, employees!inner(name, business_id)").eq("employees.business_id", business!.id).gte("timestamp", mondayISO).lt("timestamp", sundayISO).order("timestamp"),
+      supabase.from("clock_events").select("*, employees!inner(name, business_id)").eq("employees.business_id", business!.id).order("created_at", { ascending: false }).limit(10),
     ]);
 
     const totalEmployees = empRes.count || 0;
