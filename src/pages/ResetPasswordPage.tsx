@@ -1,18 +1,20 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
 import { useToast } from "@/hooks/use-toast";
-import { KeyRound, ArrowLeft, ShieldCheck, Lock } from "lucide-react";
+import { KeyRound, ArrowLeft, ShieldCheck, Lock, Crown, Clock } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 
 type ResetStep = "email" | "otp" | "newPassword";
 
 export default function ResetPasswordPage() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const isMasterReset = searchParams.get("master") === "true";
   const { toast } = useToast();
   const [step, setStep] = useState<ResetStep>("email");
   const [email, setEmail] = useState("");
@@ -104,7 +106,7 @@ export default function ResetPasswordPage() {
       });
     } else {
       toast({ title: "Password Reset", description: "Your password has been updated successfully. Please sign in." });
-      navigate("/auth");
+      navigate(isMasterReset ? "/auth?master=true" : "/auth");
     }
     setLoading(false);
   };
@@ -133,12 +135,14 @@ export default function ResetPasswordPage() {
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
       <div className="w-full max-w-md space-y-6">
         <div className="text-center space-y-2">
-          <img src="/logo.jpeg" alt="Pro Regal Pavilion" className="h-20 w-20 mx-auto rounded-lg object-cover" />
-          <h1 className="text-2xl font-bold gold-text">Pro Regal Pavilion</h1>
-          <p className="text-muted-foreground text-sm">Admin Portal</p>
+          <div className="h-20 w-20 mx-auto rounded-full bg-primary/15 flex items-center justify-center">
+            {isMasterReset ? <Crown className="h-10 w-10 text-primary" /> : <Clock className="h-10 w-10 text-primary" />}
+          </div>
+          <h1 className="text-2xl font-bold text-foreground">{isMasterReset ? "Master Admin" : "OmnexClock"}</h1>
+          <p className="text-muted-foreground text-sm">Password Recovery</p>
         </div>
 
-        <Card className="gold-border border">
+        <Card className="border border-border">
           <CardHeader>
             <div className="flex items-center gap-2">
               <current.icon className="h-5 w-5 text-primary" />
@@ -276,7 +280,7 @@ export default function ResetPasswordPage() {
                     setStep("email");
                     setOtp("");
                   } else {
-                    navigate("/auth");
+                    navigate(isMasterReset ? "/auth?master=true" : "/auth");
                   }
                 }}
                 className="text-sm text-muted-foreground hover:underline inline-flex items-center gap-1"

@@ -55,12 +55,12 @@ serve(async (req) => {
         });
       }
 
-      // Check if user has admin role
+      // Check if user has admin or master role
       const { data: roleData } = await supabaseAdmin
         .from("user_roles")
         .select("role")
         .eq("user_id", targetUser.id)
-        .eq("role", "admin")
+        .in("role", ["admin", "master"])
         .limit(1);
 
       if (!roleData || roleData.length === 0) {
