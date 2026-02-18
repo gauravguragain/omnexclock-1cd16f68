@@ -502,6 +502,10 @@ export type Database = {
         Args: { _content: string; _employee_code: string; _post_id: string }
         Returns: boolean
       }
+      delete_employee_request: {
+        Args: { _employee_code: string; _request_id: string }
+        Returns: boolean
+      }
       get_employee_clock_history: {
         Args: { _employee_code: string }
         Returns: {
@@ -619,6 +623,23 @@ export type Database = {
       }
       toggle_forum_reaction: {
         Args: { _employee_code: string; _post_id: string; _reaction: string }
+        Returns: boolean
+      }
+      update_employee_request: {
+        Args: {
+          _employee_code: string
+          _end_date?: string
+          _end_time?: string
+          _is_recurring?: boolean
+          _reason?: string
+          _recurring_days?: string[]
+          _recurring_end_date?: string
+          _recurring_start_date?: string
+          _request_id: string
+          _request_type: string
+          _start_date?: string
+          _start_time?: string
+        }
         Returns: boolean
       }
     }
