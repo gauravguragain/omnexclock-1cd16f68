@@ -84,6 +84,7 @@ export type Database = {
           created_at: string
           employee_id: string
           end_date: string | null
+          end_time: string | null
           id: string
           is_recurring: boolean
           reason: string | null
@@ -92,6 +93,7 @@ export type Database = {
           recurring_start_date: string | null
           request_type: string
           start_date: string | null
+          start_time: string | null
           status: string
           updated_at: string
         }
@@ -102,6 +104,7 @@ export type Database = {
           created_at?: string
           employee_id: string
           end_date?: string | null
+          end_time?: string | null
           id?: string
           is_recurring?: boolean
           reason?: string | null
@@ -110,6 +113,7 @@ export type Database = {
           recurring_start_date?: string | null
           request_type?: string
           start_date?: string | null
+          start_time?: string | null
           status?: string
           updated_at?: string
         }
@@ -120,6 +124,7 @@ export type Database = {
           created_at?: string
           employee_id?: string
           end_date?: string | null
+          end_time?: string | null
           id?: string
           is_recurring?: boolean
           reason?: string | null
@@ -128,6 +133,7 @@ export type Database = {
           recurring_start_date?: string | null
           request_type?: string
           start_date?: string | null
+          start_time?: string | null
           status?: string
           updated_at?: string
         }
