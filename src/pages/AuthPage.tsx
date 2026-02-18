@@ -62,7 +62,22 @@ export default function AuthPage() {
       }
     } else {
       const { error } = await signIn(email, password);
-      if (error) {
+      if (!error) {
+        const { data: { user: signedInUser } } = await supabase.auth.getUser();
+        if (signedInUser) {
+          const { data: roles } = await supabase
+            .from("user_roles")
+            .select("role, business_id")
+            .eq("user_id", signedInUser.id);
+          const hasBusinessRole = roles?.some(r => r.business_id !== null);
+          if (!hasBusinessRole) {
+            await supabase.auth.signOut();
+            toast({ title: "Access Denied", description: "No business access found for this account.", variant: "destructive" });
+            setLoading(false);
+            return;
+          }
+        }
+      } else {
         toast({ title: "Error", description: error, variant: "destructive" });
       }
     }
