@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
 import { Clock, LogIn, LogOut, Coffee } from "lucide-react";
-import { toAusTime12, ausStartOfToday } from "@/lib/dateUtils";
+import { toAusTime12, ausStartOfToday, ausStartOfTomorrow } from "@/lib/dateUtils";
 
 interface LiveEmployee {
   id: string;
@@ -18,12 +18,16 @@ export default function LiveMonitorPage() {
 
   const fetchLive = async () => {
     const todayISO = ausStartOfToday();
+    const tomorrowISO = ausStartOfTomorrow();
 
+    // Use timestamp (actual event time) instead of created_at
+    // so manual timesheet edits don't affect live kiosk status
     const { data: events } = await supabase
       .from("clock_events")
       .select("*, employees(name)")
-      .gte("created_at", todayISO)
-      .order("created_at", { ascending: false });
+      .gte("timestamp", todayISO)
+      .lt("timestamp", tomorrowISO)
+      .order("timestamp", { ascending: false });
 
     if (!events) return;
 
@@ -35,7 +39,7 @@ export default function LiveMonitorPage() {
           id: ev.employee_id,
           name: emp?.name || "Unknown",
           lastEvent: ev.event_type,
-          lastTime: toAusTime12(new Date(ev.created_at)),
+          lastTime: toAusTime12(new Date(ev.timestamp)),
           photoPath: ev.photo_url || undefined,
         });
       }
