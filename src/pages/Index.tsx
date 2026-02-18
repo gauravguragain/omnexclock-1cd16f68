@@ -1,8 +1,12 @@
+import { useEffect } from "react";
 import { Link } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { ShieldCheck, Building2, Clock } from "lucide-react";
+import { useBusiness } from "@/contexts/BusinessContext";
 
 const Index = () => {
+  const { resetTheme } = useBusiness();
+  useEffect(() => { resetTheme(); }, []);
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-background p-4">
       <div className="text-center space-y-2 mb-8">

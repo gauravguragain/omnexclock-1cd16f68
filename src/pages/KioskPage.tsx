@@ -1,12 +1,12 @@
 import { useState, useRef, useCallback, useEffect } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Camera, Clock, Coffee, LogIn, LogOut, ArrowLeft, Delete, User } from "lucide-react";
+import { Camera, Clock, Coffee, LogIn, LogOut, ArrowLeft, Delete, User, ShieldCheck } from "lucide-react";
 import { toAusTime12, toAusTime12WithSeconds, toAusFormatted } from "@/lib/dateUtils";
 
 type KioskStep = "loading" | "code_entry" | "action_select" | "photo_capture" | "confirmation";
@@ -15,6 +15,7 @@ type EmployeeStatus = "clocked_out" | "clocked_in" | "on_break";
 export default function KioskPage() {
   const { toast } = useToast();
   const { businessCode: urlBusinessCode } = useParams();
+  const navigate = useNavigate();
   const [step, setStep] = useState<KioskStep>("loading");
   const [businessName, setBusinessName] = useState("");
   const [businessLogo, setBusinessLogo] = useState<string | null>(null);
@@ -380,9 +381,24 @@ export default function KioskPage() {
       )}
 
       {/* Footer */}
-      <p className="mt-8 text-xs text-muted-foreground">
-        © 2024 Omnex Ventures Pty. Ltd. All rights reserved.
-      </p>
+      <div className="mt-8 flex flex-col items-center gap-3">
+        <Button
+          variant="ghost"
+          size="sm"
+          className="text-muted-foreground hover:text-foreground"
+          onClick={async () => {
+            // Always sign out first so kiosk can never be backtracked to a logged-in admin session
+            await supabase.auth.signOut();
+            navigate(`/b/${urlBusinessCode}/admin`);
+          }}
+        >
+          <ShieldCheck className="h-4 w-4 mr-1" />
+          Admin Login
+        </Button>
+        <p className="text-xs text-muted-foreground">
+          © 2024 Omnex Ventures Pty. Ltd. All rights reserved.
+        </p>
+      </div>
     </div>
   );
 }

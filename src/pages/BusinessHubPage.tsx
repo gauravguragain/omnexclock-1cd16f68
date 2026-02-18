@@ -3,11 +3,15 @@ import { useBusiness } from "@/contexts/BusinessContext";
 import { Navigate, Link } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ShieldCheck, User, Clock, LogOut, Building2 } from "lucide-react";
+import { ShieldCheck, Clock, LogOut, Building2 } from "lucide-react";
+import { useEffect } from "react";
 
 export default function BusinessHubPage() {
   const { user, isApproved, isMaster, isAdminOf, isViewerOf, hasAccessTo, loading, signOut } = useAuth();
-  const { business, businesses, loading: bizLoading, setBusiness, applyTheme } = useBusiness();
+  const { business, businesses, loading: bizLoading, setBusiness, applyTheme, resetTheme } = useBusiness();
+
+  // Always reset to default theme on the hub
+  useEffect(() => { resetTheme(); }, []);
 
   if (loading || bizLoading) {
     return (
@@ -49,7 +53,7 @@ export default function BusinessHubPage() {
     );
   }
 
-  // If user has multiple businesses, show a selection
+  // If user has multiple businesses, show a selection (admin panel only)
   if (businesses.length > 1) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-background p-4">
@@ -99,10 +103,8 @@ export default function BusinessHubPage() {
     );
   }
 
-  // Single business - show hub for that business
+  // Single business - go straight to admin
   const businessCode = business.business_code;
-  const isAdmin = isAdminOf(business.id);
-  const isViewerOnly = isViewerOf(business.id) && !isAdmin;
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-background p-4">
@@ -115,55 +117,27 @@ export default function BusinessHubPage() {
           </div>
         )}
         <h1 className="text-2xl font-bold text-foreground">{business.name}</h1>
-        <p className="text-muted-foreground text-sm">Select where you'd like to go</p>
+        <p className="text-muted-foreground text-sm">Business Administration</p>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 w-full max-w-2xl">
-        {(isAdmin || isViewerOnly) && (
-          <Link to={`/b/${businessCode}/admin`} className="block">
-            <Card className="border border-border cursor-pointer hover:border-primary/50 transition-all duration-300 group h-full">
-              <CardContent className="p-6 flex flex-col items-center text-center space-y-3">
-                <div className="h-14 w-14 rounded-full bg-primary/15 flex items-center justify-center group-hover:bg-primary/25 transition-colors">
-                  <ShieldCheck className="h-7 w-7 text-primary" />
-                </div>
-                <div>
-                  <h2 className="text-lg font-semibold text-foreground">Admin Panel</h2>
-                  <p className="text-xs text-muted-foreground mt-1">Manage employees, timesheets & more</p>
-                </div>
-              </CardContent>
-            </Card>
-          </Link>
-        )}
-
-        <Link to={`/b/${businessCode}/portal`} className="block">
-          <Card className="border border-border cursor-pointer hover:border-primary/50 transition-all duration-300 group h-full">
+      <div className="w-full max-w-sm">
+        <Link
+          to={`/b/${businessCode}/admin`}
+          onClick={() => applyTheme(business.theme)}
+          className="block"
+        >
+          <Card className="border border-border cursor-pointer hover:border-primary/50 transition-all duration-300 group">
             <CardContent className="p-6 flex flex-col items-center text-center space-y-3">
               <div className="h-14 w-14 rounded-full bg-primary/15 flex items-center justify-center group-hover:bg-primary/25 transition-colors">
-                <User className="h-7 w-7 text-primary" />
+                <ShieldCheck className="h-7 w-7 text-primary" />
               </div>
               <div>
-                <h2 className="text-lg font-semibold text-foreground">Employee Portal</h2>
-                <p className="text-xs text-muted-foreground mt-1">View roster, timesheets & requests</p>
+                <h2 className="text-lg font-semibold text-foreground">Admin Panel</h2>
+                <p className="text-xs text-muted-foreground mt-1">Manage employees, timesheets & more</p>
               </div>
             </CardContent>
           </Card>
         </Link>
-
-        {isAdmin && (
-          <Link to={`/b/${businessCode}/kiosk`} className="block">
-            <Card className="border border-border cursor-pointer hover:border-primary/50 transition-all duration-300 group h-full">
-              <CardContent className="p-6 flex flex-col items-center text-center space-y-3">
-                <div className="h-14 w-14 rounded-full bg-primary/15 flex items-center justify-center group-hover:bg-primary/25 transition-colors">
-                  <Clock className="h-7 w-7 text-primary" />
-                </div>
-                <div>
-                  <h2 className="text-lg font-semibold text-foreground">Kiosk</h2>
-                  <p className="text-xs text-muted-foreground mt-1">Clock in/out station</p>
-                </div>
-              </CardContent>
-            </Card>
-          </Link>
-        )}
       </div>
 
       <Button variant="ghost" className="mt-8 text-muted-foreground" onClick={signOut}>

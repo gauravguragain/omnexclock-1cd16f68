@@ -35,6 +35,7 @@ interface BusinessContextType {
   setBusiness: (b: Business | null) => void;
   refreshBusiness: () => Promise<void>;
   applyTheme: (theme: BusinessTheme) => void;
+  resetTheme: () => void;
 }
 
 const defaultTheme: BusinessTheme = {
@@ -76,6 +77,19 @@ export function BusinessProvider({ children }: { children: React.ReactNode }) {
     root.style.setProperty("--sidebar-foreground", theme.foreground);
     root.style.setProperty("--sidebar-border", theme.border);
     root.style.setProperty("--sidebar-ring", theme.primary);
+  };
+
+  const resetTheme = () => {
+    // Remove all inline style overrides so CSS :root defaults apply
+    const root = document.documentElement;
+    const props = [
+      "--primary", "--background", "--foreground", "--card", "--card-foreground",
+      "--popover", "--popover-foreground", "--accent", "--accent-foreground",
+      "--primary-foreground", "--muted", "--border", "--input", "--ring",
+      "--sidebar-primary", "--sidebar-background", "--sidebar-foreground",
+      "--sidebar-border", "--sidebar-ring",
+    ];
+    props.forEach(p => root.style.removeProperty(p));
   };
 
   const setBusiness = (b: Business | null) => {
@@ -153,7 +167,7 @@ export function BusinessProvider({ children }: { children: React.ReactNode }) {
   }, [user]);
 
   return (
-    <BusinessContext.Provider value={{ business, businesses, loading, setBusiness, refreshBusiness, applyTheme }}>
+    <BusinessContext.Provider value={{ business, businesses, loading, setBusiness, refreshBusiness, applyTheme, resetTheme }}>
       {children}
     </BusinessContext.Provider>
   );
