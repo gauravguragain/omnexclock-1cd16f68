@@ -558,7 +558,11 @@ export default function RosterPage() {
                               ))}
                               {(() => {
                                 const hasAllDayBlock = dayRequests.some(r => isAllDayUnavailability(r));
-                                if (!hasAllDayBlock) return (
+                                const hasPartialUnavailability = dayRequests.some(r => !isAllDayUnavailability(r));
+                                // Hide add button if all-day block OR if employee already has a shift (unless partial unavailability exists, allowing a second non-overlapping shift)
+                                if (hasAllDayBlock) return null;
+                                if (dayShifts.length > 0 && !hasPartialUnavailability) return null;
+                                return (
                                   <button
                                     onClick={() => openAddShift(emp.id, dayIdx)}
                                     className="w-full rounded-md border border-dashed border-border hover:border-primary/50 hover:bg-primary/5 text-muted-foreground hover:text-primary text-xs py-1.5 transition-colors flex items-center justify-center gap-1"
@@ -566,7 +570,6 @@ export default function RosterPage() {
                                     <Plus className="h-3 w-3" />
                                   </button>
                                 );
-                                return null;
                               })()}
                             </div>
                           </td>
