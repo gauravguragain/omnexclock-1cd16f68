@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Mail } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { logAudit, getDeviceInfo } from "@/lib/auditLog";
 
 interface EmailCSVDialogProps {
   open: boolean;
@@ -43,6 +44,12 @@ export function EmailCSVDialog({ open, onOpenChange, csvData, csvFilename, subje
       if (error) throw error;
       if (data?.success === false) throw new Error(data.error || "Failed to send email");
       toast.success(`Report sent to ${email.trim()}`);
+      logAudit("csv_email_sent", {
+        recipient_email: email.trim(),
+        subject,
+        filename: csvFilename,
+        device: getDeviceInfo(),
+      });
       setEmail("");
       onOpenChange(false);
     } catch (err: any) {

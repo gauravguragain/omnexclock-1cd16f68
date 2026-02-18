@@ -15,7 +15,7 @@ import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { TimeDropdownPicker } from "@/components/TimeDropdownPicker";
-import { logAudit } from "@/lib/auditLog";
+import { logAudit, getDeviceInfo } from "@/lib/auditLog";
 import { toAusDate, toAusDisplayDate, toAusTime24, toAusTime12, buildAusTimestamp, ausToday, ausNow, ausStartOfDay, ausEndOfDay } from "@/lib/dateUtils";
 import { useAuth } from "@/contexts/AuthContext";
 import { EmailCSVDialog } from "@/components/EmailCSVDialog";
@@ -467,6 +467,12 @@ export default function TimesheetsPage() {
     a.click();
     URL.revokeObjectURL(url);
     toast.success("Downloaded timesheet data");
+    logAudit("csv_download", {
+      source: "timesheets",
+      filename: csvFilename,
+      row_count: filtered.length,
+      device: getDeviceInfo(),
+    });
   };
 
   const csvFilename = `timesheets_${format(dateFrom, "yyyy-MM-dd")}_to_${format(dateTo, "yyyy-MM-dd")}.csv`;
