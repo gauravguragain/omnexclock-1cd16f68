@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -40,6 +41,7 @@ function generateEmployeeCode(existing: string[]): string {
 }
 
 export default function EmployeesPage() {
+  const { isViewer } = useAuth();
   const { toast } = useToast();
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [search, setSearch] = useState("");
@@ -194,7 +196,7 @@ export default function EmployeesPage() {
         </div>
         <Dialog open={dialogOpen} onOpenChange={(open) => { setDialogOpen(open); if (!open) { setStep(0); setEditing(null); } }}>
           <DialogTrigger asChild>
-            <Button onClick={openAdd}><Plus className="mr-2 h-4 w-4" /> Add Employee</Button>
+            <Button onClick={openAdd} disabled={isViewer}><Plus className="mr-2 h-4 w-4" /> Add Employee</Button>
           </DialogTrigger>
           <DialogContent className="sm:max-w-lg">
             <DialogHeader>
@@ -365,12 +367,18 @@ export default function EmployeesPage() {
                       </span>
                     </TableCell>
                     <TableCell className="text-right space-x-1">
-                      <Button variant="ghost" size="icon" onClick={() => openEdit(emp)} disabled={saving}>
-                        <Pencil className="h-4 w-4" />
-                      </Button>
-                      <Button variant="ghost" size="icon" onClick={() => toggleActive(emp)} disabled={togglingIds.has(emp.id)}>
-                        {emp.active ? <UserX className="h-4 w-4" /> : <UserCheck className="h-4 w-4" />}
-                      </Button>
+                      {isViewer ? (
+                        <span className="text-xs text-muted-foreground">View only</span>
+                      ) : (
+                        <>
+                          <Button variant="ghost" size="icon" onClick={() => openEdit(emp)} disabled={saving}>
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                          <Button variant="ghost" size="icon" onClick={() => toggleActive(emp)} disabled={togglingIds.has(emp.id)}>
+                            {emp.active ? <UserX className="h-4 w-4" /> : <UserCheck className="h-4 w-4" />}
+                          </Button>
+                        </>
+                      )}
                     </TableCell>
                   </TableRow>
                 ))}

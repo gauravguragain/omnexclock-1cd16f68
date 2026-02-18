@@ -6,6 +6,7 @@ import type { User } from "@supabase/supabase-js";
 interface AuthContextType {
   user: User | null;
   isAdmin: boolean;
+  isViewer: boolean;
   isApproved: boolean;
   loading: boolean;
   signIn: (email: string, password: string) => Promise<{ error: string | null }>;
@@ -18,15 +19,18 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [isViewer, setIsViewer] = useState(false);
   const [isApproved, setIsApproved] = useState(false);
   const [loading, setLoading] = useState(true);
 
   const checkRoles = async (userId: string) => {
-    const [roleResult, approvedResult] = await Promise.all([
+    const [roleResult, viewerResult, approvedResult] = await Promise.all([
       supabase.rpc("has_role", { _user_id: userId, _role: "admin" }),
+      supabase.rpc("has_role", { _user_id: userId, _role: "viewer" }),
       supabase.rpc("is_approved", { _user_id: userId }),
     ]);
     setIsAdmin(!!roleResult.data);
+    setIsViewer(!!viewerResult.data);
     setIsApproved(!!approvedResult.data);
   };
 
@@ -40,6 +44,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }, 0);
       } else {
         setIsAdmin(false);
+        setIsViewer(false);
         setIsApproved(false);
         setLoading(false);
       }
@@ -81,7 +86,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, isAdmin, isApproved, loading, signIn, signUp, signOut }}>
+    <AuthContext.Provider value={{ user, isAdmin, isViewer, isApproved, loading, signIn, signUp, signOut }}>
       {children}
     </AuthContext.Provider>
   );

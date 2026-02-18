@@ -5,9 +5,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { UserCheck, UserX, Shield, ShieldOff, Search } from "lucide-react";
+import { UserCheck, UserX, Shield, ShieldOff, Search, Eye, EyeOff } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { logAudit } from "@/lib/auditLog";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface UserProfile {
   id: string;
@@ -16,9 +17,11 @@ interface UserProfile {
   approved: boolean;
   created_at: string;
   has_admin_role: boolean;
+  has_viewer_role: boolean;
 }
 
 export default function UsersPage() {
+  const { isViewer } = useAuth();
   const { toast } = useToast();
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [search, setSearch] = useState("");
@@ -46,11 +49,15 @@ export default function UsersPage() {
     const adminUserIds = new Set(
       (roles || []).filter((r) => r.role === "admin").map((r) => r.user_id)
     );
+    const viewerUserIds = new Set(
+      (roles || []).filter((r) => r.role === "viewer").map((r) => r.user_id)
+    );
 
     setUsers(
       (profiles || []).map((p) => ({
         ...p,
         has_admin_role: adminUserIds.has(p.id),
+        has_viewer_role: viewerUserIds.has(p.id),
       }))
     );
     setLoading(false);
@@ -127,6 +134,42 @@ export default function UsersPage() {
       } else {
         await logAudit("admin_role_granted", { user_id: user.id, email: user.email });
         toast({ title: "Admin role granted" });
+        fetchUsers();
+      }
+    }
+
+    setActionLoading((prev) => {
+      const s = new Set(prev);
+      s.delete(user.id);
+      return s;
+    });
+  };
+
+  const toggleViewerRole = async (user: UserProfile) => {
+    setActionLoading((prev) => new Set(prev).add(user.id));
+
+    if (user.has_viewer_role) {
+      const { error } = await supabase
+        .from("user_roles")
+        .delete()
+        .eq("user_id", user.id)
+        .eq("role", "viewer");
+      if (error) {
+        toast({ title: "Error", description: error.message, variant: "destructive" });
+      } else {
+        await logAudit("viewer_role_removed", { user_id: user.id, email: user.email });
+        toast({ title: "Viewer role removed" });
+        fetchUsers();
+      }
+    } else {
+      const { error } = await supabase
+        .from("user_roles")
+        .insert({ user_id: user.id, role: "viewer" });
+      if (error) {
+        toast({ title: "Error", description: error.message, variant: "destructive" });
+      } else {
+        await logAudit("viewer_role_granted", { user_id: user.id, email: user.email });
+        toast({ title: "Viewer role granted" });
         fetchUsers();
       }
     }
@@ -221,51 +264,78 @@ export default function UsersPage() {
                         </Badge>
                       </TableCell>
                       <TableCell>
-                        <Badge
-                          variant={user.has_admin_role ? "default" : "secondary"}
-                        >
-                          {user.has_admin_role ? "Admin" : "User"}
-                        </Badge>
+                        <div className="flex gap-1 flex-wrap">
+                          <Badge
+                            variant={user.has_admin_role ? "default" : "secondary"}
+                          >
+                            {user.has_admin_role ? "Admin" : "User"}
+                          </Badge>
+                          {user.has_viewer_role && (
+                            <Badge variant="outline" className="text-primary border-primary/30">
+                              Viewer
+                            </Badge>
+                          )}
+                        </div>
                       </TableCell>
                       <TableCell className="text-right space-x-1">
-                        {user.approved ? (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => revokeAndDelete(user)}
-                            disabled={actionLoading.has(user.id)}
-                            title="Revoke access & delete user"
-                            className="text-destructive hover:text-destructive"
-                          >
-                            <UserX className="h-4 w-4 mr-1" />
-                            Delete
-                          </Button>
+                        {isViewer ? (
+                          <span className="text-xs text-muted-foreground">View only</span>
                         ) : (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => approveUser(user)}
-                            disabled={actionLoading.has(user.id)}
-                            title="Approve user"
-                          >
-                            <UserCheck className="h-4 w-4 mr-1" />
-                            Approve
-                          </Button>
+                          <>
+                            {user.approved ? (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => revokeAndDelete(user)}
+                                disabled={actionLoading.has(user.id)}
+                                title="Revoke access & delete user"
+                                className="text-destructive hover:text-destructive"
+                              >
+                                <UserX className="h-4 w-4 mr-1" />
+                                Delete
+                              </Button>
+                            ) : (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => approveUser(user)}
+                                disabled={actionLoading.has(user.id)}
+                                title="Approve user"
+                              >
+                                <UserCheck className="h-4 w-4 mr-1" />
+                                Approve
+                              </Button>
+                            )}
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => toggleAdminRole(user)}
+                              disabled={actionLoading.has(user.id)}
+                              title={user.has_admin_role ? "Remove admin" : "Make admin"}
+                            >
+                              {user.has_admin_role ? (
+                                <ShieldOff className="h-4 w-4 mr-1" />
+                              ) : (
+                                <Shield className="h-4 w-4 mr-1" />
+                              )}
+                              {user.has_admin_role ? "Remove Admin" : "Make Admin"}
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => toggleViewerRole(user)}
+                              disabled={actionLoading.has(user.id)}
+                              title={user.has_viewer_role ? "Remove viewer" : "Make viewer"}
+                            >
+                              {user.has_viewer_role ? (
+                                <EyeOff className="h-4 w-4 mr-1" />
+                              ) : (
+                                <Eye className="h-4 w-4 mr-1" />
+                              )}
+                              {user.has_viewer_role ? "Remove Viewer" : "Make Viewer"}
+                            </Button>
+                          </>
                         )}
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => toggleAdminRole(user)}
-                          disabled={actionLoading.has(user.id)}
-                          title={user.has_admin_role ? "Remove admin" : "Make admin"}
-                        >
-                          {user.has_admin_role ? (
-                            <ShieldOff className="h-4 w-4 mr-1" />
-                          ) : (
-                            <Shield className="h-4 w-4 mr-1" />
-                          )}
-                          {user.has_admin_role ? "Remove Admin" : "Make Admin"}
-                        </Button>
                       </TableCell>
                     </TableRow>
                   ))

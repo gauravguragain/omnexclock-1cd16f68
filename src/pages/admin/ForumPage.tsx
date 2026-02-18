@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { toAusLocaleString } from "@/lib/dateUtils";
+import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -29,6 +30,7 @@ interface Comment {
 }
 
 export default function ForumPage() {
+  const { isViewer } = useAuth();
   const [posts, setPosts] = useState<ForumPost[]>([]);
   const [loading, setLoading] = useState(true);
   const [createOpen, setCreateOpen] = useState(false);
@@ -140,9 +142,11 @@ export default function ForumPage() {
           <h2 className="text-lg font-semibold">Forum</h2>
           <p className="text-sm text-muted-foreground">Post announcements for employees to view in their portal</p>
         </div>
-        <Button onClick={() => setCreateOpen(true)}>
-          <Plus className="mr-1.5 h-4 w-4" /> New Post
-        </Button>
+        {!isViewer && (
+          <Button onClick={() => setCreateOpen(true)}>
+            <Plus className="mr-1.5 h-4 w-4" /> New Post
+          </Button>
+        )}
       </div>
 
       {loading ? (
@@ -177,9 +181,11 @@ export default function ForumPage() {
                       ))}
                     </div>
                   </div>
-                  <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-destructive hover:text-destructive" onClick={() => handleDelete(post.id)}>
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
+                  {!isViewer && (
+                    <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-destructive hover:text-destructive" onClick={() => handleDelete(post.id)}>
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  )}
                 </div>
               </CardContent>
             </Card>
@@ -233,9 +239,11 @@ export default function ForumPage() {
                     </div>
                     <p className="text-sm text-foreground mt-1">{c.content}</p>
                   </div>
-                  <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-destructive" onClick={() => deleteComment(c.id)}>
-                    <Trash2 className="h-3.5 w-3.5" />
-                  </Button>
+                  {!isViewer && (
+                    <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-destructive" onClick={() => deleteComment(c.id)}>
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </Button>
+                  )}
                 </div>
               ))}
             </div>

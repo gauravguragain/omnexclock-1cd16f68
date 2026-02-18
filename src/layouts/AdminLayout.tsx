@@ -1,4 +1,5 @@
 import { useAuth } from "@/contexts/AuthContext";
+import { Badge } from "@/components/ui/badge";
 import { Navigate, Outlet, Link, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import {
@@ -21,7 +22,7 @@ const navItems = [
 ];
 
 export default function AdminLayout() {
-  const { user, isAdmin, isApproved, loading, signOut } = useAuth();
+  const { user, isAdmin, isViewer, isApproved, loading, signOut } = useAuth();
   const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   useSessionGuard();
@@ -36,7 +37,7 @@ export default function AdminLayout() {
 
   // UX guard only — all data access is protected by RLS policies server-side.
   if (!user) return <Navigate to="/" replace />;
-  if (!isAdmin || !isApproved) {
+  if ((!isAdmin && !isViewer) || !isApproved) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="text-center space-y-4">
@@ -119,6 +120,9 @@ export default function AdminLayout() {
           <h2 className="text-lg font-semibold text-foreground">
             {navItems.find((n) => n.path === location.pathname)?.label || "Admin"}
           </h2>
+          {isViewer && !isAdmin && (
+            <Badge variant="outline" className="text-primary border-primary/30 text-xs">View Only</Badge>
+          )}
         </header>
         <div className="p-4 lg:p-6">
           <Outlet />

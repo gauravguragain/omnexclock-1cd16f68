@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { toAusLocaleString } from "@/lib/dateUtils";
+import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -32,6 +33,7 @@ interface EmployeeRequest {
 }
 
 export default function RequestsPage() {
+  const { isViewer } = useAuth();
   const [requests, setRequests] = useState<EmployeeRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<string>("pending");
@@ -191,7 +193,7 @@ export default function RequestsPage() {
                       Submitted {toAusLocaleString(new Date(req.created_at), { day: "numeric", month: "short", year: "numeric" })}
                     </p>
                   </div>
-                  {req.status === "pending" && (
+                  {req.status === "pending" && !isViewer && (
                     <div className="flex gap-1">
                       <Button size="sm" variant="outline" className="h-8 text-green-500 border-green-500/30 hover:bg-green-500/10" onClick={() => openReview(req)}>
                         <Check className="h-4 w-4" />
