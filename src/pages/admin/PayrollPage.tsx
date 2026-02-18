@@ -394,13 +394,13 @@ export default function PayrollPage() {
             </TableBody>
             {pageEntries.length > 0 && (
               <tfoot>
-                <TableRow className="bg-muted/50 font-semibold">
-                  <TableCell>Totals</TableCell>
+                <TableRow className="bg-muted/50 font-bold border-t-2 border-primary/20">
+                  <TableCell className="font-bold">TOTAL</TableCell>
                   <TableCell />
-                  <TableCell>{(entries.reduce((s, e) => s + e.total_hours, 0)).toFixed(2)}</TableCell>
-                  <TableCell>{totalBreakHours.toFixed(2)}</TableCell>
-                  <TableCell>{totalNetHours.toFixed(2)}</TableCell>
-                  <TableCell className="text-right">${totalPay.toFixed(2)}</TableCell>
+                  <TableCell className="font-bold">{(entries.reduce((s, e) => s + e.total_hours, 0)).toFixed(2)}</TableCell>
+                  <TableCell className="font-bold">{totalBreakHours.toFixed(2)}</TableCell>
+                  <TableCell className="font-bold">{totalNetHours.toFixed(2)}</TableCell>
+                  <TableCell className="text-right font-bold">${totalPay.toFixed(2)}</TableCell>
                 </TableRow>
               </tfoot>
             )}
