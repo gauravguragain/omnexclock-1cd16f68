@@ -16,6 +16,7 @@ import { useToast } from "@/hooks/use-toast";
 import {
   ArrowLeft, Delete, CalendarRange, Clock, LogIn, LogOut, Coffee, User, FileText,
   MessageSquare, CalendarOff, Send, Plus, RefreshCw, CalendarIcon, Trash2, Pencil,
+  History, CheckCircle2, XCircle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ausToday, toAusFormatted, toAusTime12, toAusDate, toAusLocaleString } from "@/lib/dateUtils";
@@ -125,6 +126,13 @@ export default function PortalPage() {
 
   const [editingRequestId, setEditingRequestId] = useState<string | null>(null);
 
+  // Timesheet approval & history state
+  const [timesheetApprovals, setTimesheetApprovals] = useState<Map<string, boolean>>(new Map());
+  const [tsHistoryDialog, setTsHistoryDialog] = useState(false);
+  const [tsHistoryDate, setTsHistoryDate] = useState<string>("");
+  const [tsHistoryLogs, setTsHistoryLogs] = useState<any[]>([]);
+  const [tsHistoryLoading, setTsHistoryLoading] = useState(false);
+
   useEffect(() => {
     const timer = setInterval(() => setCurrentTime(new Date()), 1000);
     return () => clearInterval(timer);
@@ -154,17 +162,23 @@ export default function PortalPage() {
       setEmployeeInfo(statusData[0] as EmployeeInfo);
       setEmployeeCode(code);
 
-      const [shiftsRes, tsRes, forumRes, requestsRes] = await Promise.all([
+      const [shiftsRes, tsRes, forumRes, requestsRes, approvalsRes] = await Promise.all([
         supabase.rpc("get_employee_shifts", { _employee_code: code }),
         supabase.rpc("get_employee_timesheets", { _employee_code: code }),
         supabase.rpc("get_forum_posts", { _employee_code: code }),
         supabase.rpc("get_employee_requests", { _employee_code: code }),
+        supabase.rpc("get_employee_timesheet_approvals", { _employee_code: code }),
       ]);
 
       setShifts((shiftsRes.data as PortalShift[]) || []);
       setTimesheets((tsRes.data as TimesheetEntry[]) || []);
       setForumPosts(forumRes.data || []);
       setMyRequests(requestsRes.data || []);
+      const approvalMap = new Map<string, boolean>();
+      for (const a of (approvalsRes.data || []) as any[]) {
+        approvalMap.set(a.approval_date, a.is_approved);
+      }
+      setTimesheetApprovals(approvalMap);
       setAuthenticated(true);
     } catch {
       toast({ title: "Error", description: "Unable to load portal.", variant: "destructive" });
@@ -179,6 +193,23 @@ export default function PortalPage() {
     setEmployeeInfo(null);
     setShifts([]);
     setTimesheets([]);
+  };
+
+  const openTsHistory = async (workDate: string) => {
+    setTsHistoryDate(workDate);
+    setTsHistoryDialog(true);
+    setTsHistoryLoading(true);
+    try {
+      const { data } = await supabase.rpc("get_employee_timesheet_history", {
+        _employee_code: employeeCode,
+        _date: workDate,
+      });
+      setTsHistoryLogs(data || []);
+    } catch {
+      setTsHistoryLogs([]);
+    } finally {
+      setTsHistoryLoading(false);
+    }
   };
 
   // Forum helpers
@@ -579,21 +610,43 @@ export default function PortalPage() {
                   const dayName = toAusFormatted(d, { weekday: "short" });
                   const dateLabel = toAusFormatted(d, { day: "numeric", month: "short" });
                   const isActive = ts.clock_in && !ts.clock_out;
+                  const isApproved = timesheetApprovals.get(ts.work_date);
 
                   return (
-                    <Card key={ts.work_date} className={isActive ? "border-warning/40" : ""}>
+                    <Card key={ts.work_date} className={isActive ? "border-warning/40" : isApproved ? "border-success/30" : ""}>
                       <CardContent className="p-3">
                         <div className="flex items-center justify-between mb-2">
                           <div className="flex items-center gap-2">
+                            {isApproved === true ? (
+                              <CheckCircle2 className="h-4 w-4 text-success" />
+                            ) : isApproved === false ? (
+                              <XCircle className="h-4 w-4 text-muted-foreground" />
+                            ) : null}
                             <span className="text-sm font-medium text-foreground">{dayName}</span>
                             <span className="text-xs text-muted-foreground">{dateLabel}</span>
                             {isActive && (
                               <Badge className="bg-warning/15 text-warning text-[10px] px-1.5 py-0">Active</Badge>
                             )}
+                            {isApproved === true && (
+                              <Badge className="bg-success/15 text-success text-[10px] px-1.5 py-0">Approved</Badge>
+                            )}
+                            {isApproved === false && (
+                              <Badge variant="outline" className="text-muted-foreground text-[10px] px-1.5 py-0">Pending</Badge>
+                            )}
                           </div>
-                          <span className="font-mono font-semibold text-foreground text-sm">
-                            {ts.net_hours.toFixed(1)}h
-                          </span>
+                          <div className="flex items-center gap-2">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => openTsHistory(ts.work_date)}
+                              className="h-7 w-7 p-0 text-muted-foreground hover:text-primary"
+                            >
+                              <History className="h-3.5 w-3.5" />
+                            </Button>
+                            <span className="font-mono font-semibold text-foreground text-sm">
+                              {ts.net_hours.toFixed(1)}h
+                            </span>
+                          </div>
                         </div>
                         <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
                           <div className="flex items-center gap-1.5">
@@ -931,6 +984,76 @@ export default function PortalPage() {
           </DialogContent>
         </Dialog>
       </main>
+
+      {/* Timesheet History Dialog */}
+      <Dialog open={tsHistoryDialog} onOpenChange={setTsHistoryDialog}>
+        <DialogContent className="sm:max-w-md max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <History className="h-5 w-5 text-primary" />
+              Edit History
+            </DialogTitle>
+            <p className="text-sm text-muted-foreground">
+              {tsHistoryDate && toAusFormatted(new Date(tsHistoryDate + "T00:00:00"), { weekday: "long", day: "numeric", month: "short", year: "numeric" })}
+            </p>
+          </DialogHeader>
+          {tsHistoryLoading ? (
+            <p className="text-sm text-muted-foreground text-center py-4">Loading...</p>
+          ) : tsHistoryLogs.length === 0 ? (
+            <p className="text-sm text-muted-foreground text-center py-4">No edit history found.</p>
+          ) : (
+            <div className="space-y-3">
+              {tsHistoryLogs.map((log: any, i: number) => {
+                const d = log.log_details as any;
+                const actionLabels: Record<string, string> = {
+                  timesheet_edit: "Edited",
+                  timesheet_add: "Added",
+                  timesheet_delete: "Deleted",
+                  timesheet_approve: "Approved",
+                  timesheet_unapprove: "Approval Revoked",
+                };
+                return (
+                  <div key={i} className="border border-border rounded-lg p-3 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <Badge variant="outline" className="text-xs">{actionLabels[log.log_action] || log.log_action}</Badge>
+                      <span className="text-xs text-muted-foreground">
+                        {new Date(log.log_timestamp).toLocaleString("en-AU", { dateStyle: "medium", timeStyle: "short" })}
+                      </span>
+                    </div>
+                    {d?.comment && (
+                      <p className="text-sm text-foreground"><span className="text-muted-foreground">Comment:</span> {d.comment}</p>
+                    )}
+                    {d?.previous && d?.updated && (
+                      <div className="grid grid-cols-2 gap-2 text-xs">
+                        <div className="space-y-1">
+                          <p className="font-medium text-muted-foreground">Before</p>
+                          {d.previous.clock_in && <p>In: {d.previous.clock_in}</p>}
+                          {d.previous.clock_out && <p>Out: {d.previous.clock_out}</p>}
+                          {d.previous.break_start && <p>Break: {d.previous.break_start}</p>}
+                          {d.previous.break_end && <p>Resume: {d.previous.break_end}</p>}
+                        </div>
+                        <div className="space-y-1">
+                          <p className="font-medium text-muted-foreground">After</p>
+                          {d.updated.clock_in && <p>In: {d.updated.clock_in}</p>}
+                          {d.updated.clock_out && <p>Out: {d.updated.clock_out}</p>}
+                          {d.updated.break_start && <p>Break: {d.updated.break_start}</p>}
+                          {d.updated.break_end && <p>Resume: {d.updated.break_end}</p>}
+                        </div>
+                      </div>
+                    )}
+                    {d?.times && (
+                      <div className="text-xs space-y-1">
+                        {d.times.clock_in && <p>In: {d.times.clock_in}</p>}
+                        {d.times.clock_out && <p>Out: {d.times.clock_out}</p>}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
 
       <footer className="text-center py-6">
         <p className="text-xs text-muted-foreground">© 2024 Omnex Ventures Pty. Ltd. All rights reserved.</p>

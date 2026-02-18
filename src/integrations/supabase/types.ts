@@ -566,6 +566,21 @@ export type Database = {
           last_event_time: string
         }[]
       }
+      get_employee_timesheet_approvals: {
+        Args: { _employee_code: string }
+        Returns: {
+          approval_date: string
+          is_approved: boolean
+        }[]
+      }
+      get_employee_timesheet_history: {
+        Args: { _date: string; _employee_code: string }
+        Returns: {
+          log_action: string
+          log_details: Json
+          log_timestamp: string
+        }[]
+      }
       get_employee_timesheets: {
         Args: { _employee_code: string }
         Returns: {
