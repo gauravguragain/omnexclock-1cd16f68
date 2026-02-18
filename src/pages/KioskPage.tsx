@@ -56,7 +56,7 @@ export default function KioskPage() {
   }, [urlBusinessCode]);
 
   const getEmployeeStatusByCode = async (employeeCode: string): Promise<{ id: string; name: string; status: EmployeeStatus } | null> => {
-    const { data, error } = await supabase.rpc("get_employee_status", { _employee_code: employeeCode });
+    const { data, error } = await supabase.rpc("get_employee_status", { _employee_code: employeeCode, _business_code: urlBusinessCode?.toUpperCase() || null });
     if (error || !data || data.length === 0) return null;
     const row = data[0];
     return {
@@ -117,6 +117,7 @@ export default function KioskPage() {
           employee_code: codeRef.current,
           event_type: actionRef.current,
           photo_base64: photo,
+          business_code: urlBusinessCode?.toUpperCase() || null,
           device_info: { userAgent: navigator.userAgent, screen: `${screen.width}x${screen.height}` },
         },
       });
