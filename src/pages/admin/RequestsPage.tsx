@@ -26,6 +26,8 @@ interface EmployeeRequest {
   reason: string | null;
   admin_note: string | null;
   created_at: string;
+  start_time: string | null;
+  end_time: string | null;
 }
 
 export default function RequestsPage() {
@@ -102,22 +104,37 @@ export default function RequestsPage() {
     }
   };
 
+  const formatTime12 = (t: string): string => {
+    if (!t) return "";
+    const [h, m] = t.split(":");
+    const hr = parseInt(h);
+    const ampm = hr >= 12 ? "PM" : "AM";
+    const h12 = hr === 0 ? 12 : hr > 12 ? hr - 12 : hr;
+    return `${h12}:${m} ${ampm}`;
+  };
+
   const formatDateRange = (req: EmployeeRequest) => {
+    let base = "";
     if (req.is_recurring) {
       const days = req.recurring_days?.join(", ") || "";
       const from = req.recurring_start_date ? new Date(req.recurring_start_date + "T00:00:00").toLocaleDateString("en-AU", { day: "numeric", month: "short", year: "numeric" }) : "";
       const to = req.recurring_end_date ? new Date(req.recurring_end_date + "T00:00:00").toLocaleDateString("en-AU", { day: "numeric", month: "short", year: "numeric" }) : "";
-      return `Every ${days}${from ? ` (${from} – ${to})` : ""}`;
-    }
-    if (req.start_date) {
+      base = `Every ${days}${from ? ` (${from} – ${to})` : ""}`;
+    } else if (req.start_date) {
       const start = new Date(req.start_date + "T00:00:00").toLocaleDateString("en-AU", { day: "numeric", month: "short", year: "numeric" });
       if (req.end_date && req.end_date !== req.start_date) {
         const end = new Date(req.end_date + "T00:00:00").toLocaleDateString("en-AU", { day: "numeric", month: "short", year: "numeric" });
-        return `${start} – ${end}`;
+        base = `${start} – ${end}`;
+      } else {
+        base = start;
       }
-      return start;
+    } else {
+      base = "—";
     }
-    return "—";
+    if (req.start_time && req.end_time) {
+      base += ` · ${formatTime12(req.start_time)} – ${formatTime12(req.end_time)}`;
+    }
+    return base;
   };
 
   return (

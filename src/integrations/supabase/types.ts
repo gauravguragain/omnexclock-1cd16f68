@@ -517,6 +517,7 @@ export type Database = {
           admin_note: string
           created_at: string
           end_date: string
+          end_time: string
           id: string
           is_recurring: boolean
           reason: string
@@ -525,6 +526,7 @@ export type Database = {
           recurring_start_date: string
           request_type: string
           start_date: string
+          start_time: string
           status: string
         }[]
       }
@@ -603,6 +605,7 @@ export type Database = {
         Args: {
           _employee_code: string
           _end_date?: string
+          _end_time?: string
           _is_recurring?: boolean
           _reason?: string
           _recurring_days?: string[]
@@ -610,6 +613,7 @@ export type Database = {
           _recurring_start_date?: string
           _request_type: string
           _start_date?: string
+          _start_time?: string
         }
         Returns: boolean
       }
