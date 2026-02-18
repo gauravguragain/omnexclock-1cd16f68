@@ -325,6 +325,7 @@ export default function TimesheetsPage() {
   };
 
   const openEdit = (entry: TimesheetEntry) => {
+    if (entry.approved) { toast.error("Cannot edit an approved timesheet. Revoke approval first."); return; }
     setEditingEntry(entry);
     setEditForm({
       employee_id: entry.employee_id,
@@ -402,6 +403,7 @@ export default function TimesheetsPage() {
   };
 
   const deleteEntry = async (entry: TimesheetEntry) => {
+    if (entry.approved) { toast.error("Cannot delete an approved timesheet. Revoke approval first."); return; }
     if (saving) return;
     if (!confirm(`Delete all timesheet entries for ${entry.employee_name} on ${entry.date}?`)) return;
     setSaving(true);
@@ -601,10 +603,10 @@ export default function TimesheetsPage() {
                     <span className="font-medium text-foreground">{e.employee_name}</span>
                   </div>
                   <div className="flex gap-1">
-                    <Button variant="ghost" size="sm" onClick={() => openEdit(e)} disabled={saving} className="h-7 w-7 p-0">
+                    <Button variant="ghost" size="sm" onClick={() => openEdit(e)} disabled={saving || e.approved} className="h-7 w-7 p-0">
                       <Pencil className="h-3.5 w-3.5" />
                     </Button>
-                    <Button variant="ghost" size="sm" onClick={() => deleteEntry(e)} disabled={saving} className="h-7 w-7 p-0 text-destructive hover:text-destructive">
+                    <Button variant="ghost" size="sm" onClick={() => deleteEntry(e)} disabled={saving || e.approved} className="h-7 w-7 p-0 text-destructive hover:text-destructive">
                       <Trash2 className="h-3.5 w-3.5" />
                     </Button>
                   </div>
@@ -673,10 +675,10 @@ export default function TimesheetsPage() {
                     <TableCell className="font-semibold">{e.net_hours}h</TableCell>
                     <TableCell className="text-right">
                       <div className="flex gap-1 justify-end">
-                        <Button variant="ghost" size="sm" onClick={() => openEdit(e)} disabled={saving} className="h-7 w-7 p-0">
+                        <Button variant="ghost" size="sm" onClick={() => openEdit(e)} disabled={saving || e.approved} className="h-7 w-7 p-0">
                           <Pencil className="h-3.5 w-3.5" />
                         </Button>
-                        <Button variant="ghost" size="sm" onClick={() => deleteEntry(e)} disabled={saving} className="h-7 w-7 p-0 text-destructive hover:text-destructive">
+                        <Button variant="ghost" size="sm" onClick={() => deleteEntry(e)} disabled={saving || e.approved} className="h-7 w-7 p-0 text-destructive hover:text-destructive">
                           <Trash2 className="h-3.5 w-3.5" />
                         </Button>
                       </div>
