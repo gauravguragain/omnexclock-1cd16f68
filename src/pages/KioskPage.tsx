@@ -87,15 +87,28 @@ export default function KioskPage() {
     streamRef.current = null;
   }, []);
 
+  const getGeolocation = (): Promise<{ latitude: number; longitude: number; accuracy: number } | null> => {
+    return new Promise((resolve) => {
+      if (!navigator.geolocation) { resolve(null); return; }
+      navigator.geolocation.getCurrentPosition(
+        (pos) => resolve({ latitude: pos.coords.latitude, longitude: pos.coords.longitude, accuracy: pos.coords.accuracy }),
+        () => resolve(null),
+        { timeout: 5000, enableHighAccuracy: true }
+      );
+    });
+  };
+
   const submitClock = useCallback(async (photo: string) => {
     setLoading(true);
     try {
+      const geolocation = await getGeolocation();
       const { data, error } = await supabase.functions.invoke("kiosk-clock", {
         body: {
           employee_code: codeRef.current,
           event_type: actionRef.current,
           photo_base64: photo,
           device_info: { userAgent: navigator.userAgent, screen: `${screen.width}x${screen.height}` },
+          geolocation,
         },
       });
 

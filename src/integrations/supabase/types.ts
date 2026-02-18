@@ -44,6 +44,7 @@ export type Database = {
           device_info: Json | null
           employee_id: string
           event_type: Database["public"]["Enums"]["clock_event_type"]
+          geolocation: Json | null
           id: string
           photo_url: string | null
           timestamp: string
@@ -53,6 +54,7 @@ export type Database = {
           device_info?: Json | null
           employee_id: string
           event_type: Database["public"]["Enums"]["clock_event_type"]
+          geolocation?: Json | null
           id?: string
           photo_url?: string | null
           timestamp?: string
@@ -62,6 +64,7 @@ export type Database = {
           device_info?: Json | null
           employee_id?: string
           event_type?: Database["public"]["Enums"]["clock_event_type"]
+          geolocation?: Json | null
           id?: string
           photo_url?: string | null
           timestamp?: string

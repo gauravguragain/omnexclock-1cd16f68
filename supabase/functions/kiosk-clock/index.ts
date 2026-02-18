@@ -61,7 +61,7 @@ serve(async (req) => {
       });
     }
 
-    const { employee_code, event_type, photo_base64, device_info } = body;
+    const { employee_code, event_type, photo_base64, device_info, geolocation } = body;
 
     // Input validation
     if (!employee_code || typeof employee_code !== "string" || !CODE_REGEX.test(employee_code)) {
@@ -161,6 +161,17 @@ serve(async (req) => {
       }
     }
 
+    // Validate and sanitize geolocation
+    let sanitizedGeo: { latitude: number; longitude: number; accuracy: number } | null = null;
+    if (geolocation && typeof geolocation === "object" &&
+        typeof geolocation.latitude === "number" && typeof geolocation.longitude === "number") {
+      sanitizedGeo = {
+        latitude: geolocation.latitude,
+        longitude: geolocation.longitude,
+        accuracy: typeof geolocation.accuracy === "number" ? geolocation.accuracy : 0,
+      };
+    }
+
     const { data: clockEvent, error: clockError } = await supabase
       .from("clock_events")
       .insert({
@@ -168,6 +179,7 @@ serve(async (req) => {
         event_type,
         photo_url,
         device_info: device_info || null,
+        geolocation: sanitizedGeo,
       })
       .select()
       .single();

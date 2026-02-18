@@ -2,7 +2,7 @@ import { useEffect, useState, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Clock, LogIn, LogOut, Coffee } from "lucide-react";
+import { Clock, LogIn, LogOut, Coffee, MapPin } from "lucide-react";
 import { toAusTime12, ausStartOfToday } from "@/lib/dateUtils";
 
 interface LiveEmployee {
@@ -12,6 +12,7 @@ interface LiveEmployee {
   lastTime: string;
   photoPath?: string;
   signedUrl?: string;
+  geolocation?: { latitude: number; longitude: number; accuracy: number } | null;
 }
 
 export default function LiveMonitorPage() {
@@ -38,6 +39,7 @@ export default function LiveMonitorPage() {
           lastEvent: ev.event_type,
           lastTime: toAusTime12(new Date(ev.created_at)),
           photoPath: ev.photo_url || undefined,
+          geolocation: ev.geolocation as any || null,
         });
       }
     }
@@ -127,6 +129,17 @@ export default function LiveMonitorPage() {
                     <span className="text-sm text-muted-foreground">{eventLabel(emp.lastEvent)}</span>
                   </div>
                   <p className="text-xs text-muted-foreground mt-0.5">{emp.lastTime}</p>
+                  {emp.geolocation && (
+                    <a
+                      href={`https://www.google.com/maps?q=${emp.geolocation.latitude},${emp.geolocation.longitude}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-1 text-xs text-primary hover:underline mt-0.5"
+                    >
+                      <MapPin className="h-3 w-3" />
+                      {emp.geolocation.latitude.toFixed(4)}, {emp.geolocation.longitude.toFixed(4)}
+                    </a>
+                  )}
                 </div>
               </CardContent>
             </Card>
