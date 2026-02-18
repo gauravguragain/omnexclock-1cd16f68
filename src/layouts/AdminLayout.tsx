@@ -2,7 +2,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Navigate, Outlet, Link, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import {
-  Users, Clock, CalendarDays, DollarSign, BarChart3, Monitor, LogOut, Menu, X, Settings, FileText, UserCog
+  Users, Clock, CalendarDays, DollarSign, BarChart3, Monitor, LogOut, Menu, X, Settings, FileText, UserCog, CalendarRange
 } from "lucide-react";
 import { useState } from "react";
 import { useSessionGuard } from "@/hooks/useSessionGuard";
@@ -10,6 +10,7 @@ import { useSessionGuard } from "@/hooks/useSessionGuard";
 const navItems = [
   { path: "/admin", label: "Dashboard", icon: BarChart3 },
   { path: "/admin/employees", label: "Employees", icon: Users },
+  { path: "/admin/roster", label: "Roster", icon: CalendarRange },
   { path: "/admin/live", label: "Live Monitor", icon: Monitor },
   { path: "/admin/timesheets", label: "Timesheets", icon: CalendarDays },
   { path: "/admin/payroll", label: "Payroll", icon: DollarSign },
