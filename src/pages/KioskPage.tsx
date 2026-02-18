@@ -127,13 +127,13 @@ export default function KioskPage() {
   }, [stopCamera, submitClock]);
 
   const handleNumpadClick = (num: string) => {
-    if (code.length < 8) setCode((prev) => prev + num);
+    if (code.length < 4) setCode((prev) => prev + num);
   };
 
   const handleSubmitCode = async () => {
     if (!code) return;
     // Validate code format
-    if (!/^[0-9A-Za-z\-]{1,20}$/.test(code)) {
+    if (!/^\d{4}$/.test(code)) {
       toast({ title: "Invalid Code", description: "Please enter a valid employee code.", variant: "destructive" });
       setCode("");
       return;
@@ -256,7 +256,7 @@ export default function KioskPage() {
                 <Delete className="h-6 w-6" />
               </Button>
             </div>
-            <Button className="w-full h-14 text-lg" onClick={handleSubmitCode} disabled={!code || loading}>
+            <Button className="w-full h-14 text-lg" onClick={handleSubmitCode} disabled={code.length !== 4 || loading}>
               {loading ? "Verifying..." : "Continue"}
             </Button>
           </CardContent>
