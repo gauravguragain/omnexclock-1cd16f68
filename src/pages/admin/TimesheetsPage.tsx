@@ -103,6 +103,52 @@ function DateRangeSelector({ dateFrom, dateTo, onChangeFrom, onChangeTo }: {
   );
 }
 
+const TIMEZONE = "Australia/Sydney";
+
+/** Format a Date to YYYY-MM-DD in Australia/Sydney timezone */
+function toAusDate(d: Date): string {
+  return d.toLocaleDateString("en-CA", { timeZone: TIMEZONE }); // en-CA gives YYYY-MM-DD
+}
+
+/** Format a Date to DD/MM/YYYY in Australia/Sydney timezone */
+function toAusDisplayDate(d: Date): string {
+  return d.toLocaleDateString("en-AU", { timeZone: TIMEZONE });
+}
+
+/** Format a Date to HH:MM (24h) in Australia/Sydney timezone */
+function toAusTime24(d: Date): string {
+  return d.toLocaleTimeString("en-GB", { timeZone: TIMEZONE, hour: "2-digit", minute: "2-digit", hour12: false });
+}
+
+/** Format a Date to hh:mm am/pm in Australia/Sydney timezone */
+function toAusTime12(d: Date): string {
+  return d.toLocaleTimeString("en-AU", { timeZone: TIMEZONE, hour: "2-digit", minute: "2-digit", hour12: true });
+}
+
+/** Build an ISO timestamp from a YYYY-MM-DD date and HH:MM time, interpreted in Australia/Sydney.
+ *  We compute the offset for that specific date/time to handle AEST vs AEDT correctly. */
+function buildAusTimestamp(dateStr: string, timeStr: string): string {
+  // Create a temp date to figure out the offset for that date in Australia/Sydney
+  const naive = new Date(`${dateStr}T${timeStr}:00`);
+  // Use Intl to get the actual offset
+  const formatter = new Intl.DateTimeFormat("en-AU", {
+    timeZone: TIMEZONE,
+    timeZoneName: "shortOffset",
+  });
+  const parts = formatter.formatToParts(naive);
+  const tzPart = parts.find(p => p.type === "timeZoneName")?.value || "+11";
+  // tzPart is like "GMT+11" or "GMT+10" — extract the offset
+  const offsetMatch = tzPart.match(/GMT([+-]?\d+)(?::(\d+))?/);
+  let offsetStr = "+10:00"; // fallback AEST
+  if (offsetMatch) {
+    const hrs = parseInt(offsetMatch[1]);
+    const mins = offsetMatch[2] ? parseInt(offsetMatch[2]) : 0;
+    const sign = hrs >= 0 ? "+" : "-";
+    offsetStr = `${sign}${String(Math.abs(hrs)).padStart(2, "0")}:${String(mins).padStart(2, "0")}`;
+  }
+  return `${dateStr}T${timeStr}:00${offsetStr}`;
+}
+
 export default function TimesheetsPage() {
   const [entries, setEntries] = useState<TimesheetEntry[]>([]);
   const [employees, setEmployees] = useState<{ id: string; name: string }[]>([]);
@@ -163,9 +209,9 @@ export default function TimesheetsPage() {
 
     for (const ev of data) {
       const evDate = new Date(ev.timestamp);
-      const date = evDate.toLocaleDateString("en-AU");
-      const localDate = `${evDate.getFullYear()}-${String(evDate.getMonth() + 1).padStart(2, "0")}-${String(evDate.getDate()).padStart(2, "0")}`;
-      const key = `${ev.employee_id}-${date}`;
+      const date = toAusDisplayDate(evDate);
+      const localDate = toAusDate(evDate);
+      const key = `${ev.employee_id}-${localDate}`;
       const empName = (ev.employees as any)?.name || "Unknown";
 
       if (!dailyMap.has(key)) {
@@ -233,10 +279,10 @@ export default function TimesheetsPage() {
         employee_name: e.employee_name,
         date: e.date,
         raw_date: e.raw_date,
-        clock_in: e.clock_in ? new Date(e.clock_in).toLocaleTimeString("en-AU", { hour: "2-digit", minute: "2-digit", hour12: true }) : null,
-        clock_out: e.clock_out ? new Date(e.clock_out).toLocaleTimeString("en-AU", { hour: "2-digit", minute: "2-digit", hour12: true }) : null,
-        break_start: e.first_break_start ? new Date(e.first_break_start).toLocaleTimeString("en-AU", { hour: "2-digit", minute: "2-digit", hour12: true }) : null,
-        break_end: e.last_break_end ? new Date(e.last_break_end).toLocaleTimeString("en-AU", { hour: "2-digit", minute: "2-digit", hour12: true }) : null,
+        clock_in: e.clock_in ? toAusTime12(new Date(e.clock_in)) : null,
+        clock_out: e.clock_out ? toAusTime12(new Date(e.clock_out)) : null,
+        break_start: e.first_break_start ? toAusTime12(new Date(e.first_break_start)) : null,
+        break_end: e.last_break_end ? toAusTime12(new Date(e.last_break_end)) : null,
         break_minutes: Math.round(e.break_minutes),
         total_hours: Math.round(totalHours * 100) / 100,
         net_hours: Math.round(netHours * 100) / 100,
@@ -317,8 +363,7 @@ export default function TimesheetsPage() {
 
   const toTimeInput = (isoTimestamp: string | null) => {
     if (!isoTimestamp) return "";
-    const d = new Date(isoTimestamp);
-    return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+    return toAusTime24(new Date(isoTimestamp));
   };
 
   const openEdit = (entry: TimesheetEntry) => {
@@ -358,10 +403,10 @@ export default function TimesheetsPage() {
         await supabase.from("clock_events").delete().eq("id", id);
       }
       const events: { employee_id: string; event_type: "clock_in" | "clock_out" | "break_start" | "break_end"; timestamp: string }[] = [];
-      if (editForm.clock_in) events.push({ employee_id: editForm.employee_id, event_type: "clock_in", timestamp: `${editForm.date}T${editForm.clock_in}:00` });
-      if (editForm.break_start) events.push({ employee_id: editForm.employee_id, event_type: "break_start", timestamp: `${editForm.date}T${editForm.break_start}:00` });
-      if (editForm.break_end) events.push({ employee_id: editForm.employee_id, event_type: "break_end", timestamp: `${editForm.date}T${editForm.break_end}:00` });
-      if (editForm.clock_out) events.push({ employee_id: editForm.employee_id, event_type: "clock_out", timestamp: `${editForm.date}T${editForm.clock_out}:00` });
+      if (editForm.clock_in) events.push({ employee_id: editForm.employee_id, event_type: "clock_in", timestamp: buildAusTimestamp(editForm.date, editForm.clock_in) });
+      if (editForm.break_start) events.push({ employee_id: editForm.employee_id, event_type: "break_start", timestamp: buildAusTimestamp(editForm.date, editForm.break_start) });
+      if (editForm.break_end) events.push({ employee_id: editForm.employee_id, event_type: "break_end", timestamp: buildAusTimestamp(editForm.date, editForm.break_end) });
+      if (editForm.clock_out) events.push({ employee_id: editForm.employee_id, event_type: "clock_out", timestamp: buildAusTimestamp(editForm.date, editForm.clock_out) });
       if (events.length > 0) {
         const { error } = await supabase.from("clock_events").insert(events);
         if (error) { toast.error("Failed to save: " + error.message); return; }
@@ -381,10 +426,10 @@ export default function TimesheetsPage() {
     setSaving(true);
     try {
       const events: { employee_id: string; event_type: "clock_in" | "clock_out" | "break_start" | "break_end"; timestamp: string }[] = [];
-      if (editForm.clock_in) events.push({ employee_id: editForm.employee_id, event_type: "clock_in", timestamp: `${editForm.date}T${editForm.clock_in}:00` });
-      if (editForm.break_start) events.push({ employee_id: editForm.employee_id, event_type: "break_start", timestamp: `${editForm.date}T${editForm.break_start}:00` });
-      if (editForm.break_end) events.push({ employee_id: editForm.employee_id, event_type: "break_end", timestamp: `${editForm.date}T${editForm.break_end}:00` });
-      if (editForm.clock_out) events.push({ employee_id: editForm.employee_id, event_type: "clock_out", timestamp: `${editForm.date}T${editForm.clock_out}:00` });
+      if (editForm.clock_in) events.push({ employee_id: editForm.employee_id, event_type: "clock_in", timestamp: buildAusTimestamp(editForm.date, editForm.clock_in) });
+      if (editForm.break_start) events.push({ employee_id: editForm.employee_id, event_type: "break_start", timestamp: buildAusTimestamp(editForm.date, editForm.break_start) });
+      if (editForm.break_end) events.push({ employee_id: editForm.employee_id, event_type: "break_end", timestamp: buildAusTimestamp(editForm.date, editForm.break_end) });
+      if (editForm.clock_out) events.push({ employee_id: editForm.employee_id, event_type: "clock_out", timestamp: buildAusTimestamp(editForm.date, editForm.clock_out) });
       if (events.length === 0) { toast.error("Enter at least one time"); return; }
       const { error } = await supabase.from("clock_events").insert(events);
       if (error) { toast.error("Failed to add: " + error.message); return; }
