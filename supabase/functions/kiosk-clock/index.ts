@@ -198,6 +198,31 @@ serve(async (req) => {
       });
     }
 
+    // Reverse geocode if we have coordinates — fire-and-forget, don't block response
+    if (sanitizedGeo) {
+      (async () => {
+        try {
+          const geoRes = await fetch(
+            `https://nominatim.openstreetmap.org/reverse?format=json&lat=${sanitizedGeo.latitude}&lon=${sanitizedGeo.longitude}&zoom=18&addressdetails=1`,
+            { headers: { "User-Agent": "OmnexClock/1.0" } }
+          );
+          if (geoRes.ok) {
+            const geoData = await geoRes.json();
+            const addr = geoData.address || {};
+            const locationName = addr.road || addr.suburb || addr.city || geoData.display_name || null;
+            if (locationName) {
+              await supabase
+                .from("clock_events")
+                .update({ geolocation: { ...sanitizedGeo, location_name: locationName } })
+                .eq("id", clockEvent.id);
+            }
+          }
+        } catch (e) {
+          console.error("Reverse geocode failed:", e);
+        }
+      })();
+    }
+
     await supabase.from("audit_logs").insert({
       user_id: null,
       action: `kiosk_${event_type}`,

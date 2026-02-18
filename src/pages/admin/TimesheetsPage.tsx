@@ -272,7 +272,8 @@ export default function TimesheetsPage() {
     // Set location names directly from coordinates (no external API)
     for (const entry of result) {
       if (entry.geolocation) {
-        entry.locationName = formatLocation(entry.geolocation.latitude, entry.geolocation.longitude);
+        const geo = entry.geolocation as any;
+        entry.locationName = geo.location_name || formatLocation(entry.geolocation.latitude, entry.geolocation.longitude);
       }
     }
 

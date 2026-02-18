@@ -28,9 +28,26 @@ export default function KioskPage() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const [currentTime, setCurrentTime] = useState(new Date());
+  const [geoReady, setGeoReady] = useState(false);
 
+  // Warm up geolocation on mount — triggers permission prompt early & caches position
   useEffect(() => {
     const timer = setInterval(() => setCurrentTime(new Date()), 1000);
+
+    // Pre-request geolocation so permission is granted once and cached
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          geoRef.current = { latitude: pos.coords.latitude, longitude: pos.coords.longitude, accuracy: pos.coords.accuracy };
+          setGeoReady(true);
+        },
+        () => setGeoReady(true), // even if denied, mark as ready so flow isn't blocked
+        { timeout: 10000, enableHighAccuracy: true }
+      );
+    } else {
+      setGeoReady(true);
+    }
+
     return () => clearInterval(timer);
   }, []);
 
@@ -179,9 +196,12 @@ export default function KioskPage() {
     setSelectedAction(action);
     actionRef.current = action;
     setStep("photo_capture");
-    // Start geolocation and camera in parallel, wait for both before capturing
+
+    // If we already have cached geo from warmup, use it; otherwise fetch fresh
+    const geoPromise = geoRef.current ? Promise.resolve(geoRef.current) : getGeolocation();
+
     const [geo] = await Promise.all([
-      getGeolocation(),
+      geoPromise,
       new Promise<void>((resolve) => {
         setTimeout(() => {
           startCamera().then(() => resolve());
