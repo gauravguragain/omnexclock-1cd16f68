@@ -381,7 +381,24 @@ export default function TimesheetsPage() {
         const { error } = await supabase.from("clock_events").insert(events);
         if (error) { toast.error("Failed to save: " + error.message); return; }
       }
-      await logAudit("timesheet_edit", { employee_id: editForm.employee_id, employee_name: editingEntry.employee_name, date: editForm.date, comment: editForm.comment.trim() });
+      await logAudit("timesheet_edit", {
+        employee_id: editForm.employee_id,
+        employee_name: editingEntry.employee_name,
+        date: editForm.date,
+        comment: editForm.comment.trim(),
+        previous: {
+          clock_in: editingEntry.clock_in,
+          clock_out: editingEntry.clock_out,
+          break_start: editingEntry.break_start,
+          break_end: editingEntry.break_end,
+        },
+        updated: {
+          clock_in: editForm.clock_in || null,
+          clock_out: editForm.clock_out || null,
+          break_start: editForm.break_start || null,
+          break_end: editForm.break_end || null,
+        },
+      });
       toast.success("Timesheet updated");
       setEditDialog(false);
       fetchTimesheets();
@@ -404,7 +421,18 @@ export default function TimesheetsPage() {
       const { error } = await supabase.from("clock_events").insert(events);
       if (error) { toast.error("Failed to add: " + error.message); return; }
       const emp = employees.find(e => e.id === editForm.employee_id);
-      await logAudit("timesheet_add", { employee_id: editForm.employee_id, employee_name: emp?.name || "Unknown", date: editForm.date, comment: editForm.comment.trim() });
+      await logAudit("timesheet_add", {
+        employee_id: editForm.employee_id,
+        employee_name: emp?.name || "Unknown",
+        date: editForm.date,
+        comment: editForm.comment.trim(),
+        times: {
+          clock_in: editForm.clock_in || null,
+          clock_out: editForm.clock_out || null,
+          break_start: editForm.break_start || null,
+          break_end: editForm.break_end || null,
+        },
+      });
       toast.success("Entry added");
       setAddDialog(false);
       fetchTimesheets();
@@ -422,7 +450,17 @@ export default function TimesheetsPage() {
       for (const id of entry.event_ids) {
         await supabase.from("clock_events").delete().eq("id", id);
       }
-      await logAudit("timesheet_delete", { employee_id: entry.employee_id, employee_name: entry.employee_name, date: entry.date });
+      await logAudit("timesheet_delete", {
+        employee_id: entry.employee_id,
+        employee_name: entry.employee_name,
+        date: entry.date,
+        deleted_times: {
+          clock_in: entry.clock_in,
+          clock_out: entry.clock_out,
+          break_start: entry.break_start,
+          break_end: entry.break_end,
+        },
+      });
       toast.success("Entry deleted");
       fetchTimesheets();
     } finally {
