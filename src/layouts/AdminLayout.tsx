@@ -1,34 +1,48 @@
 import { useAuth } from "@/contexts/AuthContext";
 import { useBusiness } from "@/contexts/BusinessContext";
 import { Badge } from "@/components/ui/badge";
-import { Navigate, Outlet, Link, useLocation } from "react-router-dom";
+import { Navigate, Outlet, Link, useLocation, useParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import {
   Users, Clock, CalendarDays, DollarSign, BarChart3, Monitor, LogOut, Menu, X, Settings, FileText, UserCog, CalendarRange, MessageSquare, CalendarOff, Building2
 } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useSessionGuard } from "@/hooks/useSessionGuard";
-
-const navItems = [
-  { path: "/admin", label: "Dashboard", icon: BarChart3 },
-  { path: "/admin/employees", label: "Employees", icon: Users },
-  { path: "/admin/roster", label: "Roster", icon: CalendarRange },
-  { path: "/admin/live", label: "Live Monitor", icon: Monitor },
-  { path: "/admin/timesheets", label: "Timesheets", icon: CalendarDays },
-  { path: "/admin/payroll", label: "Payroll", icon: DollarSign },
-  { path: "/admin/requests", label: "Requests", icon: CalendarOff },
-  { path: "/admin/forum", label: "Forum", icon: MessageSquare },
-  { path: "/admin/audit-log", label: "Audit Log", icon: FileText },
-  { path: "/admin/users", label: "User Management", icon: UserCog },
-  { path: "/admin/my-business", label: "My Business", icon: Building2 },
-];
+import { supabase } from "@/integrations/supabase/client";
 
 export default function AdminLayout() {
   const { user, isAdmin, isViewer, isApproved, loading, signOut } = useAuth();
-  const { business } = useBusiness();
+  const { business, businesses, setBusiness } = useBusiness();
   const location = useLocation();
+  const { businessCode } = useParams();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   useSessionGuard();
+
+  // Ensure the correct business is active based on URL
+  useEffect(() => {
+    if (businessCode && businesses.length > 0) {
+      const match = businesses.find(b => b.business_code === businessCode);
+      if (match && match.id !== business?.id) {
+        setBusiness(match);
+      }
+    }
+  }, [businessCode, businesses]);
+
+  const basePath = `/b/${businessCode}/admin`;
+
+  const navItems = [
+    { path: basePath, label: "Dashboard", icon: BarChart3 },
+    { path: `${basePath}/employees`, label: "Employees", icon: Users },
+    { path: `${basePath}/roster`, label: "Roster", icon: CalendarRange },
+    { path: `${basePath}/live`, label: "Live Monitor", icon: Monitor },
+    { path: `${basePath}/timesheets`, label: "Timesheets", icon: CalendarDays },
+    { path: `${basePath}/payroll`, label: "Payroll", icon: DollarSign },
+    { path: `${basePath}/requests`, label: "Requests", icon: CalendarOff },
+    { path: `${basePath}/forum`, label: "Forum", icon: MessageSquare },
+    { path: `${basePath}/audit-log`, label: "Audit Log", icon: FileText },
+    { path: `${basePath}/users`, label: "User Management", icon: UserCog },
+    { path: `${basePath}/my-business`, label: "My Business", icon: Building2 },
+  ];
 
   if (loading) {
     return (
@@ -38,8 +52,7 @@ export default function AdminLayout() {
     );
   }
 
-  // UX guard only — all data access is protected by RLS policies server-side.
-  if (!user) return <Navigate to="/" replace />;
+  if (!user) return <Navigate to="/auth" replace />;
   if ((!isAdmin && !isViewer) || !isApproved) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
@@ -105,17 +118,24 @@ export default function AdminLayout() {
             <p className="text-xs text-muted-foreground truncate">{user?.email}</p>
           </div>
           {!isViewer && (
-            <button
+            <Link
+              to={`/b/${businessCode}/kiosk`}
               onClick={async () => {
                 await signOut();
-                window.location.href = "/kiosk";
               }}
               className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-muted-foreground hover:text-foreground hover:bg-secondary w-full"
             >
               <Clock className="h-4 w-4" />
               Launch Kiosk
-            </button>
+            </Link>
           )}
+          <Link
+            to="/hub"
+            className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-muted-foreground hover:text-foreground hover:bg-secondary w-full"
+          >
+            <Building2 className="h-4 w-4" />
+            Business Hub
+          </Link>
           <button onClick={signOut} className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-muted-foreground hover:text-foreground hover:bg-secondary w-full">
             <LogOut className="h-4 w-4" />
             Sign Out

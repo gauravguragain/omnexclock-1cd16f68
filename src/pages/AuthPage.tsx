@@ -19,8 +19,8 @@ export default function AuthPage() {
   const [fullName, setFullName] = useState("");
   const [loading, setLoading] = useState(false);
 
-  if (user && isAdmin && isApproved) return <Navigate to="/admin" replace />;
-  if (user && isApproved) return <Navigate to="/kiosk" replace />;
+  // After login, redirect to hub which will show business options
+  if (user && isApproved) return <Navigate to="/hub" replace />;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -73,7 +73,7 @@ export default function AuthPage() {
               )}
               <div className="space-y-2">
                 <Label htmlFor="email">Email</Label>
-                <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="admin@proregal.com" required />
+                <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="admin@business.com" required />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="password">Password</Label>
@@ -105,9 +105,9 @@ export default function AuthPage() {
           </CardContent>
         </Card>
 
-        <p className="text-center text-xs text-muted-foreground">
-          © 2024 Omnex Ventures Pty. Ltd. All rights reserved.
-        </p>
+        <Link to="/" className="flex items-center justify-center text-sm text-muted-foreground hover:text-foreground">
+          ← Back to Home
+        </Link>
       </div>
     </div>
   );

@@ -62,7 +62,7 @@ export default function RegisterBusinessPage() {
       toast({ title: "Business Registered!", description: "You are now the admin. Redirecting to your dashboard..." });
       // Small delay then redirect
       setTimeout(() => {
-        window.location.href = "/admin";
+        window.location.href = "/hub";
       }, 1500);
     }
     setLoading(false);
