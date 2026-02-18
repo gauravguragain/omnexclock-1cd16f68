@@ -175,17 +175,22 @@ export default function KioskPage() {
     setLoading(false);
   };
 
-  const handleActionSelect = (action: string) => {
+  const handleActionSelect = async (action: string) => {
     setSelectedAction(action);
     actionRef.current = action;
     setStep("photo_capture");
-    // Start geolocation acquisition in parallel with camera
-    getGeolocation().then((geo) => { geoRef.current = geo; });
-    setTimeout(() => {
-      startCamera().then(() => {
-        setTimeout(() => captureAndSubmit(), 2000);
-      });
-    }, 100);
+    // Start geolocation and camera in parallel, wait for both before capturing
+    const [geo] = await Promise.all([
+      getGeolocation(),
+      new Promise<void>((resolve) => {
+        setTimeout(() => {
+          startCamera().then(() => resolve());
+        }, 100);
+      }),
+    ]);
+    geoRef.current = geo;
+    // Small delay for camera to render, then capture
+    setTimeout(() => captureAndSubmit(), 1500);
   };
 
   const resetKiosk = () => {
