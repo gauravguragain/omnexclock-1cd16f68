@@ -17,22 +17,42 @@ export default function ResetPasswordPage() {
   const [step, setStep] = useState<ResetStep>("email");
   const [email, setEmail] = useState("");
   const [otp, setOtp] = useState("");
+  const [verificationToken, setVerificationToken] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [resendCooldown, setResendCooldown] = useState(0);
 
-  const handleSendOTP = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const startCooldown = () => {
+    setResendCooldown(60);
+    const interval = setInterval(() => {
+      setResendCooldown((prev) => {
+        if (prev <= 1) {
+          clearInterval(interval);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+  };
+
+  const handleSendOTP = async (e?: React.FormEvent) => {
+    e?.preventDefault();
     if (!email.trim()) return;
     setLoading(true);
 
-    const { error } = await supabase.auth.resetPasswordForEmail(email.trim());
+    const { data, error } = await supabase.functions.invoke("reset-password-otp", {
+      body: { action: "send", email: email.trim() },
+    });
 
     if (error) {
-      toast({ title: "Error", description: error.message, variant: "destructive" });
+      toast({ title: "Error", description: "Failed to send code. Please try again.", variant: "destructive" });
+    } else if (data?.error) {
+      toast({ title: "Error", description: data.error, variant: "destructive" });
     } else {
-      toast({ title: "OTP Sent", description: "Check your email for the 6-digit verification code." });
+      toast({ title: "Code Sent", description: "Check your email for the 6-digit verification code." });
       setStep("otp");
+      startCooldown();
     }
     setLoading(false);
   };
@@ -42,15 +62,18 @@ export default function ResetPasswordPage() {
     if (otp.length !== 6) return;
     setLoading(true);
 
-    const { error } = await supabase.auth.verifyOtp({
-      email: email.trim(),
-      token: otp,
-      type: "recovery",
+    const { data, error } = await supabase.functions.invoke("reset-password-otp", {
+      body: { action: "verify", email: email.trim(), otp },
     });
 
-    if (error) {
-      toast({ title: "Invalid Code", description: "The code you entered is incorrect or has expired. Please try again.", variant: "destructive" });
-    } else {
+    if (error || data?.error) {
+      toast({
+        title: "Invalid Code",
+        description: data?.error || "The code you entered is incorrect or has expired.",
+        variant: "destructive",
+      });
+    } else if (data?.verificationToken) {
+      setVerificationToken(data.verificationToken);
       toast({ title: "Verified", description: "Code verified. Set your new password." });
       setStep("newPassword");
     }
@@ -69,13 +92,18 @@ export default function ResetPasswordPage() {
     }
     setLoading(true);
 
-    const { error } = await supabase.auth.updateUser({ password: newPassword });
+    const { data, error } = await supabase.functions.invoke("reset-password-otp", {
+      body: { action: "reset", email: email.trim(), otp: verificationToken, newPassword },
+    });
 
-    if (error) {
-      toast({ title: "Error", description: error.message, variant: "destructive" });
+    if (error || data?.error) {
+      toast({
+        title: "Error",
+        description: data?.error || "Failed to reset password. Please try again.",
+        variant: "destructive",
+      });
     } else {
-      toast({ title: "Password Reset", description: "Your password has been updated successfully." });
-      await supabase.auth.signOut();
+      toast({ title: "Password Reset", description: "Your password has been updated successfully. Please sign in." });
       navigate("/auth");
     }
     setLoading(false);
@@ -121,13 +149,22 @@ export default function ResetPasswordPage() {
             <div className="flex items-center gap-2 pt-2">
               {(["email", "otp", "newPassword"] as ResetStep[]).map((s, i) => (
                 <div key={s} className="flex items-center gap-2">
-                  <div className={`h-2 w-2 rounded-full transition-colors ${
-                    step === s ? "bg-primary" : 
-                    (["email", "otp", "newPassword"].indexOf(step) > i) ? "bg-primary/50" : "bg-muted"
-                  }`} />
-                  {i < 2 && <div className={`h-px w-6 transition-colors ${
-                    (["email", "otp", "newPassword"].indexOf(step) > i) ? "bg-primary/50" : "bg-muted"
-                  }`} />}
+                  <div
+                    className={`h-2 w-2 rounded-full transition-colors ${
+                      step === s
+                        ? "bg-primary"
+                        : ["email", "otp", "newPassword"].indexOf(step) > i
+                          ? "bg-primary/50"
+                          : "bg-muted"
+                    }`}
+                  />
+                  {i < 2 && (
+                    <div
+                      className={`h-px w-6 transition-colors ${
+                        ["email", "otp", "newPassword"].indexOf(step) > i ? "bg-primary/50" : "bg-muted"
+                      }`}
+                    />
+                  )}
                 </div>
               ))}
             </div>
@@ -148,9 +185,11 @@ export default function ResetPasswordPage() {
                   />
                 </div>
                 <Button type="submit" className="w-full" disabled={loading}>
-                  {loading ? "Sending..." : <>
-                    <KeyRound className="mr-2 h-4 w-4" /> Send Verification Code
-                  </>}
+                  {loading ? "Sending..." : (
+                    <>
+                      <KeyRound className="mr-2 h-4 w-4" /> Send Verification Code
+                    </>
+                  )}
                 </Button>
               </form>
             )}
@@ -175,17 +214,20 @@ export default function ResetPasswordPage() {
                     Didn't receive the code?{" "}
                     <button
                       type="button"
-                      onClick={handleSendOTP as any}
-                      className="text-primary hover:underline"
+                      disabled={resendCooldown > 0}
+                      onClick={() => handleSendOTP()}
+                      className="text-primary hover:underline disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                      Resend
+                      {resendCooldown > 0 ? `Resend in ${resendCooldown}s` : "Resend"}
                     </button>
                   </p>
                 </div>
                 <Button type="submit" className="w-full" disabled={loading || otp.length !== 6}>
-                  {loading ? "Verifying..." : <>
-                    <ShieldCheck className="mr-2 h-4 w-4" /> Verify Code
-                  </>}
+                  {loading ? "Verifying..." : (
+                    <>
+                      <ShieldCheck className="mr-2 h-4 w-4" /> Verify Code
+                    </>
+                  )}
                 </Button>
               </form>
             )}
@@ -218,9 +260,11 @@ export default function ResetPasswordPage() {
                   />
                 </div>
                 <Button type="submit" className="w-full" disabled={loading}>
-                  {loading ? "Updating..." : <>
-                    <Lock className="mr-2 h-4 w-4" /> Reset Password
-                  </>}
+                  {loading ? "Updating..." : (
+                    <>
+                      <Lock className="mr-2 h-4 w-4" /> Reset Password
+                    </>
+                  )}
                 </Button>
               </form>
             )}
@@ -228,8 +272,12 @@ export default function ResetPasswordPage() {
             <div className="mt-4 text-center">
               <button
                 onClick={() => {
-                  if (step === "otp") setStep("email");
-                  else navigate("/auth");
+                  if (step === "otp") {
+                    setStep("email");
+                    setOtp("");
+                  } else {
+                    navigate("/auth");
+                  }
                 }}
                 className="text-sm text-muted-foreground hover:underline inline-flex items-center gap-1"
               >
