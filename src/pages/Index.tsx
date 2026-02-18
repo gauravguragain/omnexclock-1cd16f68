@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import { Link } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
-import { ShieldCheck, Building2, Clock } from "lucide-react";
+import { ShieldCheck, Building2, Clock, Users } from "lucide-react";
 import { useBusiness } from "@/contexts/BusinessContext";
 
 const Index = () => {
@@ -17,7 +17,7 @@ const Index = () => {
         <p className="text-muted-foreground text-sm">Time & Workforce Management</p>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 w-full max-w-lg">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 w-full max-w-2xl">
         <Link to="/auth" className="block">
           <Card className="border border-border cursor-pointer hover:border-primary/50 transition-all duration-300 group h-full">
             <CardContent className="p-6 flex flex-col items-center text-center space-y-3">
@@ -27,6 +27,20 @@ const Index = () => {
               <div>
                 <h2 className="text-lg font-semibold text-foreground">Business Admin</h2>
                 <p className="text-xs text-muted-foreground mt-1">Sign in to manage your business</p>
+              </div>
+            </CardContent>
+          </Card>
+        </Link>
+
+        <Link to="/portal" className="block">
+          <Card className="border border-border cursor-pointer hover:border-primary/50 transition-all duration-300 group h-full">
+            <CardContent className="p-6 flex flex-col items-center text-center space-y-3">
+              <div className="h-14 w-14 rounded-full bg-primary/15 flex items-center justify-center group-hover:bg-primary/25 transition-colors">
+                <Users className="h-7 w-7 text-primary" />
+              </div>
+              <div>
+                <h2 className="text-lg font-semibold text-foreground">Employee Portal</h2>
+                <p className="text-xs text-muted-foreground mt-1">Access your roster & timesheets</p>
               </div>
             </CardContent>
           </Card>

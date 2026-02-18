@@ -14,6 +14,7 @@ import RegisterBusinessPage from "./pages/RegisterBusinessPage";
 import BusinessHubPage from "./pages/BusinessHubPage";
 import KioskPage from "./pages/KioskPage";
 import PortalPage from "./pages/PortalPage";
+import EmployeePortalEntry from "./pages/EmployeePortalEntry";
 import AdminLayout from "./layouts/AdminLayout";
 import MasterLayout from "./layouts/MasterLayout";
 import DashboardPage from "./pages/admin/DashboardPage";
@@ -73,7 +74,7 @@ const App = () => (
               {/* Legacy redirects */}
               <Route path="/admin/*" element={<BusinessHubPage />} />
               <Route path="/kiosk" element={<BusinessHubPage />} />
-              <Route path="/portal" element={<BusinessHubPage />} />
+              <Route path="/portal" element={<EmployeePortalEntry />} />
 
               <Route path="*" element={<NotFound />} />
             </Routes>
