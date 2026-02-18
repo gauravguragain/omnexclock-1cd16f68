@@ -25,13 +25,15 @@ interface PayrollEntry {
   employee_id: string;
   name: string;
   pay_rate: number;
+  admin_hourly_rate: number;
   total_hours: number;
   break_hours: number;
   net_hours: number;
-  gross_pay: number;
+  employee_pay: number;
+  admin_pay: number;
 }
 
-type SortKey = "name" | "net_hours" | "gross_pay" | "total_hours";
+type SortKey = "name" | "net_hours" | "employee_pay" | "admin_pay" | "total_hours";
 type SortDir = "asc" | "desc";
 
 function DateRangeSelector({ dateFrom, dateTo, onChangeFrom, onChangeTo }: {
@@ -97,7 +99,7 @@ export default function PayrollPage() {
   const [dateTo, setDateTo] = useState<Date>(() => endOfWeek(new Date(), { weekStartsOn: 1 }));
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(0);
-  const [sortKey, setSortKey] = useState<SortKey>("gross_pay");
+  const [sortKey, setSortKey] = useState<SortKey>("employee_pay");
   const [sortDir, setSortDir] = useState<SortDir>("desc");
   const [chartLimit, setChartLimit] = useState(25);
 
@@ -215,15 +217,20 @@ export default function PayrollPage() {
       }
 
       const netHours = Math.max(0, totalHours - breakHours);
+      const employeePay = Math.round(netHours * emp.pay_rate * 100) / 100;
+      // Admin pay: GST-inclusive rate, back-calculate by dividing by 1.10
+      const adminPay = Math.round((netHours * emp.admin_hourly_rate) / 1.10 * 100) / 100;
 
       result.push({
         employee_id: empId,
         name: emp.name,
         pay_rate: emp.pay_rate,
+        admin_hourly_rate: emp.admin_hourly_rate,
         total_hours: Math.round(totalHours * 100) / 100,
         break_hours: Math.round(breakHours * 100) / 100,
         net_hours: Math.round(netHours * 100) / 100,
-        gross_pay: Math.round(netHours * emp.pay_rate * 100) / 100,
+        employee_pay: employeePay,
+        admin_pay: adminPay,
       });
     }
 
@@ -258,8 +265,10 @@ export default function PayrollPage() {
   };
 
   const exportCSV = () => {
-    const headers = "Name,Pay Rate,Total Hours,Break Hours,Net Hours,Gross Pay\n";
-    const rows = filtered.map((e) => `${e.name},${e.pay_rate},${e.total_hours},${e.break_hours},${e.net_hours},${e.gross_pay}`).join("\n");
+    const headers = "Name,Employee Rate ($/hr),Admin Rate ($/hr),Total Hours,Break Hours,Net Hours,Employee Pay,Admin Pay (ex GST)\n";
+    const rows = filtered.map((e) =>
+      `${e.name},${e.pay_rate},${e.admin_hourly_rate},${e.total_hours},${e.break_hours},${e.net_hours},${e.employee_pay},${e.admin_pay}`
+    ).join("\n");
     const blob = new Blob([headers + rows], { type: "text/csv" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
@@ -268,26 +277,29 @@ export default function PayrollPage() {
     a.click();
   };
 
-  const totalPayrollAmount = entries.reduce((sum, e) => sum + e.gross_pay, 0);
+  const totalEmployeePay = entries.reduce((sum, e) => sum + e.employee_pay, 0);
+  const totalAdminPay = entries.reduce((sum, e) => sum + e.admin_pay, 0);
   const totalNetHours = entries.reduce((sum, e) => sum + e.net_hours, 0);
   const totalBreakHours = entries.reduce((sum, e) => sum + e.break_hours, 0);
 
-  const topByPay = [...entries].sort((a, b) => b.gross_pay - a.gross_pay).slice(0, chartLimit);
+  const topByPay = [...entries].sort((a, b) => b.admin_pay - a.admin_pay).slice(0, chartLimit);
   const topByHours = [...entries].sort((a, b) => b.net_hours - a.net_hours).slice(0, chartLimit);
   const othersPayCount = entries.length - topByPay.length;
-  const othersPay = entries.reduce((s, e) => s + e.gross_pay, 0) - topByPay.reduce((s, e) => s + e.gross_pay, 0);
+  const othersAdminPay = entries.reduce((s, e) => s + e.admin_pay, 0) - topByPay.reduce((s, e) => s + e.admin_pay, 0);
+  const othersEmpPay = entries.reduce((s, e) => s + e.employee_pay, 0) - topByPay.reduce((s, e) => s + e.employee_pay, 0);
   const othersHours = entries.reduce((s, e) => s + e.net_hours, 0) - topByHours.reduce((s, e) => s + e.net_hours, 0);
 
   const barData = othersPayCount > 0
-    ? [...topByPay, { employee_id: "others", name: `Others (${othersPayCount})`, pay_rate: 0, total_hours: 0, break_hours: 0, net_hours: 0, gross_pay: Math.round(othersPay * 100) / 100 }]
+    ? [...topByPay, { employee_id: "others", name: `Others (${othersPayCount})`, pay_rate: 0, admin_hourly_rate: 0, total_hours: 0, break_hours: 0, net_hours: 0, employee_pay: Math.round(othersEmpPay * 100) / 100, admin_pay: Math.round(othersAdminPay * 100) / 100 }]
     : topByPay;
 
   const pieData = entries.length > chartLimit
-    ? [...topByHours, { employee_id: "others", name: `Others (${entries.length - chartLimit})`, pay_rate: 0, total_hours: 0, break_hours: 0, net_hours: Math.round(othersHours * 100) / 100, gross_pay: 0 }]
+    ? [...topByHours, { employee_id: "others", name: `Others (${entries.length - chartLimit})`, pay_rate: 0, admin_hourly_rate: 0, total_hours: 0, break_hours: 0, net_hours: Math.round(othersHours * 100) / 100, employee_pay: 0, admin_pay: 0 }]
     : topByHours.length > 0 ? topByHours : entries;
 
   const summaryCards = [
-    { title: "Total Payroll", value: `$${totalPayrollAmount.toFixed(2)}`, icon: DollarSign, color: "text-primary" },
+    { title: "Employee Payroll", value: `$${totalEmployeePay.toFixed(2)}`, icon: DollarSign, color: "text-primary" },
+    { title: "Admin Cost (ex GST)", value: `$${totalAdminPay.toFixed(2)}`, icon: DollarSign, color: "text-orange-500" },
     { title: "Total Net Hours", value: Math.round(totalNetHours * 100) / 100, icon: ClockIcon, color: "text-green-500" },
     { title: "Total Break Hours", value: Math.round(totalBreakHours * 100) / 100, icon: Coffee, color: "text-yellow-500" },
     { title: "Employees", value: entries.length, icon: Users, color: "text-primary" },
@@ -317,7 +329,7 @@ export default function PayrollPage() {
       </Badge>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
         {summaryCards.map(({ title, value, icon: Icon, color }) => (
           <Card key={title}>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
@@ -350,7 +362,7 @@ export default function PayrollPage() {
         <Card>
           <CardHeader>
             <CardTitle className="text-sm font-medium text-muted-foreground">
-              Top {Math.min(chartLimit, entries.length)} Pay Distribution{entries.length > chartLimit ? ` (of ${entries.length})` : ""}
+              Pay Distribution — Employee vs Admin{entries.length > chartLimit ? ` (Top ${chartLimit} of ${entries.length})` : ""}
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -361,7 +373,9 @@ export default function PayrollPage() {
                   <XAxis dataKey="name" tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} interval={0} angle={-30} textAnchor="end" height={60} />
                   <YAxis tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} />
                   <Tooltip contentStyle={{ backgroundColor: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 8, color: "hsl(var(--foreground))" }} />
-                  <Bar dataKey="gross_pay" name="Gross Pay ($)" fill="hsl(45, 60%, 53%)" radius={[4, 4, 0, 0]} />
+                  <Legend />
+                  <Bar dataKey="employee_pay" name="Employee Pay ($)" fill="hsl(45, 60%, 53%)" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="admin_pay" name="Admin Cost ($)" fill="hsl(217, 91%, 60%)" radius={[4, 4, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             ) : (
@@ -413,32 +427,50 @@ export default function PayrollPage() {
               <TableHeader>
                 <TableRow>
                   <SortHeader label="Employee" sortKeyName="name" />
-                  <TableHead>Rate ($/hr)</TableHead>
-                  <SortHeader label="Total Hours" sortKeyName="total_hours" />
-                  <TableHead>Breaks (hrs)</TableHead>
-                  <SortHeader label="Net Hours" sortKeyName="net_hours" />
-                  <SortHeader label="Gross Pay" sortKeyName="gross_pay" />
+                  <TableHead>Emp Rate</TableHead>
+                  <TableHead>Admin Rate</TableHead>
+                  <SortHeader label="Total Hrs" sortKeyName="total_hours" />
+                  <TableHead>Breaks</TableHead>
+                  <SortHeader label="Net Hrs" sortKeyName="net_hours" />
+                  <SortHeader label="Employee Pay" sortKeyName="employee_pay" />
+                  <SortHeader label="Admin Cost" sortKeyName="admin_pay" />
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {pageEntries.map((e) => (
                   <TableRow key={e.employee_id}>
                     <TableCell className="font-medium">{e.name}</TableCell>
-                    <TableCell>${e.pay_rate}</TableCell>
+                    <TableCell>${e.pay_rate.toFixed(2)}</TableCell>
+                    <TableCell>${e.admin_hourly_rate.toFixed(2)}</TableCell>
                     <TableCell>{e.total_hours}</TableCell>
                     <TableCell>{e.break_hours}</TableCell>
                     <TableCell>{e.net_hours}</TableCell>
-                    <TableCell className="text-right font-semibold">${e.gross_pay.toFixed(2)}</TableCell>
+                    <TableCell className="font-semibold text-green-500">${e.employee_pay.toFixed(2)}</TableCell>
+                    <TableCell className="font-semibold text-right">${e.admin_pay.toFixed(2)}</TableCell>
                   </TableRow>
                 ))}
                 {pageEntries.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
+                    <TableCell colSpan={8} className="text-center text-muted-foreground py-8">
                       {loading ? "Loading..." : "No approved payroll data for this period."}
                     </TableCell>
                   </TableRow>
                 )}
               </TableBody>
+              {pageEntries.length > 0 && (
+                <tfoot>
+                  <TableRow className="bg-muted/50 font-semibold">
+                    <TableCell>Totals</TableCell>
+                    <TableCell />
+                    <TableCell />
+                    <TableCell>{(entries.reduce((s, e) => s + e.total_hours, 0)).toFixed(2)}</TableCell>
+                    <TableCell>{totalBreakHours.toFixed(2)}</TableCell>
+                    <TableCell>{totalNetHours.toFixed(2)}</TableCell>
+                    <TableCell className="text-green-500">${totalEmployeePay.toFixed(2)}</TableCell>
+                    <TableCell className="text-right">${totalAdminPay.toFixed(2)}</TableCell>
+                  </TableRow>
+                </tfoot>
+              )}
             </Table>
           </div>
 
