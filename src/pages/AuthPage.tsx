@@ -1,17 +1,19 @@
 import { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
+import { useBusiness } from "@/contexts/BusinessContext";
 import { Navigate, Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { LogIn, UserPlus, ShieldCheck } from "lucide-react";
+import { LogIn, UserPlus, ShieldCheck, Clock, Building2 } from "lucide-react";
 
 type AuthMode = "signIn" | "signUp";
 
 export default function AuthPage() {
-  const { user, isAdmin, isApproved, signIn, signUp } = useAuth();
+  const { user, isAdmin, isApproved, isMaster, isAdminOf, isViewerOf, businessRoles, signIn, signUp, signOut } = useAuth();
+  const { business, businesses, loading: bizLoading, setBusiness, applyTheme } = useBusiness();
   const { toast } = useToast();
   const [mode, setMode] = useState<AuthMode>("signIn");
   const [email, setEmail] = useState("");
@@ -19,8 +21,87 @@ export default function AuthPage() {
   const [fullName, setFullName] = useState("");
   const [loading, setLoading] = useState(false);
 
-  // After login, redirect to hub which will show business options
-  if (user && isApproved) return <Navigate to="/hub" replace />;
+  // Master admin → master panel
+  if (user && isApproved && isMaster) return <Navigate to="/master" replace />;
+
+  // Approved user with businesses → go to admin panel
+  if (user && isApproved && !bizLoading && businesses.length === 1) {
+    return <Navigate to={`/b/${businesses[0].business_code}/admin`} replace />;
+  }
+
+  // Multiple businesses → show selection
+  if (user && isApproved && !bizLoading && businesses.length > 1) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-background p-4">
+        <div className="text-center space-y-2 mb-8">
+          <h1 className="text-2xl font-bold text-foreground">Select Business</h1>
+          <p className="text-muted-foreground text-sm">Choose a business to manage</p>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 w-full max-w-xl mb-8">
+          {businesses.map((biz) => {
+            const isAdm = isAdminOf(biz.id);
+            const isView = isViewerOf(biz.id) && !isAdm;
+            return (
+              <Link
+                key={biz.id}
+                to={`/b/${biz.business_code}/admin`}
+                onClick={() => { setBusiness(biz); applyTheme(biz.theme); }}
+                className="block"
+              >
+                <Card className="border border-border cursor-pointer hover:border-primary/50 transition-all duration-300 group h-full">
+                  <CardContent className="p-6 flex flex-col items-center text-center space-y-3">
+                    {biz.logo_url ? (
+                      <img src={biz.logo_url} alt={biz.name} className="h-14 w-14 rounded-full object-cover" />
+                    ) : (
+                      <div className="h-14 w-14 rounded-full bg-primary/15 flex items-center justify-center group-hover:bg-primary/25 transition-colors">
+                        <Building2 className="h-7 w-7 text-primary" />
+                      </div>
+                    )}
+                    <div>
+                      <h2 className="text-lg font-semibold text-foreground">{biz.name}</h2>
+                      <p className="text-xs text-muted-foreground mt-1">{isAdm ? "Admin" : isView ? "Viewer" : "Member"}</p>
+                    </div>
+                  </CardContent>
+                </Card>
+              </Link>
+            );
+          })}
+        </div>
+        <Button variant="ghost" className="text-muted-foreground" onClick={signOut}>
+          <LogIn className="h-4 w-4 mr-2" /> Sign Out
+        </Button>
+      </div>
+    );
+  }
+
+  // Approved but no business
+  if (user && isApproved && !bizLoading && businesses.length === 0) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background p-4">
+        <div className="text-center space-y-4">
+          <h1 className="text-xl font-bold text-foreground">No Business Found</h1>
+          <p className="text-muted-foreground">You don't have a business linked to your account yet.</p>
+          <div className="flex gap-3 justify-center">
+            <Link to="/register-business"><Button>Register a Business</Button></Link>
+            <Button variant="outline" onClick={signOut}>Sign Out</Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Pending approval
+  if (user && !isApproved && !bizLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background p-4">
+        <div className="text-center space-y-4">
+          <h1 className="text-xl font-bold text-foreground">Account Pending Approval</h1>
+          <p className="text-muted-foreground">Your account is awaiting approval from an administrator.</p>
+          <Button variant="outline" onClick={signOut}>Sign Out</Button>
+        </div>
+      </div>
+    );
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

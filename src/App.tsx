@@ -2,7 +2,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { BusinessProvider } from "@/contexts/BusinessContext";
 
@@ -11,7 +11,6 @@ import Index from "./pages/Index";
 import AuthPage from "./pages/AuthPage";
 import ResetPasswordPage from "./pages/ResetPasswordPage";
 import RegisterBusinessPage from "./pages/RegisterBusinessPage";
-import BusinessHubPage from "./pages/BusinessHubPage";
 import KioskPage from "./pages/KioskPage";
 import PortalPage from "./pages/PortalPage";
 import EmployeePortalEntry from "./pages/EmployeePortalEntry";
@@ -46,7 +45,7 @@ const App = () => (
               <Route path="/auth" element={<AuthPage />} />
               <Route path="/reset-password" element={<ResetPasswordPage />} />
               <Route path="/register-business" element={<RegisterBusinessPage />} />
-              <Route path="/hub" element={<BusinessHubPage />} />
+              <Route path="/hub" element={<Navigate to="/auth" replace />} />
 
               {/* Business-scoped routes */}
               <Route path="/b/:businessCode/kiosk" element={<KioskPage />} />
@@ -72,8 +71,8 @@ const App = () => (
               </Route>
 
               {/* Legacy redirects */}
-              <Route path="/admin/*" element={<BusinessHubPage />} />
-              <Route path="/kiosk" element={<BusinessHubPage />} />
+              <Route path="/admin/*" element={<Navigate to="/auth" replace />} />
+              <Route path="/kiosk" element={<Navigate to="/" replace />} />
               <Route path="/portal" element={<EmployeePortalEntry />} />
 
               <Route path="*" element={<NotFound />} />
