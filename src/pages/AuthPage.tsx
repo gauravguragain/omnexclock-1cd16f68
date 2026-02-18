@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { LogIn, UserPlus } from "lucide-react";
+import { LogIn, UserPlus, ShieldCheck } from "lucide-react";
 
 type AuthMode = "signIn" | "signUp";
 
@@ -51,12 +51,14 @@ export default function AuthPage() {
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
       <div className="w-full max-w-md space-y-6">
         <div className="text-center space-y-2">
-          <img src="/logo.jpeg" alt="Pro Regal Pavilion" className="h-20 w-20 mx-auto rounded-lg object-cover" />
-          <h1 className="text-2xl font-bold gold-text">Pro Regal Pavilion</h1>
-          <p className="text-muted-foreground text-sm">Admin Portal</p>
+          <div className="h-20 w-20 mx-auto rounded-full bg-primary/15 flex items-center justify-center">
+            <ShieldCheck className="h-10 w-10 text-primary" />
+          </div>
+          <h1 className="text-2xl font-bold text-foreground">Admin Sign In</h1>
+          <p className="text-muted-foreground text-sm">Access your business dashboard</p>
         </div>
 
-        <Card className="gold-border border">
+        <Card className="border border-border">
           <CardHeader>
             <CardTitle>{title}</CardTitle>
             <CardDescription>{description}</CardDescription>

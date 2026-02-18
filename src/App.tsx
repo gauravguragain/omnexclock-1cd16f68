@@ -4,11 +4,13 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
+import { BusinessProvider } from "@/contexts/BusinessContext";
 
 import NotFound from "./pages/NotFound";
 import Index from "./pages/Index";
 import AuthPage from "./pages/AuthPage";
 import ResetPasswordPage from "./pages/ResetPasswordPage";
+import RegisterBusinessPage from "./pages/RegisterBusinessPage";
 import KioskPage from "./pages/KioskPage";
 import PortalPage from "./pages/PortalPage";
 import AdminLayout from "./layouts/AdminLayout";
@@ -22,6 +24,7 @@ import UsersPage from "./pages/admin/UsersPage";
 import RosterPage from "./pages/admin/RosterPage";
 import ForumPage from "./pages/admin/ForumPage";
 import RequestsPage from "./pages/admin/RequestsPage";
+import MyBusinessPage from "./pages/admin/MyBusinessPage";
 
 const queryClient = new QueryClient();
 
@@ -29,30 +32,34 @@ const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
       <AuthProvider>
-        <Toaster />
-        <Sonner />
-        <BrowserRouter>
-          <Routes>
-            <Route path="/" element={<Index />} />
-            <Route path="/auth" element={<AuthPage />} />
-            <Route path="/reset-password" element={<ResetPasswordPage />} />
-            <Route path="/kiosk" element={<KioskPage />} />
-            <Route path="/portal" element={<PortalPage />} />
-            <Route path="/admin" element={<AdminLayout />}>
-              <Route index element={<DashboardPage />} />
-              <Route path="employees" element={<EmployeesPage />} />
-              <Route path="roster" element={<RosterPage />} />
-              <Route path="live" element={<LiveMonitorPage />} />
-              <Route path="timesheets" element={<TimesheetsPage />} />
-              <Route path="payroll" element={<PayrollPage />} />
-              <Route path="audit-log" element={<AuditLogPage />} />
-              <Route path="users" element={<UsersPage />} />
-              <Route path="forum" element={<ForumPage />} />
-              <Route path="requests" element={<RequestsPage />} />
-            </Route>
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </BrowserRouter>
+        <BusinessProvider>
+          <Toaster />
+          <Sonner />
+          <BrowserRouter>
+            <Routes>
+              <Route path="/" element={<Index />} />
+              <Route path="/auth" element={<AuthPage />} />
+              <Route path="/reset-password" element={<ResetPasswordPage />} />
+              <Route path="/register-business" element={<RegisterBusinessPage />} />
+              <Route path="/kiosk" element={<KioskPage />} />
+              <Route path="/portal" element={<PortalPage />} />
+              <Route path="/admin" element={<AdminLayout />}>
+                <Route index element={<DashboardPage />} />
+                <Route path="employees" element={<EmployeesPage />} />
+                <Route path="roster" element={<RosterPage />} />
+                <Route path="live" element={<LiveMonitorPage />} />
+                <Route path="timesheets" element={<TimesheetsPage />} />
+                <Route path="payroll" element={<PayrollPage />} />
+                <Route path="audit-log" element={<AuditLogPage />} />
+                <Route path="users" element={<UsersPage />} />
+                <Route path="forum" element={<ForumPage />} />
+                <Route path="requests" element={<RequestsPage />} />
+                <Route path="my-business" element={<MyBusinessPage />} />
+              </Route>
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </BrowserRouter>
+        </BusinessProvider>
       </AuthProvider>
     </TooltipProvider>
   </QueryClientProvider>

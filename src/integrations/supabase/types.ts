@@ -17,6 +17,7 @@ export type Database = {
       audit_logs: {
         Row: {
           action: string
+          business_id: string | null
           details: Json | null
           id: string
           timestamp: string
@@ -24,6 +25,7 @@ export type Database = {
         }
         Insert: {
           action: string
+          business_id?: string | null
           details?: Json | null
           id?: string
           timestamp?: string
@@ -31,10 +33,67 @@ export type Database = {
         }
         Update: {
           action?: string
+          business_id?: string | null
           details?: Json | null
           id?: string
           timestamp?: string
           user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "audit_logs_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      businesses: {
+        Row: {
+          address: string | null
+          business_code: string
+          created_at: string | null
+          description: string | null
+          email: string | null
+          id: string
+          industry: string | null
+          logo_url: string | null
+          name: string
+          owner_id: string
+          phone: string | null
+          theme: Json | null
+          updated_at: string | null
+        }
+        Insert: {
+          address?: string | null
+          business_code: string
+          created_at?: string | null
+          description?: string | null
+          email?: string | null
+          id?: string
+          industry?: string | null
+          logo_url?: string | null
+          name: string
+          owner_id: string
+          phone?: string | null
+          theme?: Json | null
+          updated_at?: string | null
+        }
+        Update: {
+          address?: string | null
+          business_code?: string
+          created_at?: string | null
+          description?: string | null
+          email?: string | null
+          id?: string
+          industry?: string | null
+          logo_url?: string | null
+          name?: string
+          owner_id?: string
+          phone?: string | null
+          theme?: Json | null
+          updated_at?: string | null
         }
         Relationships: []
       }
@@ -154,6 +213,7 @@ export type Database = {
         Row: {
           active: boolean
           admin_hourly_rate: number
+          business_id: string | null
           created_at: string
           department: string | null
           email: string | null
@@ -168,6 +228,7 @@ export type Database = {
         Insert: {
           active?: boolean
           admin_hourly_rate?: number
+          business_id?: string | null
           created_at?: string
           department?: string | null
           email?: string | null
@@ -182,6 +243,7 @@ export type Database = {
         Update: {
           active?: boolean
           admin_hourly_rate?: number
+          business_id?: string | null
           created_at?: string
           department?: string | null
           email?: string | null
@@ -193,7 +255,15 @@ export type Database = {
           phone?: string | null
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "employees_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       forum_comments: {
         Row: {
@@ -237,6 +307,7 @@ export type Database = {
       forum_posts: {
         Row: {
           author_id: string | null
+          business_id: string | null
           content: string
           created_at: string
           id: string
@@ -245,6 +316,7 @@ export type Database = {
         }
         Insert: {
           author_id?: string | null
+          business_id?: string | null
           content: string
           created_at?: string
           id?: string
@@ -253,13 +325,22 @@ export type Database = {
         }
         Update: {
           author_id?: string | null
+          business_id?: string | null
           content?: string
           created_at?: string
           id?: string
           title?: string
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "forum_posts_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       forum_reactions: {
         Row: {
@@ -510,24 +591,35 @@ export type Database = {
       }
       user_roles: {
         Row: {
+          business_id: string | null
           created_at: string
           id: string
           role: Database["public"]["Enums"]["app_role"]
           user_id: string
         }
         Insert: {
+          business_id?: string | null
           created_at?: string
           id?: string
           role: Database["public"]["Enums"]["app_role"]
           user_id: string
         }
         Update: {
+          business_id?: string | null
           created_at?: string
           id?: string
           role?: Database["public"]["Enums"]["app_role"]
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "user_roles_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {
@@ -656,6 +748,10 @@ export type Database = {
       }
       is_admin: { Args: never; Returns: boolean }
       is_approved: { Args: { _user_id: string }; Returns: boolean }
+      register_business: {
+        Args: { _business_code: string; _business_name: string }
+        Returns: string
+      }
       submit_employee_request: {
         Args: {
           _employee_code: string

@@ -1,9 +1,10 @@
 import { useAuth } from "@/contexts/AuthContext";
+import { useBusiness } from "@/contexts/BusinessContext";
 import { Badge } from "@/components/ui/badge";
 import { Navigate, Outlet, Link, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import {
-  Users, Clock, CalendarDays, DollarSign, BarChart3, Monitor, LogOut, Menu, X, Settings, FileText, UserCog, CalendarRange, MessageSquare, CalendarOff
+  Users, Clock, CalendarDays, DollarSign, BarChart3, Monitor, LogOut, Menu, X, Settings, FileText, UserCog, CalendarRange, MessageSquare, CalendarOff, Building2
 } from "lucide-react";
 import { useState } from "react";
 import { useSessionGuard } from "@/hooks/useSessionGuard";
@@ -19,10 +20,12 @@ const navItems = [
   { path: "/admin/forum", label: "Forum", icon: MessageSquare },
   { path: "/admin/audit-log", label: "Audit Log", icon: FileText },
   { path: "/admin/users", label: "User Management", icon: UserCog },
+  { path: "/admin/my-business", label: "My Business", icon: Building2 },
 ];
 
 export default function AdminLayout() {
   const { user, isAdmin, isViewer, isApproved, loading, signOut } = useAuth();
+  const { business } = useBusiness();
   const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   useSessionGuard();
@@ -60,10 +63,16 @@ export default function AdminLayout() {
       {/* Sidebar */}
       <aside className={`fixed inset-y-0 left-0 z-50 w-64 bg-card border-r border-border transform transition-transform lg:translate-x-0 ${sidebarOpen ? "translate-x-0" : "-translate-x-full"}`}>
         <div className="flex items-center gap-3 p-4 border-b border-border">
-          <img src="/logo.jpeg" alt="Logo" className="h-10 w-10 rounded-lg object-cover" />
+          {business?.logo_url ? (
+            <img src={business.logo_url} alt="Logo" className="h-10 w-10 rounded-lg object-cover" />
+          ) : (
+            <div className="h-10 w-10 rounded-lg bg-primary/15 flex items-center justify-center">
+              <Building2 className="h-5 w-5 text-primary" />
+            </div>
+          )}
           <div>
-            <h1 className="text-sm font-bold gold-text">Pro Regal Pavilion</h1>
-            <p className="text-xs text-muted-foreground">Time Clock Admin</p>
+            <h1 className="text-sm font-bold text-primary truncate">{business?.name || "OmnexClock"}</h1>
+            <p className="text-xs text-muted-foreground">Admin Panel</p>
           </div>
           <Button variant="ghost" size="icon" className="lg:hidden ml-auto" onClick={() => setSidebarOpen(false)}>
             <X className="h-4 w-4" />

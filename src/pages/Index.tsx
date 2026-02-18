@@ -1,40 +1,56 @@
 import { Link } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
-import { ShieldCheck, User } from "lucide-react";
+import { ShieldCheck, User, Building2, Clock } from "lucide-react";
 
 const Index = () => {
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-background p-4">
       <div className="text-center space-y-2 mb-8">
-        <img src="/logo.jpeg" alt="Pro Regal Pavilion" className="h-20 w-20 mx-auto rounded-lg object-cover gold-glow" />
-        <h1 className="text-2xl font-bold gold-text">Pro Regal Pavilion</h1>
-        <p className="text-muted-foreground text-sm">Select your portal</p>
+        <div className="h-20 w-20 mx-auto rounded-full bg-primary/15 flex items-center justify-center">
+          <Clock className="h-10 w-10 text-primary" />
+        </div>
+        <h1 className="text-2xl font-bold text-foreground">OmnexClock</h1>
+        <p className="text-muted-foreground text-sm">Time & Workforce Management</p>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 w-full max-w-lg">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 w-full max-w-2xl">
         <Link to="/auth" className="block">
-          <Card className="gold-border border cursor-pointer hover:gold-glow transition-all duration-300 group h-full">
+          <Card className="border border-border cursor-pointer hover:border-primary/50 transition-all duration-300 group h-full">
             <CardContent className="p-6 flex flex-col items-center text-center space-y-3">
               <div className="h-14 w-14 rounded-full bg-primary/15 flex items-center justify-center group-hover:bg-primary/25 transition-colors">
                 <ShieldCheck className="h-7 w-7 text-primary" />
               </div>
               <div>
                 <h2 className="text-lg font-semibold text-foreground">Admin</h2>
-                <p className="text-xs text-muted-foreground mt-1">Dashboard, timesheets, payroll & roster management</p>
+                <p className="text-xs text-muted-foreground mt-1">Sign in to manage your business</p>
               </div>
             </CardContent>
           </Card>
         </Link>
 
         <Link to="/portal" className="block">
-          <Card className="gold-border border cursor-pointer hover:gold-glow transition-all duration-300 group h-full">
+          <Card className="border border-border cursor-pointer hover:border-primary/50 transition-all duration-300 group h-full">
             <CardContent className="p-6 flex flex-col items-center text-center space-y-3">
               <div className="h-14 w-14 rounded-full bg-primary/15 flex items-center justify-center group-hover:bg-primary/25 transition-colors">
                 <User className="h-7 w-7 text-primary" />
               </div>
               <div>
                 <h2 className="text-lg font-semibold text-foreground">Employee Portal</h2>
-                <p className="text-xs text-muted-foreground mt-1">View your roster, timesheets & clock history</p>
+                <p className="text-xs text-muted-foreground mt-1">View roster, timesheets & clock in</p>
+              </div>
+            </CardContent>
+          </Card>
+        </Link>
+
+        <Link to="/register-business" className="block">
+          <Card className="border border-primary/30 cursor-pointer hover:border-primary/60 transition-all duration-300 group h-full bg-primary/5">
+            <CardContent className="p-6 flex flex-col items-center text-center space-y-3">
+              <div className="h-14 w-14 rounded-full bg-primary/20 flex items-center justify-center group-hover:bg-primary/30 transition-colors">
+                <Building2 className="h-7 w-7 text-primary" />
+              </div>
+              <div>
+                <h2 className="text-lg font-semibold text-foreground">Register Business</h2>
+                <p className="text-xs text-muted-foreground mt-1">Set up a new business account</p>
               </div>
             </CardContent>
           </Card>
