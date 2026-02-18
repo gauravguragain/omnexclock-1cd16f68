@@ -15,7 +15,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import {
   ArrowLeft, Delete, CalendarRange, Clock, LogIn, LogOut, Coffee, User, FileText,
-  MessageSquare, CalendarOff, Send, Plus, RefreshCw, CalendarIcon,
+  MessageSquare, CalendarOff, Send, Plus, RefreshCw, CalendarIcon, Trash2, Pencil,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ausToday, toAusFormatted, toAusTime12 } from "@/lib/dateUtils";
@@ -122,6 +122,8 @@ export default function PortalPage() {
   const [reqStartTime, setReqStartTime] = useState("");
   const [reqEndTime, setReqEndTime] = useState("");
   const [reqSaving, setReqSaving] = useState(false);
+
+  const [editingRequestId, setEditingRequestId] = useState<string | null>(null);
 
   useEffect(() => {
     const timer = setInterval(() => setCurrentTime(new Date()), 1000);
@@ -238,15 +240,32 @@ export default function PortalPage() {
       params._start_date = reqStartDate ? format(reqStartDate, "yyyy-MM-dd") : null;
       params._end_date = reqEndDate ? format(reqEndDate, "yyyy-MM-dd") : null;
     }
-    const { data } = await supabase.rpc("submit_employee_request", params);
-    if (data) {
-      toast({ title: "Request Submitted", description: "Your request has been sent for admin approval." });
-      setRequestOpen(false);
-      resetRequestForm();
-      const { data: updated } = await supabase.rpc("get_employee_requests", { _employee_code: employeeCode });
-      setMyRequests(updated || []);
+    if (editingRequestId) {
+      const updateParams: any = {
+        ...params,
+        _request_id: editingRequestId,
+      };
+      const { data } = await supabase.rpc("update_employee_request", updateParams);
+      if (data) {
+        toast({ title: "Request Updated" });
+        setRequestOpen(false);
+        resetRequestForm();
+        const { data: updated } = await supabase.rpc("get_employee_requests", { _employee_code: employeeCode });
+        setMyRequests(updated || []);
+      } else {
+        toast({ title: "Error", description: "Failed to update request.", variant: "destructive" });
+      }
     } else {
-      toast({ title: "Error", description: "Failed to submit request.", variant: "destructive" });
+      const { data } = await supabase.rpc("submit_employee_request", params);
+      if (data) {
+        toast({ title: "Request Submitted", description: "Your request has been sent for admin approval." });
+        setRequestOpen(false);
+        resetRequestForm();
+        const { data: updated } = await supabase.rpc("get_employee_requests", { _employee_code: employeeCode });
+        setMyRequests(updated || []);
+      } else {
+        toast({ title: "Error", description: "Failed to submit request.", variant: "destructive" });
+      }
     }
     setReqSaving(false);
   };
@@ -262,6 +281,41 @@ export default function PortalPage() {
     setReqReason("");
     setReqStartTime("");
     setReqEndTime("");
+    setEditingRequestId(null);
+  };
+
+  const deleteRequest = async (requestId: string) => {
+    const { data } = await supabase.rpc("delete_employee_request", { _employee_code: employeeCode, _request_id: requestId });
+    if (data) {
+      toast({ title: "Request deleted" });
+      const { data: updated } = await supabase.rpc("get_employee_requests", { _employee_code: employeeCode });
+      setMyRequests(updated || []);
+    } else {
+      toast({ title: "Error", description: "Failed to delete request.", variant: "destructive" });
+    }
+  };
+
+  const openEditRequest = (req: any) => {
+    setEditingRequestId(req.id);
+    setReqType(req.request_type);
+    setReqIsRecurring(req.is_recurring);
+    setReqReason(req.reason || "");
+    setReqStartTime(req.start_time || "");
+    setReqEndTime(req.end_time || "");
+    if (req.is_recurring) {
+      setReqDays(req.recurring_days || []);
+      setReqRecurringStart(req.recurring_start_date ? new Date(req.recurring_start_date + "T00:00:00") : undefined);
+      setReqRecurringEnd(req.recurring_end_date ? new Date(req.recurring_end_date + "T00:00:00") : undefined);
+      setReqStartDate(undefined);
+      setReqEndDate(undefined);
+    } else {
+      setReqStartDate(req.start_date ? new Date(req.start_date + "T00:00:00") : undefined);
+      setReqEndDate(req.end_date ? new Date(req.end_date + "T00:00:00") : undefined);
+      setReqDays([]);
+      setReqRecurringStart(undefined);
+      setReqRecurringEnd(undefined);
+    }
+    setRequestOpen(true);
   };
 
   const statusBadge = (status: string) => {
@@ -625,12 +679,24 @@ export default function PortalPage() {
               myRequests.map((req: any) => (
                 <Card key={req.id}>
                   <CardContent className="p-3 space-y-1">
-                    <div className="flex items-center gap-2">
-                      {statusBadge(req.status)}
-                      <Badge variant="secondary" className="text-[10px] px-1.5 py-0 capitalize">
-                        {req.is_recurring && <RefreshCw className="h-2.5 w-2.5 mr-0.5" />}
-                        {req.request_type}
-                      </Badge>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        {statusBadge(req.status)}
+                        <Badge variant="secondary" className="text-[10px] px-1.5 py-0 capitalize">
+                          {req.is_recurring && <RefreshCw className="h-2.5 w-2.5 mr-0.5" />}
+                          {req.request_type}
+                        </Badge>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        {req.status === "pending" && (
+                          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEditRequest(req)}>
+                            <Pencil className="h-3.5 w-3.5" />
+                          </Button>
+                        )}
+                        <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:text-destructive" onClick={() => deleteRequest(req.id)}>
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
                     </div>
                     <p className="text-sm text-foreground">
                       {req.is_recurring
@@ -638,6 +704,7 @@ export default function PortalPage() {
                         : req.start_date
                           ? `${new Date(req.start_date + "T00:00:00").toLocaleDateString("en-AU", { day: "numeric", month: "short", year: "numeric" })}${req.end_date && req.end_date !== req.start_date ? ` – ${new Date(req.end_date + "T00:00:00").toLocaleDateString("en-AU", { day: "numeric", month: "short", year: "numeric" })}` : ""}`
                           : "—"}
+                      {req.start_time && req.end_time && ` · ${formatTime12(req.start_time)} – ${formatTime12(req.end_time)}`}
                     </p>
                     {req.reason && <p className="text-xs text-muted-foreground">{req.reason}</p>}
                     {req.admin_note && <p className="text-xs text-muted-foreground italic">Admin: {req.admin_note}</p>}
@@ -711,7 +778,7 @@ export default function PortalPage() {
         <Dialog open={requestOpen} onOpenChange={setRequestOpen}>
           <DialogContent className="max-w-md">
             <DialogHeader>
-              <DialogTitle>Submit Request</DialogTitle>
+              <DialogTitle>{editingRequestId ? "Edit Request" : "Submit Request"}</DialogTitle>
             </DialogHeader>
             <div className="space-y-4">
               <div className="space-y-2">
@@ -854,7 +921,7 @@ export default function PortalPage() {
             </div>
             <DialogFooter>
               <Button variant="outline" onClick={() => setRequestOpen(false)}>Cancel</Button>
-              <Button onClick={submitRequest} disabled={reqSaving}>{reqSaving ? "Submitting..." : "Submit"}</Button>
+              <Button onClick={submitRequest} disabled={reqSaving}>{reqSaving ? "Saving..." : editingRequestId ? "Update" : "Submit"}</Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
