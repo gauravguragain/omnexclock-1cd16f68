@@ -17,6 +17,7 @@ import { Badge } from "@/components/ui/badge";
 import { TimeDropdownPicker } from "@/components/TimeDropdownPicker";
 import { logAudit } from "@/lib/auditLog";
 import { toAusDate, toAusDisplayDate, toAusTime24, toAusTime12, buildAusTimestamp, ausToday, ausNow, ausStartOfDay, ausEndOfDay } from "@/lib/dateUtils";
+import { useAuth } from "@/contexts/AuthContext";
 import { EmailCSVDialog } from "@/components/EmailCSVDialog";
 
 
@@ -111,6 +112,7 @@ function DateRangeSelector({ dateFrom, dateTo, onChangeFrom, onChangeTo }: {
 
 
 export default function TimesheetsPage() {
+  const { isViewer } = useAuth();
   const [entries, setEntries] = useState<TimesheetEntry[]>([]);
   const [employees, setEmployees] = useState<{ id: string; name: string; department: string | null }[]>([]);
   const [selectedEmployee, setSelectedEmployee] = useState<string>("all");
@@ -584,12 +586,16 @@ export default function TimesheetsPage() {
           <Button variant="outline" size="sm" onClick={() => setEmailDialogOpen(true)} disabled={filtered.length === 0}>
             <Mail className="mr-1.5 h-4 w-4" /> Email CSV
           </Button>
-          <Button variant="outline" size="sm" onClick={approveAll} disabled={saving} className="text-green-500 border-green-500/30 hover:bg-green-500/10">
-            <CheckCircle2 className="mr-1.5 h-4 w-4" /> Approve All
-          </Button>
-          <Button size="sm" onClick={openAdd}>
-            <Plus className="mr-1.5 h-4 w-4" /> Add Entry
-          </Button>
+          {!isViewer && (
+            <>
+              <Button variant="outline" size="sm" onClick={approveAll} disabled={saving} className="text-green-500 border-green-500/30 hover:bg-green-500/10">
+                <CheckCircle2 className="mr-1.5 h-4 w-4" /> Approve All
+              </Button>
+              <Button size="sm" onClick={openAdd}>
+                <Plus className="mr-1.5 h-4 w-4" /> Add Entry
+              </Button>
+            </>
+          )}
         </div>
       </div>
 
@@ -623,25 +629,29 @@ export default function TimesheetsPage() {
               <div key={i} className={cn("p-3 space-y-2", e.approved && "bg-green-500/5")}>
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => toggleApproval(e)}
-                      disabled={approvingIds.has(`${e.employee_id}-${e.raw_date}`)}
-                      className={cn("h-7 w-7 p-0", e.approved ? "text-green-500 hover:text-green-400" : "text-muted-foreground hover:text-yellow-500")}
-                    >
-                      {e.approved ? <CheckCircle2 className="h-4 w-4" /> : <XCircle className="h-4 w-4" />}
-                    </Button>
+                    {!isViewer && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => toggleApproval(e)}
+                        disabled={approvingIds.has(`${e.employee_id}-${e.raw_date}`)}
+                        className={cn("h-7 w-7 p-0", e.approved ? "text-green-500 hover:text-green-400" : "text-muted-foreground hover:text-yellow-500")}
+                      >
+                        {e.approved ? <CheckCircle2 className="h-4 w-4" /> : <XCircle className="h-4 w-4" />}
+                      </Button>
+                    )}
                     <span className="font-medium text-foreground">{e.employee_name}</span>
                   </div>
-                  <div className="flex gap-1">
-                    <Button variant="ghost" size="sm" onClick={() => openEdit(e)} disabled={saving || e.approved} className="h-7 w-7 p-0">
-                      <Pencil className="h-3.5 w-3.5" />
-                    </Button>
-                    <Button variant="ghost" size="sm" onClick={() => deleteEntry(e)} disabled={saving || e.approved} className="h-7 w-7 p-0 text-destructive hover:text-destructive">
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </Button>
-                  </div>
+                  {!isViewer && (
+                    <div className="flex gap-1">
+                      <Button variant="ghost" size="sm" onClick={() => openEdit(e)} disabled={saving || e.approved} className="h-7 w-7 p-0">
+                        <Pencil className="h-3.5 w-3.5" />
+                      </Button>
+                      <Button variant="ghost" size="sm" onClick={() => deleteEntry(e)} disabled={saving || e.approved} className="h-7 w-7 p-0 text-destructive hover:text-destructive">
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
+                  )}
                 </div>
                 <div className="grid grid-cols-3 gap-x-4 gap-y-1 text-xs text-muted-foreground">
                   <span>Date</span><span>Clock In</span><span>Clock Out</span>
@@ -686,15 +696,19 @@ export default function TimesheetsPage() {
                 {filtered.map((e, i) => (
                   <TableRow key={i} className={e.approved ? "bg-green-500/5" : ""}>
                     <TableCell>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => toggleApproval(e)}
-                        disabled={approvingIds.has(`${e.employee_id}-${e.raw_date}`)}
-                        className={cn("h-7 px-2", e.approved ? "text-green-500 hover:text-green-400" : "text-muted-foreground hover:text-yellow-500")}
-                      >
-                        {e.approved ? <CheckCircle2 className="h-4 w-4" /> : <XCircle className="h-4 w-4" />}
-                      </Button>
+                      {!isViewer ? (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => toggleApproval(e)}
+                          disabled={approvingIds.has(`${e.employee_id}-${e.raw_date}`)}
+                          className={cn("h-7 px-2", e.approved ? "text-green-500 hover:text-green-400" : "text-muted-foreground hover:text-yellow-500")}
+                        >
+                          {e.approved ? <CheckCircle2 className="h-4 w-4" /> : <XCircle className="h-4 w-4" />}
+                        </Button>
+                      ) : (
+                        e.approved ? <CheckCircle2 className="h-4 w-4 text-green-500" /> : <XCircle className="h-4 w-4 text-muted-foreground" />
+                      )}
                     </TableCell>
                     <TableCell className="font-medium">{e.employee_name}</TableCell>
                     <TableCell className="whitespace-nowrap">{e.date}</TableCell>
@@ -706,14 +720,16 @@ export default function TimesheetsPage() {
                     <TableCell>{e.total_hours}h</TableCell>
                     <TableCell className="font-semibold">{e.net_hours}h</TableCell>
                     <TableCell className="text-right">
-                      <div className="flex gap-1 justify-end">
-                        <Button variant="ghost" size="sm" onClick={() => openEdit(e)} disabled={saving || e.approved} className="h-7 w-7 p-0">
-                          <Pencil className="h-3.5 w-3.5" />
-                        </Button>
-                        <Button variant="ghost" size="sm" onClick={() => deleteEntry(e)} disabled={saving || e.approved} className="h-7 w-7 p-0 text-destructive hover:text-destructive">
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </Button>
-                      </div>
+                      {!isViewer && (
+                        <div className="flex gap-1 justify-end">
+                          <Button variant="ghost" size="sm" onClick={() => openEdit(e)} disabled={saving || e.approved} className="h-7 w-7 p-0">
+                            <Pencil className="h-3.5 w-3.5" />
+                          </Button>
+                          <Button variant="ghost" size="sm" onClick={() => deleteEntry(e)} disabled={saving || e.approved} className="h-7 w-7 p-0 text-destructive hover:text-destructive">
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </Button>
+                        </div>
+                      )}
                     </TableCell>
                   </TableRow>
                 ))}

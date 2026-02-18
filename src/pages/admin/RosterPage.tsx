@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/hooks/use-toast";
 import { TimeDropdownPicker } from "@/components/TimeDropdownPicker";
 import { logAudit } from "@/lib/auditLog";
+import { useAuth } from "@/contexts/AuthContext";
 import {
   ChevronLeft, ChevronRight, Plus, Trash2, Copy, Send, Clock, AlertCircle, CalendarOff,
 } from "lucide-react";
@@ -98,6 +99,7 @@ const EMPTY_SHIFT: ShiftForm = {
 };
 
 export default function RosterPage() {
+  const { isViewer } = useAuth();
   const { toast } = useToast();
   const [weekStart, setWeekStart] = useState(() => getMonday(new Date()));
   const [employees, setEmployees] = useState<Employee[]>([]);
@@ -460,14 +462,16 @@ export default function RosterPage() {
           </Button>
         </div>
 
-        <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" onClick={handleCopyPrevWeek} disabled={loading}>
-            <Copy className="mr-1.5 h-3.5 w-3.5" /> Copy Last Week
-          </Button>
-          <Button size="sm" onClick={handlePublishWeek} disabled={publishing || weekStatus === "published" || weekStatus === "empty"}>
-            <Send className="mr-1.5 h-3.5 w-3.5" /> {publishing ? "Publishing..." : "Publish Week"}
-          </Button>
-        </div>
+        {!isViewer && (
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" onClick={handleCopyPrevWeek} disabled={loading}>
+              <Copy className="mr-1.5 h-3.5 w-3.5" /> Copy Last Week
+            </Button>
+            <Button size="sm" onClick={handlePublishWeek} disabled={publishing || weekStatus === "published" || weekStatus === "empty"}>
+              <Send className="mr-1.5 h-3.5 w-3.5" /> {publishing ? "Publishing..." : "Publish Week"}
+            </Button>
+          </div>
+        )}
       </div>
 
       {/* Grid */}
@@ -560,9 +564,9 @@ export default function RosterPage() {
                                 </button>
                               ))}
                               {(() => {
+                                if (isViewer) return null;
                                 const hasAllDayBlock = dayRequests.some(r => isAllDayUnavailability(r));
                                 const hasPartialUnavailability = dayRequests.some(r => !isAllDayUnavailability(r));
-                                // Hide add button if all-day block OR if employee already has a shift (unless partial unavailability exists, allowing a second non-overlapping shift)
                                 if (hasAllDayBlock) return null;
                                 if (dayShifts.length > 0 && !hasPartialUnavailability) return null;
                                 return (
