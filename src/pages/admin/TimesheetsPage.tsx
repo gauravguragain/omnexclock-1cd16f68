@@ -22,6 +22,7 @@ import { EmailCSVDialog } from "@/components/EmailCSVDialog";
 interface TimesheetEntry {
   employee_id: string;
   employee_name: string;
+  employee_department: string | null;
   date: string;
   raw_date: string;
   clock_in: string | null;
@@ -110,8 +111,9 @@ function DateRangeSelector({ dateFrom, dateTo, onChangeFrom, onChangeTo }: {
 
 export default function TimesheetsPage() {
   const [entries, setEntries] = useState<TimesheetEntry[]>([]);
-  const [employees, setEmployees] = useState<{ id: string; name: string }[]>([]);
+  const [employees, setEmployees] = useState<{ id: string; name: string; department: string | null }[]>([]);
   const [selectedEmployee, setSelectedEmployee] = useState<string>("all");
+  const [selectedDepartment, setSelectedDepartment] = useState<string>("all");
   const [dateFrom, setDateFrom] = useState<Date>(() => startOfWeek(new Date(), { weekStartsOn: 1 }));
   const [dateTo, setDateTo] = useState<Date>(() => endOfWeek(new Date(), { weekStartsOn: 1 }));
   const [editDialog, setEditDialog] = useState(false);
@@ -125,7 +127,7 @@ export default function TimesheetsPage() {
   const [emailDialogOpen, setEmailDialogOpen] = useState(false);
 
   useEffect(() => {
-    supabase.from("employees").select("id, name").eq("active", true).order("name").then(({ data }) => setEmployees(data || []));
+    supabase.from("employees").select("id, name, department").eq("active", true).order("name").then(({ data }) => setEmployees(data || []));
   }, []);
 
   useEffect(() => {
@@ -140,7 +142,7 @@ export default function TimesheetsPage() {
 
     let query = supabase
       .from("clock_events")
-      .select("*, employees(name)")
+      .select("*, employees(name, department)")
       .gte("timestamp", fromISO)
       .lte("timestamp", toISO)
       .order("timestamp", { ascending: true });
@@ -173,11 +175,13 @@ export default function TimesheetsPage() {
       const localDate = toAusDate(evDate);
       const key = `${ev.employee_id}-${localDate}`;
       const empName = (ev.employees as any)?.name || "Unknown";
+      const empDept = (ev.employees as any)?.department || null;
 
       if (!dailyMap.has(key)) {
         dailyMap.set(key, {
           employee_id: ev.employee_id,
           employee_name: empName,
+          employee_department: empDept,
           date,
           raw_date: localDate,
           clock_in: null,
@@ -237,6 +241,7 @@ export default function TimesheetsPage() {
       return {
         employee_id: e.employee_id,
         employee_name: e.employee_name,
+        employee_department: e.employee_department,
         date: e.date,
         raw_date: e.raw_date,
         clock_in: e.clock_in ? toAusTime12(new Date(e.clock_in)) : null,
@@ -421,9 +426,11 @@ export default function TimesheetsPage() {
     }
   };
 
-  const filtered = searchQuery
-    ? entries.filter((e) => e.employee_name.toLowerCase().includes(searchQuery.toLowerCase()))
-    : entries;
+  const filtered = entries.filter((e) => {
+    if (searchQuery && !e.employee_name.toLowerCase().includes(searchQuery.toLowerCase())) return false;
+    if (selectedDepartment !== "all" && e.employee_department !== selectedDepartment) return false;
+    return true;
+  });
 
   const approvedCount = filtered.filter(e => e.approved).length;
   const pendingCount = filtered.length - approvedCount;
@@ -442,11 +449,7 @@ export default function TimesheetsPage() {
       e.total_hours.toString(),
       e.net_hours.toString(),
     ]);
-    const totBreakMin = filtered.reduce((s, e) => s + e.break_minutes, 0);
-    const totTotalHrs = filtered.reduce((s, e) => s + e.total_hours, 0);
-    const totNetHrs = filtered.reduce((s, e) => s + e.net_hours, 0);
-    const totalRow = ["", "TOTAL", "", "", "", "", "", totBreakMin.toString(), totTotalHrs.toFixed(2), totNetHrs.toFixed(2)];
-    return [headers, ...rows, totalRow].map(r => r.map(c => `"${c}"`).join(",")).join("\n");
+    return [headers, ...rows].map(r => r.map(c => `"${c}"`).join(",")).join("\n");
   };
 
   const downloadCSV = () => {
@@ -545,7 +548,7 @@ export default function TimesheetsPage() {
     <div className="space-y-4">
       {/* Filters row */}
       <div className="flex flex-col gap-3">
-        <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center">
+        <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center flex-wrap">
           <Select value={selectedEmployee} onValueChange={setSelectedEmployee}>
             <SelectTrigger className="w-full sm:w-48">
               <SelectValue placeholder="All employees" />
@@ -554,6 +557,17 @@ export default function TimesheetsPage() {
               <SelectItem value="all">All Employees</SelectItem>
               {employees.map((e) => (
                 <SelectItem key={e.id} value={e.id}>{e.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select value={selectedDepartment} onValueChange={setSelectedDepartment}>
+            <SelectTrigger className="w-full sm:w-48">
+              <SelectValue placeholder="All departments" />
+            </SelectTrigger>
+            <SelectContent className="bg-card border-border z-50">
+              <SelectItem value="all">All Departments</SelectItem>
+              {[...new Set(employees.map(e => e.department).filter(Boolean))].sort().map((dept) => (
+                <SelectItem key={dept!} value={dept!}>{dept}</SelectItem>
               ))}
             </SelectContent>
           </Select>
@@ -708,23 +722,6 @@ export default function TimesheetsPage() {
                     </TableCell>
                   </TableRow>
                 )}
-              {filtered.length > 0 && (
-                <tfoot>
-                  <TableRow className="bg-muted/50 font-semibold">
-                    <TableCell />
-                    <TableCell>Totals</TableCell>
-                    <TableCell />
-                    <TableCell />
-                    <TableCell />
-                    <TableCell className="hidden lg:table-cell" />
-                    <TableCell className="hidden lg:table-cell" />
-                    <TableCell>{filtered.reduce((s, e) => s + e.break_minutes, 0)}m</TableCell>
-                    <TableCell>{filtered.reduce((s, e) => s + e.total_hours, 0).toFixed(2)}h</TableCell>
-                    <TableCell>{filtered.reduce((s, e) => s + e.net_hours, 0).toFixed(2)}h</TableCell>
-                    <TableCell />
-                  </TableRow>
-                </tfoot>
-              )}
               </TableBody>
             </Table>
           </div>
