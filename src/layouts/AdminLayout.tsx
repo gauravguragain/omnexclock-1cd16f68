@@ -14,9 +14,9 @@ const navItems = [
   { path: "/admin/live", label: "Live Monitor", icon: Monitor },
   { path: "/admin/timesheets", label: "Timesheets", icon: CalendarDays },
   { path: "/admin/payroll", label: "Payroll", icon: DollarSign },
-  { path: "/admin/audit-log", label: "Audit Log", icon: FileText },
-  { path: "/admin/forum", label: "Forum", icon: MessageSquare },
   { path: "/admin/requests", label: "Requests", icon: CalendarOff },
+  { path: "/admin/forum", label: "Forum", icon: MessageSquare },
+  { path: "/admin/audit-log", label: "Audit Log", icon: FileText },
   { path: "/admin/users", label: "User Management", icon: UserCog },
 ];
 
