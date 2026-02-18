@@ -16,6 +16,7 @@ import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { TimeDropdownPicker } from "@/components/TimeDropdownPicker";
 import { logAudit } from "@/lib/auditLog";
+import { toAusDate, toAusDisplayDate, toAusTime24, toAusTime12, buildAusTimestamp } from "@/lib/dateUtils";
 
 interface TimesheetEntry {
   employee_id: string;
@@ -103,51 +104,8 @@ function DateRangeSelector({ dateFrom, dateTo, onChangeFrom, onChangeTo }: {
   );
 }
 
-const TIMEZONE = "Australia/Sydney";
 
-/** Format a Date to YYYY-MM-DD in Australia/Sydney timezone */
-function toAusDate(d: Date): string {
-  return d.toLocaleDateString("en-CA", { timeZone: TIMEZONE }); // en-CA gives YYYY-MM-DD
-}
 
-/** Format a Date to DD/MM/YYYY in Australia/Sydney timezone */
-function toAusDisplayDate(d: Date): string {
-  return d.toLocaleDateString("en-AU", { timeZone: TIMEZONE });
-}
-
-/** Format a Date to HH:MM (24h) in Australia/Sydney timezone */
-function toAusTime24(d: Date): string {
-  return d.toLocaleTimeString("en-GB", { timeZone: TIMEZONE, hour: "2-digit", minute: "2-digit", hour12: false });
-}
-
-/** Format a Date to hh:mm am/pm in Australia/Sydney timezone */
-function toAusTime12(d: Date): string {
-  return d.toLocaleTimeString("en-AU", { timeZone: TIMEZONE, hour: "2-digit", minute: "2-digit", hour12: true });
-}
-
-/** Build an ISO timestamp from a YYYY-MM-DD date and HH:MM time, interpreted in Australia/Sydney.
- *  We compute the offset for that specific date/time to handle AEST vs AEDT correctly. */
-function buildAusTimestamp(dateStr: string, timeStr: string): string {
-  // Create a temp date to figure out the offset for that date in Australia/Sydney
-  const naive = new Date(`${dateStr}T${timeStr}:00`);
-  // Use Intl to get the actual offset
-  const formatter = new Intl.DateTimeFormat("en-AU", {
-    timeZone: TIMEZONE,
-    timeZoneName: "shortOffset",
-  });
-  const parts = formatter.formatToParts(naive);
-  const tzPart = parts.find(p => p.type === "timeZoneName")?.value || "+11";
-  // tzPart is like "GMT+11" or "GMT+10" — extract the offset
-  const offsetMatch = tzPart.match(/GMT([+-]?\d+)(?::(\d+))?/);
-  let offsetStr = "+10:00"; // fallback AEST
-  if (offsetMatch) {
-    const hrs = parseInt(offsetMatch[1]);
-    const mins = offsetMatch[2] ? parseInt(offsetMatch[2]) : 0;
-    const sign = hrs >= 0 ? "+" : "-";
-    offsetStr = `${sign}${String(Math.abs(hrs)).padStart(2, "0")}:${String(mins).padStart(2, "0")}`;
-  }
-  return `${dateStr}T${timeStr}:00${offsetStr}`;
-}
 
 export default function TimesheetsPage() {
   const [entries, setEntries] = useState<TimesheetEntry[]>([]);

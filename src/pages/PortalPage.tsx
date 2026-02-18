@@ -9,6 +9,7 @@ import { useToast } from "@/hooks/use-toast";
 import {
   ArrowLeft, Delete, CalendarRange, Clock, LogIn, LogOut, Coffee, User, FileText,
 } from "lucide-react";
+import { ausToday, toAusFormatted, toAusTime12 } from "@/lib/dateUtils";
 
 /* ── types ───────────────────────────────────────────────── */
 
@@ -73,7 +74,7 @@ function getMonday(d: Date): Date {
 
 function fmtTimestamp(ts: string | null): string {
   if (!ts) return "—";
-  return new Date(ts).toLocaleTimeString("en-AU", { hour: "2-digit", minute: "2-digit", hour12: true });
+  return toAusTime12(new Date(ts));
 }
 
 /* ── component ───────────────────────────────────────────── */
@@ -118,7 +119,6 @@ export default function PortalPage() {
       setEmployeeInfo(statusData[0] as EmployeeInfo);
       setEmployeeCode(code);
 
-      // Fetch shifts and timesheets in parallel
       const [shiftsRes, tsRes] = await Promise.all([
         supabase.rpc("get_employee_shifts", { _employee_code: code }),
         supabase.rpc("get_employee_timesheets", { _employee_code: code }),
@@ -142,7 +142,6 @@ export default function PortalPage() {
     setTimesheets([]);
   };
 
-  // Auto-logout after 5 minutes of inactivity
   useEffect(() => {
     if (!authenticated) return;
     let timeout: NodeJS.Timeout;
@@ -193,7 +192,7 @@ export default function PortalPage() {
           <img src="/logo.jpeg" alt="Pro Regal Pavilion" className="h-16 w-16 mx-auto rounded-lg object-cover mb-2" />
           <h1 className="text-xl font-bold gold-text">Employee Portal</h1>
           <p className="text-sm text-muted-foreground mt-1">
-            {currentTime.toLocaleDateString("en-AU", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}
+            {toAusFormatted(currentTime, { weekday: "long", day: "numeric", month: "long", year: "numeric" })}
           </p>
         </div>
 
@@ -280,7 +279,7 @@ export default function PortalPage() {
             <CardContent className="p-4 text-center">
               <p className="text-xs text-muted-foreground mb-1">Next Shift</p>
               {(() => {
-                const today = new Date().toISOString().slice(0, 10);
+                const today = ausToday();
                 const next = shifts.find(s => s.date >= today);
                 if (!next) return <p className="text-sm text-muted-foreground mt-2">No upcoming shifts</p>;
                 return (
@@ -327,7 +326,7 @@ export default function PortalPage() {
                     <CardHeader className="pb-2 px-4 pt-4">
                       <div className="flex items-center justify-between">
                         <CardTitle className="text-sm font-medium text-muted-foreground">
-                          {ws.toLocaleDateString("en-AU", { day: "numeric", month: "short" })} – {we.toLocaleDateString("en-AU", { day: "numeric", month: "short" })}
+                          {toAusFormatted(ws, { day: "numeric", month: "short" })} – {toAusFormatted(we, { day: "numeric", month: "short" })}
                         </CardTitle>
                         <Badge variant="outline" className="font-mono text-xs">{weekTotal.toFixed(1)}h</Badge>
                       </div>
@@ -338,7 +337,7 @@ export default function PortalPage() {
                           <div>
                             <p className="text-sm font-medium text-foreground">{shift.day_of_week}</p>
                             <p className="text-xs text-muted-foreground">
-                              {new Date(shift.date + "T00:00:00").toLocaleDateString("en-AU", { day: "numeric", month: "short" })}
+                              {toAusFormatted(new Date(shift.date + "T00:00:00"), { day: "numeric", month: "short" })}
                             </p>
                           </div>
                           <div className="text-right">
@@ -381,8 +380,8 @@ export default function PortalPage() {
                 {/* Timesheet rows */}
                 {timesheets.map((ts) => {
                   const d = new Date(ts.work_date + "T00:00:00");
-                  const dayName = d.toLocaleDateString("en-AU", { weekday: "short" });
-                  const dateLabel = d.toLocaleDateString("en-AU", { day: "numeric", month: "short" });
+                  const dayName = toAusFormatted(d, { weekday: "short" });
+                  const dateLabel = toAusFormatted(d, { day: "numeric", month: "short" });
                   const isActive = ts.clock_in && !ts.clock_out;
 
                   return (

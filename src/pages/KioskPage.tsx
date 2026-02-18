@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { Camera, Clock, Coffee, LogIn, LogOut, ArrowLeft, Delete, User } from "lucide-react";
+import { toAusTime12, toAusTime12WithSeconds, toAusFormatted } from "@/lib/dateUtils";
 
 type KioskStep = "code_entry" | "action_select" | "photo_capture" | "confirmation";
 type EmployeeStatus = "clocked_out" | "clocked_in" | "on_break";
@@ -219,10 +220,10 @@ export default function KioskPage() {
         <img src="/logo.jpeg" alt="Pro Regal Pavilion" className="h-16 w-16 mx-auto rounded-lg object-cover mb-2" />
         <h1 className="text-xl font-bold gold-text">Pro Regal Pavilion</h1>
         <p className="text-3xl font-mono text-foreground mt-2">
-          {currentTime.toLocaleTimeString("en-AU", { hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: true })}
+          {toAusTime12WithSeconds(currentTime)}
         </p>
         <p className="text-sm text-muted-foreground">
-          {currentTime.toLocaleDateString("en-AU", { weekday: "long", year: "numeric", month: "long", day: "numeric" })}
+          {toAusFormatted(currentTime, { weekday: "long", year: "numeric", month: "long", day: "numeric" })}
         </p>
       </div>
 
@@ -333,7 +334,7 @@ export default function KioskPage() {
             <h2 className="text-2xl font-bold text-foreground">{actionLabels[selectedAction]?.label}</h2>
             <p className="text-xl gold-text font-semibold">{employeeName}</p>
             <p className="text-muted-foreground text-sm">
-              {currentTime.toLocaleTimeString("en-AU", { hour: "2-digit", minute: "2-digit", hour12: true })}
+              {toAusTime12(currentTime)}
             </p>
           </CardContent>
         </Card>
