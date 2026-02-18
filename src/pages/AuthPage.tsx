@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Navigate, Link, useSearchParams } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -32,9 +33,24 @@ export default function AuthPage() {
     setLoading(true);
 
     if (isMasterLogin) {
-      // Master login: sign-in only
       const { error } = await signIn(email, password);
-      if (error) {
+      if (!error) {
+        // Verify user actually has master role after sign-in
+        const { data: { user: signedInUser } } = await supabase.auth.getUser();
+        if (signedInUser) {
+          const { data: roles } = await supabase
+            .from("user_roles")
+            .select("role")
+            .eq("user_id", signedInUser.id)
+            .eq("role", "master");
+          if (!roles || roles.length === 0) {
+            await supabase.auth.signOut();
+            toast({ title: "Access Denied", description: "This login is for master admins only.", variant: "destructive" });
+            setLoading(false);
+            return;
+          }
+        }
+      } else {
         toast({ title: "Error", description: error, variant: "destructive" });
       }
     } else if (mode === "signUp") {
@@ -46,7 +62,24 @@ export default function AuthPage() {
       }
     } else {
       const { error } = await signIn(email, password);
-      if (error) {
+      if (!error) {
+        // Block master-only accounts from business admin login
+        const { data: { user: signedInUser } } = await supabase.auth.getUser();
+        if (signedInUser) {
+          const { data: roles } = await supabase
+            .from("user_roles")
+            .select("role, business_id")
+            .eq("user_id", signedInUser.id);
+          const hasMaster = roles?.some(r => r.role === "master");
+          const hasBusinessRole = roles?.some(r => r.role !== "master" && r.business_id);
+          if (hasMaster && !hasBusinessRole) {
+            await supabase.auth.signOut();
+            toast({ title: "Access Denied", description: "Master admin cannot sign in here. Use the Master Login on the home page.", variant: "destructive" });
+            setLoading(false);
+            return;
+          }
+        }
+      } else {
         toast({ title: "Error", description: error, variant: "destructive" });
       }
     }
