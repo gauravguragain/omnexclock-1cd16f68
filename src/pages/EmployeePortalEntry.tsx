@@ -54,7 +54,7 @@ export default function EmployeePortalEntry() {
             <Input
               value={businessCode}
               onChange={(e) => setBusinessCode(e.target.value.toUpperCase())}
-              placeholder="e.g. PRP-9898"
+              placeholder="e.g. PRP"
               className="text-center text-lg tracking-widest uppercase"
               autoFocus
             />
