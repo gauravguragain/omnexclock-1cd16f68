@@ -2,7 +2,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useBusiness } from "@/contexts/BusinessContext";
 import { Navigate, Outlet, Link, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Building2, LogOut, Menu, X, Shield, LayoutDashboard } from "lucide-react";
+import { Building2, LogOut, Menu, X, Shield, LayoutDashboard, Users, FileText, Settings } from "lucide-react";
 import { useState, useEffect } from "react";
 
 export default function MasterLayout() {
@@ -17,6 +17,9 @@ export default function MasterLayout() {
   const navItems = [
     { path: "/master", label: "Dashboard", icon: LayoutDashboard },
     { path: "/master/businesses", label: "Businesses", icon: Building2 },
+    { path: "/master/users", label: "Users", icon: Users },
+    { path: "/master/audit-log", label: "Audit Log", icon: FileText },
+    { path: "/master/settings", label: "Settings", icon: Settings },
   ];
 
   if (loading) {

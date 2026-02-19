@@ -30,6 +30,9 @@ import RequestsPage from "./pages/admin/RequestsPage";
 import MyBusinessPage from "./pages/admin/MyBusinessPage";
 import MasterDashboardPage from "./pages/master/MasterDashboardPage";
 import MasterBusinessesPage from "./pages/master/MasterBusinessesPage";
+import MasterUsersPage from "./pages/master/MasterUsersPage";
+import MasterAuditLogPage from "./pages/master/MasterAuditLogPage";
+import MasterSettingsPage from "./pages/master/MasterSettingsPage";
 
 const queryClient = new QueryClient();
 
@@ -69,6 +72,9 @@ const App = () => (
               <Route path="/master" element={<MasterLayout />}>
                 <Route index element={<MasterDashboardPage />} />
                 <Route path="businesses" element={<MasterBusinessesPage />} />
+                <Route path="users" element={<MasterUsersPage />} />
+                <Route path="audit-log" element={<MasterAuditLogPage />} />
+                <Route path="settings" element={<MasterSettingsPage />} />
               </Route>
 
               {/* Legacy redirects */}
