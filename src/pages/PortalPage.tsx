@@ -23,7 +23,7 @@ import { useToast } from "@/hooks/use-toast";
 import {
   ArrowLeft, Delete, CalendarRange, Clock, LogIn, LogOut, Coffee, User, FileText,
   MessageSquare, CalendarOff, Send, Plus, RefreshCw, CalendarIcon, Trash2, Pencil,
-  History, CheckCircle2, XCircle,
+  History, CheckCircle2, XCircle, PartyPopper,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ausToday, toAusFormatted, toAusTime12, toAusDate, toAusLocaleString, ensureTime12 } from "@/lib/dateUtils";
@@ -105,6 +105,138 @@ function PortalNotifications({ employeeCode, businessCode }: { employeeCode: str
       onMarkRead={markRead}
       onMarkAllRead={markAllRead}
     />
+  );
+}
+
+/* ── Today Tab ───────────────────────────────────────────── */
+function TodayTab({ employeeCode, businessCode, shifts, employeeName, businessName }: {
+  employeeCode: string;
+  businessCode: string | null;
+  shifts: PortalShift[];
+  employeeName: string;
+  businessName: string;
+}) {
+  const [dayEvents, setDayEvents] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const todayStr = ausToday();
+
+  useEffect(() => {
+    const fetchEvents = async () => {
+      setLoading(true);
+      const { data } = await supabase.rpc("get_employee_day_events", {
+        _employee_code: employeeCode,
+        _business_code: businessCode,
+      });
+      setDayEvents((data || []).filter((e: any) => e.date === todayStr));
+      setLoading(false);
+    };
+    fetchEvents();
+  }, [employeeCode, businessCode, todayStr]);
+
+  const todayShifts = shifts.filter(s => s.date === todayStr);
+  const hasShiftToday = todayShifts.length > 0;
+
+  return (
+    <div className="space-y-4">
+      {/* Today's Shift */}
+      <Card>
+        <CardHeader className="pb-2 px-4 pt-4">
+          <CardTitle className="text-sm font-medium flex items-center gap-2">
+            <Clock className="h-4 w-4 text-primary" /> Today's Shift
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="px-4 pb-4">
+          {hasShiftToday ? (
+            <div className="space-y-2">
+              {todayShifts.map(s => (
+                <div key={s.id} className="flex items-center justify-between rounded-lg bg-primary/10 border border-primary/20 px-3 py-2.5">
+                  <div>
+                    <span className="font-semibold text-sm text-foreground">{formatTime12(s.start_time)} – {formatTime12(s.end_time)}</span>
+                    <span className="text-xs text-muted-foreground ml-2">{s.break_minutes}m break</span>
+                  </div>
+                  <span className="font-mono text-sm font-bold">{(s.hours_worked ?? calcNetHours(s.start_time, s.end_time, s.break_minutes)).toFixed(2)}h</span>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-sm text-muted-foreground text-center py-3">No shift scheduled for today.</p>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Event Details */}
+      {hasShiftToday && (
+        <Card>
+          <CardHeader className="pb-2 px-4 pt-4">
+            <CardTitle className="text-sm font-medium flex items-center gap-2">
+              <PartyPopper className="h-4 w-4 text-primary" /> Today's Event Setup
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="px-4 pb-4">
+            {loading ? (
+              <p className="text-xs text-muted-foreground text-center py-3">Loading...</p>
+            ) : dayEvents.length === 0 ? (
+              <p className="text-sm text-muted-foreground text-center py-3">No event details for today.</p>
+            ) : (
+              <div className="space-y-3">
+                {dayEvents.map((ev: any, idx: number) => (
+                  <div key={ev.id} className="rounded-lg border border-border/60 bg-secondary/30 p-3 space-y-2">
+                    {ev.event_space && (
+                      <div className="flex justify-between text-xs">
+                        <span className="text-muted-foreground">Event Space</span>
+                        <span className="font-semibold text-foreground">{ev.event_space}</span>
+                      </div>
+                    )}
+                    {ev.event_type && (
+                      <div className="flex justify-between text-xs">
+                        <span className="text-muted-foreground">Event Type</span>
+                        <span className="font-semibold text-foreground">{ev.event_type}</span>
+                      </div>
+                    )}
+                    <div className="flex justify-between text-xs">
+                      <span className="text-muted-foreground">Tables</span>
+                      <span className="font-semibold text-foreground">{ev.num_tables} ({ev.chairs_per_table} chairs each)</span>
+                    </div>
+                    <div className="flex justify-between text-xs">
+                      <span className="text-muted-foreground">Tablecloth</span>
+                      <span className="font-semibold text-foreground">{ev.tablecloth_color === "black" ? "⬛ Black" : "⬜ White"}</span>
+                    </div>
+                    <div className="flex flex-wrap gap-2 pt-1">
+                      {ev.cold_sparkles && <Badge variant="secondary" className="text-[10px]">✨ Cold Sparkles</Badge>}
+                      {ev.dry_ice && <Badge variant="secondary" className="text-[10px]">🌫️ Dry Ice</Badge>}
+                      {ev.red_carpet && <Badge variant="secondary" className="text-[10px]">🔴 Red Carpet</Badge>}
+                      {ev.decor_access && <Badge variant="secondary" className="text-[10px]">🎨 Decor Access</Badge>}
+                    </div>
+                    {ev.notes && <p className="text-xs text-muted-foreground italic mt-1">{ev.notes}</p>}
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Portal Access Instructions */}
+      <Card>
+        <CardHeader className="pb-2 px-4 pt-4">
+          <CardTitle className="text-sm font-medium flex items-center gap-2">
+            <LogIn className="h-4 w-4 text-primary" /> Portal Access Info
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="px-4 pb-4">
+          <div className="text-xs space-y-2 text-muted-foreground">
+            <p className="font-medium text-foreground">How to access your Employee Portal:</p>
+            <ol className="list-decimal pl-4 space-y-1">
+              <li>Open <span className="font-mono text-primary break-all">{window.location.origin}/portal</span> in your browser</li>
+              <li>Enter the Business Code: <span className="font-mono font-bold text-foreground">{businessCode || "—"}</span></li>
+              <li>Enter your 4-digit Employee Code (provided by your manager)</li>
+              <li>View your shifts, timesheets, forum, and requests</li>
+            </ol>
+            <p className="text-[10px] mt-2 opacity-70">Your employee code is confidential. Do not share it with others.</p>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
   );
 }
 
@@ -602,8 +734,11 @@ export default function PortalPage() {
         </div>
 
         {/* Tabs */}
-        <Tabs defaultValue="roster" className="w-full">
-          <TabsList className="w-full grid grid-cols-4">
+        <Tabs defaultValue="today" className="w-full">
+          <TabsList className="w-full grid grid-cols-5">
+            <TabsTrigger value="today" className="gap-1 text-xs">
+              <Clock className="h-3.5 w-3.5" /> Today
+            </TabsTrigger>
             <TabsTrigger value="roster" className="gap-1 text-xs" data-tour="portal-roster">
               <CalendarRange className="h-3.5 w-3.5" /> Roster
             </TabsTrigger>
@@ -617,6 +752,11 @@ export default function PortalPage() {
               <CalendarOff className="h-3.5 w-3.5" /> Requests
             </TabsTrigger>
           </TabsList>
+
+          {/* TODAY TAB */}
+          <TabsContent value="today" className="space-y-4 mt-4">
+            <TodayTab employeeCode={employeeCode} businessCode={urlBusinessCode?.toUpperCase() || null} shifts={shifts} employeeName={employeeInfo?.employee_name || ""} businessName={businessName} />
+          </TabsContent>
 
           {/* ROSTER TAB */}
           <TabsContent value="roster" className="space-y-4 mt-4">

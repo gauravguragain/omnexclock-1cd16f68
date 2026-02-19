@@ -13,6 +13,9 @@ interface EmailRequest {
   employeeName?: string;
   weekLabel?: string;
   shifts?: { day: string; date: string; start: string; end: string; breakMin: number; notes?: string }[];
+  dayEvents?: { date: string; event_space?: string; event_type?: string; num_tables?: number; chairs_per_table?: number; tablecloth_color?: string; cold_sparkles?: boolean; dry_ice?: boolean; red_carpet?: boolean; decor_access?: boolean; notes?: string }[];
+  portalUrl?: string;
+  businessCode?: string;
   // csv_export fields
   recipientEmail?: string;
   subject?: string;
@@ -72,6 +75,33 @@ serve(async (req) => {
             </thead>
             <tbody>${shiftRows}</tbody>
           </table>
+          ${(body.dayEvents && body.dayEvents.length > 0) ? `
+          <h3 style="color:#1a1a1a;margin-top:24px;font-size:16px;">📋 Event Details</h3>
+          ${body.dayEvents.map(ev => `
+            <div style="margin:8px 0;padding:10px 14px;background:#f0f9ff;border:1px solid #bae6fd;border-radius:6px;">
+              <div style="font-size:13px;font-weight:600;color:#0369a1;">${ev.date}${ev.event_space ? ` — ${ev.event_space}` : ''}</div>
+              ${ev.event_type ? `<div style="font-size:12px;color:#475569;margin-top:4px;">Type: <strong>${ev.event_type}</strong></div>` : ''}
+              <div style="font-size:12px;color:#475569;margin-top:2px;">Tables: ${ev.num_tables || 0} (${ev.chairs_per_table || 0} chairs each) · Tablecloth: ${ev.tablecloth_color === 'black' ? '⬛ Black' : '⬜ White'}</div>
+              <div style="font-size:11px;color:#64748b;margin-top:4px;">${[
+                ev.cold_sparkles ? '✨ Cold Sparkles' : '',
+                ev.dry_ice ? '🌫️ Dry Ice' : '',
+                ev.red_carpet ? '🔴 Red Carpet' : '',
+                ev.decor_access ? '🎨 Decor Access' : '',
+              ].filter(Boolean).join(' · ') || 'No extras'}</div>
+              ${ev.notes ? `<div style="font-size:11px;color:#94a3b8;margin-top:4px;font-style:italic;">${ev.notes}</div>` : ''}
+            </div>
+          `).join('')}
+          ` : ''}
+          ${body.portalUrl ? `
+          <div style="margin-top:20px;padding:14px 16px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:6px;">
+            <p style="margin:0;font-size:13px;color:#166534;font-weight:600;">📱 Access Your Employee Portal</p>
+            <p style="margin:4px 0 0;font-size:12px;color:#15803d;line-height:1.5;">
+              1. Open <a href="${body.portalUrl}" style="color:#0369a1;text-decoration:underline;">${body.portalUrl}</a><br/>
+              2. Enter Business Code: <strong>${body.businessCode || ''}</strong><br/>
+              3. Enter your 4-digit Employee Code (provided by your manager)
+            </p>
+          </div>
+          ` : ''}
           <div style="margin-top:20px;padding:14px 16px;background:#fef9e7;border:1px solid #f5e6b8;border-radius:6px;">
             <p style="margin:0;font-size:12px;color:#92400e;line-height:1.5;">
               <strong>⚠️ Disclaimer:</strong> The shift and break times stated in this roster are indicative and may vary according to the operational needs of the business and at the discretion of management. You may be required to start earlier, finish later, or take breaks at different times depending on business demands. Please check with your manager if you have any concerns.

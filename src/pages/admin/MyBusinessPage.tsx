@@ -10,6 +10,7 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { Building2, Upload, Palette, Check, Loader2, BookOpen } from "lucide-react";
 import { logMasterAudit } from "@/lib/auditLog";
+import EventSetupSettings from "@/components/EventSetupSettings";
 
 export default function MyBusinessPage() {
   const { runAction } = useActionLock();
@@ -304,6 +305,9 @@ export default function MyBusinessPage() {
           </div>
         </CardContent>
       </Card>
+      {/* Event Setup */}
+      <EventSetupSettings />
+
       {/* Instruction Manual */}
       <Card>
         <CardHeader>
