@@ -1,4 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
+import WalkthroughTour from "@/components/WalkthroughTour";
+import { portalTourSteps } from "@/components/tourSteps";
 import { useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useBusiness } from "@/contexts/BusinessContext";
@@ -1120,6 +1122,12 @@ export default function PortalPage() {
       <footer className="text-center py-6">
         <p className="text-xs text-muted-foreground">© 2024 Omnex Ventures Pty. Ltd. All rights reserved.</p>
       </footer>
+
+      {/* First-time employee walkthrough */}
+      <WalkthroughTour
+        steps={portalTourSteps}
+        storageKey={`portal-tour-seen-${urlBusinessCode}`}
+      />
     </div>
   );
 }
