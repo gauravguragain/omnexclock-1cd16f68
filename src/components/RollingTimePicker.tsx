@@ -23,6 +23,7 @@ function ScrollColumn({
   const containerRef = useRef<HTMLDivElement>(null);
   const isScrollingRef = useRef(false);
   const timeoutRef = useRef<ReturnType<typeof setTimeout>>();
+  const touchStartY = useRef<number | null>(null);
 
   const scrollToIndex = useCallback((index: number, smooth = true) => {
     if (!containerRef.current) return;
@@ -36,6 +37,50 @@ function ScrollColumn({
     const idx = items.indexOf(selected);
     if (idx >= 0) scrollToIndex(idx, false);
   }, [selected, items, scrollToIndex]);
+
+  // Touch scroll handling
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+
+    const onTouchStart = (e: TouchEvent) => {
+      touchStartY.current = e.touches[0].clientY;
+    };
+
+    const onTouchMove = (e: TouchEvent) => {
+      if (touchStartY.current === null) return;
+      const deltaY = touchStartY.current - e.touches[0].clientY;
+      touchStartY.current = e.touches[0].clientY;
+      el.scrollTop += deltaY;
+      e.preventDefault();
+      e.stopPropagation();
+    };
+
+    const onTouchEnd = () => {
+      touchStartY.current = null;
+      // Snap to nearest item
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+      timeoutRef.current = setTimeout(() => {
+        const scrollTop = el.scrollTop;
+        const index = Math.round(scrollTop / ITEM_HEIGHT);
+        const clampedIndex = Math.max(0, Math.min(index, items.length - 1));
+        scrollToIndex(clampedIndex);
+        if (items[clampedIndex] !== selected) {
+          onSelect(items[clampedIndex]);
+        }
+      }, 80);
+    };
+
+    el.addEventListener("touchstart", onTouchStart, { passive: true });
+    el.addEventListener("touchmove", onTouchMove, { passive: false });
+    el.addEventListener("touchend", onTouchEnd, { passive: true });
+
+    return () => {
+      el.removeEventListener("touchstart", onTouchStart);
+      el.removeEventListener("touchmove", onTouchMove);
+      el.removeEventListener("touchend", onTouchEnd);
+    };
+  }, [items, selected, onSelect, scrollToIndex]);
 
   const handleScroll = () => {
     if (!containerRef.current) return;
@@ -55,6 +100,18 @@ function ScrollColumn({
     }, 80);
   };
 
+  // Keyboard navigation
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    const idx = items.indexOf(selected);
+    if (e.key === "ArrowDown" && idx < items.length - 1) {
+      e.preventDefault();
+      onSelect(items[idx + 1]);
+    } else if (e.key === "ArrowUp" && idx > 0) {
+      e.preventDefault();
+      onSelect(items[idx - 1]);
+    }
+  };
+
   return (
     <div className="relative" style={{ height: ITEM_HEIGHT * VISIBLE_ITEMS }}>
       {/* Selection highlight */}
@@ -69,13 +126,14 @@ function ScrollColumn({
       <div
         ref={containerRef}
         onScroll={handleScroll}
-        className="h-full overflow-y-auto scrollbar-hide snap-y snap-mandatory"
+        onKeyDown={handleKeyDown}
+        tabIndex={0}
+        className="h-full overflow-y-auto scrollbar-hide snap-y snap-mandatory focus:outline-none"
         style={{
           paddingTop: CENTER_INDEX * ITEM_HEIGHT,
           paddingBottom: CENTER_INDEX * ITEM_HEIGHT,
           scrollSnapType: "y mandatory",
           WebkitOverflowScrolling: "touch",
-          touchAction: "pan-y",
           overscrollBehavior: "contain",
         }}
       >

@@ -45,6 +45,7 @@ function ScrollColumn({
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const selectedRef = useRef<HTMLButtonElement>(null);
+  const touchStartY = useRef<number | null>(null);
 
   useEffect(() => {
     if (selectedRef.current && containerRef.current) {
@@ -52,22 +53,63 @@ function ScrollColumn({
     }
   }, [selected]);
 
-  const handleWheel = (e: React.WheelEvent<HTMLDivElement>) => {
-    e.stopPropagation();
-    if (containerRef.current) {
-      containerRef.current.scrollTop += e.deltaY;
+  // Native touch scroll handling
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+
+    const onTouchStart = (e: TouchEvent) => {
+      touchStartY.current = e.touches[0].clientY;
+    };
+
+    const onTouchMove = (e: TouchEvent) => {
+      if (touchStartY.current === null) return;
+      const deltaY = touchStartY.current - e.touches[0].clientY;
+      touchStartY.current = e.touches[0].clientY;
+      el.scrollTop += deltaY;
+      e.preventDefault();
+      e.stopPropagation();
+    };
+
+    const onTouchEnd = () => {
+      touchStartY.current = null;
+    };
+
+    el.addEventListener("touchstart", onTouchStart, { passive: true });
+    el.addEventListener("touchmove", onTouchMove, { passive: false });
+    el.addEventListener("touchend", onTouchEnd, { passive: true });
+
+    return () => {
+      el.removeEventListener("touchstart", onTouchStart);
+      el.removeEventListener("touchmove", onTouchMove);
+      el.removeEventListener("touchend", onTouchEnd);
+    };
+  }, []);
+
+  // Keyboard navigation
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    const idx = items.indexOf(selected);
+    if (e.key === "ArrowDown" && idx < items.length - 1) {
+      e.preventDefault();
+      onSelect(items[idx + 1]);
+    } else if (e.key === "ArrowUp" && idx > 0) {
+      e.preventDefault();
+      onSelect(items[idx - 1]);
     }
   };
 
   return (
     <div
       ref={containerRef}
-      onWheel={handleWheel}
-      className={cn("overflow-y-auto overscroll-contain py-1", width || "w-14")}
+      onKeyDown={handleKeyDown}
+      tabIndex={0}
+      className={cn(
+        "overflow-y-auto overscroll-contain py-1 focus:outline-none",
+        width || "w-14"
+      )}
       style={{
         maxHeight: 220,
         WebkitOverflowScrolling: "touch",
-        touchAction: "pan-y",
         overscrollBehavior: "contain",
       }}
     >
@@ -122,7 +164,7 @@ export function TimeDropdownPicker({ value, onChange, placeholder = "Select time
           {displayValue || placeholder}
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-auto p-0" align="start">
+      <PopoverContent className="w-auto p-0" align="start" onOpenAutoFocus={(e) => e.preventDefault()}>
         <div className="flex divide-x divide-border">
           <div>
             <p className="text-xs font-medium text-muted-foreground px-3 py-2 border-b border-border text-center">HR</p>
