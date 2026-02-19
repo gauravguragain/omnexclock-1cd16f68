@@ -255,7 +255,7 @@ export default function InventoryPage() {
     const headers = ["Name", "Category", "Current Count", "Par Level", "Unit", "Status"];
     const rows = items.map(i => [
       i.name, i.category, String(i.current_count), String(i.min_count), i.unit,
-      i.current_count <= i.min_count ? "Low Stock" : "OK",
+      i.current_count < i.min_count ? "Low Stock" : "OK",
     ]);
     downloadCSV(`inventory-items-${new Date().toISOString().slice(0, 10)}.csv`, headers, rows);
   };
@@ -281,7 +281,7 @@ export default function InventoryPage() {
 
   // Auto-request low stock
   const requestLowStockOrders = () => {
-    const lowItems = items.filter(i => i.current_count <= i.min_count);
+    const lowItems = items.filter(i => i.current_count < i.min_count);
     if (lowItems.length === 0) {
       toast({ title: "No low stock items" });
       return;
@@ -291,7 +291,7 @@ export default function InventoryPage() {
     setOrderOpen(true);
   };
 
-  const lowStockItems = items.filter(i => i.current_count <= i.min_count);
+  const lowStockItems = items.filter(i => i.current_count < i.min_count);
 
   // Active orders = pending, approved, ordered (not received/rejected)
   const activeOrders = orders.filter(o => ["pending", "approved", "ordered"].includes(o.status));
@@ -352,7 +352,7 @@ export default function InventoryPage() {
                         {items.map(i => (
                           <SelectItem key={i.id} value={i.id}>
                             {i.name} ({i.current_count}/{i.min_count} {i.unit})
-                            {i.current_count <= i.min_count ? " ⚠️" : ""}
+                            {i.current_count < i.min_count ? " ⚠️" : ""}
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -503,7 +503,7 @@ export default function InventoryPage() {
                 </TableHeader>
                 <TableBody>
                   {items.map(item => {
-                    const isLow = item.current_count <= item.min_count;
+                    const isLow = item.current_count < item.min_count;
                     const itemActiveOrders = activeOrders.filter(o => o.item_id === item.id);
                     return (
                       <TableRow key={item.id} className={isLow ? "bg-warning/5" : ""}>
