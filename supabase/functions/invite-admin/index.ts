@@ -101,14 +101,20 @@ serve(async (req) => {
     };
     const roleLabel = roleLabels[role] || role;
 
+    // Always use the published URL for links (not the preview URL)
+    const publishedUrl = appUrl.includes("preview--") 
+      ? "https://omnexclock.lovable.app" 
+      : appUrl;
+
     const inductionGuides: Record<string, string> = {
       super_admin: "/induction-guide-super-admin.html",
       admin: "/induction-guide-admin.html",
       viewer: "/induction-guide-viewer.html",
       roster_admin: "/induction-guide-roster-admin.html",
     };
-    const guideUrl = `${appUrl}${inductionGuides[role] || "/induction-guide.html"}`;
-    const signupUrl = `${appUrl}/auth?invite=${token}`;
+    const guideUrl = `${publishedUrl}${inductionGuides[role] || "/induction-guide.html"}`;
+    const signupUrl = `${publishedUrl}/auth?invite=${token}`;
+    const portalUrl = `${publishedUrl}/portal`;
 
     // Send invitation email
     const html = `
@@ -145,6 +151,13 @@ serve(async (req) => {
           </p>
           <a href="${guideUrl}" style="color:#c9a227;font-weight:600;font-size:13px;text-decoration:underline;">
             View Your Induction Guide →
+          </a>
+        </div>
+        
+        <div style="background:#f0f4f8;border-radius:8px;padding:16px;margin:16px 0;text-align:center;">
+          <p style="color:#555;font-size:13px;margin:0 0 8px;">Looking for the <strong>Employee Portal</strong>?</p>
+          <a href="${portalUrl}" style="color:#c9a227;font-weight:600;font-size:13px;text-decoration:underline;">
+            Access Employee Portal →
           </a>
         </div>
         
