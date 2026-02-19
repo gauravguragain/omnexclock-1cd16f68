@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -28,6 +29,7 @@ const REPORT_OPTIONS = [
   { id: "service", label: "Service & Maintenance", description: "Task schedules, overdue items, compliance", category: "Compliance" },
   { id: "audit", label: "Audit Trail", description: "Admin actions, system changes, security log", category: "Compliance" },
   { id: "dept_breakdown", label: "Department Breakdown", description: "Hours, headcount, and costs per department", category: "Analytics" },
+  { id: "margin_analysis", label: "Margin Analysis", description: "Difference between admin pay and employee pay per employee", category: "Finance", superAdminOnly: true },
 ] as const;
 
 type ReportId = typeof REPORT_OPTIONS[number]["id"];
@@ -75,11 +77,16 @@ function getWeekOptions(monthStr: string) {
 
 export default function MonthlyReportSection() {
   const { business } = useBusiness();
+  const { isSuperAdminOf } = useAuth();
   const { toast } = useToast();
   const [selectedMonth, setSelectedMonth] = useState(format(new Date(), "yyyy-MM"));
   const [selectedWeek, setSelectedWeek] = useState<string>("full-month");
-  const [selectedReports, setSelectedReports] = useState<Set<ReportId>>(new Set(REPORT_OPTIONS.map(r => r.id)));
+  // Default: select all except margin_analysis
+  const [selectedReports, setSelectedReports] = useState<Set<ReportId>>(new Set(REPORT_OPTIONS.filter(r => r.id !== "margin_analysis").map(r => r.id)));
   const [generating, setGenerating] = useState(false);
+
+  const currentBusinessId = business?.id || "";
+  const isSuperAdmin = isSuperAdminOf(currentBusinessId);
 
   const monthOptions = getMonthOptions();
   const weekOptions = getWeekOptions(selectedMonth);
@@ -92,7 +99,7 @@ export default function MonthlyReportSection() {
     });
   };
 
-  const selectAll = () => setSelectedReports(new Set(REPORT_OPTIONS.map(r => r.id)));
+  const selectAll = () => setSelectedReports(new Set(REPORT_OPTIONS.filter(r => r.id !== "margin_analysis").map(r => r.id)));
   const selectNone = () => setSelectedReports(new Set());
 
   const handleGenerate = async () => {
@@ -741,6 +748,67 @@ export default function MonthlyReportSection() {
       }
 
       // ==========================================
+      // SECTION: MARGIN ANALYSIS (Super Admin only)
+      // ==========================================
+      if (selectedReports.has("margin_analysis") && results.payroll && results.payroll.length > 0) {
+        addSectionHeader("Margin Analysis", "Finance");
+        const payroll = results.payroll;
+        const totalEmpPay = payroll.reduce((s: number, p: any) => s + Number(p.employee_pay), 0);
+        const totalAdminPay = payroll.reduce((s: number, p: any) => s + Number(p.admin_pay), 0);
+        const totalMargin = totalAdminPay - totalEmpPay;
+        const totalHours = payroll.reduce((s: number, p: any) => s + Number(p.net_hours), 0);
+        const marginPct = totalAdminPay > 0 ? (totalMargin / totalAdminPay * 100) : 0;
+
+        addStatsRow([
+          { label: "Total Margin", value: `$${totalMargin.toFixed(2)}`, color: [16, 124, 65] },
+          { label: "Margin %", value: `${marginPct.toFixed(1)}%`, color: [41, 98, 255] },
+          { label: "Admin Cost (ex GST)", value: `$${totalAdminPay.toFixed(2)}`, color: [180, 83, 9] },
+          { label: "Employee Pay", value: `$${totalEmpPay.toFixed(2)}`, color: [124, 58, 237] },
+        ]);
+
+        addSubHeader("Individual Margin Breakdown");
+        addTable(
+          ["Employee", "Department", "Net Hours", "Employee Pay", "Admin Cost", "Margin", "Margin %"],
+          payroll.map((p: any) => {
+            const margin = Number(p.admin_pay) - Number(p.employee_pay);
+            const mPct = Number(p.admin_pay) > 0 ? (margin / Number(p.admin_pay) * 100) : 0;
+            return [
+              p.name, p.department || "-", Number(p.net_hours).toFixed(2),
+              `$${Number(p.employee_pay).toFixed(2)}`, `$${Number(p.admin_pay).toFixed(2)}`,
+              `$${margin.toFixed(2)}`, `${mPct.toFixed(1)}%`
+            ];
+          }).sort((a: string[], b: string[]) => parseFloat(b[5].replace('$', '')) - parseFloat(a[5].replace('$', ''))),
+          SECTION_COLORS.Finance
+        );
+
+        // Department margin breakdown
+        const deptMargin: Record<string, { empPay: number; adminPay: number; hours: number; count: number }> = {};
+        payroll.forEach((p: any) => {
+          const dept = p.department || "Unassigned";
+          if (!deptMargin[dept]) deptMargin[dept] = { empPay: 0, adminPay: 0, hours: 0, count: 0 };
+          deptMargin[dept].empPay += Number(p.employee_pay);
+          deptMargin[dept].adminPay += Number(p.admin_pay);
+          deptMargin[dept].hours += Number(p.net_hours);
+          deptMargin[dept].count++;
+        });
+
+        if (Object.keys(deptMargin).length > 0) {
+          addSubHeader("Margin by Department");
+          addTable(
+            ["Department", "Employees", "Employee Pay", "Admin Cost", "Margin", "Margin %"],
+            Object.entries(deptMargin).sort((a, b) => (b[1].adminPay - b[1].empPay) - (a[1].adminPay - a[1].empPay)).map(([dept, d]) => {
+              const margin = d.adminPay - d.empPay;
+              const mPct = d.adminPay > 0 ? (margin / d.adminPay * 100) : 0;
+              return [dept, String(d.count), `$${d.empPay.toFixed(2)}`, `$${d.adminPay.toFixed(2)}`, `$${margin.toFixed(2)}`, `${mPct.toFixed(1)}%`];
+            }),
+            SECTION_COLORS.Finance
+          );
+        }
+
+        addNote("* Margin = Admin Cost (ex GST) - Employee Pay. This represents the earnings retained between charge-out and pay rates.");
+      }
+
+      // ==========================================
       // SECTION: REQUESTS
       // ==========================================
       if (selectedReports.has("requests") && results.requests) {
@@ -1118,7 +1186,7 @@ export default function MonthlyReportSection() {
             <div key={cat} className="space-y-2">
               <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">{cat}</p>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                {REPORT_OPTIONS.filter(o => o.category === cat).map(opt => (
+                {REPORT_OPTIONS.filter(o => o.category === cat).filter(o => !('superAdminOnly' in o && o.superAdminOnly) || isSuperAdmin).map(opt => (
                   <label
                     key={opt.id}
                     className={`flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${
@@ -1147,7 +1215,7 @@ export default function MonthlyReportSection() {
         {/* Selected count */}
         <div className="flex items-center justify-between text-sm">
           <span className="text-muted-foreground">
-            {selectedReports.size} of {REPORT_OPTIONS.length} reports selected
+            {selectedReports.size} of {REPORT_OPTIONS.filter(r => !('superAdminOnly' in r && r.superAdminOnly) || isSuperAdmin).length} reports selected
           </span>
           {selectedWeek === "full-month" && (
             <Badge variant="secondary" className="text-xs">Includes weekly breakdown</Badge>
