@@ -746,7 +746,7 @@ export default function PortalPage() {
   /* ── LOGIN SCREEN ── */
   if (!authenticated) {
     return (
-      <div className="h-dvh bg-background flex flex-col items-center justify-center p-4 standalone-top-pad overflow-hidden">
+      <div className="min-h-[100dvh] bg-background flex flex-col items-center justify-center p-4 standalone-top-pad overflow-y-auto">
         <div className="text-center mb-6">
           {businessLogo ? (
             <img src={businessLogo} alt={businessName} className="h-16 w-16 mx-auto rounded-lg object-cover mb-2" />
