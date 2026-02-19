@@ -123,16 +123,12 @@ function EventCard({ ev }: { ev: any }) {
     ev.live_stall && "🍳 Live Stall",
   ].filter(Boolean) as string[];
 
-  const viewPdf = async (urlOrPath: string) => {
+  const viewPdf = (urlOrPath: string) => {
     let url = urlOrPath;
-    // If it's a file path (not a full URL), generate a signed URL
+    // If it's a file path (not a full URL), construct the public URL
     if (!urlOrPath.startsWith("http")) {
-      const { data } = await supabase.storage.from("event-runsheets").createSignedUrl(urlOrPath, 3600);
-      if (data?.signedUrl) {
-        url = data.signedUrl;
-      } else {
-        return;
-      }
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+      url = `${supabaseUrl}/storage/v1/object/public/event-runsheets/${urlOrPath}`;
     }
     window.open(url, "_blank", "noopener,noreferrer");
   };
