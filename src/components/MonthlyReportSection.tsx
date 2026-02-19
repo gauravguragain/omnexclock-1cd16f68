@@ -20,7 +20,7 @@ const REPORT_OPTIONS = [
   { id: "payroll", label: "Payroll Summary", description: "Pay entries, cost breakdown, department totals", category: "Finance" },
   { id: "labour_cost", label: "Labour Cost Analysis", description: "Cost per department, average hourly rate, overtime", category: "Finance" },
   { id: "requests", label: "Employee Requests", description: "Leave, availability, approval rates", category: "People" },
-  { id: "inventory", label: "Kitchen Inventory", description: "Stock levels, low stock alerts, category breakdown", category: "Stock" },
+  { id: "inventory", label: "FOH Inventory", description: "Stock levels, low stock alerts, category breakdown", category: "Stock" },
   { id: "bar_inventory", label: "Bar Inventory & Orders", description: "Bar stock, order history, reorder alerts", category: "Stock" },
   { id: "events", label: "Events & Functions", description: "Day events, banquet tiers, guest counts, setup details", category: "Operations" },
   { id: "service", label: "Service & Maintenance", description: "Task schedules, overdue items, compliance", category: "Compliance" },
@@ -628,7 +628,7 @@ export default function MonthlyReportSection() {
       // SECTION: INVENTORY
       // ==========================================
       if (selectedReports.has("inventory") && results.inventory) {
-        addSectionHeader("Kitchen Inventory", "Stock");
+        addSectionHeader("FOH Inventory", "Stock");
         const items = results.inventory;
         const lowStock = items.filter((i: any) => i.current_count <= i.min_count);
         const categories = [...new Set(items.map((i: any) => i.category || "General"))] as string[];
