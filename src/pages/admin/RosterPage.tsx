@@ -118,10 +118,21 @@ export default function RosterPage() {
   const [saving, setSaving] = useState(false);
   const [publishing, setPublishing] = useState(false);
   const [copiedShift, setCopiedShift] = useState<Shift | null>(null);
+  const [departmentFilter, setDepartmentFilter] = useState<string>("all");
 
   const weekDates = useMemo(() => DAYS.map((_, i) => addDays(weekStart, i)), [weekStart]);
   const weekEnd = addDays(weekStart, 6);
   const weekLabel = `${toAusFormatted(weekStart, { day: "numeric", month: "short" })} – ${toAusFormatted(weekEnd, { day: "numeric", month: "short", year: "numeric" })}`;
+
+  const departments = useMemo(() => {
+    const depts = [...new Set(employees.map(e => e.department).filter(Boolean))] as string[];
+    return depts.sort();
+  }, [employees]);
+
+  const filteredEmployees = useMemo(() => {
+    if (departmentFilter === "all") return employees;
+    return employees.filter(e => e.department === departmentFilter);
+  }, [employees, departmentFilter]);
 
   /* ── data fetching ── */
 
@@ -518,6 +529,19 @@ export default function RosterPage() {
           <Button variant="ghost" size="sm" onClick={() => setWeekStart(getMonday(new Date()))} className="text-xs text-muted-foreground hover:text-primary ml-1">
             Today
           </Button>
+          {departments.length > 0 && (
+            <Select value={departmentFilter} onValueChange={setDepartmentFilter}>
+              <SelectTrigger className="h-9 w-[160px] rounded-lg text-xs ml-2">
+                <SelectValue placeholder="All Departments" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Departments</SelectItem>
+                {departments.map(dept => (
+                  <SelectItem key={dept} value={dept}>{dept}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
         </div>
 
         {!isViewer && (
@@ -571,15 +595,15 @@ export default function RosterPage() {
                       Loading roster...
                     </td>
                   </tr>
-                ) : employees.length === 0 ? (
+                ) : filteredEmployees.length === 0 ? (
                   <tr>
                     <td colSpan={9} className="text-center py-12 text-muted-foreground">
                       <AlertCircle className="h-5 w-5 mx-auto mb-2" />
-                      No active employees. Add employees first.
+                      {employees.length === 0 ? "No active employees. Add employees first." : "No employees in this department."}
                     </td>
                   </tr>
                 ) : (
-                  employees.map(emp => (
+                  filteredEmployees.map(emp => (
                     <tr key={emp.id} className="border-b border-border/50 hover:bg-secondary/20 transition-colors group/row">
                       <td className="px-3 py-2.5 sticky left-0 bg-card z-20 border-r border-border/60">
                         <div className="font-medium text-foreground truncate text-[13px]">{emp.name}</div>
