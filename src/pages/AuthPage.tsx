@@ -35,7 +35,6 @@ export default function AuthPage() {
         if (data) {
           sessionStorage.removeItem("invite_token");
           toast({ title: "Invitation accepted!", description: "Your role has been assigned. Redirecting..." });
-          // Force refresh roles
           window.location.href = "/hub";
         }
       } catch (err) {
@@ -45,7 +44,6 @@ export default function AuthPage() {
     acceptInvite();
   }, [user]);
 
-  // Redirect based on login type - but not if access was just denied
   if (user && isApproved && !denied) {
     if (isMasterLogin && isMaster) return <Navigate to="/master" replace />;
     if (!isMasterLogin) return <Navigate to="/hub" replace />;
@@ -58,7 +56,6 @@ export default function AuthPage() {
     if (isMasterLogin) {
       const { error } = await signIn(email, password);
       if (!error) {
-        // Verify user actually has master role after sign-in
         const { data: { user: signedInUser } } = await supabase.auth.getUser();
         if (signedInUser) {
           const { data: roles } = await supabase
@@ -81,7 +78,6 @@ export default function AuthPage() {
       if (error) {
         toast({ title: "Error", description: error, variant: "destructive" });
       } else {
-        // If there's an invite token, store it for after email confirmation
         if (inviteToken) {
           sessionStorage.setItem("invite_token", inviteToken);
         }
@@ -128,19 +124,21 @@ export default function AuthPage() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-background p-4 relative overflow-hidden">
       {/* Ambient background */}
-      <div className="absolute top-1/3 -left-24 w-56 h-56 rounded-full bg-primary/[0.04] blur-3xl float" />
-      <div className="absolute bottom-1/3 -right-24 w-60 h-60 rounded-full bg-primary/[0.03] blur-3xl float" style={{ animationDelay: '2s' }} />
+      <div className="absolute top-1/3 -left-24 w-56 h-56 rounded-full bg-primary/[0.03] blur-[80px] float" />
+      <div className="absolute bottom-1/3 -right-24 w-60 h-60 rounded-full bg-primary/[0.025] blur-[80px] float" style={{ animationDelay: '2s' }} />
 
-      <div className="w-full max-w-md space-y-6 relative z-10">
+      <div className="w-full max-w-md space-y-6 relative z-10 animate-fade-in">
         <div className="text-center space-y-3">
-          <div className="h-20 w-20 mx-auto rounded-2xl bg-primary/10 flex items-center justify-center shadow-lg shadow-primary/5 pulse-ring">
-            <IconComponent className="h-10 w-10 text-primary" />
+          <div className="h-18 w-18 mx-auto rounded-2xl bg-primary/8 flex items-center justify-center shadow-lg shadow-primary/5 pulse-ring" style={{ height: '72px', width: '72px' }}>
+            <IconComponent className="h-9 w-9 text-primary" />
           </div>
-          <h1 className="text-2xl font-bold text-foreground tracking-tight">{heading}</h1>
-          <p className="text-muted-foreground text-sm">{subheading}</p>
+          <div className="space-y-1">
+            <h1 className="text-2xl font-bold text-foreground tracking-tight">{heading}</h1>
+            <p className="text-muted-foreground text-sm">{subheading}</p>
+          </div>
         </div>
 
-        <Card className="border border-border/60 shadow-sm">
+        <Card className="border border-border/50 shadow-lg shadow-black/20">
           <CardHeader className="pb-4">
             <CardTitle className="text-lg">{title}</CardTitle>
             <CardDescription>{description}</CardDescription>
@@ -150,18 +148,18 @@ export default function AuthPage() {
               {!isMasterLogin && mode === "signUp" && (
                 <div className="space-y-2">
                   <Label htmlFor="fullName">Full Name</Label>
-                  <Input id="fullName" value={fullName} onChange={(e) => setFullName(e.target.value)} placeholder="John Doe" required />
+                  <Input id="fullName" value={fullName} onChange={(e) => setFullName(e.target.value)} placeholder="John Doe" required className="h-11" />
                 </div>
               )}
               <div className="space-y-2">
                 <Label htmlFor="email">Email</Label>
-                <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder={isMasterLogin ? "master@omnexclock.com" : "admin@business.com"} required />
+                <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder={isMasterLogin ? "master@omnexclock.com" : "admin@business.com"} required className="h-11" />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="password">Password</Label>
-                <Input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" required minLength={6} />
+                <Input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" required minLength={6} className="h-11" />
               </div>
-              <Button type="submit" className="w-full h-11" disabled={loading}>
+              <Button type="submit" className="w-full h-11 font-medium" disabled={loading}>
                 {loading ? "Loading..." : isMasterLogin
                   ? <><Crown className="mr-2 h-4 w-4" /> Master Sign In</>
                   : mode === "signUp"
@@ -198,7 +196,7 @@ export default function AuthPage() {
           </CardContent>
         </Card>
 
-        <Link to="/" className="flex items-center justify-center text-sm text-muted-foreground hover:text-foreground transition-colors">
+        <Link to="/" className="flex items-center justify-center text-sm text-muted-foreground hover:text-foreground transition-colors gap-1">
           ← Back to Home
         </Link>
       </div>

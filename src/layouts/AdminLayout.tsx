@@ -88,15 +88,12 @@ export default function AdminLayout() {
     if (item.access === "super_admin_only") {
       return isSuperAdmin;
     }
-    // Admin and Super Admin see everything except super_admin_only items
     if (isAdmin || isSuperAdmin) return true;
-    // Roster admin: only roster + timesheets, plus inventory for FOH
     if (isRosterAdmin && !isAdmin && !isSuperAdmin && !isViewer) {
       if (item.access === "roster") return true;
       if (item.access === "inventory" && isRosterAdminFOH) return true;
       return false;
     }
-    // Viewer: see everything except super_admin_only and admin_only
     if (isViewer) {
       return item.access !== "super_admin_only" && item.access !== "admin_only";
     }
@@ -106,21 +103,23 @@ export default function AdminLayout() {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
-        <Clock className="h-8 w-8 animate-spin text-primary" />
+        <div className="flex flex-col items-center gap-3">
+          <Clock className="h-8 w-8 animate-spin text-primary" />
+          <p className="text-xs text-muted-foreground animate-pulse">Loading...</p>
+        </div>
       </div>
     );
   }
 
   if (!user) return <Navigate to="/auth" replace />;
 
-  // Check if business is suspended or deactivated
   const businessStatus = business && (business as any).status;
   const isSuspended = businessStatus === "suspended" || businessStatus === "deactivated";
 
   if (!isApproved || !hasAccess || isSuspended) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
-        <div className="text-center space-y-4">
+        <div className="text-center space-y-4 animate-fade-in">
           <h1 className="text-xl font-bold text-foreground">
             {isSuspended ? "Business Unavailable" : !isApproved ? "Account Pending Approval" : "Access Denied"}
           </h1>
@@ -152,54 +151,64 @@ export default function AdminLayout() {
   return (
     <div className="min-h-screen bg-background flex">
       {/* Sidebar */}
-      <aside className={`fixed inset-y-0 left-0 z-50 w-64 bg-card border-r border-border/60 transform transition-transform lg:translate-x-0 flex flex-col ${sidebarOpen ? "translate-x-0" : "-translate-x-full"}`}>
-        <div className="flex items-center gap-3 p-4 border-b border-border/60">
+      <aside className={`fixed inset-y-0 left-0 z-50 w-64 bg-sidebar border-r border-sidebar-border transform transition-all duration-300 ease-in-out lg:translate-x-0 flex flex-col ${sidebarOpen ? "translate-x-0 shadow-2xl shadow-black/50" : "-translate-x-full"}`}>
+        {/* Logo area */}
+        <div className="flex items-center gap-3 px-4 py-4 border-b border-sidebar-border">
           {business?.logo_url ? (
-            <img src={business.logo_url} alt="Logo" className="h-10 w-10 rounded-xl object-cover shadow-sm" />
+            <img src={business.logo_url} alt="Logo" className="h-9 w-9 rounded-lg object-cover ring-1 ring-border/40" />
           ) : (
-            <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center">
-              <Building2 className="h-5 w-5 text-primary" />
+            <div className="h-9 w-9 rounded-lg bg-primary/10 flex items-center justify-center">
+              <Building2 className="h-4.5 w-4.5 text-primary" />
             </div>
           )}
           <div className="min-w-0 flex-1">
-            <h1 className="text-sm font-bold text-primary truncate">{business?.name || "OmnexClock"}</h1>
-            <p className="text-[11px] text-muted-foreground/70">Admin Panel</p>
+            <h1 className="text-sm font-semibold text-primary truncate leading-tight">{business?.name || "OmnexClock"}</h1>
+            <p className="text-[10px] text-muted-foreground/60 font-medium tracking-wide uppercase">Admin Panel</p>
           </div>
-          <Button variant="ghost" size="icon" className="lg:hidden ml-auto shrink-0" onClick={() => setSidebarOpen(false)}>
+          <Button variant="ghost" size="icon" className="lg:hidden ml-auto shrink-0 h-8 w-8" onClick={() => setSidebarOpen(false)}>
             <X className="h-4 w-4" />
           </Button>
         </div>
 
-        <nav className="p-3 space-y-0.5 overflow-y-auto flex-1 scrollbar-hide">
-          {navItems.map(({ path, label, icon: Icon, tourId }) => (
-            <Link
-              key={path}
-              to={path}
-              data-tour={tourId}
-              onClick={() => setSidebarOpen(false)}
-              className={`flex items-center gap-3 px-3 py-2 rounded-lg text-[13px] transition-all ${
-                location.pathname === path
-                  ? "bg-primary/10 text-primary font-semibold shadow-sm"
-                  : "text-muted-foreground hover:text-foreground hover:bg-secondary/50"
-              }`}
-            >
-              <Icon className="h-4 w-4 flex-shrink-0" />
-              {label}
-              {label === "Requests" && pendingRequestCount > 0 && (
-                <Badge className="ml-auto bg-warning text-warning-foreground text-[10px] px-1.5 py-0 min-w-[20px] justify-center font-semibold">
-                  {pendingRequestCount}
-                </Badge>
-              )}
-            </Link>
-          ))}
+        {/* Navigation */}
+        <nav className="px-2.5 py-3 space-y-0.5 overflow-y-auto flex-1 scrollbar-hide">
+          {navItems.map(({ path, label, icon: Icon, tourId }, index) => {
+            const isActive = location.pathname === path;
+            return (
+              <Link
+                key={path}
+                to={path}
+                data-tour={tourId}
+                onClick={() => setSidebarOpen(false)}
+                className={`flex items-center gap-3 px-3 py-2 rounded-lg text-[13px] transition-all duration-200 group relative ${
+                  isActive
+                    ? "bg-primary/10 text-primary font-semibold"
+                    : "text-muted-foreground hover:text-foreground hover:bg-sidebar-accent"
+                }`}
+                style={{ animationDelay: `${index * 30}ms` }}
+              >
+                {isActive && (
+                  <div className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 rounded-r-full bg-primary" />
+                )}
+                <Icon className={`h-4 w-4 flex-shrink-0 transition-transform duration-200 ${isActive ? "" : "group-hover:scale-110"}`} />
+                <span className="truncate">{label}</span>
+                {label === "Requests" && pendingRequestCount > 0 && (
+                  <Badge className="ml-auto bg-warning text-warning-foreground text-[10px] px-1.5 py-0 min-w-[20px] justify-center font-semibold animate-pulse">
+                    {pendingRequestCount}
+                  </Badge>
+                )}
+              </Link>
+            );
+          })}
         </nav>
 
-        <div className="p-3 border-t border-border/60 space-y-0.5 flex-shrink-0">
+        {/* User section */}
+        <div className="px-2.5 py-3 border-t border-sidebar-border space-y-0.5 flex-shrink-0">
           <div className="px-3 py-2">
-            <p className="text-[13px] font-medium text-foreground truncate">
+            <p className="text-[13px] font-medium text-foreground truncate leading-tight">
               {user?.user_metadata?.full_name || "Admin"}
             </p>
-            <p className="text-[11px] text-muted-foreground/70 truncate">{user?.email}</p>
+            <p className="text-[10px] text-muted-foreground/60 truncate mt-0.5">{user?.email}</p>
           </div>
           {isAdmin && (
             <Link
@@ -208,7 +217,7 @@ export default function AdminLayout() {
               onClick={async () => {
                 await signOut();
               }}
-              className="flex items-center gap-3 px-3 py-2 rounded-lg text-[13px] text-muted-foreground hover:text-foreground hover:bg-secondary/50 w-full transition-colors"
+              className="flex items-center gap-3 px-3 py-2 rounded-lg text-[13px] text-muted-foreground hover:text-foreground hover:bg-sidebar-accent w-full transition-all duration-200"
             >
               <Clock className="h-4 w-4 flex-shrink-0" />
               Launch Kiosk
@@ -216,12 +225,12 @@ export default function AdminLayout() {
           )}
           <Link
             to="/hub"
-            className="flex items-center gap-3 px-3 py-2 rounded-lg text-[13px] text-muted-foreground hover:text-foreground hover:bg-secondary/50 w-full transition-colors"
+            className="flex items-center gap-3 px-3 py-2 rounded-lg text-[13px] text-muted-foreground hover:text-foreground hover:bg-sidebar-accent w-full transition-all duration-200"
           >
             <Building2 className="h-4 w-4 flex-shrink-0" />
             Business Hub
           </Link>
-          <button onClick={signOut} className="flex items-center gap-3 px-3 py-2 rounded-lg text-[13px] text-muted-foreground hover:text-foreground hover:bg-secondary/50 w-full transition-colors">
+          <button onClick={signOut} className="flex items-center gap-3 px-3 py-2 rounded-lg text-[13px] text-muted-foreground hover:text-foreground hover:bg-sidebar-accent w-full transition-all duration-200">
             <LogOut className="h-4 w-4 flex-shrink-0" />
             Sign Out
           </button>
@@ -230,16 +239,16 @@ export default function AdminLayout() {
 
       {/* Overlay */}
       {sidebarOpen && (
-        <div className="fixed inset-0 z-40 bg-black/50 lg:hidden" onClick={() => setSidebarOpen(false)} />
+        <div className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm lg:hidden transition-opacity duration-300" onClick={() => setSidebarOpen(false)} />
       )}
 
       {/* Main */}
       <main className="flex-1 lg:ml-64 min-w-0">
-        <header className="sticky top-0 z-30 bg-card/80 backdrop-blur-lg border-b border-border/60 px-4 py-3 flex items-center gap-3 lg:px-6">
-          <Button variant="ghost" size="icon" className="lg:hidden" onClick={() => setSidebarOpen(true)}>
+        <header className="sticky top-0 z-30 glass border-b border-border/40 px-4 py-3 flex items-center gap-3 lg:px-6">
+          <Button variant="ghost" size="icon" className="lg:hidden h-9 w-9" onClick={() => setSidebarOpen(true)}>
             <Menu className="h-5 w-5" />
           </Button>
-          <h2 className="text-lg font-semibold text-foreground tracking-tight">
+          <h2 className="text-base font-semibold text-foreground tracking-tight">
             {allNavItems.find((n) => n.path === location.pathname)?.label || "Admin"}
           </h2>
           {roleBadge && (
@@ -255,7 +264,7 @@ export default function AdminLayout() {
             />
           </div>
         </header>
-        <div className="p-4 lg:p-6">
+        <div className="p-4 lg:p-6 page-enter">
           <Outlet />
         </div>
       </main>

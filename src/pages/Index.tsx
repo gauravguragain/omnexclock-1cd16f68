@@ -11,28 +11,32 @@ const Index = () => {
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-background p-4 relative overflow-hidden">
       {/* Ambient background orbs */}
-      <div className="absolute top-1/4 -left-32 w-64 h-64 rounded-full bg-primary/[0.04] blur-3xl float" />
-      <div className="absolute bottom-1/4 -right-32 w-72 h-72 rounded-full bg-primary/[0.03] blur-3xl float" style={{ animationDelay: '3s' }} />
+      <div className="absolute top-1/4 -left-32 w-72 h-72 rounded-full bg-primary/[0.03] blur-[80px] float" />
+      <div className="absolute bottom-1/4 -right-32 w-80 h-80 rounded-full bg-primary/[0.025] blur-[80px] float" style={{ animationDelay: '3s' }} />
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] rounded-full bg-primary/[0.015] blur-[120px]" />
 
       <Link to="/auth?master=true" className="absolute top-4 right-4 z-10">
-        <Button variant="ghost" size="sm" className="text-muted-foreground/60 hover:text-foreground gap-1.5 text-xs">
+        <Button variant="ghost" size="sm" className="text-muted-foreground/50 hover:text-foreground gap-1.5 text-xs">
           <LogIn className="h-3.5 w-3.5" />
           Master Login
         </Button>
       </Link>
-      <div className="text-center space-y-3 mb-10 relative">
+
+      <div className="text-center space-y-4 mb-12 relative animate-fade-in">
         <div className="relative inline-block">
-          <img src="/omnex-logo.jpg" alt="OmnexClock" className="h-20 w-20 mx-auto rounded-2xl object-cover shadow-lg shadow-primary/10 pulse-ring" />
+          <img src="/omnex-logo.jpg" alt="OmnexClock" className="h-20 w-20 mx-auto rounded-2xl object-cover shadow-xl shadow-primary/10 pulse-ring" />
         </div>
-        <h1 className="text-3xl font-bold text-foreground tracking-tight">OmnexClock</h1>
-        <p className="text-muted-foreground text-sm font-medium">Time & Workforce Management</p>
+        <div className="space-y-1">
+          <h1 className="text-3xl font-bold text-foreground tracking-tight">OmnexClock</h1>
+          <p className="text-muted-foreground text-sm font-medium tracking-wide">Time & Workforce Management</p>
+        </div>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-5 w-full max-w-2xl">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-5 w-full max-w-2xl animate-fade-in" style={{ animationDelay: '0.15s' }}>
         <Link to="/auth" className="block">
-          <Card className="border border-border/60 cursor-pointer hover:border-primary/50 hover:shadow-lg hover:shadow-primary/5 transition-all duration-300 group h-full ambient-glow shimmer">
-            <CardContent className="p-7 flex flex-col items-center text-center space-y-4">
-              <div className="h-14 w-14 rounded-2xl bg-primary/10 flex items-center justify-center group-hover:bg-primary/20 group-hover:scale-105 transition-all">
+          <Card className="border border-border/50 cursor-pointer hover:border-primary/40 transition-all duration-300 group h-full ambient-glow shimmer card-lift">
+            <CardContent className="p-8 flex flex-col items-center text-center space-y-4">
+              <div className="h-14 w-14 rounded-2xl bg-primary/8 flex items-center justify-center group-hover:bg-primary/15 group-hover:scale-110 transition-all duration-300">
                 <ShieldCheck className="h-7 w-7 text-primary" />
               </div>
               <div>
@@ -44,9 +48,9 @@ const Index = () => {
         </Link>
 
         <Link to="/portal" className="block">
-          <Card className="border border-border/60 cursor-pointer hover:border-primary/50 hover:shadow-lg hover:shadow-primary/5 transition-all duration-300 group h-full ambient-glow shimmer">
-            <CardContent className="p-7 flex flex-col items-center text-center space-y-4">
-              <div className="h-14 w-14 rounded-2xl bg-primary/10 flex items-center justify-center group-hover:bg-primary/20 group-hover:scale-105 transition-all">
+          <Card className="border border-border/50 cursor-pointer hover:border-primary/40 transition-all duration-300 group h-full ambient-glow shimmer card-lift">
+            <CardContent className="p-8 flex flex-col items-center text-center space-y-4">
+              <div className="h-14 w-14 rounded-2xl bg-primary/8 flex items-center justify-center group-hover:bg-primary/15 group-hover:scale-110 transition-all duration-300">
                 <Users className="h-7 w-7 text-primary" />
               </div>
               <div>
@@ -58,9 +62,9 @@ const Index = () => {
         </Link>
 
         <Link to="/register-business" className="block">
-          <Card className="border border-primary/30 cursor-pointer hover:border-primary/60 hover:shadow-lg hover:shadow-primary/10 transition-all duration-300 group h-full bg-primary/[0.03] ambient-glow shimmer">
-            <CardContent className="p-7 flex flex-col items-center text-center space-y-4">
-              <div className="h-14 w-14 rounded-2xl bg-primary/15 flex items-center justify-center group-hover:bg-primary/25 group-hover:scale-105 transition-all">
+          <Card className="border border-primary/25 cursor-pointer hover:border-primary/50 transition-all duration-300 group h-full bg-primary/[0.02] ambient-glow shimmer card-lift">
+            <CardContent className="p-8 flex flex-col items-center text-center space-y-4">
+              <div className="h-14 w-14 rounded-2xl bg-primary/12 flex items-center justify-center group-hover:bg-primary/20 group-hover:scale-110 transition-all duration-300">
                 <Building2 className="h-7 w-7 text-primary" />
               </div>
               <div>
@@ -72,7 +76,7 @@ const Index = () => {
         </Link>
       </div>
 
-      <p className="mt-12 text-center text-[11px] text-muted-foreground/60">
+      <p className="mt-14 text-center text-[11px] text-muted-foreground/40 tracking-wide">
         © {new Date().getFullYear()} Omnex Ventures Pty. Ltd. All rights reserved.
       </p>
     </div>
