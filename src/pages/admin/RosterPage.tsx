@@ -404,7 +404,7 @@ export default function RosterPage() {
       dayEventsData = data || [];
     }
 
-    const portalUrl = `${window.location.origin}/portal`;
+    const portalUrl = "https://omnexclock.lovable.app/portal";
 
     let sentCount = 0;
     for (const [empId, empShifts] of allByEmployee) {
