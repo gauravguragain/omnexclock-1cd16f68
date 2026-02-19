@@ -45,7 +45,7 @@ function generateEmployeeCode(existing: string[]): string {
 
 export default function EmployeesPage() {
   const { runAction } = useActionLock();
-  const { isViewer, isSuperAdminOf } = useAuth();
+  const { isViewer, isSuperAdminOf, isAdminOf } = useAuth();
   const { business } = useBusiness();
   const { toast } = useToast();
   const [employees, setEmployees] = useState<Employee[]>([]);
@@ -61,6 +61,8 @@ export default function EmployeesPage() {
   const [sendingInduction, setSendingInduction] = useState<Set<string>>(new Set());
 
   const isSuperAdmin = business ? isSuperAdminOf(business.id) : false;
+  const isAdminOnly = business ? isAdminOf(business.id) && !isSuperAdmin : false;
+  const canEditEmployees = isSuperAdmin; // Only super admin can add/edit/toggle employees
 
   const fetchEmployees = async () => {
     if (!business) return;
@@ -292,7 +294,7 @@ export default function EmployeesPage() {
         </div>
         <Dialog open={dialogOpen} onOpenChange={(open) => { setDialogOpen(open); if (!open) { setStep(0); setEditing(null); } }}>
           <DialogTrigger asChild>
-            <Button onClick={openAdd} disabled={isViewer}><Plus className="mr-2 h-4 w-4" /> Add Employee</Button>
+            <Button onClick={openAdd} disabled={!canEditEmployees}><Plus className="mr-2 h-4 w-4" /> Add Employee</Button>
           </DialogTrigger>
           <DialogContent className="sm:max-w-lg">
             <DialogHeader>
@@ -463,7 +465,7 @@ export default function EmployeesPage() {
                       </span>
                     </TableCell>
                     <TableCell className="text-right space-x-1">
-                      {isViewer ? (
+                      {!canEditEmployees ? (
                         <span className="text-xs text-muted-foreground">View only</span>
                       ) : (
                         <div className="flex items-center justify-end gap-1">

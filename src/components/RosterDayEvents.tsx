@@ -77,7 +77,7 @@ function DebouncedSwitch({ checked, onSave, disabled }: { checked: boolean; onSa
 
 export default function RosterDayEvents({ weekDates, fmtDate }: Props) {
   const { runAction } = useActionLock();
-  const { isViewer, isRosterAdminOf, getRosterAdminDepartments, isAdminOf } = useAuth();
+  const { isViewer, isRosterAdminOf, getRosterAdminDepartments, isAdminOf, isSuperAdminOf } = useAuth();
   const { business } = useBusiness();
   const { toast } = useToast();
   const [events, setEvents] = useState<DayEvent[]>([]);
@@ -90,14 +90,10 @@ export default function RosterDayEvents({ weekDates, fmtDate }: Props) {
   const [sectionUploading, setSectionUploading] = useState(false);
   const [sectionExtracting, setSectionExtracting] = useState(false);
 
-  const isRosterAdminBOHOnly = business
-    ? isRosterAdminOf(business.id) && !isAdminOf(business.id) && (() => {
-        const depts = getRosterAdminDepartments(business.id);
-        return depts.length > 0 && depts.every(d => d.toUpperCase() === "BOH");
-      })()
-    : false;
-
-  const cannotEdit = isViewer || isRosterAdminBOHOnly;
+  // Only admin and super admin can edit/add daily events
+  const isAdmin = business ? isAdminOf(business.id) : false;
+  const isSuperAdmin = business ? isSuperAdminOf(business.id) : false;
+  const cannotEdit = !isAdmin && !isSuperAdmin;
 
   const fetchData = useCallback(async () => {
     if (!business) return;
