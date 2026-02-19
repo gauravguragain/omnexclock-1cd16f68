@@ -134,8 +134,7 @@ function EventCard({ ev }: { ev: any }) {
         return;
       }
     }
-    const viewerUrl = `https://docs.google.com/viewer?url=${encodeURIComponent(url)}&embedded=true`;
-    window.open(viewerUrl, "_blank", "noopener,noreferrer");
+    window.open(url, "_blank", "noopener,noreferrer");
   };
 
   const detailRow = (label: string, value: string | null | undefined) => {
