@@ -367,13 +367,15 @@ export default function DashboardPage() {
       {/* Stats Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {cards.map(({ title, value, icon: Icon, color }) => (
-          <Card key={title}>
+          <Card key={title} className="border-border/60 shadow-sm hover:shadow-md transition-shadow">
             <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">{title}</CardTitle>
-              <Icon className={`h-4 w-4 ${color}`} />
+              <CardTitle className="text-xs font-medium text-muted-foreground uppercase tracking-wide">{title}</CardTitle>
+              <div className="h-8 w-8 rounded-lg bg-secondary flex items-center justify-center">
+                <Icon className={`h-4 w-4 ${color}`} />
+              </div>
             </CardHeader>
             <CardContent>
-              <p className="text-2xl font-bold">{value}</p>
+              <p className="text-3xl font-bold tracking-tight">{value}</p>
             </CardContent>
           </Card>
         ))}
