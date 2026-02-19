@@ -951,6 +951,59 @@ export type Database = {
           },
         ]
       }
+      service_maintenance_tasks: {
+        Row: {
+          active: boolean
+          business_id: string
+          created_at: string
+          description: string | null
+          frequency_days: number
+          id: string
+          last_service_date: string | null
+          name: string
+          next_service_date: string | null
+          reminder_email: string | null
+          reminder_sent: boolean
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          business_id: string
+          created_at?: string
+          description?: string | null
+          frequency_days?: number
+          id?: string
+          last_service_date?: string | null
+          name: string
+          next_service_date?: string | null
+          reminder_email?: string | null
+          reminder_sent?: boolean
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          business_id?: string
+          created_at?: string
+          description?: string | null
+          frequency_days?: number
+          id?: string
+          last_service_date?: string | null
+          name?: string
+          next_service_date?: string | null
+          reminder_email?: string | null
+          reminder_sent?: boolean
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "service_maintenance_tasks_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       shifts: {
         Row: {
           break_minutes: number
