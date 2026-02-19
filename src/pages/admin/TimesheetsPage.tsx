@@ -112,13 +112,12 @@ function DateRangeSelector({ dateFrom, dateTo, onChangeFrom, onChangeTo }: {
 
 
 
-
 export default function TimesheetsPage() {
   const { runAction } = useActionLock();
-  const { isViewer } = useAuth();
+  const { isViewer, isAdminOf, isSuperAdminOf, isRosterAdminOf, getRosterAdminDepartments } = useAuth();
   const { business } = useBusiness();
   const [entries, setEntries] = useState<TimesheetEntry[]>([]);
-  const [employees, setEmployees] = useState<{ id: string; name: string; department: string | null }[]>([]);
+  const [allEmployees, setAllEmployees] = useState<{ id: string; name: string; department: string | null }[]>([]);
   const [selectedEmployee, setSelectedEmployee] = useState<string>("all");
   const [selectedDepartment, setSelectedDepartment] = useState<string>("all");
   const [dateFrom, setDateFrom] = useState<Date>(() => startOfWeek(ausNow(), { weekStartsOn: 1 }));
@@ -136,6 +135,24 @@ export default function TimesheetsPage() {
   const [historyEntry, setHistoryEntry] = useState<{ employee_name: string; date: string } | null>(null);
   const [historyLogs, setHistoryLogs] = useState<any[]>([]);
   const [historyLoading, setHistoryLoading] = useState(false);
+
+  const currentBusinessId = business?.id || "";
+  const isAdmin = isAdminOf(currentBusinessId) || isSuperAdminOf(currentBusinessId);
+  const isRosterAdmin = isRosterAdminOf(currentBusinessId) && !isAdmin;
+  const rosterDepts = getRosterAdminDepartments(currentBusinessId);
+  const lockedDepartment = isRosterAdmin && rosterDepts.length > 0 ? rosterDepts[0] : null;
+
+  // Filter employees to only those in roster admin's department
+  const employees = isRosterAdmin && rosterDepts.length > 0
+    ? allEmployees.filter(e => e.department && rosterDepts.map(d => d.toUpperCase()).includes(e.department.toUpperCase()))
+    : allEmployees;
+
+  // Auto-lock department filter for roster admins
+  useEffect(() => {
+    if (lockedDepartment) {
+      setSelectedDepartment(lockedDepartment);
+    }
+  }, [lockedDepartment]);
 
   const openHistory = async (entry: TimesheetEntry) => {
     setHistoryEntry({ employee_name: entry.employee_name, date: entry.date });
@@ -161,7 +178,7 @@ export default function TimesheetsPage() {
 
   useEffect(() => {
     if (!business) return;
-    supabase.from("employees").select("id, name, department").eq("active", true).eq("business_id", business.id).order("name").then(({ data }) => setEmployees(data || []));
+    supabase.from("employees").select("id, name, department").eq("active", true).eq("business_id", business.id).order("name").then(({ data }) => setAllEmployees(data || []));
   }, [business]);
 
   useEffect(() => {
@@ -509,7 +526,12 @@ export default function TimesheetsPage() {
 
   const filtered = entries.filter((e) => {
     if (searchQuery && !e.employee_name.toLowerCase().includes(searchQuery.toLowerCase())) return false;
-    if (selectedDepartment !== "all" && e.employee_department !== selectedDepartment) return false;
+    // Roster admins: only show their department's entries
+    if (isRosterAdmin && rosterDepts.length > 0) {
+      if (!e.employee_department || !rosterDepts.map(d => d.toUpperCase()).includes(e.employee_department.toUpperCase())) return false;
+    } else if (selectedDepartment !== "all" && e.employee_department !== selectedDepartment) {
+      return false;
+    }
     return true;
   });
 
@@ -649,13 +671,17 @@ export default function TimesheetsPage() {
               ))}
             </SelectContent>
           </Select>
-          <Select value={selectedDepartment} onValueChange={setSelectedDepartment}>
+          <Select
+            value={lockedDepartment || selectedDepartment}
+            onValueChange={setSelectedDepartment}
+            disabled={!!lockedDepartment}
+          >
             <SelectTrigger className="w-full sm:w-48">
               <SelectValue placeholder="All departments" />
             </SelectTrigger>
             <SelectContent className="bg-card border-border z-50">
-              <SelectItem value="all">All Departments</SelectItem>
-              {[...new Set(employees.map(e => e.department).filter(Boolean))].sort().map((dept) => (
+              {!lockedDepartment && <SelectItem value="all">All Departments</SelectItem>}
+              {(lockedDepartment ? rosterDepts : [...new Set(allEmployees.map(e => e.department).filter(Boolean))].sort()).map((dept) => (
                 <SelectItem key={dept!} value={dept!}>{dept}</SelectItem>
               ))}
             </SelectContent>

@@ -108,7 +108,7 @@ const EMPTY_SHIFT: ShiftForm = {
 
 export default function RosterPage() {
   const { runAction } = useActionLock();
-  const { isViewer } = useAuth();
+  const { isViewer, isAdminOf, isSuperAdminOf, isRosterAdminOf, getRosterAdminDepartments } = useAuth();
   const { business } = useBusiness();
   const { toast } = useToast();
   const [weekStart, setWeekStart] = useState(() => getMonday(new Date()));
@@ -122,6 +122,13 @@ export default function RosterPage() {
   const [saving, setSaving] = useState(false);
   const [publishing, setPublishing] = useState(false);
   const [copiedShift, setCopiedShift] = useState<Shift | null>(null);
+
+  const currentBusinessId = business?.id || "";
+  const isAdmin = isAdminOf(currentBusinessId) || isSuperAdminOf(currentBusinessId);
+  const isRosterAdmin = isRosterAdminOf(currentBusinessId) && !isAdmin;
+  const rosterDepts = getRosterAdminDepartments(currentBusinessId);
+  // Roster admins are locked to their department
+  const lockedDepartment = isRosterAdmin && rosterDepts.length > 0 ? rosterDepts[0] : null;
   const [departmentFilter, setDepartmentFilter] = useState<string>("all");
 
   // Email roster state
@@ -139,10 +146,21 @@ export default function RosterPage() {
     return depts.sort();
   }, [employees]);
 
+  // Auto-lock department filter for roster admins
+  useEffect(() => {
+    if (lockedDepartment) {
+      setDepartmentFilter(lockedDepartment);
+    }
+  }, [lockedDepartment]);
+
   const filteredEmployees = useMemo(() => {
+    // For roster admins, always filter by their departments
+    if (isRosterAdmin && rosterDepts.length > 0) {
+      return employees.filter(e => e.department && rosterDepts.map(d => d.toUpperCase()).includes(e.department.toUpperCase()));
+    }
     if (departmentFilter === "all") return employees;
     return employees.filter(e => e.department === departmentFilter);
-  }, [employees, departmentFilter]);
+  }, [employees, departmentFilter, isRosterAdmin, rosterDepts]);
 
   /* ── data fetching ── */
 
@@ -774,13 +792,17 @@ export default function RosterPage() {
             Today
           </Button>
           {departments.length > 0 && (
-            <Select value={departmentFilter} onValueChange={setDepartmentFilter}>
+            <Select
+              value={lockedDepartment || departmentFilter}
+              onValueChange={setDepartmentFilter}
+              disabled={!!lockedDepartment}
+            >
               <SelectTrigger className="h-9 w-[160px] rounded-lg text-xs ml-2">
                 <SelectValue placeholder="All Departments" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Departments</SelectItem>
-                {departments.map(dept => (
+                {!lockedDepartment && <SelectItem value="all">All Departments</SelectItem>}
+                {(lockedDepartment ? rosterDepts : departments).map(dept => (
                   <SelectItem key={dept} value={dept}>{dept}</SelectItem>
                 ))}
               </SelectContent>
