@@ -159,7 +159,7 @@ export default function AdminLayout() {
   const isMoreActive = bottomNavOverflow.some(item => location.pathname === item.path);
 
   return (
-    <div className="min-h-dvh bg-background flex standalone-top-pad">
+    <div className="min-h-dvh bg-background flex standalone-top-pad safe-x">
       {/* Desktop Sidebar — hidden on mobile */}
       <aside className={`fixed inset-y-0 left-0 z-50 w-64 bg-sidebar border-r border-sidebar-border transform transition-all duration-300 ease-in-out lg:translate-x-0 flex flex-col ${sidebarOpen ? "translate-x-0 shadow-2xl shadow-black/50" : "-translate-x-full"}`}>
         {/* Logo area */}
@@ -253,25 +253,22 @@ export default function AdminLayout() {
       )}
 
       {/* Main */}
-      <main className="flex-1 lg:ml-64 min-w-0">
-        {/* Header */}
-        <header className="sticky top-0 z-30 glass border-b border-border/40 px-4 py-3 flex items-center gap-3 lg:px-6">
-          {/* Desktop hamburger — hidden on mobile since we have bottom nav */}
-          <Button variant="ghost" size="icon" className="hidden lg:hidden h-9 w-9 btn-press" onClick={() => setSidebarOpen(true)}>
-            <Menu className="h-5 w-5" />
-          </Button>
+      <main className="flex-1 lg:ml-64 min-w-0 flex flex-col">
+        {/* Header — compact on mobile, spacious on desktop */}
+        <header className="sticky top-0 z-30 glass border-b border-border/40 px-3 py-2.5 flex items-center gap-2 lg:px-6 lg:py-3">
           <div className="flex items-center gap-2 min-w-0 flex-1">
+            {/* Mobile: show logo + page title compact */}
             {business?.logo_url && (
               <img src={business.logo_url} alt="" className="h-7 w-7 rounded-md object-cover lg:hidden flex-shrink-0" />
             )}
-            <h2 className="text-base font-semibold text-foreground tracking-tight truncate">
+            <h2 className="text-sm font-semibold text-foreground tracking-tight truncate lg:text-base">
               {allNavItems.find((n) => n.path === location.pathname)?.label || "Admin"}
             </h2>
             {roleBadge && (
               <Badge variant={roleBadge.variant} className={`${roleBadge.className} hidden sm:inline-flex`}>{roleBadge.label}</Badge>
             )}
           </div>
-          <div className="ml-auto flex items-center gap-2 flex-shrink-0">
+          <div className="ml-auto flex items-center gap-1.5 lg:gap-2 flex-shrink-0">
             <NotificationBell
               notifications={notifications}
               unreadCount={unreadCount}
@@ -281,7 +278,8 @@ export default function AdminLayout() {
             />
           </div>
         </header>
-        <div className="p-4 lg:p-6 page-enter has-bottom-nav lg:pb-6">
+        {/* Content — tighter padding on mobile, more on desktop */}
+        <div className="flex-1 p-3 lg:p-6 page-enter has-bottom-nav lg:pb-6">
           <Outlet />
         </div>
       </main>
