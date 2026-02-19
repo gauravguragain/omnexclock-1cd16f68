@@ -14,7 +14,7 @@ import MonthlyReportSection from "@/components/MonthlyReportSection";
 import { logMasterAudit } from "@/lib/auditLog";
 
 export default function MyBusinessPage() {
-  const { isSuperAdminOf } = useAuth();
+  const { isSuperAdminOf, isAdminOf } = useAuth();
   const { runAction } = useActionLock();
   const { business, refreshBusiness, applyTheme } = useBusiness();
   const { toast } = useToast();
@@ -308,8 +308,8 @@ export default function MyBusinessPage() {
         </CardContent>
       </Card>
 
-      {/* Monthly Reports - Super Admin Only */}
-      {isSuperAdminOf(business.id) && <MonthlyReportSection />}
+      {/* Business Reports - Admin & Super Admin */}
+      {(isSuperAdminOf(business.id) || isAdminOf(business.id)) && <MonthlyReportSection />}
 
       {/* Instruction Manual */}
       <Card>
