@@ -1,12 +1,14 @@
 import { useEffect } from "react";
 import { Link } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
-import { ShieldCheck, Building2, Users, LogIn } from "lucide-react";
+import { ShieldCheck, Building2, Users, LogIn, Sun, Moon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useBusiness } from "@/contexts/BusinessContext";
+import { useTheme } from "next-themes";
 
 const Index = () => {
   const { resetTheme } = useBusiness();
+  const { theme, setTheme } = useTheme();
   useEffect(() => { resetTheme(); }, []);
   return (
     <div className="min-h-[100dvh] flex flex-col bg-background relative overflow-hidden">
@@ -15,8 +17,16 @@ const Index = () => {
       <div className="absolute bottom-1/4 -right-32 w-80 h-80 rounded-full bg-primary/[0.025] blur-[80px] float" style={{ animationDelay: '3s' }} />
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] rounded-full bg-primary/[0.015] blur-[120px]" />
 
-      {/* Top bar with Master Login — safe area aware */}
-      <div className="flex justify-end px-4 pt-[calc(env(safe-area-inset-top,0px)+0.75rem)] pb-2 relative z-10">
+      {/* Top bar — dark mode toggle + Master Login */}
+      <div className="flex justify-between items-center px-4 pt-[calc(env(safe-area-inset-top,0px)+0.75rem)] pb-2 relative z-10">
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-8 w-8 text-muted-foreground hover:text-foreground"
+          onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+        >
+          {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+        </Button>
         <Link to="/auth?master=true">
           <Button variant="ghost" size="sm" className="text-muted-foreground/50 hover:text-foreground gap-1.5 text-xs">
             <LogIn className="h-3.5 w-3.5" />
