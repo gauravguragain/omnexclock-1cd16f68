@@ -142,7 +142,10 @@ export default function MasterUsersPage() {
     setConfirmAction(null);
   };
 
-  const filtered = users.filter(u => {
+  // Exclude master-only users from the platform users list
+  const nonMasterUsers = users.filter(u => !u.roles.some(r => r.role === "master" && !r.business_name));
+
+  const filtered = nonMasterUsers.filter(u => {
     const matchSearch = !search ||
       u.email.toLowerCase().includes(search.toLowerCase()) ||
       (u.full_name || "").toLowerCase().includes(search.toLowerCase());
@@ -155,7 +158,7 @@ export default function MasterUsersPage() {
     return matchSearch && matchRole && matchStatus;
   });
 
-  const pendingCount = users.filter(u => !u.approved).length;
+  const pendingCount = nonMasterUsers.filter(u => !u.approved).length;
 
   const handleConfirmAction = () => {
     if (!confirmAction) return;
@@ -177,13 +180,13 @@ export default function MasterUsersPage() {
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <Card className="bg-card border-border">
           <CardContent className="p-4">
-            <p className="text-2xl font-bold text-foreground">{users.length}</p>
+            <p className="text-2xl font-bold text-foreground">{nonMasterUsers.length}</p>
             <p className="text-xs text-muted-foreground">Total Users</p>
           </CardContent>
         </Card>
         <Card className="bg-card border-border">
           <CardContent className="p-4">
-            <p className="text-2xl font-bold text-green-400">{users.filter(u => u.approved).length}</p>
+            <p className="text-2xl font-bold text-green-400">{nonMasterUsers.filter(u => u.approved).length}</p>
             <p className="text-xs text-muted-foreground">Approved</p>
           </CardContent>
         </Card>
@@ -195,7 +198,7 @@ export default function MasterUsersPage() {
         </Card>
         <Card className="bg-card border-border">
           <CardContent className="p-4">
-            <p className="text-2xl font-bold text-primary">{users.filter(u => u.roles.some(r => r.role === "admin")).length}</p>
+            <p className="text-2xl font-bold text-primary">{nonMasterUsers.filter(u => u.roles.some(r => r.role === "admin")).length}</p>
             <p className="text-xs text-muted-foreground">Admins</p>
           </CardContent>
         </Card>
