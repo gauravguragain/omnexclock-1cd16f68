@@ -256,6 +256,124 @@
     -webkit-text-fill-color: transparent;
     background-clip: text;
   }
+
+  /* ── Enhanced micro-interactions ── */
+
+  /* Table row hover with left-accent reveal */
+  .table-row-interactive {
+    position: relative;
+    transition: background-color 0.2s ease, transform 0.15s ease;
+  }
+  .table-row-interactive::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    background: hsl(var(--primary));
+    transform: scaleY(0);
+    transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    border-radius: 0 2px 2px 0;
+  }
+  .table-row-interactive:hover::before {
+    transform: scaleY(1);
+  }
+
+  /* Stat card with number counter feel */
+  .stat-card {
+    transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.25s ease, border-color 0.3s ease;
+  }
+  .stat-card:hover {
+    transform: translateY(-3px) scale(1.01);
+    box-shadow: 0 8px 30px hsl(0 0% 0% / 0.3), 0 0 0 1px hsl(var(--primary) / 0.08);
+    border-color: hsl(var(--primary) / 0.2);
+  }
+
+  /* Button press effect */
+  .btn-press {
+    transition: transform 0.1s ease, box-shadow 0.15s ease;
+  }
+  .btn-press:active {
+    transform: scale(0.97);
+  }
+
+  /* Smooth badge pulse */
+  .badge-live {
+    animation: badgePulse 2s ease-in-out infinite;
+  }
+  @keyframes badgePulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.7; }
+  }
+
+  /* Sidebar nav item slide-in on first render */
+  .nav-stagger {
+    opacity: 0;
+    animation: navSlideIn 0.35s ease-out forwards;
+  }
+  @keyframes navSlideIn {
+    from { opacity: 0; transform: translateX(-8px); }
+    to { opacity: 1; transform: translateX(0); }
+  }
+
+  /* Smooth number transition placeholder */
+  .tabular-smooth {
+    font-variant-numeric: tabular-nums;
+    transition: color 0.3s ease;
+  }
+
+  /* Glow border on focus for inputs */
+  .input-glow:focus-within {
+    box-shadow: 0 0 0 3px hsl(var(--primary) / 0.1), 0 0 12px hsl(var(--primary) / 0.06);
+    border-color: hsl(var(--primary) / 0.4);
+  }
+
+  /* Breadcrumb trail line */
+  .breadcrumb-line {
+    position: relative;
+  }
+  .breadcrumb-line::after {
+    content: '';
+    position: absolute;
+    bottom: -2px;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, hsl(var(--primary) / 0.4), transparent);
+  }
+
+  /* Skeleton shimmer for loading states */
+  .skeleton-shimmer {
+    background: linear-gradient(
+      90deg,
+      hsl(var(--muted)) 25%,
+      hsl(var(--muted-foreground) / 0.08) 50%,
+      hsl(var(--muted)) 75%
+    );
+    background-size: 200% 100%;
+    animation: skeletonShimmer 1.5s ease-in-out infinite;
+  }
+  @keyframes skeletonShimmer {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+  }
+
+  /* Stagger children animation helper */
+  .stagger-children > * {
+    opacity: 0;
+    animation: staggerFadeIn 0.4s ease-out forwards;
+  }
+  .stagger-children > *:nth-child(1) { animation-delay: 0ms; }
+  .stagger-children > *:nth-child(2) { animation-delay: 60ms; }
+  .stagger-children > *:nth-child(3) { animation-delay: 120ms; }
+  .stagger-children > *:nth-child(4) { animation-delay: 180ms; }
+  .stagger-children > *:nth-child(5) { animation-delay: 240ms; }
+  .stagger-children > *:nth-child(6) { animation-delay: 300ms; }
+  @keyframes staggerFadeIn {
+    from { opacity: 0; transform: translateY(6px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
 }
 
 .scrollbar-hide {
