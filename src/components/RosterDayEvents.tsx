@@ -41,6 +41,20 @@ interface Props {
   fmtDate: (d: Date) => string;
 }
 
+function DebouncedInput({ value, onSave, ...props }: { value: string; onSave: (v: string) => void } & Omit<React.ComponentProps<typeof Input>, "value" | "onChange" | "onBlur">) {
+  const [local, setLocal] = useState(value);
+  useEffect(() => { setLocal(value); }, [value]);
+  return (
+    <Input
+      {...props}
+      value={local}
+      onChange={e => setLocal(e.target.value)}
+      onBlur={() => { if (local !== value) onSave(local); }}
+      onKeyDown={e => { if (e.key === "Enter") { e.currentTarget.blur(); } }}
+    />
+  );
+}
+
 export default function RosterDayEvents({ weekDates, fmtDate }: Props) {
   const { runAction } = useActionLock();
   const { isViewer, isRosterAdminOf, getRosterAdminDepartments, isAdminOf } = useAuth();
@@ -224,9 +238,9 @@ export default function RosterDayEvents({ weekDates, fmtDate }: Props) {
                       <div className="space-y-1">
                         <Label className="text-[11px] text-muted-foreground">Event Type</Label>
                         {business?.business_code === "PRP" ? (
-                          <Input
+                          <DebouncedInput
                             value={ev.event_type || ""}
-                            onChange={e => updateEvent(ev.id, { event_type: e.target.value || null })}
+                            onSave={v => updateEvent(ev.id, { event_type: v || null })}
                             placeholder="Enter event type..."
                             className="h-8 text-xs"
                             disabled={cannotEdit}
