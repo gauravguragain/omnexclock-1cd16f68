@@ -7,13 +7,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogClose } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Plus, Minus, Package, ShoppingCart, Trash2, AlertTriangle, CheckCircle2, Clock, XCircle } from "lucide-react";
+import { Plus, Minus, Package, ShoppingCart, Trash2, AlertTriangle, CheckCircle2, Clock, XCircle, Download, ClipboardCheck } from "lucide-react";
 
 interface InventoryItem {
   id: string;
@@ -38,19 +38,37 @@ interface InventoryOrder {
 
 const CATEGORIES = ["Glassware", "Cutlery", "Linen", "Consumables", "Equipment", "Cleaning", "General"];
 
+// CSV helper
+function downloadCSV(filename: string, headers: string[], rows: string[][]) {
+  const csvContent = [headers.join(","), ...rows.map(r => r.map(c => `"${(c ?? "").replace(/"/g, '""')}"`).join(","))].join("\n");
+  const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
 export default function InventoryPage() {
   const { business } = useBusiness();
-  const { user } = useAuth();
+  const { user, isAdminOf, isSuperAdminOf, isRosterAdminOf } = useAuth();
   const { toast } = useToast();
   const [items, setItems] = useState<InventoryItem[]>([]);
   const [orders, setOrders] = useState<InventoryOrder[]>([]);
   const [loading, setLoading] = useState(true);
 
+  const currentBusinessId = business?.id || "";
+  const isAdmin = isAdminOf(currentBusinessId) || isSuperAdminOf(currentBusinessId);
+  const isRosterAdmin = isRosterAdminOf(currentBusinessId);
+  const canManageItems = isAdmin; // Only admin/super_admin can add/delete items
+  const canAdjustAndRequest = isAdmin || isRosterAdmin; // Both can adjust counts and request
+
   // Add item form
   const [newName, setNewName] = useState("");
   const [newCategory, setNewCategory] = useState("General");
-  const [newCount, setNewCount] = useState(0);
-  const [newMinCount, setNewMinCount] = useState(0);
+  const [newCount, setNewCount] = useState("0");
+  const [newMinCount, setNewMinCount] = useState("0");
   const [newUnit, setNewUnit] = useState("pcs");
   const [addOpen, setAddOpen] = useState(false);
 
@@ -59,6 +77,10 @@ export default function InventoryPage() {
   const [orderQty, setOrderQty] = useState("1");
   const [orderNotes, setOrderNotes] = useState("");
   const [orderOpen, setOrderOpen] = useState(false);
+
+  // Stocktake
+  const [stocktakeOpen, setStocktakeOpen] = useState(false);
+  const [stocktakeCounts, setStocktakeCounts] = useState<Record<string, string>>({});
 
   const fetchData = useCallback(async () => {
     if (!business) return;
@@ -70,7 +92,6 @@ export default function InventoryPage() {
     setItems((itemsRes.data as InventoryItem[]) || []);
 
     const rawOrders = (ordersRes.data || []) as InventoryOrder[];
-    // Attach item names
     const itemMap = new Map((itemsRes.data || []).map((i: any) => [i.id, i.name]));
     setOrders(rawOrders.map(o => ({ ...o, item_name: itemMap.get(o.item_id) || "Unknown" })));
     setLoading(false);
@@ -84,15 +105,15 @@ export default function InventoryPage() {
       business_id: business.id,
       name: newName.trim(),
       category: newCategory,
-      current_count: newCount,
-      min_count: newMinCount,
+      current_count: parseInt(newCount) || 0,
+      min_count: parseInt(newMinCount) || 0,
       unit: newUnit,
     });
     if (error) {
       toast({ title: "Error", description: error.message, variant: "destructive" });
     } else {
       toast({ title: "Item added" });
-      setNewName(""); setNewCount(0); setNewMinCount(0); setNewUnit("pcs"); setNewCategory("General");
+      setNewName(""); setNewCount("0"); setNewMinCount("0"); setNewUnit("pcs"); setNewCategory("General");
       setAddOpen(false);
       fetchData();
     }
@@ -101,12 +122,12 @@ export default function InventoryPage() {
   const updateCount = async (id: string, delta: number) => {
     const item = items.find(i => i.id === id);
     if (!item) return;
-    const newCount = Math.max(0, item.current_count + delta);
-    const { error } = await supabase.from("inventory_items").update({ current_count: newCount }).eq("id", id);
+    const nc = Math.max(0, item.current_count + delta);
+    const { error } = await supabase.from("inventory_items").update({ current_count: nc }).eq("id", id);
     if (error) {
       toast({ title: "Error", description: error.message, variant: "destructive" });
     } else {
-      setItems(prev => prev.map(i => i.id === id ? { ...i, current_count: newCount } : i));
+      setItems(prev => prev.map(i => i.id === id ? { ...i, current_count: nc } : i));
     }
   };
 
@@ -149,6 +170,65 @@ export default function InventoryPage() {
     }
   };
 
+  // Stocktake: open dialog with all items pre-filled
+  const openStocktake = () => {
+    const counts: Record<string, string> = {};
+    items.forEach(i => { counts[i.id] = String(i.current_count); });
+    setStocktakeCounts(counts);
+    setStocktakeOpen(true);
+  };
+
+  const handleStocktakeSave = async () => {
+    const updates = Object.entries(stocktakeCounts).map(([id, val]) => ({
+      id,
+      current_count: Math.max(0, parseInt(val) || 0),
+    }));
+    let errorCount = 0;
+    for (const u of updates) {
+      const { error } = await supabase.from("inventory_items").update({ current_count: u.current_count }).eq("id", u.id);
+      if (error) errorCount++;
+    }
+    if (errorCount > 0) {
+      toast({ title: "Some updates failed", variant: "destructive" });
+    } else {
+      toast({ title: "Stocktake saved" });
+    }
+    setStocktakeOpen(false);
+    fetchData();
+  };
+
+  // CSV exports
+  const exportInventoryCSV = () => {
+    const headers = ["Name", "Category", "Current Count", "Par Level", "Unit", "Status"];
+    const rows = items.map(i => [
+      i.name, i.category, String(i.current_count), String(i.min_count), i.unit,
+      i.current_count <= i.min_count ? "Low Stock" : "OK",
+    ]);
+    downloadCSV(`inventory-items-${new Date().toISOString().slice(0, 10)}.csv`, headers, rows);
+  };
+
+  const exportOrdersCSV = () => {
+    const headers = ["Item", "Quantity", "Status", "Notes", "Date"];
+    const rows = orders.map(o => [
+      o.item_name || "Unknown", String(o.quantity), o.status, o.notes || "",
+      new Date(o.created_at).toLocaleDateString("en-AU", { day: "numeric", month: "short", year: "numeric" }),
+    ]);
+    downloadCSV(`order-requests-${new Date().toISOString().slice(0, 10)}.csv`, headers, rows);
+  };
+
+  // Auto-request low stock
+  const requestLowStockOrders = () => {
+    const lowItems = items.filter(i => i.current_count <= i.min_count);
+    if (lowItems.length === 0) {
+      toast({ title: "No low stock items" });
+      return;
+    }
+    // Pre-select the first low stock item
+    setOrderItemId(lowItems[0].id);
+    setOrderQty(String(Math.max(1, lowItems[0].min_count - lowItems[0].current_count)));
+    setOrderOpen(true);
+  };
+
   const lowStockItems = items.filter(i => i.current_count <= i.min_count);
 
   const statusIcon = (status: string) => {
@@ -179,92 +259,103 @@ export default function InventoryPage() {
           </h2>
           <p className="text-xs text-muted-foreground">{items.length} items · {lowStockItems.length} low stock</p>
         </div>
-        <div className="flex gap-2">
-          <Dialog open={orderOpen} onOpenChange={setOrderOpen}>
-            <DialogTrigger asChild>
-              <Button variant="outline" size="sm" className="gap-1.5" disabled={items.length === 0}>
-                <ShoppingCart className="h-3.5 w-3.5" /> Order Request
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>New Order Request</DialogTitle>
-              </DialogHeader>
-              <div className="space-y-3">
-                <div className="space-y-1">
-                  <Label className="text-xs">Item</Label>
-                  <Select value={orderItemId} onValueChange={setOrderItemId}>
-                    <SelectTrigger><SelectValue placeholder="Select item..." /></SelectTrigger>
-                    <SelectContent>
-                      {items.map(i => (
-                        <SelectItem key={i.id} value={i.id}>{i.name} ({i.current_count} {i.unit})</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-1">
-                  <Label className="text-xs">Quantity</Label>
-                  <Input type="number" min={1} value={orderQty} onChange={e => setOrderQty(e.target.value)} />
-                </div>
-                <div className="space-y-1">
-                  <Label className="text-xs">Notes</Label>
-                  <Input value={orderNotes} onChange={e => setOrderNotes(e.target.value)} placeholder="Optional notes..." />
-                </div>
-              </div>
-              <DialogFooter>
-                <DialogClose asChild><Button variant="outline">Cancel</Button></DialogClose>
-                <Button onClick={handleOrderRequest} disabled={!orderItemId}>Submit Request</Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
-
-          <Dialog open={addOpen} onOpenChange={setAddOpen}>
-            <DialogTrigger asChild>
-              <Button size="sm" className="gap-1.5">
-                <Plus className="h-3.5 w-3.5" /> Add Item
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Add Inventory Item</DialogTitle>
-              </DialogHeader>
-              <div className="space-y-3">
-                <div className="space-y-1">
-                  <Label className="text-xs">Name</Label>
-                  <Input value={newName} onChange={e => setNewName(e.target.value)} placeholder="e.g. Wine Glasses" autoFocus />
-                </div>
-                <div className="grid grid-cols-2 gap-3">
+        <div className="flex gap-2 flex-wrap">
+          {canAdjustAndRequest && (
+            <Button variant="outline" size="sm" className="gap-1.5" onClick={openStocktake} disabled={items.length === 0}>
+              <ClipboardCheck className="h-3.5 w-3.5" /> Stocktake
+            </Button>
+          )}
+          {canAdjustAndRequest && (
+            <Dialog open={orderOpen} onOpenChange={setOrderOpen}>
+              <DialogTrigger asChild>
+                <Button variant="outline" size="sm" className="gap-1.5" disabled={items.length === 0}>
+                  <ShoppingCart className="h-3.5 w-3.5" /> Order Request
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>New Order Request</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-3">
                   <div className="space-y-1">
-                    <Label className="text-xs">Category</Label>
-                    <Select value={newCategory} onValueChange={setNewCategory}>
-                      <SelectTrigger><SelectValue /></SelectTrigger>
+                    <Label className="text-xs">Item</Label>
+                    <Select value={orderItemId} onValueChange={setOrderItemId}>
+                      <SelectTrigger><SelectValue placeholder="Select item..." /></SelectTrigger>
                       <SelectContent>
-                        {CATEGORIES.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                        {items.map(i => (
+                          <SelectItem key={i.id} value={i.id}>
+                            {i.name} ({i.current_count}/{i.min_count} {i.unit})
+                            {i.current_count <= i.min_count ? " ⚠️" : ""}
+                          </SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                   </div>
                   <div className="space-y-1">
-                    <Label className="text-xs">Unit</Label>
-                    <Input value={newUnit} onChange={e => setNewUnit(e.target.value)} placeholder="pcs, boxes, etc." />
-                  </div>
-                </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-1">
-                    <Label className="text-xs">Current Count</Label>
-                    <Input type="number" min={0} value={newCount} onChange={e => setNewCount(parseInt(e.target.value) || 0)} />
+                    <Label className="text-xs">Quantity</Label>
+                    <Input type="number" min={1} value={orderQty} onChange={e => setOrderQty(e.target.value)} />
                   </div>
                   <div className="space-y-1">
-                    <Label className="text-xs">Min Stock Level</Label>
-                    <Input type="number" min={0} value={newMinCount} onChange={e => setNewMinCount(parseInt(e.target.value) || 0)} />
+                    <Label className="text-xs">Notes</Label>
+                    <Input value={orderNotes} onChange={e => setOrderNotes(e.target.value)} placeholder="Optional notes..." />
                   </div>
                 </div>
-              </div>
-              <DialogFooter>
-                <DialogClose asChild><Button variant="outline">Cancel</Button></DialogClose>
-                <Button onClick={handleAddItem} disabled={!newName.trim()}>Add Item</Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
+                <DialogFooter>
+                  <DialogClose asChild><Button variant="outline">Cancel</Button></DialogClose>
+                  <Button onClick={handleOrderRequest} disabled={!orderItemId}>Submit Request</Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+          )}
+          {canManageItems && (
+            <Dialog open={addOpen} onOpenChange={setAddOpen}>
+              <DialogTrigger asChild>
+                <Button size="sm" className="gap-1.5">
+                  <Plus className="h-3.5 w-3.5" /> Add Item
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Add Inventory Item</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-3">
+                  <div className="space-y-1">
+                    <Label className="text-xs">Name</Label>
+                    <Input value={newName} onChange={e => setNewName(e.target.value)} placeholder="e.g. Wine Glasses" autoFocus />
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1">
+                      <Label className="text-xs">Category</Label>
+                      <Select value={newCategory} onValueChange={setNewCategory}>
+                        <SelectTrigger><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          {CATEGORIES.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs">Unit</Label>
+                      <Input value={newUnit} onChange={e => setNewUnit(e.target.value)} placeholder="pcs, boxes, etc." />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1">
+                      <Label className="text-xs">Current Count</Label>
+                      <Input type="number" min={0} value={newCount} onChange={e => setNewCount(e.target.value)} />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs">Par Level</Label>
+                      <Input type="number" min={0} value={newMinCount} onChange={e => setNewMinCount(e.target.value)} />
+                    </div>
+                  </div>
+                </div>
+                <DialogFooter>
+                  <DialogClose asChild><Button variant="outline">Cancel</Button></DialogClose>
+                  <Button onClick={handleAddItem} disabled={!newName.trim()}>Add Item</Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+          )}
         </div>
       </div>
 
@@ -272,13 +363,20 @@ export default function InventoryPage() {
       {lowStockItems.length > 0 && (
         <Card className="border-warning/40 bg-warning/5">
           <CardContent className="p-3">
-            <div className="flex items-center gap-2 text-warning text-xs font-medium mb-1">
-              <AlertTriangle className="h-3.5 w-3.5" /> Low Stock Alert
+            <div className="flex items-center justify-between mb-1">
+              <div className="flex items-center gap-2 text-warning text-xs font-medium">
+                <AlertTriangle className="h-3.5 w-3.5" /> Low Stock Alert ({lowStockItems.length} items)
+              </div>
+              {canAdjustAndRequest && (
+                <Button variant="outline" size="sm" className="h-6 text-[10px] text-warning border-warning/30" onClick={requestLowStockOrders}>
+                  <ShoppingCart className="h-3 w-3 mr-1" /> Request Order
+                </Button>
+              )}
             </div>
             <div className="flex flex-wrap gap-1.5">
               {lowStockItems.map(i => (
                 <Badge key={i.id} variant="outline" className="text-[10px] border-warning/30 text-warning">
-                  {i.name}: {i.current_count} {i.unit}
+                  {i.name}: {i.current_count}/{i.min_count} {i.unit}
                 </Badge>
               ))}
             </div>
@@ -300,6 +398,11 @@ export default function InventoryPage() {
         </TabsList>
 
         <TabsContent value="items" className="mt-3">
+          <div className="flex justify-end mb-2">
+            <Button variant="ghost" size="sm" className="gap-1.5 text-xs" onClick={exportInventoryCSV} disabled={items.length === 0}>
+              <Download className="h-3.5 w-3.5" /> Export CSV
+            </Button>
+          </div>
           {items.length === 0 ? (
             <Card>
               <CardContent className="py-12 text-center">
@@ -315,9 +418,10 @@ export default function InventoryPage() {
                     <TableHead className="text-xs">Item</TableHead>
                     <TableHead className="text-xs">Category</TableHead>
                     <TableHead className="text-xs text-center">Count</TableHead>
-                    <TableHead className="text-xs text-center">Min</TableHead>
-                    <TableHead className="text-xs text-center">Adjust</TableHead>
-                    <TableHead className="text-xs w-10"></TableHead>
+                    <TableHead className="text-xs text-center">Par Level</TableHead>
+                    <TableHead className="text-xs text-center">Status</TableHead>
+                    {canAdjustAndRequest && <TableHead className="text-xs text-center">Adjust</TableHead>}
+                    {canManageItems && <TableHead className="text-xs w-10"></TableHead>}
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -339,34 +443,43 @@ export default function InventoryPage() {
                         </TableCell>
                         <TableCell className="text-center text-xs text-muted-foreground">{item.min_count}</TableCell>
                         <TableCell className="text-center">
-                          <div className="flex items-center justify-center gap-1">
-                            <Button variant="outline" size="icon" className="h-6 w-6" onClick={() => updateCount(item.id, -1)} disabled={item.current_count === 0}>
-                              <Minus className="h-3 w-3" />
-                            </Button>
-                            <Button variant="outline" size="icon" className="h-6 w-6" onClick={() => updateCount(item.id, 1)}>
-                              <Plus className="h-3 w-3" />
-                            </Button>
-                          </div>
+                          <Badge variant={isLow ? "destructive" : "outline"} className="text-[10px]">
+                            {isLow ? "Low" : "OK"}
+                          </Badge>
                         </TableCell>
-                        <TableCell>
-                          <AlertDialog>
-                            <AlertDialogTrigger asChild>
-                              <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive hover:text-destructive">
-                                <Trash2 className="h-3 w-3" />
+                        {canAdjustAndRequest && (
+                          <TableCell className="text-center">
+                            <div className="flex items-center justify-center gap-1">
+                              <Button variant="outline" size="icon" className="h-6 w-6" onClick={() => updateCount(item.id, -1)} disabled={item.current_count === 0}>
+                                <Minus className="h-3 w-3" />
                               </Button>
-                            </AlertDialogTrigger>
-                            <AlertDialogContent>
-                              <AlertDialogHeader>
-                                <AlertDialogTitle>Delete {item.name}?</AlertDialogTitle>
-                                <AlertDialogDescription>This will permanently remove this item and all associated order requests.</AlertDialogDescription>
-                              </AlertDialogHeader>
-                              <AlertDialogFooter>
-                                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                <AlertDialogAction onClick={() => deleteItem(item.id)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Delete</AlertDialogAction>
-                              </AlertDialogFooter>
-                            </AlertDialogContent>
-                          </AlertDialog>
-                        </TableCell>
+                              <Button variant="outline" size="icon" className="h-6 w-6" onClick={() => updateCount(item.id, 1)}>
+                                <Plus className="h-3 w-3" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        )}
+                        {canManageItems && (
+                          <TableCell>
+                            <AlertDialog>
+                              <AlertDialogTrigger asChild>
+                                <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive hover:text-destructive">
+                                  <Trash2 className="h-3 w-3" />
+                                </Button>
+                              </AlertDialogTrigger>
+                              <AlertDialogContent>
+                                <AlertDialogHeader>
+                                  <AlertDialogTitle>Delete {item.name}?</AlertDialogTitle>
+                                  <AlertDialogDescription>This will permanently remove this item and all associated order requests.</AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                  <AlertDialogAction onClick={() => deleteItem(item.id)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Delete</AlertDialogAction>
+                                </AlertDialogFooter>
+                              </AlertDialogContent>
+                            </AlertDialog>
+                          </TableCell>
+                        )}
                       </TableRow>
                     );
                   })}
@@ -377,6 +490,11 @@ export default function InventoryPage() {
         </TabsContent>
 
         <TabsContent value="orders" className="mt-3">
+          <div className="flex justify-end mb-2">
+            <Button variant="ghost" size="sm" className="gap-1.5 text-xs" onClick={exportOrdersCSV} disabled={orders.length === 0}>
+              <Download className="h-3.5 w-3.5" /> Export CSV
+            </Button>
+          </div>
           {orders.length === 0 ? (
             <Card>
               <CardContent className="py-12 text-center">
@@ -394,7 +512,7 @@ export default function InventoryPage() {
                     <TableHead className="text-xs">Notes</TableHead>
                     <TableHead className="text-xs">Status</TableHead>
                     <TableHead className="text-xs">Date</TableHead>
-                    <TableHead className="text-xs text-right">Actions</TableHead>
+                    {isAdmin && <TableHead className="text-xs text-right">Actions</TableHead>}
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -411,23 +529,25 @@ export default function InventoryPage() {
                       <TableCell className="text-xs text-muted-foreground">
                         {new Date(order.created_at).toLocaleDateString("en-AU", { day: "numeric", month: "short" })}
                       </TableCell>
-                      <TableCell className="text-right">
-                        {order.status === "pending" && (
-                          <div className="flex gap-1 justify-end">
-                            <Button variant="outline" size="sm" className="h-6 text-[10px] text-success border-success/30" onClick={() => updateOrderStatus(order.id, "approved")}>
-                              Approve
+                      {isAdmin && (
+                        <TableCell className="text-right">
+                          {order.status === "pending" && (
+                            <div className="flex gap-1 justify-end">
+                              <Button variant="outline" size="sm" className="h-6 text-[10px] text-success border-success/30" onClick={() => updateOrderStatus(order.id, "approved")}>
+                                Approve
+                              </Button>
+                              <Button variant="outline" size="sm" className="h-6 text-[10px] text-destructive border-destructive/30" onClick={() => updateOrderStatus(order.id, "rejected")}>
+                                Reject
+                              </Button>
+                            </div>
+                          )}
+                          {order.status === "approved" && (
+                            <Button variant="outline" size="sm" className="h-6 text-[10px] text-primary border-primary/30" onClick={() => updateOrderStatus(order.id, "ordered")}>
+                              Mark Ordered
                             </Button>
-                            <Button variant="outline" size="sm" className="h-6 text-[10px] text-destructive border-destructive/30" onClick={() => updateOrderStatus(order.id, "rejected")}>
-                              Reject
-                            </Button>
-                          </div>
-                        )}
-                        {order.status === "approved" && (
-                          <Button variant="outline" size="sm" className="h-6 text-[10px] text-primary border-primary/30" onClick={() => updateOrderStatus(order.id, "ordered")}>
-                            Mark Ordered
-                          </Button>
-                        )}
-                      </TableCell>
+                          )}
+                        </TableCell>
+                      )}
                     </TableRow>
                   ))}
                 </TableBody>
@@ -436,6 +556,39 @@ export default function InventoryPage() {
           )}
         </TabsContent>
       </Tabs>
+
+      {/* Stocktake Dialog */}
+      <Dialog open={stocktakeOpen} onOpenChange={setStocktakeOpen}>
+        <DialogContent className="max-w-lg max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <ClipboardCheck className="h-5 w-5 text-primary" /> Weekly Stocktake
+            </DialogTitle>
+          </DialogHeader>
+          <p className="text-xs text-muted-foreground">Enter the actual count for each item. Par levels are shown for reference.</p>
+          <div className="space-y-2 mt-2">
+            {items.map(item => (
+              <div key={item.id} className="flex items-center gap-3 py-1.5 border-b border-border/40 last:border-0">
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-medium truncate">{item.name}</p>
+                  <p className="text-[10px] text-muted-foreground">Par: {item.min_count} {item.unit}</p>
+                </div>
+                <Input
+                  type="number"
+                  min={0}
+                  className="w-20 h-8 text-xs text-center"
+                  value={stocktakeCounts[item.id] ?? ""}
+                  onChange={e => setStocktakeCounts(prev => ({ ...prev, [item.id]: e.target.value }))}
+                />
+              </div>
+            ))}
+          </div>
+          <DialogFooter>
+            <DialogClose asChild><Button variant="outline">Cancel</Button></DialogClose>
+            <Button onClick={handleStocktakeSave}>Save Stocktake</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
