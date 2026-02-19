@@ -73,7 +73,7 @@ export default function AdminLayout() {
     { path: `${basePath}/requests`, label: "Requests", icon: CalendarOff, tourId: "requests", access: "full" },
     { path: `${basePath}/forum`, label: "Forum", icon: MessageSquare, tourId: "forum", access: "full" },
     { path: `${basePath}/audit-log`, label: "Audit Log", icon: FileText, tourId: "audit-log", access: "full" },
-    { path: `${basePath}/inventory`, label: "FOH Inventory", icon: Package, tourId: "inventory", access: "roster" },
+    { path: `${basePath}/inventory`, label: "Inventory", icon: Package, tourId: "inventory", access: "roster" },
     { path: `${basePath}/users`, label: "User Management", icon: UserCog, tourId: "users", access: "super_admin_only" },
     { path: `${basePath}/my-business`, label: "My Business", icon: Building2, tourId: "my-business", access: "full" },
   ];
