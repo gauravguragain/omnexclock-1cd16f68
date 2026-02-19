@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useBusiness } from "@/contexts/BusinessContext";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -14,13 +14,16 @@ import { logAudit } from "@/lib/auditLog";
 import { notifyEmployees } from "@/lib/notifications";
 import { useAuth } from "@/contexts/AuthContext";
 import {
-  ChevronLeft, ChevronRight, Plus, Trash2, Copy, Send, Clock, AlertCircle, CalendarOff, Clipboard, ClipboardPaste, X,
+  ChevronLeft, ChevronRight, Plus, Trash2, Copy, Send, Clock, AlertCircle, CalendarOff, Clipboard, ClipboardPaste, X, Mail,
 } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
 import type { Tables } from "@/integrations/supabase/types";
 import { toAusDate, toAusFormatted } from "@/lib/dateUtils";
 import RosterDayEvents from "@/components/RosterDayEvents";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
 
 type Employee = Tables<"employees">;
 type Shift = Tables<"shifts">;
@@ -121,6 +124,12 @@ export default function RosterPage() {
   const [copiedShift, setCopiedShift] = useState<Shift | null>(null);
   const [departmentFilter, setDepartmentFilter] = useState<string>("all");
 
+  // Email roster state
+  const [emailDialogOpen, setEmailDialogOpen] = useState(false);
+  const [adminUsers, setAdminUsers] = useState<{ id: string; email: string; full_name: string | null; role: string }[]>([]);
+  const [selectedAdminIds, setSelectedAdminIds] = useState<string[]>([]);
+  const [sendingEmail, setSendingEmail] = useState(false);
+
   const weekDates = useMemo(() => DAYS.map((_, i) => addDays(weekStart, i)), [weekStart]);
   const weekEnd = addDays(weekStart, 6);
   const weekLabel = `${toAusFormatted(weekStart, { day: "numeric", month: "short" })} – ${toAusFormatted(weekEnd, { day: "numeric", month: "short", year: "numeric" })}`;
@@ -154,6 +163,209 @@ export default function RosterPage() {
   }, [weekStart, business]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
+
+  // Fetch admin users for email dialog
+  const fetchAdminUsers = useCallback(async () => {
+    if (!business) return;
+    const { data: roles } = await supabase
+      .from("user_roles")
+      .select("user_id, role")
+      .eq("business_id", business.id)
+      .in("role", ["admin", "super_admin", "roster_admin"]);
+    if (!roles || roles.length === 0) { setAdminUsers([]); return; }
+    const userIds = [...new Set(roles.map(r => r.user_id))];
+    const { data: profiles } = await supabase
+      .from("profiles")
+      .select("id, email, full_name")
+      .in("id", userIds);
+    if (!profiles) { setAdminUsers([]); return; }
+    const roleMap = new Map<string, string>();
+    for (const r of roles) {
+      const existing = roleMap.get(r.user_id);
+      if (!existing || r.role === "super_admin" || (r.role === "admin" && existing === "roster_admin")) {
+        roleMap.set(r.user_id, r.role);
+      }
+    }
+    setAdminUsers(profiles.map(p => ({
+      id: p.id,
+      email: p.email,
+      full_name: p.full_name,
+      role: roleMap.get(p.id) || "admin",
+    })));
+  }, [business]);
+
+  const openEmailDialog = async () => {
+    await fetchAdminUsers();
+    setSelectedAdminIds([]);
+    setEmailDialogOpen(true);
+  };
+
+  const generateRosterPDF = (): string => {
+    const doc = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
+    const pageWidth = doc.internal.pageSize.getWidth();
+
+    // Header
+    doc.setFillColor(26, 26, 26);
+    doc.rect(0, 0, pageWidth, 22, "F");
+    doc.setTextColor(201, 162, 39);
+    doc.setFontSize(16);
+    doc.setFont("helvetica", "bold");
+    doc.text("OmnexClock", 14, 14);
+    doc.setTextColor(160, 160, 160);
+    doc.setFontSize(9);
+    doc.setFont("helvetica", "normal");
+    doc.text("Weekly Roster", 58, 14);
+
+    // Week label
+    doc.setTextColor(26, 26, 26);
+    doc.setFontSize(12);
+    doc.setFont("helvetica", "bold");
+    doc.text(`Roster: ${weekLabel}`, 14, 32);
+
+    if (business) {
+      doc.setFontSize(9);
+      doc.setFont("helvetica", "normal");
+      doc.setTextColor(100, 100, 100);
+      doc.text(`Business: ${business.name}`, 14, 38);
+    }
+
+    // Department filter note
+    if (departmentFilter !== "all") {
+      doc.setFontSize(8);
+      doc.setTextColor(150, 100, 0);
+      doc.text(`Filtered: ${departmentFilter} department only`, 14, 43);
+    }
+
+    // Build table data
+    const headers = ["Employee", ...DAYS.map((d, i) => `${d}\n${toAusFormatted(weekDates[i], { day: "numeric", month: "short" })}`), "Total"];
+    const tableData = filteredEmployees.map(emp => {
+      const row: string[] = [emp.name + (emp.department ? `\n${emp.department}` : "")];
+      for (let dayIdx = 0; dayIdx < 7; dayIdx++) {
+        const dayShifts = shiftMap[emp.id]?.[dayIdx] || [];
+        if (dayShifts.length > 0) {
+          row.push(dayShifts.map(s =>
+            `${formatTime12(s.start_time)} – ${formatTime12(s.end_time)}` +
+            (s.break_minutes > 0 ? `\n(${s.break_minutes}m break)` : "") +
+            (s.notes ? `\n${s.notes}` : "")
+          ).join("\n"));
+        } else {
+          row.push("—");
+        }
+      }
+      row.push(`${(weeklyTotals[emp.id] || 0).toFixed(2)}h`);
+      return row;
+    });
+
+    autoTable(doc, {
+      startY: departmentFilter !== "all" ? 47 : 42,
+      head: [headers],
+      body: tableData,
+      theme: "grid",
+      styles: {
+        fontSize: 7,
+        cellPadding: 2,
+        lineColor: [200, 200, 200],
+        lineWidth: 0.3,
+        overflow: "linebreak",
+      },
+      headStyles: {
+        fillColor: [40, 40, 40],
+        textColor: [201, 162, 39],
+        fontStyle: "bold",
+        fontSize: 7.5,
+        halign: "center",
+      },
+      columnStyles: {
+        0: { cellWidth: 32, halign: "left", fontStyle: "bold" },
+        8: { cellWidth: 18, halign: "center", fontStyle: "bold" },
+      },
+      alternateRowStyles: { fillColor: [248, 249, 250] },
+    });
+
+    // Day events section
+    const dayEventsY = (doc as any).lastAutoTable?.finalY || 50;
+    // Fetch day events if available - we'll check in the data we already have
+    // For now we include a summary section
+
+    // Footer
+    const finalY = (doc as any).lastAutoTable?.finalY || dayEventsY;
+    doc.setFontSize(7);
+    doc.setTextColor(146, 64, 14);
+    doc.setFont("helvetica", "italic");
+    const disclaimerY = Math.min(finalY + 8, doc.internal.pageSize.getHeight() - 12);
+    doc.text(
+      "⚠ Disclaimer: Shift and break times are indicative and subject to management discretion.",
+      14,
+      disclaimerY
+    );
+    doc.setTextColor(150, 150, 150);
+    doc.setFont("helvetica", "normal");
+    doc.text(
+      `Generated: ${new Date().toLocaleDateString("en-AU", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" })}`,
+      14,
+      disclaimerY + 4
+    );
+
+    // Return as base64
+    return doc.output("datauristring").split(",")[1];
+  };
+
+  const handleSendRosterEmail = async () => {
+    if (selectedAdminIds.length === 0) {
+      toast({ title: "No recipients selected", variant: "destructive" });
+      return;
+    }
+    setSendingEmail(true);
+    try {
+      const pdfBase64 = generateRosterPDF();
+      const pdfFilename = `roster-${fmtDate(weekStart)}-to-${fmtDate(addDays(weekStart, 6))}.pdf`;
+
+      // Get current user's name
+      const { data: currentProfile } = await supabase
+        .from("profiles")
+        .select("full_name, email")
+        .eq("id", (await supabase.auth.getUser()).data.user?.id || "")
+        .single();
+
+      let sentCount = 0;
+      for (const adminId of selectedAdminIds) {
+        const admin = adminUsers.find(a => a.id === adminId);
+        if (!admin) continue;
+        try {
+          await supabase.functions.invoke("send-email", {
+            body: {
+              type: "roster_pdf",
+              to: admin.email,
+              adminName: admin.full_name || admin.email,
+              weekLabel,
+              pdfBase64,
+              pdfFilename,
+              businessName: business?.name,
+              senderName: currentProfile?.full_name || currentProfile?.email || "Admin",
+            },
+          });
+          sentCount++;
+        } catch (err) {
+          console.error(`Failed to email ${admin.email}:`, err);
+        }
+      }
+
+      if (sentCount > 0) {
+        toast({ title: "Roster sent!", description: `PDF roster emailed to ${sentCount} admin(s).` });
+        await logAudit("roster_email_sent", {
+          week_start: fmtDate(weekStart),
+          recipients: selectedAdminIds.length,
+        });
+      } else {
+        toast({ title: "Failed to send", description: "No emails were sent.", variant: "destructive" });
+      }
+      setEmailDialogOpen(false);
+    } catch (err: any) {
+      toast({ title: "Error", description: err.message, variant: "destructive" });
+    } finally {
+      setSendingEmail(false);
+    }
+  };
 
   /* ── realtime ── */
   useEffect(() => {
@@ -593,6 +805,9 @@ export default function RosterPage() {
             <Button size="sm" className="rounded-lg" onClick={handlePublishWeek} disabled={publishing || weekStatus === "published" || weekStatus === "empty"}>
               <Send className="mr-1.5 h-3.5 w-3.5" /> {publishing ? "Publishing..." : "Publish Week"}
             </Button>
+            <Button variant="outline" size="sm" className="rounded-lg" onClick={openEmailDialog} disabled={shifts.length === 0}>
+              <Mail className="mr-1.5 h-3.5 w-3.5" /> Email Roster
+            </Button>
           </div>
         )}
       </div>
@@ -867,6 +1082,83 @@ export default function RosterPage() {
               </Button>
             </div>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Email Roster Dialog */}
+      <Dialog open={emailDialogOpen} onOpenChange={setEmailDialogOpen}>
+        <DialogContent className="sm:max-w-md rounded-xl">
+          <DialogHeader>
+            <DialogTitle className="text-lg flex items-center gap-2">
+              <Mail className="h-5 w-5 text-primary" /> Email Roster as PDF
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-1">
+              <Label className="text-xs text-muted-foreground">Week</Label>
+              <p className="font-medium text-foreground text-sm">{weekLabel}</p>
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs text-muted-foreground">
+                {departmentFilter !== "all" ? `Showing: ${departmentFilter} department` : "All departments"}
+              </Label>
+              <p className="text-xs text-muted-foreground">{filteredEmployees.length} employee(s) · {shifts.length} shift(s)</p>
+            </div>
+            <div className="space-y-2">
+              <Label className="text-xs font-medium">Select Recipients</Label>
+              {adminUsers.length === 0 ? (
+                <p className="text-xs text-muted-foreground">No admin users found for this business.</p>
+              ) : (
+                <div className="space-y-2 max-h-[200px] overflow-y-auto rounded-lg border border-border/60 p-2">
+                  {adminUsers.map(admin => (
+                    <label key={admin.id} className="flex items-center gap-3 px-2 py-1.5 rounded-md hover:bg-secondary/50 cursor-pointer transition-colors">
+                      <Checkbox
+                        checked={selectedAdminIds.includes(admin.id)}
+                        onCheckedChange={(checked) => {
+                          if (checked) {
+                            setSelectedAdminIds(prev => [...prev, admin.id]);
+                          } else {
+                            setSelectedAdminIds(prev => prev.filter(id => id !== admin.id));
+                          }
+                        }}
+                      />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-foreground truncate">{admin.full_name || admin.email}</p>
+                        <p className="text-[11px] text-muted-foreground truncate">{admin.email}</p>
+                      </div>
+                      <Badge variant="outline" className="text-[10px] capitalize shrink-0">
+                        {admin.role.replace("_", " ")}
+                      </Badge>
+                    </label>
+                  ))}
+                </div>
+              )}
+              {adminUsers.length > 0 && (
+                <div className="flex gap-2 text-[10px]">
+                  <button
+                    className="text-primary hover:underline"
+                    onClick={() => setSelectedAdminIds(adminUsers.map(a => a.id))}
+                  >
+                    Select All
+                  </button>
+                  <span className="text-muted-foreground">·</span>
+                  <button
+                    className="text-muted-foreground hover:underline"
+                    onClick={() => setSelectedAdminIds([])}
+                  >
+                    Clear
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+          <DialogFooter>
+            <DialogClose asChild><Button variant="outline">Cancel</Button></DialogClose>
+            <Button onClick={handleSendRosterEmail} disabled={sendingEmail || selectedAdminIds.length === 0}>
+              <Mail className="mr-1.5 h-3.5 w-3.5" />
+              {sendingEmail ? "Sending..." : `Send to ${selectedAdminIds.length} admin(s)`}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

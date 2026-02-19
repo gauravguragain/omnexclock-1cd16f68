@@ -7,7 +7,7 @@ const corsHeaders = {
 };
 
 interface EmailRequest {
-  type: "roster_notification" | "csv_export" | "employee_induction";
+  type: "roster_notification" | "csv_export" | "employee_induction" | "roster_pdf";
   // roster_notification fields
   to?: string;
   employeeName?: string;
@@ -26,6 +26,11 @@ interface EmailRequest {
   jobTitle?: string;
   department?: string;
   businessName?: string;
+  // roster_pdf fields
+  pdfBase64?: string;
+  pdfFilename?: string;
+  adminName?: string;
+  senderName?: string;
 }
 
 serve(async (req) => {
@@ -289,6 +294,66 @@ serve(async (req) => {
         to: [body.to],
         subject: `Welcome to ${body.businessName || "the team"}, ${body.employeeName}! 🎉 — Your Induction Packet`,
         html,
+      };
+    } else if (body.type === "roster_pdf") {
+      if (!body.to || !body.pdfBase64 || !body.weekLabel) {
+        throw new Error("Missing required fields for roster PDF email");
+      }
+
+      const html = `
+        <div style="font-family:'Segoe UI',Arial,sans-serif;max-width:600px;margin:0 auto;color:#1a1a1a;background:#ffffff;">
+          <!-- Header -->
+          <div style="text-align:center;padding:30px 20px 16px;background:linear-gradient(135deg,#1a1a1a 0%,#2d2d2d 100%);border-radius:12px 12px 0 0;">
+            <h1 style="color:#c9a227;font-size:24px;margin:0;letter-spacing:1px;">OmnexClock</h1>
+            <p style="color:#a0a0a0;font-size:11px;margin:6px 0 0;text-transform:uppercase;letter-spacing:2px;">Roster Report</p>
+          </div>
+          
+          <!-- Body -->
+          <div style="padding:24px 30px;">
+            <h2 style="margin:0 0 12px;font-size:18px;color:#1a1a1a;">📋 Weekly Roster — ${body.weekLabel}</h2>
+            <p style="color:#555;font-size:14px;line-height:1.6;">
+              Hi ${body.adminName || 'Admin'},
+            </p>
+            <p style="color:#555;font-size:14px;line-height:1.6;">
+              Please find the attached roster for <strong>${body.weekLabel}</strong>.
+              ${body.senderName ? `This was sent by <strong>${body.senderName}</strong>.` : ''}
+            </p>
+            <div style="margin:20px 0;padding:14px 16px;background:#f0f9ff;border:1px solid #bae6fd;border-radius:6px;">
+              <p style="margin:0;font-size:13px;color:#0369a1;font-weight:600;">📎 Attachment</p>
+              <p style="margin:4px 0 0;font-size:12px;color:#475569;">
+                The roster PDF is attached to this email. Open it to view the full schedule with all employee shifts, hours, and event details.
+              </p>
+            </div>
+          </div>
+          
+          <!-- Disclaimer -->
+          <div style="padding:16px 30px;background:#fef9e7;border-top:1px solid #f5e6b8;">
+            <p style="margin:0;font-size:11px;color:#92400e;line-height:1.5;">
+              <strong>⚠️ Disclaimer:</strong> The shift and break times stated in this roster are indicative and may vary according to the operational needs of the business and at the discretion of management.
+            </p>
+          </div>
+          
+          <!-- Footer -->
+          <div style="text-align:center;padding:16px 30px;background:#f8f9fa;border-radius:0 0 12px 12px;">
+            <p style="color:#999;font-size:11px;margin:0;">
+              This is an automated email from <strong>${body.businessName || "OmnexClock"}</strong>.
+            </p>
+          </div>
+        </div>
+      `;
+
+      emailPayload = {
+        from: `${body.businessName || "OmnexClock"} <noreply@omnexventures.com>`,
+        to: [body.to],
+        subject: `Roster — ${body.weekLabel}`,
+        html,
+        attachments: [
+          {
+            filename: body.pdfFilename || `roster-${body.weekLabel}.pdf`,
+            content: body.pdfBase64,
+            type: "application/pdf",
+          },
+        ],
       };
     } else {
       throw new Error("Invalid email type");
