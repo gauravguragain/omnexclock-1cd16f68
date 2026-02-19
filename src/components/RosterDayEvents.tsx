@@ -11,7 +11,7 @@ import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { useToast } from "@/hooks/use-toast";
-import { ChevronDown, ChevronUp, Plus, Trash2, PartyPopper, Sparkles, Wind, Ribbon, Palette } from "lucide-react";
+import { ChevronDown, ChevronUp, Plus, Trash2, PartyPopper, Sparkles, Wind, Ribbon, Palette, Upload, FileText, X, Loader2 } from "lucide-react";
 
 interface DayEvent {
   id: string;
@@ -26,6 +26,7 @@ interface DayEvent {
   red_carpet: boolean;
   decor_access: boolean;
   notes: string | null;
+  runsheet_url: string | null;
 }
 
 interface ConfigItem {
@@ -48,6 +49,7 @@ export default function RosterDayEvents({ weekDates, fmtDate }: Props) {
   const [config, setConfig] = useState<ConfigItem[]>([]);
   const [openDays, setOpenDays] = useState<Set<number>>(new Set());
   const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState<string | null>(null);
 
   // Roster admins with only BOH access cannot edit events
   const isRosterAdminBOHOnly = business
@@ -124,6 +126,47 @@ export default function RosterDayEvents({ weekDates, fmtDate }: Props) {
       } else {
         fetchData();
         toast({ title: "Event removed" });
+      }
+    });
+  };
+
+  const handleRunsheetUpload = async (eventId: string, file: File) => {
+    if (!business) return;
+    if (file.type !== "application/pdf") {
+      toast({ title: "Invalid file", description: "Only PDF files are accepted.", variant: "destructive" });
+      return;
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      toast({ title: "File too large", description: "Maximum file size is 10MB.", variant: "destructive" });
+      return;
+    }
+    setUploading(eventId);
+    const filePath = `${business.id}/${eventId}/${Date.now()}_${file.name}`;
+    const { error: uploadError } = await supabase.storage.from("event-runsheets").upload(filePath, file, { upsert: true });
+    if (uploadError) {
+      toast({ title: "Upload failed", description: uploadError.message, variant: "destructive" });
+      setUploading(null);
+      return;
+    }
+    const { data: urlData } = supabase.storage.from("event-runsheets").getPublicUrl(filePath);
+    const { error: updateError } = await supabase.from("roster_day_events").update({ runsheet_url: urlData.publicUrl, updated_at: new Date().toISOString() }).eq("id", eventId);
+    if (updateError) {
+      toast({ title: "Error saving URL", description: updateError.message, variant: "destructive" });
+    } else {
+      setEvents(prev => prev.map(e => e.id === eventId ? { ...e, runsheet_url: urlData.publicUrl } : e));
+      toast({ title: "Runsheet uploaded" });
+    }
+    setUploading(null);
+  };
+
+  const removeRunsheet = async (eventId: string) => {
+    await runAction(async () => {
+      const { error } = await supabase.from("roster_day_events").update({ runsheet_url: null, updated_at: new Date().toISOString() }).eq("id", eventId);
+      if (error) {
+        toast({ title: "Error", description: error.message, variant: "destructive" });
+      } else {
+        setEvents(prev => prev.map(e => e.id === eventId ? { ...e, runsheet_url: null } : e));
+        toast({ title: "Runsheet removed" });
       }
     });
   };
@@ -279,6 +322,44 @@ export default function RosterDayEvents({ weekDates, fmtDate }: Props) {
                           </Label>
                         </div>
                       ))}
+                    </div>
+
+                    {/* Runsheet Upload */}
+                    <div className="flex items-center gap-2 pt-1 border-t border-border/40">
+                      <FileText className="h-3.5 w-3.5 text-muted-foreground" />
+                      <Label className="text-[11px] text-muted-foreground">Runsheet</Label>
+                      {ev.runsheet_url ? (
+                        <div className="flex items-center gap-2 ml-auto">
+                          <a href={ev.runsheet_url} target="_blank" rel="noopener noreferrer" className="text-[11px] text-primary hover:underline flex items-center gap-1">
+                            <FileText className="h-3 w-3" /> View PDF
+                          </a>
+                          {!cannotEdit && (
+                            <Button variant="ghost" size="sm" className="h-6 w-6 p-0 text-destructive hover:text-destructive" onClick={() => removeRunsheet(ev.id)}>
+                              <X className="h-3 w-3" />
+                            </Button>
+                          )}
+                        </div>
+                      ) : !cannotEdit ? (
+                        <label className="ml-auto cursor-pointer">
+                          <input
+                            type="file"
+                            accept=".pdf,application/pdf"
+                            className="hidden"
+                            onChange={e => {
+                              const f = e.target.files?.[0];
+                              if (f) handleRunsheetUpload(ev.id, f);
+                              e.target.value = "";
+                            }}
+                            disabled={uploading === ev.id}
+                          />
+                          <span className="inline-flex items-center gap-1 text-[11px] text-primary hover:underline">
+                            {uploading === ev.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <Upload className="h-3 w-3" />}
+                            {uploading === ev.id ? "Uploading..." : "Upload PDF"}
+                          </span>
+                        </label>
+                      ) : (
+                        <span className="text-[11px] text-muted-foreground ml-auto">No runsheet</span>
+                      )}
                     </div>
 
                     {!cannotEdit && (
