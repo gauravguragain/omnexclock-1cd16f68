@@ -2,10 +2,8 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useBusiness } from "@/contexts/BusinessContext";
 import { Navigate, Outlet, Link, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Building2, LogOut, Menu, X, Shield, LayoutDashboard, Users, FileText, Settings, MoreHorizontal, Sun, Moon } from "lucide-react";
+import { Building2, LogOut, Menu, X, Shield, LayoutDashboard, Users, FileText, Settings, MoreHorizontal } from "lucide-react";
 import { useState, useEffect } from "react";
-import { useTheme } from "next-themes";
-import { Switch } from "@/components/ui/switch";
 import {
   Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger
 } from "@/components/ui/sheet";
@@ -13,7 +11,6 @@ import {
 export default function MasterLayout() {
   const { user, isMaster, loading, signOut } = useAuth();
   const { resetTheme } = useBusiness();
-  const { theme, setTheme } = useTheme();
   const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [moreSheetOpen, setMoreSheetOpen] = useState(false);
@@ -178,19 +175,6 @@ export default function MasterLayout() {
                       </Link>
                     );
                   })}
-                </div>
-                {/* Dark / Light mode toggle */}
-                <div className="border-t border-border/40 pt-3 mt-2">
-                  <div className="flex items-center justify-between px-3 py-3 rounded-xl">
-                    <div className="flex items-center gap-3 text-sm text-muted-foreground">
-                      {theme === "dark" ? <Moon className="h-5 w-5" /> : <Sun className="h-5 w-5" />}
-                      <span>Dark Mode</span>
-                    </div>
-                    <Switch
-                      checked={theme === "dark"}
-                      onCheckedChange={(checked) => setTheme(checked ? "dark" : "light")}
-                    />
-                  </div>
                 </div>
                 <div className="border-t border-border/40 pt-3 mt-2 space-y-1">
                   <button
