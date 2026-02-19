@@ -58,6 +58,10 @@ serve(async (req) => {
     // Delete user roles first
     await supabase.from("user_roles").delete().eq("user_id", user_id);
 
+    // Delete audit logs related to this user
+    await supabase.from("audit_logs").delete().eq("user_id", user_id);
+    await supabase.from("master_audit_logs").delete().eq("user_id", user_id);
+
     // Delete profile
     await supabase.from("profiles").delete().eq("id", user_id);
 

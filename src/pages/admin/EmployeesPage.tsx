@@ -208,6 +208,9 @@ export default function EmployeesPage() {
         await supabase.from("forum_comments").delete().eq("employee_id", deleteTarget.id);
         await supabase.from("forum_reactions").delete().eq("employee_id", deleteTarget.id);
         await supabase.from("payroll_entries").delete().eq("employee_id", deleteTarget.id);
+        // Delete audit logs referencing this employee
+        await supabase.from("audit_logs").delete().filter("details->>employee_id", "eq", deleteTarget.id);
+        await supabase.from("audit_logs").delete().filter("details->>employee_name", "eq", deleteTarget.name);
 
         const { error } = await supabase.from("employees").delete().eq("id", deleteTarget.id);
         if (error) throw error;
