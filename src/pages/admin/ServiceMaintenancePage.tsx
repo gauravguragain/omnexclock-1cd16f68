@@ -81,7 +81,7 @@ export default function ServiceMaintenancePage() {
       .from("user_roles")
       .select("user_id")
       .eq("business_id", businessId)
-      .in("role", ["admin", "super_admin"]);
+      .in("role", ["admin", "super_admin", "roster_admin", "viewer"]);
     if (!roles || roles.length === 0) return;
 
     const userIds = roles.map((r) => r.user_id);
