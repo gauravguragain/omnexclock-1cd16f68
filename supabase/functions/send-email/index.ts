@@ -364,7 +364,8 @@ serve(async (req) => {
     const data = await res.json();
 
     if (!res.ok) {
-      throw new Error(`Resend API error [${res.status}]: ${JSON.stringify(data)}`);
+      console.error("Resend API error:", res.status, data);
+      throw new Error("Failed to send email");
     }
 
     return new Response(JSON.stringify({ success: true, data }), {
@@ -373,8 +374,13 @@ serve(async (req) => {
     });
   } catch (error: unknown) {
     console.error("Email send error:", error);
-    const message = error instanceof Error ? error.message : "Unknown error";
-    return new Response(JSON.stringify({ success: false, error: message }), {
+    let safeMessage = "Unable to send email. Please try again.";
+    if (error instanceof Error) {
+      if (error.message.includes("Missing required fields")) safeMessage = error.message;
+      else if (error.message.includes("Invalid email type")) safeMessage = "Invalid email type";
+      else if (error.message.includes("RESEND_API_KEY")) safeMessage = "Email service not configured";
+    }
+    return new Response(JSON.stringify({ success: false, error: safeMessage }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });

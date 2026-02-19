@@ -191,15 +191,19 @@ export default function RosterDayEvents({ weekDates, fmtDate }: Props) {
       setUploading(null);
       return;
     }
-    const { data: urlData } = supabase.storage.from("event-runsheets").getPublicUrl(filePath);
-    const { error: updateError } = await supabase.from("roster_day_events").update({ runsheet_url: urlData.publicUrl, updated_at: new Date().toISOString() }).eq("id", eventId);
+    // Store the file path (not public URL) since bucket is now private
+    const { error: updateError } = await supabase.from("roster_day_events").update({ runsheet_url: filePath, updated_at: new Date().toISOString() }).eq("id", eventId);
     if (updateError) {
       toast({ title: "Error saving URL", description: updateError.message, variant: "destructive" });
     } else {
-      setEvents(prev => prev.map(e => e.id === eventId ? { ...e, runsheet_url: urlData.publicUrl } : e));
+      setEvents(prev => prev.map(e => e.id === eventId ? { ...e, runsheet_url: filePath } : e));
       toast({ title: "Runsheet uploaded, extracting data..." });
       await logAudit("runsheet_upload", { event_id: eventId, filename: file.name });
-      extractRunsheetData(eventId, urlData.publicUrl);
+      // Generate a signed URL for extraction
+      const { data: signedData } = await supabase.storage.from("event-runsheets").createSignedUrl(filePath, 300);
+      if (signedData?.signedUrl) {
+        extractRunsheetData(eventId, signedData.signedUrl);
+      }
     }
     setUploading(null);
   };
@@ -226,13 +230,14 @@ export default function RosterDayEvents({ weekDates, fmtDate }: Props) {
       setSectionUploading(false);
       return;
     }
-    const { data: urlData } = supabase.storage.from("event-runsheets").getPublicUrl(filePath);
+    // Generate a signed URL for extraction
+    const { data: signedUrlData } = await supabase.storage.from("event-runsheets").createSignedUrl(filePath, 300);
     setSectionUploading(false);
     setSectionExtracting(true);
 
     try {
       const { data, error } = await supabase.functions.invoke("extract-runsheet", {
-        body: { pdfUrl: urlData.publicUrl },
+        body: { pdfUrl: signedUrlData?.signedUrl || filePath },
       });
       if (error) throw error;
       if (!data) throw new Error("No data returned");
@@ -255,7 +260,7 @@ export default function RosterDayEvents({ weekDates, fmtDate }: Props) {
       const { data: inserted, error: insertErr } = await supabase.from("roster_day_events").insert({
         business_id: business.id,
         date: dateStr,
-        runsheet_url: urlData.publicUrl,
+        runsheet_url: filePath,
       }).select().single();
 
       if (insertErr || !inserted) {
@@ -267,8 +272,7 @@ export default function RosterDayEvents({ weekDates, fmtDate }: Props) {
       // Move the file to the proper path
       const properPath = `${business.id}/${inserted.id}/${Date.now()}_${file.name}`;
       await supabase.storage.from("event-runsheets").copy(filePath, properPath);
-      const { data: properUrl } = supabase.storage.from("event-runsheets").getPublicUrl(properPath);
-      await supabase.from("roster_day_events").update({ runsheet_url: properUrl.publicUrl }).eq("id", inserted.id);
+      await supabase.from("roster_day_events").update({ runsheet_url: properPath }).eq("id", inserted.id);
 
       // Apply extracted data
       const updates: Partial<DayEvent> = {};
@@ -368,7 +372,18 @@ export default function RosterDayEvents({ weekDates, fmtDate }: Props) {
     });
   };
 
-  const viewPdf = (url: string) => {
+  const viewPdf = async (urlOrPath: string) => {
+    // If it's already a full URL (legacy data), open directly; otherwise generate signed URL
+    let url = urlOrPath;
+    if (!urlOrPath.startsWith("http")) {
+      const { data } = await supabase.storage.from("event-runsheets").createSignedUrl(urlOrPath, 3600);
+      if (data?.signedUrl) {
+        url = data.signedUrl;
+      } else {
+        toast({ title: "Error", description: "Could not generate access link for PDF.", variant: "destructive" });
+        return;
+      }
+    }
     // Use Google Docs viewer as fallback for direct PDF viewing
     const viewerUrl = `https://docs.google.com/viewer?url=${encodeURIComponent(url)}&embedded=true`;
     window.open(viewerUrl, "_blank", "noopener,noreferrer");

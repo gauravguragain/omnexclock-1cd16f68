@@ -90,7 +90,10 @@ serve(async (req) => {
       token,
     });
 
-    if (insertErr) throw new Error(`Failed to create invitation: ${insertErr.message}`);
+    if (insertErr) {
+      console.error("Insert invitation error:", insertErr);
+      throw new Error("Failed to create invitation");
+    }
 
     // Build role label and induction guide URL
     const roleLabels: Record<string, string> = {
@@ -182,7 +185,10 @@ serve(async (req) => {
     });
 
     const data = await res.json();
-    if (!res.ok) throw new Error(`Email send failed: ${JSON.stringify(data)}`);
+    if (!res.ok) {
+      console.error("Email send failed:", data);
+      throw new Error("Failed to send invitation email");
+    }
 
     return new Response(
       JSON.stringify({ success: true, token }),
@@ -190,9 +196,15 @@ serve(async (req) => {
     );
   } catch (error: unknown) {
     console.error("Invite error:", error);
-    const message = error instanceof Error ? error.message : "Unknown error";
+    // Sanitize error messages to avoid leaking internal details
+    let safeMessage = "Unable to process invitation. Please try again.";
+    if (error instanceof Error) {
+      if (error.message.includes("Missing required fields")) safeMessage = error.message;
+      else if (error.message.includes("Business not found")) safeMessage = "Business not found";
+      else if (error.message.includes("RESEND_API_KEY")) safeMessage = "Email service not configured";
+    }
     return new Response(
-      JSON.stringify({ success: false, error: message }),
+      JSON.stringify({ success: false, error: safeMessage }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
