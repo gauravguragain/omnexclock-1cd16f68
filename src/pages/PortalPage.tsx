@@ -385,7 +385,7 @@ function TodayTab({ employeeCode, businessCode, shifts, employeeName, businessNa
           <div className="text-xs space-y-2 text-muted-foreground">
             <p className="font-medium text-foreground">How to access your Employee Portal:</p>
             <ol className="list-decimal pl-4 space-y-1">
-              <li>Open <span className="font-mono text-primary break-all">{window.location.origin}/portal</span> in your browser</li>
+              <li>Open <span className="font-mono text-primary break-all">https://omnexclock.lovable.app/portal</span> in your browser</li>
               <li>Enter the Business Code: <span className="font-mono font-bold text-foreground">{businessCode || "—"}</span></li>
               <li>Enter your 4-digit Employee Code (provided by your manager)</li>
               <li>View your shifts, timesheets, forum, and requests</li>
