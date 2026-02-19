@@ -759,9 +759,9 @@ export default function PayrollPage() {
   );
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 overflow-x-hidden">
       <div className="flex flex-col gap-3">
-        <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center flex-wrap">
+        <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center flex-wrap overflow-x-hidden">
           <Select value={selectedEmployee} onValueChange={setSelectedEmployee}>
             <SelectTrigger className="w-full sm:w-48">
               <SelectValue placeholder="All employees" />
@@ -802,7 +802,7 @@ export default function PayrollPage() {
       </Badge>
 
       <Tabs value={activeTab} onValueChange={(v) => { setActiveTab(v as "employee" | "admin" | "margin"); setPage(0); }}>
-        <TabsList>
+        <TabsList className="w-full sm:w-auto flex overflow-x-auto">
           <TabsTrigger value="employee">Employee Payroll</TabsTrigger>
           <TabsTrigger value="admin">Admin Payroll</TabsTrigger>
           {isSuperAdmin && (
