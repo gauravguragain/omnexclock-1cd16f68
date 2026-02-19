@@ -809,7 +809,11 @@ export default function PortalPage() {
                             <Pencil className="h-3.5 w-3.5" />
                           </Button>
                         )}
-                        <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:text-destructive" onClick={() => deleteRequest(req.id)}>
+                        <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:text-destructive" onClick={() => {
+                          if (window.confirm("Are you sure you want to delete this request?")) {
+                            deleteRequest(req.id);
+                          }
+                        }}>
                           <Trash2 className="h-3.5 w-3.5" />
                         </Button>
                       </div>

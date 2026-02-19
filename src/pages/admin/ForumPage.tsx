@@ -83,7 +83,7 @@ export default function ForumPage() {
       return;
     }
     setSaving(true);
-    const { error } = await supabase.from("forum_posts").insert({ title: title.trim(), content: content.trim() });
+    const { error } = await supabase.from("forum_posts").insert({ title: title.trim(), content: content.trim(), business_id: business?.id || null });
     if (error) {
       toast.error(error.message);
     } else {
