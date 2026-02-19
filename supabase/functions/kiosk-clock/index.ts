@@ -105,6 +105,7 @@ serve(async (req) => {
       // Log failed attempt
       await supabase.from("audit_logs").insert({
         user_id: null,
+        business_id: null,
         action: "kiosk_invalid_code",
         details: { employee_code, ip: clientIp },
       });
@@ -191,6 +192,7 @@ serve(async (req) => {
     if (clockError) {
       await supabase.from("audit_logs").insert({
         user_id: null,
+        business_id: employee.business_id,
         action: "kiosk_error",
         details: { error: clockError.message, code: clockError.code, employee_code, ip: clientIp },
       });
@@ -201,6 +203,7 @@ serve(async (req) => {
 
     await supabase.from("audit_logs").insert({
       user_id: null,
+      business_id: employee.business_id,
       action: `kiosk_${event_type}`,
       details: { employee_id: employee.id, employee_name: employee.name, event_type },
     });
