@@ -1241,6 +1241,7 @@ export type Database = {
           notes: string
           num_tables: number
           red_carpet: boolean
+          runsheet_url: string
           smoke_machine: boolean
           tablecloth_color: string
         }[]
