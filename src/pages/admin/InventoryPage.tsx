@@ -56,7 +56,7 @@ export default function InventoryPage() {
 
   // Order form
   const [orderItemId, setOrderItemId] = useState("");
-  const [orderQty, setOrderQty] = useState(1);
+  const [orderQty, setOrderQty] = useState("1");
   const [orderNotes, setOrderNotes] = useState("");
   const [orderOpen, setOrderOpen] = useState(false);
 
@@ -125,7 +125,7 @@ export default function InventoryPage() {
     const { error } = await supabase.from("inventory_orders").insert({
       business_id: business.id,
       item_id: orderItemId,
-      quantity: orderQty,
+      quantity: parseInt(orderQty) || 1,
       notes: orderNotes || null,
       requested_by: user.id,
     });
@@ -133,7 +133,7 @@ export default function InventoryPage() {
       toast({ title: "Error", description: error.message, variant: "destructive" });
     } else {
       toast({ title: "Order request submitted" });
-      setOrderItemId(""); setOrderQty(1); setOrderNotes("");
+      setOrderItemId(""); setOrderQty("1"); setOrderNotes("");
       setOrderOpen(false);
       fetchData();
     }
@@ -204,7 +204,7 @@ export default function InventoryPage() {
                 </div>
                 <div className="space-y-1">
                   <Label className="text-xs">Quantity</Label>
-                  <Input type="number" min={1} value={orderQty} onChange={e => setOrderQty(parseInt(e.target.value) || 1)} />
+                  <Input type="number" min={1} value={orderQty} onChange={e => setOrderQty(e.target.value)} />
                 </div>
                 <div className="space-y-1">
                   <Label className="text-xs">Notes</Label>
