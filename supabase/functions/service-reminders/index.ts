@@ -95,7 +95,7 @@ serve(async (req) => {
         },
         body: JSON.stringify({
           from: `${businessName} <noreply@omnexventures.com>`,
-          to: [task.reminder_email],
+          to: task.reminder_email.split(",").map((e: string) => e.trim()).filter(Boolean),
           subject: `🔧 Service Reminder: ${task.name} — Due ${task.next_service_date}`,
           html,
         }),
