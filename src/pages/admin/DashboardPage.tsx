@@ -365,17 +365,17 @@ export default function DashboardPage() {
   return (
     <div className="space-y-6">
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 stagger-children">
         {cards.map(({ title, value, icon: Icon, color }, index) => (
-          <Card key={title} className="border-border/40 card-elevated group" style={{ animationDelay: `${index * 80}ms` }}>
+          <Card key={title} className="border-border/40 stat-card group">
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">{title}</CardTitle>
-              <div className="h-9 w-9 rounded-lg bg-secondary/80 flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
-                <Icon className={`h-4 w-4 ${color}`} />
+              <div className="h-9 w-9 rounded-lg bg-secondary/80 flex items-center justify-center group-hover:scale-110 group-hover:bg-primary/10 transition-all duration-300">
+                <Icon className={`h-4 w-4 ${color} transition-colors duration-300`} />
               </div>
             </CardHeader>
             <CardContent>
-              <p className="text-3xl font-bold tracking-tight">{value}</p>
+              <p className="text-3xl font-bold tracking-tight tabular-smooth animate-count-up">{value}</p>
             </CardContent>
           </Card>
         ))}
@@ -468,7 +468,9 @@ export default function DashboardPage() {
             {recentEvents.length > 0 ? (
               <div className="space-y-2.5 max-h-[250px] overflow-y-auto scrollbar-hide">
                 {recentEvents.map((ev, i) => (
-                  <div key={i} className="flex items-center justify-between text-sm py-2 px-2 rounded-lg hover:bg-secondary/40 transition-colors border-b border-border/30 last:border-0">
+                  <div key={i} className="flex items-center justify-between text-sm py-2 px-2 rounded-lg hover:bg-secondary/40 transition-all duration-200 border-b border-border/30 last:border-0 table-row-interactive"
+                    style={{ animationDelay: `${i * 30}ms` }}
+                  >
                     <div className="flex items-center gap-2">
                       <span className="font-medium text-foreground">{ev.name}</span>
                       <span className={`text-xs font-semibold ${eventTypeColors[ev.type] || ""}`}>

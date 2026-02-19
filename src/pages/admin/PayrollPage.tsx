@@ -813,15 +813,17 @@ export default function PayrollPage() {
         </TabsList>
 
         <TabsContent value="employee" className="space-y-4 mt-4">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 stagger-children">
             {empSummaryCards.map(({ title, value, icon: Icon, color }) => (
-              <Card key={title}>
+              <Card key={title} className="stat-card group">
                 <CardHeader className="flex flex-row items-center justify-between pb-2">
                   <CardTitle className="text-sm font-medium text-muted-foreground">{title}</CardTitle>
-                  <Icon className={`h-4 w-4 ${color}`} />
+                  <div className="h-8 w-8 rounded-lg bg-secondary/80 flex items-center justify-center group-hover:scale-110 group-hover:bg-primary/10 transition-all duration-300">
+                    <Icon className={`h-4 w-4 ${color}`} />
+                  </div>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-2xl font-bold">{value}</p>
+                  <p className="text-2xl font-bold tabular-smooth">{value}</p>
                 </CardContent>
               </Card>
             ))}
@@ -831,15 +833,17 @@ export default function PayrollPage() {
         </TabsContent>
 
         <TabsContent value="admin" className="space-y-4 mt-4">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 stagger-children">
             {adminSummaryCards.map(({ title, value, icon: Icon, color }) => (
-              <Card key={title}>
+              <Card key={title} className="stat-card group">
                 <CardHeader className="flex flex-row items-center justify-between pb-2">
                   <CardTitle className="text-sm font-medium text-muted-foreground">{title}</CardTitle>
-                  <Icon className={`h-4 w-4 ${color}`} />
+                  <div className="h-8 w-8 rounded-lg bg-secondary/80 flex items-center justify-center group-hover:scale-110 group-hover:bg-primary/10 transition-all duration-300">
+                    <Icon className={`h-4 w-4 ${color}`} />
+                  </div>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-2xl font-bold">{value}</p>
+                  <p className="text-2xl font-bold tabular-smooth">{value}</p>
                 </CardContent>
               </Card>
             ))}
@@ -850,15 +854,17 @@ export default function PayrollPage() {
 
         {isSuperAdmin && (
           <TabsContent value="margin" className="space-y-4 mt-4">
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 stagger-children">
               {marginSummaryCards.map(({ title, value, icon: Icon, color }) => (
-                <Card key={title}>
+                <Card key={title} className="stat-card group">
                   <CardHeader className="flex flex-row items-center justify-between pb-2">
                     <CardTitle className="text-sm font-medium text-muted-foreground">{title}</CardTitle>
-                    <Icon className={`h-4 w-4 ${color}`} />
+                    <div className="h-8 w-8 rounded-lg bg-secondary/80 flex items-center justify-center group-hover:scale-110 group-hover:bg-primary/10 transition-all duration-300">
+                      <Icon className={`h-4 w-4 ${color}`} />
+                    </div>
                   </CardHeader>
                   <CardContent>
-                    <p className="text-2xl font-bold">{value}</p>
+                    <p className="text-2xl font-bold tabular-smooth">{value}</p>
                   </CardContent>
                 </Card>
               ))}

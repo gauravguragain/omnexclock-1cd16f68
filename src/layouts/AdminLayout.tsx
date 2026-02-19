@@ -180,20 +180,20 @@ export default function AdminLayout() {
                 to={path}
                 data-tour={tourId}
                 onClick={() => setSidebarOpen(false)}
-                className={`flex items-center gap-3 px-3 py-2 rounded-lg text-[13px] transition-all duration-200 group relative ${
+                className={`nav-stagger flex items-center gap-3 px-3 py-2 rounded-lg text-[13px] group relative btn-press ${
                   isActive
-                    ? "bg-primary/10 text-primary font-semibold"
+                    ? "bg-primary/10 text-primary font-semibold shadow-[inset_0_1px_0_hsl(var(--primary)/0.1)]"
                     : "text-muted-foreground hover:text-foreground hover:bg-sidebar-accent"
                 }`}
-                style={{ animationDelay: `${index * 30}ms` }}
+                style={{ animationDelay: `${index * 40}ms` }}
               >
                 {isActive && (
-                  <div className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 rounded-r-full bg-primary" />
+                  <div className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 rounded-r-full bg-primary transition-all duration-300" />
                 )}
-                <Icon className={`h-4 w-4 flex-shrink-0 transition-transform duration-200 ${isActive ? "" : "group-hover:scale-110"}`} />
+                <Icon className={`h-4 w-4 flex-shrink-0 transition-all duration-200 ${isActive ? "text-primary" : "group-hover:scale-110 group-hover:text-primary/70"}`} />
                 <span className="truncate">{label}</span>
                 {label === "Requests" && pendingRequestCount > 0 && (
-                  <Badge className="ml-auto bg-warning text-warning-foreground text-[10px] px-1.5 py-0 min-w-[20px] justify-center font-semibold animate-pulse">
+                  <Badge className="ml-auto bg-warning text-warning-foreground text-[10px] px-1.5 py-0 min-w-[20px] justify-center font-semibold badge-live">
                     {pendingRequestCount}
                   </Badge>
                 )}
@@ -245,16 +245,18 @@ export default function AdminLayout() {
       {/* Main */}
       <main className="flex-1 lg:ml-64 min-w-0">
         <header className="sticky top-0 z-30 glass border-b border-border/40 px-4 py-3 flex items-center gap-3 lg:px-6">
-          <Button variant="ghost" size="icon" className="lg:hidden h-9 w-9" onClick={() => setSidebarOpen(true)}>
+          <Button variant="ghost" size="icon" className="lg:hidden h-9 w-9 btn-press" onClick={() => setSidebarOpen(true)}>
             <Menu className="h-5 w-5" />
           </Button>
-          <h2 className="text-base font-semibold text-foreground tracking-tight">
-            {allNavItems.find((n) => n.path === location.pathname)?.label || "Admin"}
-          </h2>
-          {roleBadge && (
-            <Badge variant={roleBadge.variant} className={roleBadge.className}>{roleBadge.label}</Badge>
-          )}
-          <div className="ml-auto">
+          <div className="flex items-center gap-2">
+            <h2 className="text-base font-semibold text-foreground tracking-tight">
+              {allNavItems.find((n) => n.path === location.pathname)?.label || "Admin"}
+            </h2>
+            {roleBadge && (
+              <Badge variant={roleBadge.variant} className={roleBadge.className}>{roleBadge.label}</Badge>
+            )}
+          </div>
+          <div className="ml-auto flex items-center gap-2">
             <NotificationBell
               notifications={notifications}
               unreadCount={unreadCount}
