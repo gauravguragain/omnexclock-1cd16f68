@@ -55,6 +55,31 @@ function DebouncedInput({ value, onSave, ...props }: { value: string; onSave: (v
   );
 }
 
+function DebouncedSelect({ value, onSave, disabled, children, placeholder }: { value: string; onSave: (v: string) => void; disabled?: boolean; children: React.ReactNode; placeholder?: string }) {
+  const [local, setLocal] = useState(value);
+  useEffect(() => { setLocal(value); }, [value]);
+  const handleChange = (v: string) => {
+    setLocal(v);
+    if (v !== value) onSave(v);
+  };
+  return (
+    <Select value={local} onValueChange={handleChange} disabled={disabled}>
+      <SelectTrigger className="h-8 text-xs"><SelectValue placeholder={placeholder || "Select..."} /></SelectTrigger>
+      <SelectContent>{children}</SelectContent>
+    </Select>
+  );
+}
+
+function DebouncedSwitch({ checked, onSave, disabled }: { checked: boolean; onSave: (v: boolean) => void; disabled?: boolean }) {
+  const [local, setLocal] = useState(checked);
+  useEffect(() => { setLocal(checked); }, [checked]);
+  const handleChange = (v: boolean) => {
+    setLocal(v);
+    onSave(v);
+  };
+  return <Switch checked={local} onCheckedChange={handleChange} disabled={disabled} className="scale-75" />;
+}
+
 export default function RosterDayEvents({ weekDates, fmtDate }: Props) {
   const { runAction } = useActionLock();
   const { isViewer, isRosterAdminOf, getRosterAdminDepartments, isAdminOf } = useAuth();
@@ -219,19 +244,17 @@ export default function RosterDayEvents({ weekDates, fmtDate }: Props) {
                       {/* Event Space */}
                       <div className="space-y-1">
                         <Label className="text-[11px] text-muted-foreground">Event Space</Label>
-                        <Select
+                        <DebouncedSelect
                           value={ev.event_space || ""}
-                          onValueChange={v => updateEvent(ev.id, { event_space: v || null })}
+                          onSave={v => updateEvent(ev.id, { event_space: v || null })}
                           disabled={cannotEdit}
+                          placeholder="Select..."
                         >
-                          <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Select..." /></SelectTrigger>
-                          <SelectContent>
-                            {eventSpaces.map(s => (
-                              <SelectItem key={s.id} value={s.label}>{s.label}</SelectItem>
-                            ))}
-                            {eventSpaces.length === 0 && <div className="px-3 py-2 text-xs text-muted-foreground">Add spaces in My Business settings</div>}
-                          </SelectContent>
-                        </Select>
+                          {eventSpaces.map(s => (
+                            <SelectItem key={s.id} value={s.label}>{s.label}</SelectItem>
+                          ))}
+                          {eventSpaces.length === 0 && <div className="px-3 py-2 text-xs text-muted-foreground">Add spaces in My Business settings</div>}
+                        </DebouncedSelect>
                       </div>
 
                       {/* Event Type */}
@@ -246,36 +269,31 @@ export default function RosterDayEvents({ weekDates, fmtDate }: Props) {
                             disabled={cannotEdit}
                           />
                         ) : (
-                          <Select
+                          <DebouncedSelect
                             value={ev.event_type || ""}
-                            onValueChange={v => updateEvent(ev.id, { event_type: v || null })}
+                            onSave={v => updateEvent(ev.id, { event_type: v || null })}
                             disabled={cannotEdit}
+                            placeholder="Select..."
                           >
-                            <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Select..." /></SelectTrigger>
-                            <SelectContent>
-                              {eventTypes.map(s => (
-                                <SelectItem key={s.id} value={s.label}>{s.label}</SelectItem>
-                              ))}
-                              {eventTypes.length === 0 && <div className="px-3 py-2 text-xs text-muted-foreground">Add types in My Business settings</div>}
-                            </SelectContent>
-                          </Select>
+                            {eventTypes.map(s => (
+                              <SelectItem key={s.id} value={s.label}>{s.label}</SelectItem>
+                            ))}
+                            {eventTypes.length === 0 && <div className="px-3 py-2 text-xs text-muted-foreground">Add types in My Business settings</div>}
+                          </DebouncedSelect>
                         )}
                       </div>
 
                       {/* Tablecloth Color */}
                       <div className="space-y-1">
                         <Label className="text-[11px] text-muted-foreground">Tablecloth Color</Label>
-                        <Select
+                        <DebouncedSelect
                           value={ev.tablecloth_color || "white"}
-                          onValueChange={v => updateEvent(ev.id, { tablecloth_color: v })}
+                          onSave={v => updateEvent(ev.id, { tablecloth_color: v })}
                           disabled={cannotEdit}
                         >
-                          <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="white">⬜ White</SelectItem>
-                            <SelectItem value="black">⬛ Black</SelectItem>
-                          </SelectContent>
-                        </Select>
+                          <SelectItem value="white">⬜ White</SelectItem>
+                          <SelectItem value="black">⬛ Black</SelectItem>
+                        </DebouncedSelect>
                       </div>
 
                       {/* Num Tables */}
@@ -326,11 +344,10 @@ export default function RosterDayEvents({ weekDates, fmtDate }: Props) {
                         { key: "decor_access", label: "Decor Access", icon: Palette },
                       ].map(({ key, label, icon: Icon }) => (
                         <div key={key} className="flex items-center gap-1.5">
-                          <Switch
+                          <DebouncedSwitch
                             checked={ev[key as keyof DayEvent] as boolean}
-                            onCheckedChange={v => updateEvent(ev.id, { [key]: v })}
+                            onSave={v => updateEvent(ev.id, { [key]: v })}
                             disabled={cannotEdit}
-                            className="scale-75"
                           />
                           <Label className="text-[11px] text-muted-foreground flex items-center gap-1 cursor-pointer">
                             <Icon className="h-3 w-3" /> {label}
