@@ -769,7 +769,7 @@ export default function PortalPage() {
   /* ── LOGIN SCREEN ── */
   if (!authenticated) {
     return (
-      <div className="min-h-dvh bg-background flex flex-col items-center justify-center p-4 standalone-top-pad">
+      <div className="h-dvh bg-background flex flex-col items-center justify-center p-4 standalone-top-pad overflow-hidden">
         <div className="text-center mb-6">
           {businessLogo ? (
             <img src={businessLogo} alt={businessName} className="h-16 w-16 mx-auto rounded-lg object-cover mb-2" />
@@ -836,9 +836,9 @@ export default function PortalPage() {
 
   /* ── PORTAL DASHBOARD ── */
   return (
-    <div className="min-h-dvh bg-background standalone-top-pad">
+    <div className="h-dvh bg-background standalone-top-pad flex flex-col overflow-hidden">
       {/* Header */}
-      <header className="sticky top-0 z-30 bg-card/80 backdrop-blur border-b border-border px-4 py-3">
+      <header className="shrink-0 z-30 bg-card/80 backdrop-blur border-b border-border px-4 py-3">
         <div className="max-w-3xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-3">
             {businessLogo ? (
@@ -874,7 +874,8 @@ export default function PortalPage() {
       </header>
 
       {/* Content */}
-      <main className="max-w-3xl mx-auto p-4 space-y-4 scroll-native pb-8">
+      <main className="flex-1 overflow-y-auto overscroll-none scroll-native">
+       <div className="max-w-3xl mx-auto p-4 space-y-4 pb-8">
         {/* Summary cards */}
         <div className="grid grid-cols-2 gap-3">
           <Card>
@@ -1383,6 +1384,7 @@ export default function PortalPage() {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+       </div>
       </main>
 
       {/* Timesheet History Dialog */}

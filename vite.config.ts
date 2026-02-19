@@ -31,7 +31,7 @@ export default defineConfig(({ mode }) => ({
         background_color: "#000000",
         display: "standalone",
         orientation: "portrait",
-        start_url: "/portal",
+        start_url: "/",
         scope: "/",
         categories: ["business", "productivity"],
         icons: [
