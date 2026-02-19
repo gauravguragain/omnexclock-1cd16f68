@@ -366,11 +366,11 @@ export default function DashboardPage() {
     <div className="space-y-6">
       {/* Stats Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {cards.map(({ title, value, icon: Icon, color }) => (
-          <Card key={title} className="border-border/60 shadow-sm hover:shadow-md transition-shadow ambient-glow">
+        {cards.map(({ title, value, icon: Icon, color }, index) => (
+          <Card key={title} className="border-border/40 card-elevated group" style={{ animationDelay: `${index * 80}ms` }}>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-xs font-medium text-muted-foreground uppercase tracking-wide">{title}</CardTitle>
-              <div className="h-8 w-8 rounded-lg bg-secondary flex items-center justify-center">
+              <CardTitle className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">{title}</CardTitle>
+              <div className="h-9 w-9 rounded-lg bg-secondary/80 flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
                 <Icon className={`h-4 w-4 ${color}`} />
               </div>
             </CardHeader>
@@ -382,27 +382,27 @@ export default function DashboardPage() {
       </div>
 
       {/* Weekly Hours + Employee Breakdown */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <Card>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+        <Card className="border-border/40">
           <CardHeader>
             <CardTitle className="text-sm font-medium text-muted-foreground">Weekly Hours</CardTitle>
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={250}>
               <BarChart data={weeklyData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" strokeOpacity={0.5} />
                 <XAxis dataKey="date" tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} />
                 <YAxis tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} />
                 <Tooltip
-                  contentStyle={{ backgroundColor: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 8, color: "hsl(var(--foreground))" }}
+                  contentStyle={{ backgroundColor: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 10, color: "hsl(var(--foreground))", boxShadow: "0 8px 24px rgba(0,0,0,0.3)" }}
                 />
-                <Bar dataKey="hours" name="Hours" fill="hsl(45, 60%, 53%)" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="hours" name="Hours" fill="hsl(45, 60%, 53%)" radius={[6, 6, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="border-border/40">
           <CardHeader>
             <CardTitle className="text-sm font-medium text-muted-foreground">Employee Hours (This Week)</CardTitle>
           </CardHeader>
@@ -415,7 +415,7 @@ export default function DashboardPage() {
                       <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />
                     ))}
                   </Pie>
-                  <Tooltip contentStyle={{ backgroundColor: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 8, color: "hsl(var(--foreground))" }} />
+                  <Tooltip contentStyle={{ backgroundColor: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 10, color: "hsl(var(--foreground))", boxShadow: "0 8px 24px rgba(0,0,0,0.3)" }} />
                   <Legend />
                 </PieChart>
               </ResponsiveContainer>
@@ -427,24 +427,24 @@ export default function DashboardPage() {
       </div>
 
       {/* Hourly Activity + Recent Events */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <Card>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+        <Card className="border-border/40">
           <CardHeader>
             <CardTitle className="text-sm font-medium text-muted-foreground">Today's Cumulative Hours</CardTitle>
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={250}>
               <AreaChart data={hourlyActivity}>
-                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" strokeOpacity={0.5} />
                 <XAxis dataKey="hour" tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} />
                 <YAxis tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} />
                 <Tooltip
-                  contentStyle={{ backgroundColor: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 8, color: "hsl(var(--foreground))" }}
+                  contentStyle={{ backgroundColor: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 10, color: "hsl(var(--foreground))", boxShadow: "0 8px 24px rgba(0,0,0,0.3)" }}
                   content={({ active, payload }) => {
                     if (!active || !payload?.length) return null;
                     const data = payload[0].payload as HourlyActivity;
                     return (
-                      <div style={{ backgroundColor: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 8, padding: "8px 12px", color: "hsl(var(--foreground))" }}>
+                      <div style={{ backgroundColor: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 10, padding: "10px 14px", color: "hsl(var(--foreground))", boxShadow: "0 8px 24px rgba(0,0,0,0.3)" }}>
                         <p className="font-medium text-sm">{data.hour}</p>
                         <p className="text-sm" style={{ color: "hsl(45, 60%, 53%)" }}>{data.cumulativeHours} hrs</p>
                         {data.employees.length > 0 && (
@@ -454,28 +454,28 @@ export default function DashboardPage() {
                     );
                   }}
                 />
-                <Area type="monotone" dataKey="cumulativeHours" name="Hours" stroke="hsl(45, 60%, 53%)" fill="hsl(45, 60%, 53%)" fillOpacity={0.2} />
+                <Area type="monotone" dataKey="cumulativeHours" name="Hours" stroke="hsl(45, 60%, 53%)" fill="hsl(45, 60%, 53%)" fillOpacity={0.15} />
               </AreaChart>
             </ResponsiveContainer>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="border-border/40">
           <CardHeader>
             <CardTitle className="text-sm font-medium text-muted-foreground">Recent Activity</CardTitle>
           </CardHeader>
           <CardContent>
             {recentEvents.length > 0 ? (
-              <div className="space-y-3 max-h-[250px] overflow-y-auto">
+              <div className="space-y-2.5 max-h-[250px] overflow-y-auto scrollbar-hide">
                 {recentEvents.map((ev, i) => (
-                  <div key={i} className="flex items-center justify-between text-sm border-b border-border pb-2 last:border-0">
+                  <div key={i} className="flex items-center justify-between text-sm py-2 px-2 rounded-lg hover:bg-secondary/40 transition-colors border-b border-border/30 last:border-0">
                     <div className="flex items-center gap-2">
                       <span className="font-medium text-foreground">{ev.name}</span>
                       <span className={`text-xs font-semibold ${eventTypeColors[ev.type] || ""}`}>
                         {eventTypeLabels[ev.type] || ev.type}
                       </span>
                     </div>
-                    <div className="text-xs text-muted-foreground">
+                    <div className="text-[11px] text-muted-foreground">
                       {ev.time} · {ev.date}
                     </div>
                   </div>

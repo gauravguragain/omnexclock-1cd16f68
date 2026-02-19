@@ -16,7 +16,10 @@ export default function BusinessHubPage() {
   if (loading || bizLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
-        <Clock className="h-8 w-8 animate-spin text-primary" />
+        <div className="flex flex-col items-center gap-3">
+          <Clock className="h-8 w-8 animate-spin text-primary" />
+          <p className="text-xs text-muted-foreground animate-pulse">Loading...</p>
+        </div>
       </div>
     );
   }
@@ -27,7 +30,7 @@ export default function BusinessHubPage() {
   if (!isApproved) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background p-4">
-        <div className="text-center space-y-4">
+        <div className="text-center space-y-4 animate-fade-in">
           <h1 className="text-xl font-bold text-foreground">Account Pending Approval</h1>
           <p className="text-muted-foreground">Your account is awaiting approval from an administrator.</p>
           <Button variant="outline" onClick={signOut}>Sign Out</Button>
@@ -39,7 +42,7 @@ export default function BusinessHubPage() {
   if (!business || businesses.length === 0) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background p-4">
-        <div className="text-center space-y-4">
+        <div className="text-center space-y-4 animate-fade-in">
           <h1 className="text-xl font-bold text-foreground">No Business Found</h1>
           <p className="text-muted-foreground">You don't have a business linked to your account yet.</p>
           <div className="flex gap-3 justify-center">
@@ -53,16 +56,19 @@ export default function BusinessHubPage() {
     );
   }
 
-  // If user has multiple businesses, show a selection (admin panel only)
+  // If user has multiple businesses, show a selection
   if (businesses.length > 1) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-background p-4">
-        <div className="text-center space-y-3 mb-8">
+      <div className="min-h-screen flex flex-col items-center justify-center bg-background p-4 relative overflow-hidden">
+        <div className="absolute top-1/4 -left-32 w-72 h-72 rounded-full bg-primary/[0.025] blur-[80px]" />
+        <div className="absolute bottom-1/4 -right-32 w-80 h-80 rounded-full bg-primary/[0.02] blur-[80px]" />
+
+        <div className="text-center space-y-3 mb-10 animate-fade-in">
           <h1 className="text-2xl font-bold text-foreground tracking-tight">Your Businesses</h1>
           <p className="text-muted-foreground text-sm">Select a business to manage</p>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 w-full max-w-xl mb-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 w-full max-w-xl mb-10 animate-fade-in" style={{ animationDelay: '0.1s' }}>
           {businesses.map((biz) => {
             const isAdmin = isAdminOf(biz.id);
             const isViewerOnly = isViewerOf(biz.id) && !isAdmin;
@@ -73,12 +79,12 @@ export default function BusinessHubPage() {
                 onClick={() => { setBusiness(biz); applyTheme(biz.theme); }}
                 className="block"
               >
-                <Card className="border border-border/60 cursor-pointer hover:border-primary/50 hover:shadow-lg hover:shadow-primary/5 transition-all duration-300 group h-full">
-                  <CardContent className="p-7 flex flex-col items-center text-center space-y-4">
+                <Card className="border border-border/50 cursor-pointer hover:border-primary/40 transition-all duration-300 group h-full card-lift">
+                  <CardContent className="p-8 flex flex-col items-center text-center space-y-4">
                     {biz.logo_url ? (
-                      <img src={biz.logo_url} alt={biz.name} className="h-14 w-14 rounded-2xl object-cover shadow-sm" />
+                      <img src={biz.logo_url} alt={biz.name} className="h-14 w-14 rounded-2xl object-cover ring-1 ring-border/40" />
                     ) : (
-                      <div className="h-14 w-14 rounded-2xl bg-primary/10 flex items-center justify-center group-hover:bg-primary/20 transition-colors">
+                      <div className="h-14 w-14 rounded-2xl bg-primary/8 flex items-center justify-center group-hover:bg-primary/15 transition-colors duration-300">
                         <Building2 className="h-7 w-7 text-primary" />
                       </div>
                     )}
@@ -107,28 +113,33 @@ export default function BusinessHubPage() {
   const businessCode = business.business_code;
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-background p-4">
-      <div className="text-center space-y-3 mb-8">
+    <div className="min-h-screen flex flex-col items-center justify-center bg-background p-4 relative overflow-hidden">
+      <div className="absolute top-1/4 -left-32 w-72 h-72 rounded-full bg-primary/[0.025] blur-[80px]" />
+      <div className="absolute bottom-1/4 -right-32 w-80 h-80 rounded-full bg-primary/[0.02] blur-[80px]" />
+
+      <div className="text-center space-y-4 mb-10 animate-fade-in">
         {business.logo_url ? (
-          <img src={business.logo_url} alt={business.name} className="h-20 w-20 mx-auto rounded-2xl object-cover shadow-lg shadow-primary/10" />
+          <img src={business.logo_url} alt={business.name} className="h-20 w-20 mx-auto rounded-2xl object-cover shadow-xl shadow-primary/10 ring-1 ring-border/30" />
         ) : (
-          <div className="h-20 w-20 mx-auto rounded-2xl bg-primary/10 flex items-center justify-center">
+          <div className="h-20 w-20 mx-auto rounded-2xl bg-primary/8 flex items-center justify-center">
             <Building2 className="h-10 w-10 text-primary" />
           </div>
         )}
-        <h1 className="text-2xl font-bold text-foreground tracking-tight">{business.name}</h1>
-        <p className="text-muted-foreground text-sm">Business Administration</p>
+        <div className="space-y-1">
+          <h1 className="text-2xl font-bold text-foreground tracking-tight">{business.name}</h1>
+          <p className="text-muted-foreground text-sm">Business Administration</p>
+        </div>
       </div>
 
-      <div className="w-full max-w-sm">
+      <div className="w-full max-w-sm animate-fade-in" style={{ animationDelay: '0.1s' }}>
         <Link
           to={`/b/${businessCode}/admin`}
           onClick={() => applyTheme(business.theme)}
           className="block"
         >
-          <Card className="border border-border/60 cursor-pointer hover:border-primary/50 hover:shadow-lg hover:shadow-primary/5 transition-all duration-300 group">
-            <CardContent className="p-7 flex flex-col items-center text-center space-y-4">
-              <div className="h-14 w-14 rounded-2xl bg-primary/10 flex items-center justify-center group-hover:bg-primary/20 group-hover:scale-105 transition-all">
+          <Card className="border border-border/50 cursor-pointer hover:border-primary/40 transition-all duration-300 group card-lift">
+            <CardContent className="p-8 flex flex-col items-center text-center space-y-4">
+              <div className="h-14 w-14 rounded-2xl bg-primary/8 flex items-center justify-center group-hover:bg-primary/15 group-hover:scale-110 transition-all duration-300">
                 <ShieldCheck className="h-7 w-7 text-primary" />
               </div>
               <div>
@@ -140,7 +151,7 @@ export default function BusinessHubPage() {
         </Link>
       </div>
 
-      <Button variant="ghost" className="mt-8 text-muted-foreground hover:text-foreground transition-colors" onClick={signOut}>
+      <Button variant="ghost" className="mt-10 text-muted-foreground hover:text-foreground transition-colors" onClick={signOut}>
         <LogOut className="h-4 w-4 mr-2" />
         Sign Out
       </Button>

@@ -432,38 +432,38 @@ export default function EmployeesPage() {
         </Dialog>
       </div>
 
-      <Card>
+      <Card className="border-border/40">
         <CardContent className="p-0">
           <div className="overflow-x-auto">
             <Table>
               <TableHeader>
-                <TableRow>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Code</TableHead>
-                  <TableHead>Department</TableHead>
-                  <TableHead>Job Title</TableHead>
-                  <TableHead>Emp Rate</TableHead>
-                  <TableHead>Admin Rate</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
+                <TableRow className="border-border/30 hover:bg-transparent">
+                  <TableHead className="text-[11px] uppercase tracking-wider text-muted-foreground font-medium">Name</TableHead>
+                  <TableHead className="text-[11px] uppercase tracking-wider text-muted-foreground font-medium">Code</TableHead>
+                  <TableHead className="text-[11px] uppercase tracking-wider text-muted-foreground font-medium">Department</TableHead>
+                  <TableHead className="text-[11px] uppercase tracking-wider text-muted-foreground font-medium">Job Title</TableHead>
+                  <TableHead className="text-[11px] uppercase tracking-wider text-muted-foreground font-medium">Emp Rate</TableHead>
+                  <TableHead className="text-[11px] uppercase tracking-wider text-muted-foreground font-medium">Admin Rate</TableHead>
+                  <TableHead className="text-[11px] uppercase tracking-wider text-muted-foreground font-medium">Status</TableHead>
+                  <TableHead className="text-right text-[11px] uppercase tracking-wider text-muted-foreground font-medium">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {filtered.map((emp) => (
-                  <TableRow key={emp.id}>
+                  <TableRow key={emp.id} className="border-border/20 hover:bg-secondary/30 transition-colors">
                     <TableCell className="font-medium">
                       <div>
                         {emp.name}
-                        {emp.email && <p className="text-xs text-muted-foreground">{emp.email}</p>}
+                        {emp.email && <p className="text-[11px] text-muted-foreground mt-0.5">{emp.email}</p>}
                       </div>
                     </TableCell>
-                    <TableCell className="font-mono">{emp.employee_code}</TableCell>
-                    <TableCell>{emp.department || "—"}</TableCell>
-                    <TableCell>{emp.job_title || "—"}</TableCell>
-                    <TableCell>${emp.pay_rate}/hr</TableCell>
-                    <TableCell>${emp.admin_hourly_rate}/hr</TableCell>
+                    <TableCell className="font-mono text-sm">{emp.employee_code}</TableCell>
+                    <TableCell className="text-sm">{emp.department || "—"}</TableCell>
+                    <TableCell className="text-sm">{emp.job_title || "—"}</TableCell>
+                    <TableCell className="text-sm tabular-nums">${emp.pay_rate}/hr</TableCell>
+                    <TableCell className="text-sm tabular-nums">${emp.admin_hourly_rate}/hr</TableCell>
                     <TableCell>
-                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${emp.active ? "bg-success/20 text-success" : "bg-destructive/20 text-destructive"}`}>
+                      <span className={`px-2.5 py-1 rounded-full text-[11px] font-medium ${emp.active ? "bg-success/15 text-success" : "bg-destructive/15 text-destructive"}`}>
                         {emp.active ? "Active" : "Inactive"}
                       </span>
                     </TableCell>
@@ -471,21 +471,21 @@ export default function EmployeesPage() {
                       {!canEditEmployees ? (
                         <span className="text-xs text-muted-foreground">View only</span>
                       ) : (
-                        <div className="flex items-center justify-end gap-1">
-                          <Button variant="ghost" size="icon" onClick={() => openEdit(emp)} disabled={saving} title="Edit">
-                            <Pencil className="h-4 w-4" />
+                        <div className="flex items-center justify-end gap-0.5">
+                          <Button variant="ghost" size="icon" onClick={() => openEdit(emp)} disabled={saving} title="Edit" className="h-8 w-8">
+                            <Pencil className="h-3.5 w-3.5" />
                           </Button>
-                          <Button variant="ghost" size="icon" onClick={() => toggleActive(emp)} disabled={togglingIds.has(emp.id)} title={emp.active ? "Deactivate" : "Activate"}>
-                            {emp.active ? <UserX className="h-4 w-4" /> : <UserCheck className="h-4 w-4" />}
+                          <Button variant="ghost" size="icon" onClick={() => toggleActive(emp)} disabled={togglingIds.has(emp.id)} title={emp.active ? "Deactivate" : "Activate"} className="h-8 w-8">
+                            {emp.active ? <UserX className="h-3.5 w-3.5" /> : <UserCheck className="h-3.5 w-3.5" />}
                           </Button>
                           {emp.email && (
-                            <Button variant="ghost" size="icon" onClick={() => sendInductionEmail(emp)} disabled={sendingInduction.has(emp.id)} title="Send Induction Email">
-                              <Mail className="h-4 w-4" />
+                            <Button variant="ghost" size="icon" onClick={() => sendInductionEmail(emp)} disabled={sendingInduction.has(emp.id)} title="Send Induction Email" className="h-8 w-8">
+                              <Mail className="h-3.5 w-3.5" />
                             </Button>
                           )}
                           {isSuperAdmin && (
-                            <Button variant="ghost" size="icon" onClick={() => setDeleteTarget(emp)} className="text-destructive hover:text-destructive hover:bg-destructive/10" title="Delete permanently">
-                              <Trash2 className="h-4 w-4" />
+                            <Button variant="ghost" size="icon" onClick={() => setDeleteTarget(emp)} className="text-destructive hover:text-destructive hover:bg-destructive/10 h-8 w-8" title="Delete permanently">
+                              <Trash2 className="h-3.5 w-3.5" />
                             </Button>
                           )}
                         </div>
@@ -495,7 +495,7 @@ export default function EmployeesPage() {
                 ))}
                 {filtered.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={8} className="text-center text-muted-foreground py-8">No employees found</TableCell>
+                    <TableCell colSpan={8} className="text-center text-muted-foreground py-12">No employees found</TableCell>
                   </TableRow>
                 )}
               </TableBody>

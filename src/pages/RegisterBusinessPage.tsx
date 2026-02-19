@@ -66,27 +66,31 @@ export default function RegisterBusinessPage() {
     setLoading(false);
   };
 
-  // If user is logged in, show business details form
   if (user && step === "signup") {
     setStep("business_details");
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background p-4">
-      <div className="w-full max-w-md space-y-6">
-        <div className="text-center space-y-2">
-          <div className="h-16 w-16 mx-auto rounded-full bg-primary/15 flex items-center justify-center">
+    <div className="min-h-screen flex items-center justify-center bg-background p-4 relative overflow-hidden">
+      <div className="absolute top-1/3 -left-24 w-56 h-56 rounded-full bg-primary/[0.03] blur-[80px] float" />
+      <div className="absolute bottom-1/3 -right-24 w-60 h-60 rounded-full bg-primary/[0.025] blur-[80px] float" style={{ animationDelay: '2s' }} />
+
+      <div className="w-full max-w-md space-y-6 relative z-10 animate-fade-in">
+        <div className="text-center space-y-3">
+          <div className="h-16 w-16 mx-auto rounded-2xl bg-primary/8 flex items-center justify-center shadow-lg shadow-primary/5">
             <Building2 className="h-8 w-8 text-primary" />
           </div>
-          <h1 className="text-2xl font-bold text-foreground">Register Your Business</h1>
-          <p className="text-muted-foreground text-sm">
-            {step === "signup"
-              ? "Create your account to get started"
-              : "Set up your business details"}
-          </p>
+          <div className="space-y-1">
+            <h1 className="text-2xl font-bold text-foreground tracking-tight">Register Your Business</h1>
+            <p className="text-muted-foreground text-sm">
+              {step === "signup"
+                ? "Create your account to get started"
+                : "Set up your business details"}
+            </p>
+          </div>
         </div>
 
-        <Card className="border border-border">
+        <Card className="border border-border/50 shadow-lg shadow-black/20">
           <CardHeader>
             <CardTitle>{step === "signup" ? "Create Account" : "Business Details"}</CardTitle>
             <CardDescription>
@@ -100,17 +104,17 @@ export default function RegisterBusinessPage() {
               <form onSubmit={handleSignUp} className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="fullName">Full Name</Label>
-                  <Input id="fullName" value={fullName} onChange={(e) => setFullName(e.target.value)} placeholder="John Doe" required />
+                  <Input id="fullName" value={fullName} onChange={(e) => setFullName(e.target.value)} placeholder="John Doe" required className="h-11" />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="email">Email</Label>
-                  <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@yourbusiness.com" required />
+                  <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@yourbusiness.com" required className="h-11" />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="password">Password</Label>
-                  <Input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" required minLength={6} />
+                  <Input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" required minLength={6} className="h-11" />
                 </div>
-                <Button type="submit" className="w-full" disabled={loading}>
+                <Button type="submit" className="w-full h-11 font-medium" disabled={loading}>
                   {loading ? "Creating..." : "Create Account"}
                 </Button>
                 <p className="text-center text-xs text-muted-foreground">
@@ -123,7 +127,7 @@ export default function RegisterBusinessPage() {
               <form onSubmit={handleRegisterBusiness} className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="businessName">Business Name</Label>
-                  <Input id="businessName" value={businessName} onChange={(e) => setBusinessName(e.target.value)} placeholder="My Amazing Business" required />
+                  <Input id="businessName" value={businessName} onChange={(e) => setBusinessName(e.target.value)} placeholder="My Amazing Business" required className="h-11" />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="businessCode">Business Code</Label>
@@ -135,12 +139,13 @@ export default function RegisterBusinessPage() {
                     required
                     minLength={3}
                     maxLength={20}
+                    className="h-11"
                   />
                   <p className="text-xs text-muted-foreground">
                     Employees will use this code to access the kiosk and portal. Must be unique.
                   </p>
                 </div>
-                <Button type="submit" className="w-full" disabled={loading}>
+                <Button type="submit" className="w-full h-11 font-medium" disabled={loading}>
                   {loading ? "Registering..." : "Register Business"}
                 </Button>
               </form>
@@ -148,9 +153,8 @@ export default function RegisterBusinessPage() {
           </CardContent>
         </Card>
 
-        <Link to="/" className="flex items-center justify-center gap-2 text-sm text-muted-foreground hover:text-foreground">
-          <ArrowLeft className="h-4 w-4" />
-          Back to Home
+        <Link to="/" className="flex items-center justify-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors">
+          ← Back to Home
         </Link>
       </div>
     </div>

@@ -93,11 +93,21 @@ export default {
           "0%, 100%": { boxShadow: "0 0 0 0 hsl(43 72% 52% / 0.4)" },
           "50%": { boxShadow: "0 0 0 10px hsl(43 72% 52% / 0)" },
         },
+        "fade-in": {
+          from: { opacity: "0", transform: "translateY(8px)" },
+          to: { opacity: "1", transform: "translateY(0)" },
+        },
+        "slide-in-left": {
+          from: { opacity: "0", transform: "translateX(-12px)" },
+          to: { opacity: "1", transform: "translateX(0)" },
+        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
         "accordion-up": "accordion-up 0.2s ease-out",
         "pulse-gold": "pulse-gold 2s infinite",
+        "fade-in": "fade-in 0.4s ease-out",
+        "slide-in-left": "slide-in-left 0.3s ease-out",
       },
     },
   },
