@@ -60,6 +60,7 @@ Rules:
 - host_name: The name of the host/client.
 - host_contact_number: The contact phone number of the host/client.
 - bev_package: The beverage package (e.g. "Gold Package", "Silver", "BYO", etc.).
+- banquet_tier: The banquet tier or menu tier name (e.g. "Premium", "Gold", "Silver", "Platinum", "Standard"). Just the tier name, not the full menu details.
 - notes: Any other important details or special requests.
 
 Return ONLY valid JSON, no markdown, no extra text.`,

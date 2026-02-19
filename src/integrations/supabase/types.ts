@@ -889,6 +889,7 @@ export type Database = {
       roster_day_events: {
         Row: {
           adult_guests: number | null
+          banquet_tier: string | null
           bev_package: string | null
           business_id: string
           chairs_per_table: number | null
@@ -916,6 +917,7 @@ export type Database = {
         }
         Insert: {
           adult_guests?: number | null
+          banquet_tier?: string | null
           bev_package?: string | null
           business_id: string
           chairs_per_table?: number | null
@@ -943,6 +945,7 @@ export type Database = {
         }
         Update: {
           adult_guests?: number | null
+          banquet_tier?: string | null
           bev_package?: string | null
           business_id?: string
           chairs_per_table?: number | null
@@ -1223,6 +1226,7 @@ export type Database = {
         Args: { _business_code?: string; _employee_code: string }
         Returns: {
           adult_guests: number
+          banquet_tier: string
           bev_package: string
           chairs_per_table: number
           cold_sparkles: boolean

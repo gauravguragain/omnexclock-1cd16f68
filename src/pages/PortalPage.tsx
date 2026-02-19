@@ -176,6 +176,7 @@ function EventCard({ ev }: { ev: any }) {
             {detailRow("Event Space", ev.event_space)}
             {detailRow("Event Type", ev.event_type)}
             {detailRow("Bev Package", ev.bev_package)}
+            {detailRow("Banquet Tier", ev.banquet_tier)}
           </div>
 
           {/* Guest & Table Setup */}
