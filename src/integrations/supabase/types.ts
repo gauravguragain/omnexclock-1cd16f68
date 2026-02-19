@@ -898,6 +898,7 @@ export type Database = {
           decor_access: boolean | null
           dry_ice: boolean | null
           event_space: string | null
+          event_time: string | null
           event_type: string | null
           host_contact_number: string | null
           host_name: string | null
@@ -924,6 +925,7 @@ export type Database = {
           decor_access?: boolean | null
           dry_ice?: boolean | null
           event_space?: string | null
+          event_time?: string | null
           event_type?: string | null
           host_contact_number?: string | null
           host_name?: string | null
@@ -950,6 +952,7 @@ export type Database = {
           decor_access?: boolean | null
           dry_ice?: boolean | null
           event_space?: string | null
+          event_time?: string | null
           event_type?: string | null
           host_contact_number?: string | null
           host_name?: string | null
@@ -1227,6 +1230,7 @@ export type Database = {
           decor_access: boolean
           dry_ice: boolean
           event_space: string
+          event_time: string
           event_type: string
           host_contact_number: string
           host_name: string
