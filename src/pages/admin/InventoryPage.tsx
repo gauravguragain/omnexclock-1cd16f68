@@ -13,7 +13,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Plus, Minus, Package, ShoppingCart, Trash2, AlertTriangle, CheckCircle2, Clock, XCircle, Download, ClipboardCheck } from "lucide-react";
+import { Plus, Minus, Package, ShoppingCart, Trash2, AlertTriangle, CheckCircle2, Clock, XCircle, Download, ClipboardCheck, TrendingUp, TrendingDown } from "lucide-react";
 
 interface InventoryItem {
   id: string;
@@ -61,8 +61,8 @@ export default function InventoryPage() {
   const currentBusinessId = business?.id || "";
   const isAdmin = isAdminOf(currentBusinessId) || isSuperAdminOf(currentBusinessId);
   const isRosterAdmin = isRosterAdminOf(currentBusinessId);
-  const canManageItems = isAdmin; // Only admin/super_admin can add/delete items
-  const canAdjustAndRequest = isAdmin || isRosterAdmin; // Both can adjust counts and request
+  const canManageItems = isAdmin;
+  const canAdjustAndRequest = isAdmin || isRosterAdmin;
 
   // Add item form
   const [newName, setNewName] = useState("");
@@ -82,12 +82,19 @@ export default function InventoryPage() {
   const [stocktakeOpen, setStocktakeOpen] = useState(false);
   const [stocktakeCounts, setStocktakeCounts] = useState<Record<string, string>>({});
 
+  // Stocktake report (shows diff after stocktake)
+  const [stocktakeReport, setStocktakeReport] = useState<{
+    date: string;
+    entries: { id: string; name: string; unit: string; previousCount: number; newCount: number; parLevel: number }[];
+    autoCompletedOrders: number;
+  } | null>(null);
+
   const fetchData = useCallback(async () => {
     if (!business) return;
     setLoading(true);
     const [itemsRes, ordersRes] = await Promise.all([
       supabase.from("inventory_items").select("*").eq("business_id", business.id).order("category").order("name"),
-      supabase.from("inventory_orders").select("*").eq("business_id", business.id).order("created_at", { ascending: false }).limit(50),
+      supabase.from("inventory_orders").select("*").eq("business_id", business.id).order("created_at", { ascending: false }).limit(100),
     ]);
     setItems((itemsRes.data as InventoryItem[]) || []);
 
@@ -183,16 +190,62 @@ export default function InventoryPage() {
       id,
       current_count: Math.max(0, parseInt(val) || 0),
     }));
+
+    // Build report entries before saving
+    const reportEntries = updates.map(u => {
+      const item = items.find(i => i.id === u.id);
+      return {
+        id: u.id,
+        name: item?.name || "Unknown",
+        unit: item?.unit || "pcs",
+        previousCount: item?.current_count ?? 0,
+        newCount: u.current_count,
+        parLevel: item?.min_count ?? 0,
+      };
+    });
+
+    // Save all counts
     let errorCount = 0;
     for (const u of updates) {
       const { error } = await supabase.from("inventory_items").update({ current_count: u.current_count }).eq("id", u.id);
       if (error) errorCount++;
     }
+
+    // Auto-complete "ordered" orders for items that are now at or above par level
+    const itemsAtOrAbovePar = updates.filter(u => {
+      const item = items.find(i => i.id === u.id);
+      return item && u.current_count >= item.min_count;
+    });
+
+    let autoCompletedCount = 0;
+    if (itemsAtOrAbovePar.length > 0) {
+      const parMetItemIds = itemsAtOrAbovePar.map(u => u.id);
+      // Find "ordered" orders for items that have reached par level
+      const orderedOrdersToComplete = orders.filter(
+        o => o.status === "ordered" && parMetItemIds.includes(o.item_id)
+      );
+      for (const o of orderedOrdersToComplete) {
+        const { error } = await supabase.from("inventory_orders").update({ status: "received" }).eq("id", o.id);
+        if (!error) autoCompletedCount++;
+      }
+    }
+
     if (errorCount > 0) {
       toast({ title: "Some updates failed", variant: "destructive" });
     } else {
-      toast({ title: "Stocktake saved" });
+      const msg = autoCompletedCount > 0
+        ? `Stocktake saved. ${autoCompletedCount} order(s) auto-completed (par level reached).`
+        : "Stocktake saved successfully.";
+      toast({ title: "Stocktake Complete", description: msg });
     }
+
+    // Set report
+    setStocktakeReport({
+      date: new Date().toLocaleDateString("en-AU", { weekday: "short", day: "numeric", month: "short", year: "numeric" }),
+      entries: reportEntries,
+      autoCompletedOrders: autoCompletedCount,
+    });
+
     setStocktakeOpen(false);
     fetchData();
   };
@@ -216,6 +269,16 @@ export default function InventoryPage() {
     downloadCSV(`order-requests-${new Date().toISOString().slice(0, 10)}.csv`, headers, rows);
   };
 
+  const exportStocktakeCSV = () => {
+    if (!stocktakeReport) return;
+    const headers = ["Item", "Previous Count", "New Count", "Difference", "Par Level", "Unit", "Status"];
+    const rows = stocktakeReport.entries.map(e => [
+      e.name, String(e.previousCount), String(e.newCount), String(e.newCount - e.previousCount),
+      String(e.parLevel), e.unit, e.newCount >= e.parLevel ? "OK" : "Low Stock",
+    ]);
+    downloadCSV(`stocktake-report-${new Date().toISOString().slice(0, 10)}.csv`, headers, rows);
+  };
+
   // Auto-request low stock
   const requestLowStockOrders = () => {
     const lowItems = items.filter(i => i.current_count <= i.min_count);
@@ -223,7 +286,6 @@ export default function InventoryPage() {
       toast({ title: "No low stock items" });
       return;
     }
-    // Pre-select the first low stock item
     setOrderItemId(lowItems[0].id);
     setOrderQty(String(Math.max(1, lowItems[0].min_count - lowItems[0].current_count)));
     setOrderOpen(true);
@@ -231,12 +293,17 @@ export default function InventoryPage() {
 
   const lowStockItems = items.filter(i => i.current_count <= i.min_count);
 
+  // Active orders = pending, approved, ordered (not received/rejected)
+  const activeOrders = orders.filter(o => ["pending", "approved", "ordered"].includes(o.status));
+  const completedOrders = orders.filter(o => ["received", "rejected"].includes(o.status));
+
   const statusIcon = (status: string) => {
     switch (status) {
       case "pending": return <Clock className="h-3.5 w-3.5 text-warning" />;
       case "approved": return <CheckCircle2 className="h-3.5 w-3.5 text-success" />;
       case "rejected": return <XCircle className="h-3.5 w-3.5 text-destructive" />;
       case "ordered": return <ShoppingCart className="h-3.5 w-3.5 text-primary" />;
+      case "received": return <CheckCircle2 className="h-3.5 w-3.5 text-muted-foreground" />;
       default: return null;
     }
   };
@@ -257,7 +324,7 @@ export default function InventoryPage() {
           <h2 className="text-lg font-bold text-foreground flex items-center gap-2">
             <Package className="h-5 w-5 text-primary" /> FOH Inventory
           </h2>
-          <p className="text-xs text-muted-foreground">{items.length} items · {lowStockItems.length} low stock</p>
+          <p className="text-xs text-muted-foreground">{items.length} items · {lowStockItems.length} low stock · {activeOrders.length} active orders</p>
         </div>
         <div className="flex gap-2 flex-wrap">
           {canAdjustAndRequest && (
@@ -388,15 +455,24 @@ export default function InventoryPage() {
         <TabsList>
           <TabsTrigger value="items" className="text-xs">Inventory Items</TabsTrigger>
           <TabsTrigger value="orders" className="text-xs">
-            Order Requests
-            {orders.filter(o => o.status === "pending").length > 0 && (
+            Active Orders
+            {activeOrders.filter(o => o.status === "pending").length > 0 && (
               <Badge className="ml-1.5 bg-warning text-warning-foreground text-[10px] px-1 py-0 min-w-[16px] justify-center">
-                {orders.filter(o => o.status === "pending").length}
+                {activeOrders.filter(o => o.status === "pending").length}
               </Badge>
             )}
           </TabsTrigger>
+          {stocktakeReport && (
+            <TabsTrigger value="stocktake" className="text-xs">
+              <ClipboardCheck className="h-3 w-3 mr-1" /> Stocktake Report
+            </TabsTrigger>
+          )}
+          {completedOrders.length > 0 && (
+            <TabsTrigger value="history" className="text-xs">History</TabsTrigger>
+          )}
         </TabsList>
 
+        {/* Inventory Items Tab */}
         <TabsContent value="items" className="mt-3">
           <div className="flex justify-end mb-2">
             <Button variant="ghost" size="sm" className="gap-1.5 text-xs" onClick={exportInventoryCSV} disabled={items.length === 0}>
@@ -420,6 +496,7 @@ export default function InventoryPage() {
                     <TableHead className="text-xs text-center">Count</TableHead>
                     <TableHead className="text-xs text-center">Par Level</TableHead>
                     <TableHead className="text-xs text-center">Status</TableHead>
+                    <TableHead className="text-xs text-center">On Order</TableHead>
                     {canAdjustAndRequest && <TableHead className="text-xs text-center">Adjust</TableHead>}
                     {canManageItems && <TableHead className="text-xs w-10"></TableHead>}
                   </TableRow>
@@ -427,6 +504,7 @@ export default function InventoryPage() {
                 <TableBody>
                   {items.map(item => {
                     const isLow = item.current_count <= item.min_count;
+                    const itemActiveOrders = activeOrders.filter(o => o.item_id === item.id);
                     return (
                       <TableRow key={item.id} className={isLow ? "bg-warning/5" : ""}>
                         <TableCell className="text-xs font-medium">
@@ -446,6 +524,16 @@ export default function InventoryPage() {
                           <Badge variant={isLow ? "destructive" : "outline"} className="text-[10px]">
                             {isLow ? "Low" : "OK"}
                           </Badge>
+                        </TableCell>
+                        <TableCell className="text-center">
+                          {itemActiveOrders.length > 0 ? (
+                            <Badge variant="outline" className="text-[10px] gap-1">
+                              {statusIcon(itemActiveOrders[0].status)}
+                              {itemActiveOrders[0].status === "ordered" ? "Ordered" : itemActiveOrders[0].status === "approved" ? "Approved" : "Pending"}
+                            </Badge>
+                          ) : (
+                            <span className="text-[10px] text-muted-foreground">—</span>
+                          )}
                         </TableCell>
                         {canAdjustAndRequest && (
                           <TableCell className="text-center">
@@ -489,17 +577,18 @@ export default function InventoryPage() {
           )}
         </TabsContent>
 
+        {/* Active Orders Tab */}
         <TabsContent value="orders" className="mt-3">
           <div className="flex justify-end mb-2">
             <Button variant="ghost" size="sm" className="gap-1.5 text-xs" onClick={exportOrdersCSV} disabled={orders.length === 0}>
               <Download className="h-3.5 w-3.5" /> Export CSV
             </Button>
           </div>
-          {orders.length === 0 ? (
+          {activeOrders.length === 0 ? (
             <Card>
               <CardContent className="py-12 text-center">
                 <ShoppingCart className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
-                <p className="text-sm text-muted-foreground">No order requests yet.</p>
+                <p className="text-sm text-muted-foreground">No active order requests.</p>
               </CardContent>
             </Card>
           ) : (
@@ -516,7 +605,7 @@ export default function InventoryPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {orders.map(order => (
+                  {activeOrders.map(order => (
                     <TableRow key={order.id}>
                       <TableCell className="text-xs font-medium">{order.item_name}</TableCell>
                       <TableCell className="text-center text-xs font-mono">{order.quantity}</TableCell>
@@ -546,6 +635,9 @@ export default function InventoryPage() {
                               Mark Ordered
                             </Button>
                           )}
+                          {order.status === "ordered" && (
+                            <span className="text-[10px] text-muted-foreground italic">Auto-completes on stocktake</span>
+                          )}
                         </TableCell>
                       )}
                     </TableRow>
@@ -554,7 +646,104 @@ export default function InventoryPage() {
               </Table>
             </div>
           )}
+          <p className="text-[10px] text-muted-foreground mt-2">
+            💡 Orders marked as <span className="font-medium">"Ordered"</span> will automatically be completed when the next stocktake shows the item has reached its par level.
+          </p>
         </TabsContent>
+
+        {/* Stocktake Report Tab */}
+        {stocktakeReport && (
+          <TabsContent value="stocktake" className="mt-3">
+            <div className="flex items-center justify-between mb-2">
+              <div>
+                <p className="text-xs font-medium text-foreground">Stocktake Report — {stocktakeReport.date}</p>
+                {stocktakeReport.autoCompletedOrders > 0 && (
+                  <p className="text-[10px] text-success">
+                    ✓ {stocktakeReport.autoCompletedOrders} order(s) auto-completed (par level reached)
+                  </p>
+                )}
+              </div>
+              <Button variant="ghost" size="sm" className="gap-1.5 text-xs" onClick={exportStocktakeCSV}>
+                <Download className="h-3.5 w-3.5" /> Export CSV
+              </Button>
+            </div>
+            <div className="rounded-lg border border-border/60 overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="text-xs">Item</TableHead>
+                    <TableHead className="text-xs text-center">Previous</TableHead>
+                    <TableHead className="text-xs text-center">New Count</TableHead>
+                    <TableHead className="text-xs text-center">Diff</TableHead>
+                    <TableHead className="text-xs text-center">Par Level</TableHead>
+                    <TableHead className="text-xs text-center">Status</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {stocktakeReport.entries.map(entry => {
+                    const diff = entry.newCount - entry.previousCount;
+                    const isLow = entry.newCount < entry.parLevel;
+                    return (
+                      <TableRow key={entry.id} className={isLow ? "bg-warning/5" : ""}>
+                        <TableCell className="text-xs font-medium">{entry.name}</TableCell>
+                        <TableCell className="text-center text-xs text-muted-foreground font-mono">{entry.previousCount}</TableCell>
+                        <TableCell className="text-center text-xs font-mono font-medium">{entry.newCount} <span className="text-muted-foreground">{entry.unit}</span></TableCell>
+                        <TableCell className="text-center text-xs font-mono">
+                          <span className={`flex items-center justify-center gap-0.5 ${diff > 0 ? "text-success" : diff < 0 ? "text-destructive" : "text-muted-foreground"}`}>
+                            {diff > 0 ? <TrendingUp className="h-3 w-3" /> : diff < 0 ? <TrendingDown className="h-3 w-3" /> : null}
+                            {diff > 0 ? `+${diff}` : diff}
+                          </span>
+                        </TableCell>
+                        <TableCell className="text-center text-xs text-muted-foreground">{entry.parLevel}</TableCell>
+                        <TableCell className="text-center">
+                          <Badge variant={isLow ? "destructive" : "outline"} className="text-[10px]">
+                            {isLow ? "Below Par" : "OK"}
+                          </Badge>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            </div>
+          </TabsContent>
+        )}
+
+        {/* Order History Tab */}
+        {completedOrders.length > 0 && (
+          <TabsContent value="history" className="mt-3">
+            <div className="rounded-lg border border-border/60 overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="text-xs">Item</TableHead>
+                    <TableHead className="text-xs text-center">Qty</TableHead>
+                    <TableHead className="text-xs">Notes</TableHead>
+                    <TableHead className="text-xs">Status</TableHead>
+                    <TableHead className="text-xs">Date</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {completedOrders.map(order => (
+                    <TableRow key={order.id} className="opacity-60">
+                      <TableCell className="text-xs font-medium">{order.item_name}</TableCell>
+                      <TableCell className="text-center text-xs font-mono">{order.quantity}</TableCell>
+                      <TableCell className="text-xs text-muted-foreground max-w-[150px] truncate">{order.notes || "—"}</TableCell>
+                      <TableCell>
+                        <Badge variant="outline" className="text-[10px] gap-1 capitalize">
+                          {statusIcon(order.status)} {order.status}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-xs text-muted-foreground">
+                        {new Date(order.created_at).toLocaleDateString("en-AU", { day: "numeric", month: "short" })}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          </TabsContent>
+        )}
       </Tabs>
 
       {/* Stocktake Dialog */}
@@ -565,27 +754,44 @@ export default function InventoryPage() {
               <ClipboardCheck className="h-5 w-5 text-primary" /> Weekly Stocktake
             </DialogTitle>
           </DialogHeader>
-          <p className="text-xs text-muted-foreground">Enter the actual count for each item. Par levels are shown for reference.</p>
+          <p className="text-xs text-muted-foreground">
+            Enter the actual count for each item. Items with <span className="font-medium">"Ordered"</span> status will auto-complete if par level is reached.
+          </p>
           <div className="space-y-2 mt-2">
-            {items.map(item => (
-              <div key={item.id} className="flex items-center gap-3 py-1.5 border-b border-border/40 last:border-0">
-                <div className="flex-1 min-w-0">
-                  <p className="text-xs font-medium truncate">{item.name}</p>
-                  <p className="text-[10px] text-muted-foreground">Par: {item.min_count} {item.unit}</p>
+            {items.map(item => {
+              const hasOrderedOrder = orders.some(o => o.item_id === item.id && o.status === "ordered");
+              const newVal = parseInt(stocktakeCounts[item.id] ?? "0") || 0;
+              const willAutoComplete = hasOrderedOrder && newVal >= item.min_count;
+              return (
+                <div key={item.id} className={`flex items-center gap-3 py-1.5 border-b border-border/40 last:border-0 ${willAutoComplete ? "bg-success/5" : ""}`}>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-medium truncate flex items-center gap-1.5">
+                      {item.name}
+                      {hasOrderedOrder && (
+                        <Badge variant="outline" className="text-[9px] gap-0.5">
+                          <ShoppingCart className="h-2.5 w-2.5" /> On Order
+                        </Badge>
+                      )}
+                    </p>
+                    <p className="text-[10px] text-muted-foreground">
+                      Par: {item.min_count} {item.unit}
+                      {willAutoComplete && <span className="text-success ml-1">· ✓ Order will auto-complete</span>}
+                    </p>
+                  </div>
+                  <Input
+                    type="number"
+                    min={0}
+                    className="w-20 h-8 text-xs text-center"
+                    value={stocktakeCounts[item.id] ?? ""}
+                    onChange={e => setStocktakeCounts(prev => ({ ...prev, [item.id]: e.target.value }))}
+                  />
                 </div>
-                <Input
-                  type="number"
-                  min={0}
-                  className="w-20 h-8 text-xs text-center"
-                  value={stocktakeCounts[item.id] ?? ""}
-                  onChange={e => setStocktakeCounts(prev => ({ ...prev, [item.id]: e.target.value }))}
-                />
-              </div>
-            ))}
+              );
+            })}
           </div>
           <DialogFooter>
             <DialogClose asChild><Button variant="outline">Cancel</Button></DialogClose>
-            <Button onClick={handleStocktakeSave}>Save Stocktake</Button>
+            <Button onClick={handleStocktakeSave}>Submit Stocktake</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
