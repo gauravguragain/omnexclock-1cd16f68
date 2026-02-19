@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Search, FileText, RefreshCw } from "lucide-react";
+import { Search, FileText, RefreshCw, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 interface AuditLog {
@@ -30,35 +30,39 @@ export default function AuditLogPage() {
   const [tallies, setTallies] = useState<UserTally[]>([]);
   const [profiles, setProfiles] = useState<Map<string, string>>(new Map());
   const [searchQuery, setSearchQuery] = useState("");
+  const [refreshing, setRefreshing] = useState(false);
 
   const fetchData = async () => {
     if (!business) return;
-    const [logsRes, profilesRes] = await Promise.all([
-      supabase.from("audit_logs").select("*").eq("business_id", business.id).order("timestamp", { ascending: false }).limit(500),
-      supabase.from("profiles").select("id, email, full_name"),
-    ]);
+    setRefreshing(true);
+    try {
+      const [logsRes, profilesRes] = await Promise.all([
+        supabase.from("audit_logs").select("*").eq("business_id", business.id).order("timestamp", { ascending: false }).limit(500),
+        supabase.from("profiles").select("id, email, full_name"),
+      ]);
 
-    const logsData = logsRes.data || [];
-    setLogs(logsData);
+      const logsData = logsRes.data || [];
+      setLogs(logsData);
 
-    const profileMap = new Map<string, string>();
-    for (const p of profilesRes.data || []) {
-      profileMap.set(p.id, p.full_name || p.email);
+      const profileMap = new Map<string, string>();
+      for (const p of profilesRes.data || []) {
+        profileMap.set(p.id, p.full_name || p.email);
+      }
+      setProfiles(profileMap);
+      buildTallies(logsData, profileMap);
+    } finally {
+      setRefreshing(false);
     }
-    setProfiles(profileMap);
-    buildTallies(logsData, profileMap);
   };
 
   const buildTallies = (logsData: AuditLog[], profileMap: Map<string, string>) => {
     const tallyMap = new Map<string, Record<string, number>>();
     const nameMap = new Map<string, string>();
     for (const log of logsData) {
-      // For kiosk events, use employee_name from details as the identifier
       const uid = log.user_id || (log.details?.employee_name ? `emp_${log.details.employee_name}` : "unknown");
       if (!tallyMap.has(uid)) tallyMap.set(uid, {});
       const actions = tallyMap.get(uid)!;
       actions[log.action] = (actions[log.action] || 0) + 1;
-      // Store display name
       if (!nameMap.has(uid)) {
         nameMap.set(uid, log.user_id ? (profileMap.get(log.user_id) || "Unknown User") : (log.details?.employee_name || "Unknown"));
       }
@@ -81,7 +85,6 @@ export default function AuditLogPage() {
   useEffect(() => {
     fetchData();
 
-    // Realtime subscription for instant updates
     const channel = supabase
       .channel("audit-logs-realtime")
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "audit_logs" }, () => {
@@ -129,8 +132,13 @@ export default function AuditLogPage() {
           <div className="h-3 w-3 rounded-full bg-success animate-pulse" />
           <span className="text-sm text-muted-foreground">Live — updates in real-time</span>
         </div>
-        <Button variant="outline" size="sm" onClick={fetchData}>
-          <RefreshCw className="mr-2 h-3 w-3" /> Refresh
+        <Button variant="outline" size="sm" onClick={fetchData} disabled={refreshing}>
+          {refreshing ? (
+            <Loader2 className="mr-2 h-3 w-3 animate-spin" />
+          ) : (
+            <RefreshCw className="mr-2 h-3 w-3" />
+          )}
+          {refreshing ? "Refreshing..." : "Refresh"}
         </Button>
       </div>
 

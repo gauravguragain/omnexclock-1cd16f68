@@ -14,8 +14,9 @@ import { logAudit } from "@/lib/auditLog";
 import { notifyEmployees } from "@/lib/notifications";
 import { useAuth } from "@/contexts/AuthContext";
 import {
-  ChevronLeft, ChevronRight, Plus, Trash2, Copy, Send, Clock, AlertCircle, CalendarOff,
+  ChevronLeft, ChevronRight, Plus, Trash2, Copy, Send, Clock, AlertCircle, CalendarOff, Clipboard, ClipboardPaste, X,
 } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Badge } from "@/components/ui/badge";
 import type { Tables } from "@/integrations/supabase/types";
 import { toAusDate, toAusFormatted } from "@/lib/dateUtils";
@@ -116,6 +117,7 @@ export default function RosterPage() {
   const [form, setForm] = useState<ShiftForm>(EMPTY_SHIFT);
   const [saving, setSaving] = useState(false);
   const [publishing, setPublishing] = useState(false);
+  const [copiedShift, setCopiedShift] = useState<Shift | null>(null);
 
   const weekDates = useMemo(() => DAYS.map((_, i) => addDays(weekStart, i)), [weekStart]);
   const weekEnd = addDays(weekStart, 6);
@@ -453,6 +455,42 @@ export default function RosterPage() {
     }
   };
 
+  const handleCopyShift = (shift: Shift) => {
+    setCopiedShift(shift);
+    toast({ title: "Shift copied", description: `${formatTime12(shift.start_time)} – ${formatTime12(shift.end_time)}. Click an empty cell to paste.` });
+  };
+
+  const handlePasteShift = async (employeeId: string, dayIdx: number) => {
+    if (!copiedShift) return;
+    const date = fmtDate(weekDates[dayIdx]);
+    const dayOfWeek = FULL_DAYS[dayIdx];
+    await runAction(async () => {
+      setSaving(true);
+      try {
+        const payload = {
+          employee_id: employeeId,
+          date,
+          day_of_week: dayOfWeek,
+          start_time: copiedShift.start_time,
+          end_time: copiedShift.end_time,
+          break_minutes: copiedShift.break_minutes,
+          notes: copiedShift.notes,
+          week_start_date: fmtDate(weekStart),
+          status: "draft" as const,
+        };
+        const { error } = await supabase.from("shifts").insert(payload);
+        if (error) throw error;
+        await logAudit("shift_paste", { from_shift_id: copiedShift.id, ...payload });
+        toast({ title: "Shift pasted" });
+        fetchData();
+      } catch (err: any) {
+        toast({ title: "Error", description: err.message, variant: "destructive" });
+      } finally {
+        setSaving(false);
+      }
+    });
+  };
+
   const netHours = calcNetHours(form.start_time, form.end_time, parseInt(form.break_minutes) || 0);
 
   return (
@@ -484,6 +522,15 @@ export default function RosterPage() {
 
         {!isViewer && (
           <div className="flex items-center gap-2">
+            {copiedShift && (
+              <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md border border-primary/30 bg-primary/10 text-xs text-primary">
+                <Clipboard className="h-3 w-3" />
+                <span className="font-medium">{formatTime12(copiedShift.start_time)} – {formatTime12(copiedShift.end_time)}</span>
+                <button onClick={() => setCopiedShift(null)} className="ml-1 hover:text-destructive transition-colors">
+                  <X className="h-3 w-3" />
+                </button>
+              </div>
+            )}
             <Button variant="outline" size="sm" onClick={handleCopyPrevWeek} disabled={loading}>
               <Copy className="mr-1.5 h-3.5 w-3.5" /> Copy Last Week
             </Button>
@@ -567,38 +614,69 @@ export default function RosterPage() {
                                 </div>
                               ))}
                               {dayShifts.map(shift => (
-                                <button
-                                  key={shift.id}
-                                  onClick={() => !isViewer && openEditShift(shift)}
-                                  disabled={isViewer}
-                                  className={`w-full rounded-md px-2 py-1.5 text-left text-xs transition-colors ${
-                                    isViewer ? "cursor-default" : ""
-                                  } ${
-                                    shift.status === "published"
-                                      ? "bg-primary/15 text-primary hover:bg-primary/25 border border-primary/20"
-                                      : "bg-muted text-muted-foreground hover:bg-muted/80 border border-border border-dashed"
-                                  }`}
-                                >
-                                  <div className="font-medium">{formatTime12(shift.start_time)} – {formatTime12(shift.end_time)}</div>
-                                  <div className="text-[10px] opacity-70">
-                                    {(shift.hours_worked ?? calcNetHours(shift.start_time, shift.end_time, shift.break_minutes)).toFixed(1)}h
-                                    {shift.break_minutes > 0 && ` · ${shift.break_minutes}m brk`}
-                                  </div>
-                                </button>
+                                <div key={shift.id} className="relative group">
+                                  <button
+                                    onClick={() => !isViewer && openEditShift(shift)}
+                                    disabled={isViewer}
+                                    className={`w-full rounded-md px-2 py-1.5 text-left text-xs transition-colors ${
+                                      isViewer ? "cursor-default" : ""
+                                    } ${
+                                      shift.status === "published"
+                                        ? "bg-primary/15 text-primary hover:bg-primary/25 border border-primary/20"
+                                        : "bg-muted text-muted-foreground hover:bg-muted/80 border border-border border-dashed"
+                                    }`}
+                                  >
+                                    <div className="font-medium">{formatTime12(shift.start_time)} – {formatTime12(shift.end_time)}</div>
+                                    <div className="text-[10px] opacity-70">
+                                      {(shift.hours_worked ?? calcNetHours(shift.start_time, shift.end_time, shift.break_minutes)).toFixed(1)}h
+                                      {shift.break_minutes > 0 && ` · ${shift.break_minutes}m brk`}
+                                    </div>
+                                  </button>
+                                  {!isViewer && (
+                                    <Tooltip>
+                                      <TooltipTrigger asChild>
+                                        <button
+                                          onClick={(e) => { e.stopPropagation(); handleCopyShift(shift); }}
+                                          className="absolute -top-1.5 -right-1.5 h-5 w-5 rounded-full bg-card border border-border shadow-sm flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-primary hover:text-primary-foreground hover:border-primary"
+                                        >
+                                          <Clipboard className="h-2.5 w-2.5" />
+                                        </button>
+                                      </TooltipTrigger>
+                                      <TooltipContent side="top" className="text-xs">Copy shift</TooltipContent>
+                                    </Tooltip>
+                                  )}
+                                </div>
                               ))}
                               {(() => {
                                 if (isViewer) return null;
                                 const hasAllDayBlock = dayRequests.some(r => isAllDayUnavailability(r));
                                 const hasPartialUnavailability = dayRequests.some(r => !isAllDayUnavailability(r));
                                 if (hasAllDayBlock) return null;
-                                if (dayShifts.length > 0 && !hasPartialUnavailability) return null;
+                                if (dayShifts.length > 0 && !hasPartialUnavailability && !copiedShift) return null;
                                 return (
-                                  <button
-                                    onClick={() => openAddShift(emp.id, dayIdx)}
-                                    className="w-full rounded-md border border-dashed border-border hover:border-primary/50 hover:bg-primary/5 text-muted-foreground hover:text-primary text-xs py-1.5 transition-colors flex items-center justify-center gap-1"
-                                  >
-                                    <Plus className="h-3 w-3" />
-                                  </button>
+                                  <div className="flex gap-1">
+                                    <button
+                                      onClick={() => openAddShift(emp.id, dayIdx)}
+                                      className="flex-1 rounded-md border border-dashed border-border hover:border-primary/50 hover:bg-primary/5 text-muted-foreground hover:text-primary text-xs py-1.5 transition-colors flex items-center justify-center gap-1"
+                                    >
+                                      <Plus className="h-3 w-3" />
+                                    </button>
+                                    {copiedShift && (dayShifts.length === 0 || hasPartialUnavailability) && (
+                                      <Tooltip>
+                                        <TooltipTrigger asChild>
+                                          <button
+                                            onClick={() => handlePasteShift(emp.id, dayIdx)}
+                                            className="rounded-md border border-dashed border-primary/40 bg-primary/5 hover:bg-primary/15 text-primary text-xs py-1.5 px-2 transition-colors flex items-center justify-center gap-1"
+                                          >
+                                            <ClipboardPaste className="h-3 w-3" />
+                                          </button>
+                                        </TooltipTrigger>
+                                        <TooltipContent side="top" className="text-xs">
+                                          Paste {formatTime12(copiedShift.start_time)} – {formatTime12(copiedShift.end_time)}
+                                        </TooltipContent>
+                                      </Tooltip>
+                                    )}
+                                  </div>
                                 );
                               })()}
                             </div>
