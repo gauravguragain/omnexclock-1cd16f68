@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useSessionGuard } from "@/hooks/useSessionGuard";
+import { supabase } from "@/integrations/supabase/client";
 
 export default function AdminLayout() {
   const { user, isAdminOf, isViewerOf, hasAccessTo, isApproved, loading, signOut } = useAuth();
@@ -15,6 +16,7 @@ export default function AdminLayout() {
   const location = useLocation();
   const { businessCode } = useParams();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [pendingRequestCount, setPendingRequestCount] = useState(0);
   useSessionGuard();
 
   // Ensure the correct business is active based on URL
@@ -26,6 +28,25 @@ export default function AdminLayout() {
       }
     }
   }, [businessCode, businesses]);
+
+  // Fetch pending request count
+  useEffect(() => {
+    if (!business) return;
+    const fetchCount = async () => {
+      const { count } = await supabase
+        .from("employee_requests")
+        .select("*, employees!inner(business_id)", { count: "exact", head: true })
+        .eq("employees.business_id", business.id)
+        .eq("status", "pending");
+      setPendingRequestCount(count || 0);
+    };
+    fetchCount();
+    const channel = supabase
+      .channel("requests-count")
+      .on("postgres_changes", { event: "*", schema: "public", table: "employee_requests" }, () => fetchCount())
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [business]);
 
   const currentBusinessId = business?.id || "";
   const isAdmin = isAdminOf(currentBusinessId);
@@ -113,6 +134,11 @@ export default function AdminLayout() {
             >
               <Icon className="h-4 w-4 flex-shrink-0" />
               {label}
+              {label === "Requests" && pendingRequestCount > 0 && (
+                <Badge className="ml-auto bg-yellow-500 text-black text-[10px] px-1.5 py-0 min-w-[20px] justify-center">
+                  {pendingRequestCount}
+                </Badge>
+              )}
             </Link>
           ))}
         </nav>

@@ -38,22 +38,41 @@ export default function KioskPage() {
     return () => clearInterval(timer);
   }, []);
 
-  // Load business from URL param
+  // Load business from URL param and apply theme
   useEffect(() => {
     if (!urlBusinessCode) return;
     const loadBusiness = async () => {
       const { data } = await supabase
         .from("businesses")
-        .select("name, logo_url")
+        .select("name, logo_url, theme")
         .eq("business_code", urlBusinessCode.toUpperCase())
         .maybeSingle();
       if (data) {
         setBusinessName(data.name);
         setBusinessLogo(data.logo_url);
         setStep("code_entry");
+        // Apply business theme
+        if (data.theme && typeof data.theme === "object") {
+          const t = data.theme as Record<string, string>;
+          const root = document.documentElement;
+          Object.entries(t).forEach(([key, value]) => {
+            root.style.setProperty(`--${key}`, value);
+          });
+        }
       }
     };
     loadBusiness();
+    return () => {
+      // Reset theme on unmount
+      const root = document.documentElement;
+      const defaults: Record<string, string> = {
+        primary: "43 72% 52%", background: "0 0% 0%", foreground: "0 0% 96%",
+        card: "0 0% 4%", border: "0 0% 16%", muted: "0 0% 10%", accent: "43 72% 52%",
+      };
+      Object.entries(defaults).forEach(([key, value]) => {
+        root.style.setProperty(`--${key}`, value);
+      });
+    };
   }, [urlBusinessCode]);
 
   const getEmployeeStatusByCode = async (employeeCode: string): Promise<{ id: string; name: string; status: EmployeeStatus } | null> => {

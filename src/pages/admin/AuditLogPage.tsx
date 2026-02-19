@@ -209,8 +209,15 @@ export default function AuditLogPage() {
                         {log.action.replace(/_/g, " ")}
                       </Badge>
                     </TableCell>
-                    <TableCell className="text-xs text-muted-foreground max-w-[300px] truncate">
-                      {log.details?.comment || log.details?.employee_name || JSON.stringify(log.details)}
+                    <TableCell className="text-xs text-muted-foreground max-w-[400px]">
+                      <details className="cursor-pointer">
+                        <summary className="truncate">
+                          {log.details?.comment || log.details?.employee_name || JSON.stringify(log.details)?.slice(0, 80)}
+                        </summary>
+                        <pre className="mt-2 whitespace-pre-wrap text-[11px] bg-secondary/50 rounded p-2 max-h-48 overflow-y-auto">
+                          {JSON.stringify(log.details, null, 2)}
+                        </pre>
+                      </details>
                     </TableCell>
                     <TableCell className="text-xs text-muted-foreground whitespace-nowrap">
                       {toAusLocaleString(new Date(log.timestamp), {

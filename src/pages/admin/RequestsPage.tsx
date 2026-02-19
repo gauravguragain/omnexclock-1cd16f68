@@ -148,7 +148,14 @@ export default function RequestsPage() {
     <div className="space-y-4">
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
-          <h2 className="text-lg font-semibold">Leave & Unavailability Requests</h2>
+          <h2 className="text-lg font-semibold flex items-center gap-2">
+            Leave & Unavailability Requests
+            {requests.filter(r => r.status === "pending").length > 0 && (
+              <Badge className="bg-yellow-500 text-black text-xs">
+                {requests.filter(r => r.status === "pending").length} pending
+              </Badge>
+            )}
+          </h2>
           <p className="text-sm text-muted-foreground">Review and approve employee requests</p>
         </div>
         <Select value={filter} onValueChange={setFilter}>
