@@ -24,6 +24,7 @@ export interface Business {
   industry: string | null;
   description: string | null;
   theme: BusinessTheme;
+  status: string;
   created_at: string;
   updated_at: string;
 }
@@ -128,6 +129,7 @@ export function BusinessProvider({ children }: { children: React.ReactNode }) {
       const mapped = data.map((b: any) => ({
         ...b,
         theme: b.theme || defaultTheme,
+        status: b.status || "active",
       }));
       setBusinesses(mapped);
 

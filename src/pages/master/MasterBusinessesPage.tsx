@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { logMasterAudit } from "@/lib/auditLog";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -9,8 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import {
   Building2, Mail, Phone, MapPin, Calendar, Users, Trash2,
-  Search, Filter, ShieldAlert, ShieldCheck, ShieldOff, StickyNote,
-  ChevronDown, ChevronUp, Send, X, AlertTriangle, CheckCircle2, Pause
+  Search, ShieldOff, StickyNote, Send, X, AlertTriangle, CheckCircle2, Pause
 } from "lucide-react";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
@@ -79,7 +79,6 @@ export default function MasterBusinessesPage() {
 
       const profileMap = new Map(profiles?.map(p => [p.id, p.email]) || []);
 
-      // Get employee counts per business
       const { data: employees } = await supabase
         .from("employees")
         .select("business_id")
@@ -143,6 +142,7 @@ export default function MasterBusinessesPage() {
 
   const addNote = async (businessId: string) => {
     if (!newNote.trim() || !user) return;
+    const biz = businesses.find(b => b.id === businessId);
 
     const { error } = await supabase
       .from("business_notes")
@@ -152,6 +152,7 @@ export default function MasterBusinessesPage() {
       toast({ title: "Error", description: "Failed to add note", variant: "destructive" });
     } else {
       toast({ title: "Note added" });
+      logMasterAudit("business_note_added", { business_id: businessId, business_name: biz?.name });
       setNewNote("");
       loadNotes(businessId);
     }
@@ -163,6 +164,9 @@ export default function MasterBusinessesPage() {
   };
 
   const updateStatus = async (bizId: string, newStatus: string) => {
+    const biz = businesses.find(b => b.id === bizId);
+    const oldStatus = biz?.status;
+
     const { error } = await supabase
       .from("businesses")
       .update({ status: newStatus })
@@ -172,6 +176,12 @@ export default function MasterBusinessesPage() {
       toast({ title: "Error", description: "Failed to update status", variant: "destructive" });
     } else {
       toast({ title: "Status updated", description: `Business set to ${newStatus}` });
+      logMasterAudit("business_status_changed", {
+        business_id: bizId,
+        business_name: biz?.name,
+        old_status: oldStatus,
+        new_status: newStatus,
+      });
       load();
     }
     setConfirmAction(null);
@@ -187,6 +197,11 @@ export default function MasterBusinessesPage() {
       toast({ title: "Error", description: data?.error || error?.message || "Failed to delete business", variant: "destructive" });
     } else {
       toast({ title: "Business deleted", description: `${biz.name} and all its data have been permanently removed.` });
+      logMasterAudit("business_deleted", {
+        business_id: biz.id,
+        business_name: biz.name,
+        business_code: biz.business_code,
+      });
       load();
     }
     setDeleting(null);
@@ -295,7 +310,6 @@ export default function MasterBusinessesPage() {
                       </div>
                     </div>
 
-                    {/* Actions */}
                     <div className="flex items-center gap-1 flex-shrink-0">
                       <Select
                         value={biz.status}
@@ -317,19 +331,12 @@ export default function MasterBusinessesPage() {
                         </SelectContent>
                       </Select>
 
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 text-muted-foreground hover:text-foreground"
-                        onClick={() => toggleNotes(biz.id)}
-                        title="Internal notes"
-                      >
+                      <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-foreground" onClick={() => toggleNotes(biz.id)} title="Internal notes">
                         <StickyNote className="h-4 w-4" />
                       </Button>
 
                       <Button
-                        variant="ghost"
-                        size="icon"
+                        variant="ghost" size="icon"
                         className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
                         onClick={() => setConfirmAction({ bizId: biz.id, bizName: biz.name, action: "delete" })}
                         disabled={deleting === biz.id}
@@ -377,15 +384,12 @@ export default function MasterBusinessesPage() {
                     )}
                   </div>
 
-                  {/* Notes section */}
                   {isExpanded && (
                     <div className="border-t border-border pt-3 space-y-3">
                       <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
                         <StickyNote className="h-3.5 w-3.5" />
                         Internal Notes
                       </h4>
-
-                      {/* Add note */}
                       <div className="flex gap-2">
                         <Textarea
                           placeholder="Add an internal note..."
@@ -394,17 +398,10 @@ export default function MasterBusinessesPage() {
                           className="bg-secondary border-border text-sm min-h-[60px]"
                           rows={2}
                         />
-                        <Button
-                          size="icon"
-                          className="h-auto flex-shrink-0"
-                          onClick={() => addNote(biz.id)}
-                          disabled={!newNote.trim()}
-                        >
+                        <Button size="icon" className="h-auto flex-shrink-0" onClick={() => addNote(biz.id)} disabled={!newNote.trim()}>
                           <Send className="h-4 w-4" />
                         </Button>
                       </div>
-
-                      {/* Existing notes */}
                       {loadingNotes ? (
                         <p className="text-xs text-muted-foreground">Loading notes...</p>
                       ) : (notes[biz.id] || []).length === 0 ? (
@@ -418,12 +415,7 @@ export default function MasterBusinessesPage() {
                                 <p className="text-xs text-muted-foreground">
                                   {note.author_name} · {format(new Date(note.created_at), "MMM d, yyyy h:mm a")}
                                 </p>
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  className="h-5 w-5 opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-destructive"
-                                  onClick={() => deleteNote(note.id, biz.id)}
-                                >
+                                <Button variant="ghost" size="icon" className="h-5 w-5 opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-destructive" onClick={() => deleteNote(note.id, biz.id)}>
                                   <X className="h-3 w-3" />
                                 </Button>
                               </div>
@@ -440,7 +432,6 @@ export default function MasterBusinessesPage() {
         </div>
       )}
 
-      {/* Confirmation dialog */}
       <AlertDialog open={!!confirmAction} onOpenChange={() => setConfirmAction(null)}>
         <AlertDialogContent className="bg-card border-border">
           <AlertDialogHeader>
@@ -450,15 +441,9 @@ export default function MasterBusinessesPage() {
             </AlertDialogTitle>
             <AlertDialogDescription className="text-muted-foreground">
               {confirmAction?.action === "delete" ? (
-                <>
-                  This will <strong className="text-destructive">permanently delete</strong> "{confirmAction?.bizName}" and ALL its data
-                  (employees, timesheets, shifts, payroll, forum posts, etc.). This cannot be undone.
-                </>
+                <>This will <strong className="text-destructive">permanently delete</strong> "{confirmAction?.bizName}" and ALL its data. This cannot be undone.</>
               ) : (
-                <>
-                  Deactivating "{confirmAction?.bizName}" will prevent all users from accessing this business.
-                  This can be reversed by changing the status back to Active.
-                </>
+                <>Deactivating "{confirmAction?.bizName}" will prevent all users from accessing this business. This can be reversed.</>
               )}
             </AlertDialogDescription>
           </AlertDialogHeader>
