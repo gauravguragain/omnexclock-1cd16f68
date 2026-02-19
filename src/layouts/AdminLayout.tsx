@@ -4,7 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Navigate, Outlet, Link, useLocation, useParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import {
-  Users, Clock, CalendarDays, DollarSign, BarChart3, Monitor, LogOut, Menu, X, Settings, FileText, UserCog, CalendarRange, MessageSquare, CalendarOff, Building2, Package, Wrench
+  Users, Clock, CalendarDays, DollarSign, BarChart3, Monitor, LogOut, Menu, X, Settings, FileText, UserCog, CalendarRange, MessageSquare, CalendarOff, Building2, Package, Wrench, MoreHorizontal
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useSessionGuard } from "@/hooks/useSessionGuard";
@@ -13,6 +13,9 @@ import WalkthroughTour from "@/components/WalkthroughTour";
 import { adminTourSteps } from "@/components/tourSteps";
 import NotificationBell from "@/components/NotificationBell";
 import { useAdminNotifications } from "@/hooks/useNotifications";
+import {
+  Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger
+} from "@/components/ui/sheet";
 
 export default function AdminLayout() {
   const { user, isAdminOf, isSuperAdminOf, isViewerOf, isRosterAdminOf, getRosterAdminDepartments, hasAccessTo, isApproved, loading, signOut } = useAuth();
@@ -20,6 +23,7 @@ export default function AdminLayout() {
   const location = useLocation();
   const { businessCode } = useParams();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [moreSheetOpen, setMoreSheetOpen] = useState(false);
   const [pendingRequestCount, setPendingRequestCount] = useState(0);
   const { notifications, unreadCount, markRead, markAllRead, clearAll } = useAdminNotifications(business?.id || null);
   useSessionGuard();
@@ -100,6 +104,10 @@ export default function AdminLayout() {
     return true;
   });
 
+  // Bottom nav: show first 4 items + "More" on mobile
+  const bottomNavPrimary = navItems.slice(0, 4);
+  const bottomNavOverflow = navItems.slice(4);
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
@@ -148,9 +156,11 @@ export default function AdminLayout() {
     ? { label: "Super Admin", variant: "outline" as const, className: "text-primary border-primary/30 text-[10px] font-medium" }
     : null;
 
+  const isMoreActive = bottomNavOverflow.some(item => location.pathname === item.path);
+
   return (
-    <div className="min-h-screen bg-background flex">
-      {/* Sidebar */}
+    <div className="min-h-dvh bg-background flex standalone-top-pad">
+      {/* Desktop Sidebar — hidden on mobile */}
       <aside className={`fixed inset-y-0 left-0 z-50 w-64 bg-sidebar border-r border-sidebar-border transform transition-all duration-300 ease-in-out lg:translate-x-0 flex flex-col ${sidebarOpen ? "translate-x-0 shadow-2xl shadow-black/50" : "-translate-x-full"}`}>
         {/* Logo area */}
         <div className="flex items-center gap-3 px-4 py-4 border-b border-sidebar-border">
@@ -237,26 +247,31 @@ export default function AdminLayout() {
         </div>
       </aside>
 
-      {/* Overlay */}
+      {/* Overlay for desktop sidebar on mobile */}
       {sidebarOpen && (
         <div className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm lg:hidden transition-opacity duration-300" onClick={() => setSidebarOpen(false)} />
       )}
 
       {/* Main */}
       <main className="flex-1 lg:ml-64 min-w-0">
+        {/* Header */}
         <header className="sticky top-0 z-30 glass border-b border-border/40 px-4 py-3 flex items-center gap-3 lg:px-6">
-          <Button variant="ghost" size="icon" className="lg:hidden h-9 w-9 btn-press" onClick={() => setSidebarOpen(true)}>
+          {/* Desktop hamburger — hidden on mobile since we have bottom nav */}
+          <Button variant="ghost" size="icon" className="hidden lg:hidden h-9 w-9 btn-press" onClick={() => setSidebarOpen(true)}>
             <Menu className="h-5 w-5" />
           </Button>
-          <div className="flex items-center gap-2">
-            <h2 className="text-base font-semibold text-foreground tracking-tight">
+          <div className="flex items-center gap-2 min-w-0 flex-1">
+            {business?.logo_url && (
+              <img src={business.logo_url} alt="" className="h-7 w-7 rounded-md object-cover lg:hidden flex-shrink-0" />
+            )}
+            <h2 className="text-base font-semibold text-foreground tracking-tight truncate">
               {allNavItems.find((n) => n.path === location.pathname)?.label || "Admin"}
             </h2>
             {roleBadge && (
-              <Badge variant={roleBadge.variant} className={roleBadge.className}>{roleBadge.label}</Badge>
+              <Badge variant={roleBadge.variant} className={`${roleBadge.className} hidden sm:inline-flex`}>{roleBadge.label}</Badge>
             )}
           </div>
-          <div className="ml-auto flex items-center gap-2">
+          <div className="ml-auto flex items-center gap-2 flex-shrink-0">
             <NotificationBell
               notifications={notifications}
               unreadCount={unreadCount}
@@ -266,10 +281,99 @@ export default function AdminLayout() {
             />
           </div>
         </header>
-        <div className="p-4 lg:p-6 page-enter">
+        <div className="p-4 lg:p-6 page-enter has-bottom-nav lg:pb-6">
           <Outlet />
         </div>
       </main>
+
+      {/* Mobile Bottom Navigation Bar */}
+      <nav className="bottom-nav lg:hidden" aria-label="Main navigation">
+        <div className="flex items-stretch">
+          {bottomNavPrimary.map(({ path, label, icon: Icon }) => {
+            const isActive = location.pathname === path;
+            return (
+              <Link
+                key={path}
+                to={path}
+                className={`bottom-nav-item ${isActive ? "active" : ""}`}
+              >
+                <Icon className="h-5 w-5" />
+                <span className="bottom-nav-label">{label}</span>
+                {label === "Requests" && pendingRequestCount > 0 && (
+                  <span className="absolute top-1 right-1/4 h-2 w-2 rounded-full bg-warning" />
+                )}
+              </Link>
+            );
+          })}
+
+          {/* More button */}
+          {bottomNavOverflow.length > 0 && (
+            <Sheet open={moreSheetOpen} onOpenChange={setMoreSheetOpen}>
+              <SheetTrigger asChild>
+                <button
+                  className={`bottom-nav-item ${isMoreActive ? "active" : ""}`}
+                >
+                  <MoreHorizontal className="h-5 w-5" />
+                  <span className="bottom-nav-label">More</span>
+                </button>
+              </SheetTrigger>
+              <SheetContent side="bottom" className="rounded-t-2xl max-h-[70dvh] pb-safe">
+                <SheetHeader className="pb-2">
+                  <SheetTitle className="text-sm">More</SheetTitle>
+                </SheetHeader>
+                <div className="grid grid-cols-4 gap-3 py-2">
+                  {bottomNavOverflow.map(({ path, label, icon: Icon }) => {
+                    const isActive = location.pathname === path;
+                    return (
+                      <Link
+                        key={path}
+                        to={path}
+                        onClick={() => setMoreSheetOpen(false)}
+                        className={`flex flex-col items-center gap-1.5 p-3 rounded-xl touch-active ${
+                          isActive
+                            ? "bg-primary/10 text-primary"
+                            : "text-muted-foreground"
+                        }`}
+                      >
+                        <Icon className="h-5 w-5" />
+                        <span className="text-[10px] font-medium leading-tight text-center">{label}</span>
+                      </Link>
+                    );
+                  })}
+                </div>
+                {/* Quick actions in More sheet */}
+                <div className="border-t border-border/40 pt-3 mt-2 space-y-1">
+                  {isAdmin && (
+                    <Link
+                      to={`/b/${businessCode}/kiosk`}
+                      onClick={async () => { setMoreSheetOpen(false); await signOut(); }}
+                      className="flex items-center gap-3 px-3 py-3 rounded-xl text-sm text-muted-foreground touch-active"
+                    >
+                      <Clock className="h-5 w-5" />
+                      Launch Kiosk
+                    </Link>
+                  )}
+                  <Link
+                    to="/hub"
+                    onClick={() => setMoreSheetOpen(false)}
+                    className="flex items-center gap-3 px-3 py-3 rounded-xl text-sm text-muted-foreground touch-active"
+                  >
+                    <Building2 className="h-5 w-5" />
+                    Business Hub
+                  </Link>
+                  <button
+                    onClick={() => { setMoreSheetOpen(false); signOut(); }}
+                    className="flex items-center gap-3 px-3 py-3 rounded-xl text-sm text-muted-foreground w-full touch-active"
+                  >
+                    <LogOut className="h-5 w-5" />
+                    Sign Out
+                  </button>
+                </div>
+              </SheetContent>
+            </Sheet>
+          )}
+        </div>
+      </nav>
 
       {/* First-time admin walkthrough */}
       <WalkthroughTour

@@ -769,7 +769,7 @@ export default function PortalPage() {
   /* ── LOGIN SCREEN ── */
   if (!authenticated) {
     return (
-      <div className="min-h-screen bg-background flex flex-col items-center justify-center p-4">
+      <div className="min-h-dvh bg-background flex flex-col items-center justify-center p-4 standalone-top-pad">
         <div className="text-center mb-6">
           {businessLogo ? (
             <img src={businessLogo} alt={businessName} className="h-16 w-16 mx-auto rounded-lg object-cover mb-2" />
@@ -793,23 +793,24 @@ export default function PortalPage() {
               className="text-center text-3xl tracking-[0.5em] font-mono h-16 bg-surface"
               placeholder="••••"
             />
+            {/* Touch-optimized numpad */}
             <div className="grid grid-cols-3 gap-2">
               {["1", "2", "3", "4", "5", "6", "7", "8", "9"].map(n => (
-                <Button key={n} variant="secondary" className="h-16 text-2xl font-bold" onClick={() => handleNumpadClick(n)}>
+                <Button key={n} variant="secondary" className="h-14 sm:h-16 text-2xl font-bold touch-active btn-press select-none" onClick={() => handleNumpadClick(n)}>
                   {n}
                 </Button>
               ))}
-              <Button variant="secondary" className="h-16" onClick={() => setCode("")}>
+              <Button variant="secondary" className="h-14 sm:h-16 touch-active btn-press select-none" onClick={() => setCode("")}>
                 <ArrowLeft className="h-6 w-6" />
               </Button>
-              <Button variant="secondary" className="h-16 text-2xl font-bold" onClick={() => handleNumpadClick("0")}>
+              <Button variant="secondary" className="h-14 sm:h-16 text-2xl font-bold touch-active btn-press select-none" onClick={() => handleNumpadClick("0")}>
                 0
               </Button>
-              <Button variant="secondary" className="h-16" onClick={() => setCode(p => p.slice(0, -1))}>
+              <Button variant="secondary" className="h-14 sm:h-16 touch-active btn-press select-none" onClick={() => setCode(p => p.slice(0, -1))}>
                 <Delete className="h-6 w-6" />
               </Button>
             </div>
-            <Button className="w-full h-14 text-lg" onClick={handleLogin} disabled={code.length !== 4 || loading}>
+            <Button className="w-full h-14 text-lg touch-active btn-press" onClick={handleLogin} disabled={code.length !== 4 || loading}>
               {loading ? "Loading..." : "View My Portal"}
             </Button>
           </CardContent>
@@ -819,7 +820,7 @@ export default function PortalPage() {
           <Button
             variant="outline"
             size="sm"
-            className="gap-1.5"
+            className="gap-1.5 touch-active"
             onClick={() => {
               localStorage.removeItem("omnexclock_portal_business_code");
               window.location.href = "/portal";
@@ -835,7 +836,7 @@ export default function PortalPage() {
 
   /* ── PORTAL DASHBOARD ── */
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-dvh bg-background standalone-top-pad">
       {/* Header */}
       <header className="sticky top-0 z-30 bg-card/80 backdrop-blur border-b border-border px-4 py-3">
         <div className="max-w-3xl mx-auto flex items-center justify-between">
@@ -873,7 +874,7 @@ export default function PortalPage() {
       </header>
 
       {/* Content */}
-      <main className="max-w-3xl mx-auto p-4 space-y-4">
+      <main className="max-w-3xl mx-auto p-4 space-y-4 scroll-native pb-8">
         {/* Summary cards */}
         <div className="grid grid-cols-2 gap-3">
           <Card>
@@ -903,21 +904,21 @@ export default function PortalPage() {
 
         {/* Tabs */}
         <Tabs defaultValue="today" className="w-full">
-          <TabsList className="w-full grid grid-cols-5">
-            <TabsTrigger value="today" className="gap-1 text-xs">
-              <Clock className="h-3.5 w-3.5" /> Today
+          <TabsList className="w-full grid grid-cols-5 h-11">
+            <TabsTrigger value="today" className="gap-1 text-xs touch-active py-2.5">
+              <Clock className="h-3.5 w-3.5" /> <span className="hidden xs:inline">Today</span>
             </TabsTrigger>
-            <TabsTrigger value="roster" className="gap-1 text-xs" data-tour="portal-roster">
-              <CalendarRange className="h-3.5 w-3.5" /> Roster
+            <TabsTrigger value="roster" className="gap-1 text-xs touch-active py-2.5" data-tour="portal-roster">
+              <CalendarRange className="h-3.5 w-3.5" /> <span className="hidden xs:inline">Roster</span>
             </TabsTrigger>
-            <TabsTrigger value="timesheets" className="gap-1 text-xs" data-tour="portal-timesheets">
-              <FileText className="h-3.5 w-3.5" /> Timesheets
+            <TabsTrigger value="timesheets" className="gap-1 text-xs touch-active py-2.5" data-tour="portal-timesheets">
+              <FileText className="h-3.5 w-3.5" /> <span className="hidden xs:inline">Time</span>
             </TabsTrigger>
-            <TabsTrigger value="forum" className="gap-1 text-xs" data-tour="portal-forum">
-              <MessageSquare className="h-3.5 w-3.5" /> Forum
+            <TabsTrigger value="forum" className="gap-1 text-xs touch-active py-2.5" data-tour="portal-forum">
+              <MessageSquare className="h-3.5 w-3.5" /> <span className="hidden xs:inline">Forum</span>
             </TabsTrigger>
-            <TabsTrigger value="requests" className="gap-1 text-xs" data-tour="portal-requests">
-              <CalendarOff className="h-3.5 w-3.5" /> Requests
+            <TabsTrigger value="requests" className="gap-1 text-xs touch-active py-2.5" data-tour="portal-requests">
+              <CalendarOff className="h-3.5 w-3.5" /> <span className="hidden xs:inline">Requests</span>
             </TabsTrigger>
           </TabsList>
 
