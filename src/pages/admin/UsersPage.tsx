@@ -287,7 +287,7 @@ export default function UsersPage() {
           role: inviteRole,
           businessId,
           departments: inviteRole === "roster_admin" ? inviteDepartments : null,
-          appUrl: window.location.origin,
+          appUrl: "https://omnexclock.lovable.app",
         },
       });
 
