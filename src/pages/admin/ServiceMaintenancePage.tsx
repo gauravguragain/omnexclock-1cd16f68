@@ -6,7 +6,7 @@ import { toast } from "@/hooks/use-toast";
 import { logAudit } from "@/lib/auditLog";
 import { format, addDays, differenceInDays, parseISO } from "date-fns";
 import {
-  Wrench, Plus, Trash2, Edit2, CalendarCheck, CalendarClock, Mail, AlertTriangle, CheckCircle2, Clock, X
+  Wrench, Plus, Trash2, Edit2, CalendarCheck, CalendarClock, Mail, AlertTriangle, CheckCircle2, Clock, X, CalendarIcon
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -26,6 +26,8 @@ import { Checkbox } from "@/components/ui/checkbox";
 import {
   Popover, PopoverContent, PopoverTrigger
 } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import { cn } from "@/lib/utils";
 
 interface AdminUser {
   id: string;
@@ -350,20 +352,44 @@ export default function ServiceMaintenancePage() {
               </div>
               <div>
                 <Label className="text-xs">Last Service Date</Label>
-                <Input
-                  type="date"
-                  value={form.last_service_date}
-                  onChange={(e) => setForm({ ...form, last_service_date: e.target.value })}
-                />
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" className={cn("w-full justify-start text-left font-normal h-9", !form.last_service_date && "text-muted-foreground")}>
+                      <CalendarIcon className="mr-2 h-3.5 w-3.5" />
+                      {form.last_service_date ? format(parseISO(form.last_service_date), "PPP") : "Pick a date"}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0 z-50" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={form.last_service_date ? parseISO(form.last_service_date) : undefined}
+                      onSelect={(date) => setForm({ ...form, last_service_date: date ? format(date, "yyyy-MM-dd") : "" })}
+                      initialFocus
+                      className={cn("p-3 pointer-events-auto")}
+                    />
+                  </PopoverContent>
+                </Popover>
               </div>
             </div>
             <div>
               <Label className="text-xs">Next Service Date</Label>
-              <Input
-                type="date"
-                value={form.next_service_date}
-                onChange={(e) => setForm({ ...form, next_service_date: e.target.value })}
-              />
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" className={cn("w-full justify-start text-left font-normal h-9", !form.next_service_date && "text-muted-foreground")}>
+                    <CalendarIcon className="mr-2 h-3.5 w-3.5" />
+                    {form.next_service_date ? format(parseISO(form.next_service_date), "PPP") : "Pick a date"}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0 z-50" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={form.next_service_date ? parseISO(form.next_service_date) : undefined}
+                    onSelect={(date) => setForm({ ...form, next_service_date: date ? format(date, "yyyy-MM-dd") : "" })}
+                    initialFocus
+                    className={cn("p-3 pointer-events-auto")}
+                  />
+                </PopoverContent>
+              </Popover>
               <p className="text-[10px] text-muted-foreground mt-1">Auto-calculated from last service + frequency if left empty.</p>
             </div>
             <div>
