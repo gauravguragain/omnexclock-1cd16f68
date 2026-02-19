@@ -104,10 +104,6 @@ export default function MasterSettingsPage() {
               <Badge className="bg-green-500/20 text-green-500">Configured</Badge>
             </div>
             <div className="flex items-center justify-between">
-              <span className="text-sm text-muted-foreground">Geolocation (Nominatim)</span>
-              <Badge className="bg-green-500/20 text-green-500">Active</Badge>
-            </div>
-            <div className="flex items-center justify-between">
               <span className="text-sm text-muted-foreground">Photo Capture</span>
               <Badge className="bg-green-500/20 text-green-500">Enabled</Badge>
             </div>
