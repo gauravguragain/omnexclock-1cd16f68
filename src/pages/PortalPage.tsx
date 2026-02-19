@@ -577,16 +577,16 @@ export default function PortalPage() {
         {/* Tabs */}
         <Tabs defaultValue="roster" className="w-full">
           <TabsList className="w-full grid grid-cols-4">
-            <TabsTrigger value="roster" className="gap-1 text-xs">
+            <TabsTrigger value="roster" className="gap-1 text-xs" data-tour="portal-roster">
               <CalendarRange className="h-3.5 w-3.5" /> Roster
             </TabsTrigger>
-            <TabsTrigger value="timesheets" className="gap-1 text-xs">
+            <TabsTrigger value="timesheets" className="gap-1 text-xs" data-tour="portal-timesheets">
               <FileText className="h-3.5 w-3.5" /> Timesheets
             </TabsTrigger>
-            <TabsTrigger value="forum" className="gap-1 text-xs">
+            <TabsTrigger value="forum" className="gap-1 text-xs" data-tour="portal-forum">
               <MessageSquare className="h-3.5 w-3.5" /> Forum
             </TabsTrigger>
-            <TabsTrigger value="requests" className="gap-1 text-xs">
+            <TabsTrigger value="requests" className="gap-1 text-xs" data-tour="portal-requests">
               <CalendarOff className="h-3.5 w-3.5" /> Requests
             </TabsTrigger>
           </TabsList>
