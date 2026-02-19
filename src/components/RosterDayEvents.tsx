@@ -41,13 +41,23 @@ interface Props {
 
 export default function RosterDayEvents({ weekDates, fmtDate }: Props) {
   const { runAction } = useActionLock();
-  const { isViewer } = useAuth();
+  const { isViewer, isRosterAdminOf, getRosterAdminDepartments, isAdminOf } = useAuth();
   const { business } = useBusiness();
   const { toast } = useToast();
   const [events, setEvents] = useState<DayEvent[]>([]);
   const [config, setConfig] = useState<ConfigItem[]>([]);
   const [openDays, setOpenDays] = useState<Set<number>>(new Set());
   const [saving, setSaving] = useState(false);
+
+  // Roster admins with only BOH access cannot edit events
+  const isRosterAdminBOHOnly = business
+    ? isRosterAdminOf(business.id) && !isAdminOf(business.id) && (() => {
+        const depts = getRosterAdminDepartments(business.id);
+        return depts.length > 0 && depts.every(d => d.toUpperCase() === "BOH");
+      })()
+    : false;
+
+  const cannotEdit = isViewer || isRosterAdminBOHOnly;
 
   const eventSpaces = config.filter(c => c.config_type === "event_space");
   const eventTypes = config.filter(c => c.config_type === "event_type");
@@ -154,7 +164,7 @@ export default function RosterDayEvents({ weekDates, fmtDate }: Props) {
                         <Select
                           value={ev.event_space || ""}
                           onValueChange={v => updateEvent(ev.id, { event_space: v || null })}
-                          disabled={isViewer}
+                          disabled={cannotEdit}
                         >
                           <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Select..." /></SelectTrigger>
                           <SelectContent>
@@ -175,13 +185,13 @@ export default function RosterDayEvents({ weekDates, fmtDate }: Props) {
                             onChange={e => updateEvent(ev.id, { event_type: e.target.value || null })}
                             placeholder="Enter event type..."
                             className="h-8 text-xs"
-                            disabled={isViewer}
+                            disabled={cannotEdit}
                           />
                         ) : (
                           <Select
                             value={ev.event_type || ""}
                             onValueChange={v => updateEvent(ev.id, { event_type: v || null })}
-                            disabled={isViewer}
+                            disabled={cannotEdit}
                           >
                             <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Select..." /></SelectTrigger>
                             <SelectContent>
@@ -200,7 +210,7 @@ export default function RosterDayEvents({ weekDates, fmtDate }: Props) {
                         <Select
                           value={ev.tablecloth_color || "white"}
                           onValueChange={v => updateEvent(ev.id, { tablecloth_color: v })}
-                          disabled={isViewer}
+                          disabled={cannotEdit}
                         >
                           <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
                           <SelectContent>
@@ -219,7 +229,7 @@ export default function RosterDayEvents({ weekDates, fmtDate }: Props) {
                           value={ev.num_tables}
                           onChange={e => updateEvent(ev.id, { num_tables: parseInt(e.target.value) || 0 })}
                           className="h-8 text-xs"
-                          disabled={isViewer}
+                          disabled={cannotEdit}
                         />
                       </div>
 
@@ -232,7 +242,7 @@ export default function RosterDayEvents({ weekDates, fmtDate }: Props) {
                           value={ev.chairs_per_table}
                           onChange={e => updateEvent(ev.id, { chairs_per_table: parseInt(e.target.value) || 0 })}
                           className="h-8 text-xs"
-                          disabled={isViewer}
+                          disabled={cannotEdit}
                         />
                       </div>
 
@@ -244,7 +254,7 @@ export default function RosterDayEvents({ weekDates, fmtDate }: Props) {
                           onChange={e => updateEvent(ev.id, { notes: e.target.value || null })}
                           placeholder="Additional info..."
                           className="h-8 text-xs"
-                          disabled={isViewer}
+                          disabled={cannotEdit}
                         />
                       </div>
                     </div>
@@ -261,7 +271,7 @@ export default function RosterDayEvents({ weekDates, fmtDate }: Props) {
                           <Switch
                             checked={ev[key as keyof DayEvent] as boolean}
                             onCheckedChange={v => updateEvent(ev.id, { [key]: v })}
-                            disabled={isViewer}
+                            disabled={cannotEdit}
                             className="scale-75"
                           />
                           <Label className="text-[11px] text-muted-foreground flex items-center gap-1 cursor-pointer">
@@ -271,7 +281,7 @@ export default function RosterDayEvents({ weekDates, fmtDate }: Props) {
                       ))}
                     </div>
 
-                    {!isViewer && (
+                    {!cannotEdit && (
                       <div className="flex justify-end">
                         <Button variant="ghost" size="sm" className="h-7 text-xs text-destructive hover:text-destructive hover:bg-destructive/10" onClick={() => deleteEvent(ev.id)}>
                           <Trash2 className="h-3 w-3 mr-1" /> Remove
@@ -281,7 +291,7 @@ export default function RosterDayEvents({ weekDates, fmtDate }: Props) {
                   </div>
                 ))}
 
-                {!isViewer && (
+                {!cannotEdit && (
                   <Button
                     variant="outline"
                     size="sm"
@@ -293,7 +303,7 @@ export default function RosterDayEvents({ weekDates, fmtDate }: Props) {
                   </Button>
                 )}
 
-                {dayEvents.length === 0 && isViewer && (
+                {dayEvents.length === 0 && cannotEdit && (
                   <div className="text-xs text-muted-foreground text-center py-2">No events configured for this day.</div>
                 )}
               </div>
