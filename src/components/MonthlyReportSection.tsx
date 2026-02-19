@@ -143,7 +143,7 @@ export default function MonthlyReportSection() {
       if ((selectedReports.has("timesheets") || selectedReports.has("dept_breakdown")) && empIds.length > 0) {
         fetchers.clockEvents = wrap(supabase.from("clock_events").select("*, employees!inner(name, department)").gte("timestamp", `${startStr}T00:00:00`).lte("timestamp", `${endStr}T23:59:59`).in("employee_id", empIds).then(r => r.data || []));
       }
-      const needsPayroll = (selectedReports.has("employee_payroll") || selectedReports.has("admin_payroll") || selectedReports.has("labour_cost")) && empIds.length > 0;
+      const needsPayroll = (selectedReports.has("employee_payroll") || selectedReports.has("admin_payroll") || selectedReports.has("labour_cost") || selectedReports.has("margin_analysis")) && empIds.length > 0;
       let payrollClockPromise: Promise<any> | null = null;
       let payrollApprovalPromise: Promise<any> | null = null;
       if (needsPayroll) {
