@@ -32,9 +32,10 @@ serve(async (req) => {
       });
     }
 
-    // Check admin role
+    // Check admin or master role
     const { data: isAdmin } = await supabase.rpc("has_role", { _user_id: caller.id, _role: "admin" });
-    if (!isAdmin) {
+    const { data: isMaster } = await supabase.rpc("has_role", { _user_id: caller.id, _role: "master" });
+    if (!isAdmin && !isMaster) {
       return new Response(JSON.stringify({ error: "Forbidden" }), {
         status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
