@@ -115,17 +115,20 @@ export default function DashboardPage() {
   const getCurrentlyClockedIn = async () => {
     if (!business) return 0;
     const todayISO = ausStartOfToday();
+    const tomorrowISO = ausStartOfTomorrow();
     // Get employee IDs for this business
     const { data: empData } = await supabase.from("employees").select("id").eq("business_id", business.id).eq("active", true);
     const empIds = (empData || []).map(e => e.id);
     if (empIds.length === 0) return 0;
 
+    // Use timestamp (actual event time) not created_at to match live status logic
     const { data: events } = await supabase
       .from("clock_events")
       .select("employee_id, event_type")
       .in("employee_id", empIds)
-      .gte("created_at", todayISO)
-      .order("created_at", { ascending: false });
+      .gte("timestamp", todayISO)
+      .lt("timestamp", tomorrowISO)
+      .order("timestamp", { ascending: false });
 
     if (!events) return 0;
 
