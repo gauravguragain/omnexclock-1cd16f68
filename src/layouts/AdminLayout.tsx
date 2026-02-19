@@ -9,6 +9,8 @@ import {
 import { useState, useEffect } from "react";
 import { useSessionGuard } from "@/hooks/useSessionGuard";
 import { supabase } from "@/integrations/supabase/client";
+import WalkthroughTour from "@/components/WalkthroughTour";
+import { adminTourSteps } from "@/components/tourSteps";
 
 export default function AdminLayout() {
   const { user, isAdminOf, isViewerOf, hasAccessTo, isApproved, loading, signOut } = useAuth();
@@ -205,6 +207,12 @@ export default function AdminLayout() {
           <Outlet />
         </div>
       </main>
+
+      {/* First-time admin walkthrough */}
+      <WalkthroughTour
+        steps={adminTourSteps}
+        storageKey={`admin-tour-seen-${currentBusinessId}`}
+      />
     </div>
   );
 }
