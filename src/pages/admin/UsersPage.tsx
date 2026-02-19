@@ -5,8 +5,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { UserCheck, UserX, Shield, ShieldOff, Search, Eye, EyeOff } from "lucide-react";
+import { UserCheck, UserX, Shield, ShieldOff, Search, Eye, EyeOff, CalendarRange, X } from "lucide-react";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { logAudit, logMasterAudit } from "@/lib/auditLog";
 import { useAuth } from "@/contexts/AuthContext";
 import { useBusiness } from "@/contexts/BusinessContext";
@@ -19,6 +22,8 @@ interface UserProfile {
   created_at: string;
   has_admin_role: boolean;
   has_viewer_role: boolean;
+  has_roster_admin_role: boolean;
+  roster_admin_departments: string[];
 }
 
 export default function UsersPage() {
@@ -30,16 +35,23 @@ export default function UsersPage() {
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState<Set<string>>(new Set());
 
+  // Role assignment dialog state
+  const [roleDialogOpen, setRoleDialogOpen] = useState(false);
+  const [selectedUser, setSelectedUser] = useState<UserProfile | null>(null);
+  const [selectedRole, setSelectedRole] = useState<"admin" | "viewer" | "roster_admin">("admin");
+  const [selectedDepartments, setSelectedDepartments] = useState<string[]>([]);
+  const [availableDepartments, setAvailableDepartments] = useState<string[]>([]);
+  const [roleSaving, setRoleSaving] = useState(false);
+
   const businessId = business?.id || "";
   const isViewer = isViewerOf(businessId) && !isAdminOf(businessId);
 
   const fetchUsers = async () => {
     if (!businessId) { setLoading(false); return; }
 
-    // Get user_roles for THIS business only
     const { data: roles } = await supabase
       .from("user_roles")
-      .select("user_id, role")
+      .select("user_id, role, departments")
       .eq("business_id", businessId);
 
     if (!roles || roles.length === 0) {
@@ -51,8 +63,11 @@ export default function UsersPage() {
     const userIds = [...new Set(roles.map(r => r.user_id))];
     const adminUserIds = new Set(roles.filter(r => r.role === "admin").map(r => r.user_id));
     const viewerUserIds = new Set(roles.filter(r => r.role === "viewer").map(r => r.user_id));
+    const rosterAdminMap = new Map<string, string[]>();
+    roles.filter(r => r.role === "roster_admin").forEach(r => {
+      rosterAdminMap.set(r.user_id, (r as any).departments || []);
+    });
 
-    // Get profiles for those users only
     const { data: profiles, error } = await supabase
       .from("profiles")
       .select("id, email, full_name, approved, created_at")
@@ -70,18 +85,33 @@ export default function UsersPage() {
         ...p,
         has_admin_role: adminUserIds.has(p.id),
         has_viewer_role: viewerUserIds.has(p.id),
+        has_roster_admin_role: rosterAdminMap.has(p.id),
+        roster_admin_departments: rosterAdminMap.get(p.id) || [],
       }))
     );
     setLoading(false);
   };
 
-  useEffect(() => { fetchUsers(); }, [businessId]);
+  // Fetch available departments from employees
+  const fetchDepartments = async () => {
+    if (!businessId) return;
+    const { data } = await supabase
+      .from("employees")
+      .select("department")
+      .eq("business_id", businessId)
+      .eq("active", true)
+      .not("department", "is", null);
+    const depts = [...new Set((data || []).map(e => e.department).filter(Boolean))] as string[];
+    depts.sort();
+    setAvailableDepartments(depts);
+  };
+
+  useEffect(() => { fetchUsers(); fetchDepartments(); }, [businessId]);
 
   const revokeAndDelete = async (user: UserProfile) => {
     if (!confirm(`Remove ${user.email} from this business? This will revoke their roles for this business only.`)) return;
     setActionLoading((prev) => new Set(prev).add(user.id));
 
-    // Only remove roles for THIS business
     const { error } = await supabase
       .from("user_roles")
       .delete()
@@ -125,91 +155,102 @@ export default function UsersPage() {
     });
   };
 
-  const toggleAdminRole = async (user: UserProfile) => {
-    setActionLoading((prev) => new Set(prev).add(user.id));
-
+  const openRoleDialog = (user: UserProfile) => {
+    setSelectedUser(user);
+    // Determine current role
     if (user.has_admin_role) {
-      const { error } = await supabase
-        .from("user_roles")
-        .delete()
-        .eq("user_id", user.id)
-        .eq("role", "admin")
-        .eq("business_id", businessId);
-      if (error) {
-        toast({ title: "Error", description: error.message, variant: "destructive" });
-      } else {
-        if (user.has_viewer_role) {
-          await supabase
-            .from("user_roles")
-            .delete()
-            .eq("user_id", user.id)
-            .eq("role", "viewer")
-            .eq("business_id", businessId);
-          await logAudit("viewer_role_removed", { user_id: user.id, email: user.email, business_id: businessId });
-        }
-        await logAudit("admin_role_removed", { user_id: user.id, email: user.email, business_id: businessId });
-        logMasterAudit("role_changed", { user_email: user.email, business_name: business?.name, role: "admin", action: "removed" });
-        toast({ title: "Admin role removed", description: user.has_viewer_role ? "Viewer role also removed." : undefined });
-        fetchUsers();
-      }
+      setSelectedRole("admin");
+    } else if (user.has_roster_admin_role) {
+      setSelectedRole("roster_admin");
+      setSelectedDepartments(user.roster_admin_departments);
+    } else if (user.has_viewer_role) {
+      setSelectedRole("viewer");
     } else {
-      const { error } = await supabase
-        .from("user_roles")
-        .insert({ user_id: user.id, role: "admin", business_id: businessId });
-      if (error) {
-        toast({ title: "Error", description: error.message, variant: "destructive" });
-      } else {
-        await logAudit("admin_role_granted", { user_id: user.id, email: user.email, business_id: businessId });
-        logMasterAudit("role_changed", { user_email: user.email, business_name: business?.name, role: "admin", action: "granted" });
-        toast({ title: "Admin role granted" });
-        fetchUsers();
-      }
+      setSelectedRole("viewer");
     }
-
-    setActionLoading((prev) => {
-      const s = new Set(prev);
-      s.delete(user.id);
-      return s;
-    });
+    setRoleDialogOpen(true);
   };
 
-  const toggleViewerRole = async (user: UserProfile) => {
-    setActionLoading((prev) => new Set(prev).add(user.id));
+  const saveRole = async () => {
+    if (!selectedUser) return;
+    setRoleSaving(true);
 
-    if (user.has_viewer_role) {
-      const { error } = await supabase
+    try {
+      // Remove all existing roles for this user in this business
+      await supabase
         .from("user_roles")
         .delete()
-        .eq("user_id", user.id)
-        .eq("role", "viewer")
+        .eq("user_id", selectedUser.id)
         .eq("business_id", businessId);
-      if (error) {
-        toast({ title: "Error", description: error.message, variant: "destructive" });
-      } else {
-        await logAudit("viewer_role_removed", { user_id: user.id, email: user.email, business_id: businessId });
-        logMasterAudit("role_changed", { user_email: user.email, business_name: business?.name, role: "viewer", action: "removed" });
-        toast({ title: "Viewer role removed" });
-        fetchUsers();
+
+      // Insert the new role
+      if (selectedRole === "admin") {
+        await supabase.from("user_roles").insert({ user_id: selectedUser.id, role: "admin" as any, business_id: businessId });
+        await logAudit("admin_role_granted", { user_id: selectedUser.id, email: selectedUser.email, role: "admin", business_id: businessId });
+      } else if (selectedRole === "viewer") {
+        await supabase.from("user_roles").insert({ user_id: selectedUser.id, role: "viewer" as any, business_id: businessId });
+        await logAudit("viewer_role_granted", { user_id: selectedUser.id, email: selectedUser.email, role: "viewer", business_id: businessId });
+      } else if (selectedRole === "roster_admin") {
+        if (selectedDepartments.length === 0) {
+          toast({ title: "Select departments", description: "Roster Admin must have at least one department assigned.", variant: "destructive" });
+          setRoleSaving(false);
+          return;
+        }
+        await supabase.from("user_roles").insert({
+          user_id: selectedUser.id,
+          role: "roster_admin" as any,
+          business_id: businessId,
+          departments: selectedDepartments,
+        });
+        await logAudit("roster_admin_role_granted", {
+          user_id: selectedUser.id,
+          email: selectedUser.email,
+          role: "roster_admin",
+          departments: selectedDepartments,
+          business_id: businessId,
+        });
       }
-    } else {
-      const { error } = await supabase
-        .from("user_roles")
-        .insert({ user_id: user.id, role: "viewer", business_id: businessId });
-      if (error) {
-        toast({ title: "Error", description: error.message, variant: "destructive" });
-      } else {
-        await logAudit("viewer_role_granted", { user_id: user.id, email: user.email, business_id: businessId });
-        logMasterAudit("role_changed", { user_email: user.email, business_name: business?.name, role: "viewer", action: "granted" });
-        toast({ title: "Viewer role granted" });
-        fetchUsers();
-      }
+
+      logMasterAudit("role_changed", {
+        user_email: selectedUser.email,
+        business_name: business?.name,
+        role: selectedRole,
+        departments: selectedRole === "roster_admin" ? selectedDepartments : undefined,
+        action: "granted",
+      });
+
+      toast({ title: "Role updated", description: `${selectedUser.email} is now ${selectedRole === "admin" ? "Full Admin" : selectedRole === "viewer" ? "View Only" : "Roster Admin"}.` });
+      setRoleDialogOpen(false);
+      fetchUsers();
+    } catch (err: any) {
+      toast({ title: "Error", description: err.message, variant: "destructive" });
     }
 
-    setActionLoading((prev) => {
-      const s = new Set(prev);
-      s.delete(user.id);
-      return s;
-    });
+    setRoleSaving(false);
+  };
+
+  const toggleDepartment = (dept: string) => {
+    setSelectedDepartments(prev =>
+      prev.includes(dept) ? prev.filter(d => d !== dept) : [...prev, dept]
+    );
+  };
+
+  const getRoleBadge = (user: UserProfile) => {
+    if (user.has_admin_role) return <Badge className="bg-primary/20 text-primary">Full Admin</Badge>;
+    if (user.has_roster_admin_role) return (
+      <div className="flex flex-col gap-1">
+        <Badge className="bg-accent/20 text-accent-foreground">Roster Admin</Badge>
+        {user.roster_admin_departments.length > 0 && (
+          <div className="flex flex-wrap gap-0.5">
+            {user.roster_admin_departments.map(d => (
+              <Badge key={d} variant="outline" className="text-[9px] px-1 py-0">{d}</Badge>
+            ))}
+          </div>
+        )}
+      </div>
+    );
+    if (user.has_viewer_role) return <Badge variant="outline" className="text-primary border-primary/30">View Only</Badge>;
+    return <Badge variant="secondary">No Role</Badge>;
   };
 
   const filtered = users.filter(
@@ -256,7 +297,7 @@ export default function UsersPage() {
                   <TableHead>Email</TableHead>
                   <TableHead>Signed Up</TableHead>
                   <TableHead>Status</TableHead>
-                  <TableHead>Role</TableHead>
+                  <TableHead>Access Level</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -294,36 +335,12 @@ export default function UsersPage() {
                           {user.approved ? "Approved" : "Pending"}
                         </Badge>
                       </TableCell>
-                      <TableCell>
-                        <div className="flex gap-1 flex-wrap">
-                          <Badge
-                            variant={user.has_admin_role ? "default" : "secondary"}
-                          >
-                            {user.has_admin_role ? "Admin" : "User"}
-                          </Badge>
-                          {user.has_viewer_role && (
-                            <Badge variant="outline" className="text-primary border-primary/30">
-                              Viewer
-                            </Badge>
-                          )}
-                        </div>
-                      </TableCell>
+                      <TableCell>{getRoleBadge(user)}</TableCell>
                       <TableCell className="text-right space-x-1">
                         {isViewer ? (
                           <span className="text-xs text-muted-foreground">View only</span>
                         ) : (
-                          <>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => revokeAndDelete(user)}
-                              disabled={actionLoading.has(user.id)}
-                              title="Remove from business"
-                              className="text-destructive hover:text-destructive"
-                            >
-                              <UserX className="h-4 w-4 mr-1" />
-                              Remove
-                            </Button>
+                          <div className="flex flex-wrap justify-end gap-1">
                             {!user.approved && (
                               <Button
                                 variant="ghost"
@@ -339,32 +356,25 @@ export default function UsersPage() {
                             <Button
                               variant="ghost"
                               size="sm"
-                              onClick={() => toggleAdminRole(user)}
+                              onClick={() => openRoleDialog(user)}
                               disabled={actionLoading.has(user.id)}
-                              title={user.has_admin_role ? "Remove admin" : "Make admin"}
+                              title="Manage access"
                             >
-                              {user.has_admin_role ? (
-                                <ShieldOff className="h-4 w-4 mr-1" />
-                              ) : (
-                                <Shield className="h-4 w-4 mr-1" />
-                              )}
-                              {user.has_admin_role ? "Remove Admin" : "Make Admin"}
+                              <Shield className="h-4 w-4 mr-1" />
+                              Manage Access
                             </Button>
                             <Button
                               variant="ghost"
                               size="sm"
-                              onClick={() => toggleViewerRole(user)}
+                              onClick={() => revokeAndDelete(user)}
                               disabled={actionLoading.has(user.id)}
-                              title={user.has_viewer_role ? "Remove viewer" : "Make viewer"}
+                              title="Remove from business"
+                              className="text-destructive hover:text-destructive"
                             >
-                              {user.has_viewer_role ? (
-                                <EyeOff className="h-4 w-4 mr-1" />
-                              ) : (
-                                <Eye className="h-4 w-4 mr-1" />
-                              )}
-                              {user.has_viewer_role ? "Remove Viewer" : "Make Viewer"}
+                              <UserX className="h-4 w-4 mr-1" />
+                              Remove
                             </Button>
-                          </>
+                          </div>
                         )}
                       </TableCell>
                     </TableRow>
@@ -375,6 +385,126 @@ export default function UsersPage() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Role Assignment Dialog */}
+      <Dialog open={roleDialogOpen} onOpenChange={setRoleDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-base">Manage Access — {selectedUser?.full_name || selectedUser?.email}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <p className="text-sm text-muted-foreground">Select the access level for this user:</p>
+
+            {/* Role Selection */}
+            <div className="space-y-2">
+              {/* Full Admin */}
+              <button
+                type="button"
+                onClick={() => setSelectedRole("admin")}
+                className={`w-full text-left rounded-lg border p-3 transition-all ${
+                  selectedRole === "admin"
+                    ? "border-primary bg-primary/5 ring-1 ring-primary/30"
+                    : "border-border hover:border-muted-foreground/30"
+                }`}
+              >
+                <div className="flex items-center gap-2">
+                  <Shield className="h-4 w-4 text-primary" />
+                  <span className="font-semibold text-sm text-foreground">Full Admin</span>
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Complete access to all features: employees, roster, timesheets, payroll, reports, settings, and user management.
+                </p>
+              </button>
+
+              {/* View Only */}
+              <button
+                type="button"
+                onClick={() => setSelectedRole("viewer")}
+                className={`w-full text-left rounded-lg border p-3 transition-all ${
+                  selectedRole === "viewer"
+                    ? "border-primary bg-primary/5 ring-1 ring-primary/30"
+                    : "border-border hover:border-muted-foreground/30"
+                }`}
+              >
+                <div className="flex items-center gap-2">
+                  <Eye className="h-4 w-4 text-muted-foreground" />
+                  <span className="font-semibold text-sm text-foreground">View Only</span>
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Can view all data (dashboard, employees, roster, timesheets, etc.) but cannot edit anything.
+                </p>
+              </button>
+
+              {/* Roster Admin */}
+              <button
+                type="button"
+                onClick={() => setSelectedRole("roster_admin")}
+                className={`w-full text-left rounded-lg border p-3 transition-all ${
+                  selectedRole === "roster_admin"
+                    ? "border-primary bg-primary/5 ring-1 ring-primary/30"
+                    : "border-border hover:border-muted-foreground/30"
+                }`}
+              >
+                <div className="flex items-center gap-2">
+                  <CalendarRange className="h-4 w-4 text-accent-foreground" />
+                  <span className="font-semibold text-sm text-foreground">Roster Admin</span>
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Can view, edit, publish rosters and manage timesheets — restricted to assigned departments only.
+                </p>
+              </button>
+            </div>
+
+            {/* Department Selection (for Roster Admin) */}
+            {selectedRole === "roster_admin" && (
+              <div className="space-y-2">
+                <Label className="text-sm font-medium">Assign Departments</Label>
+                {availableDepartments.length === 0 ? (
+                  <p className="text-xs text-muted-foreground">
+                    No departments found. Assign departments to employees first.
+                  </p>
+                ) : (
+                  <div className="grid grid-cols-2 gap-2">
+                    {availableDepartments.map(dept => (
+                      <label
+                        key={dept}
+                        className={`flex items-center gap-2 rounded-lg border px-3 py-2 cursor-pointer transition-all text-sm ${
+                          selectedDepartments.includes(dept)
+                            ? "border-primary bg-primary/5"
+                            : "border-border hover:border-muted-foreground/30"
+                        }`}
+                      >
+                        <Checkbox
+                          checked={selectedDepartments.includes(dept)}
+                          onCheckedChange={() => toggleDepartment(dept)}
+                        />
+                        <span className="text-foreground">{dept}</span>
+                      </label>
+                    ))}
+                  </div>
+                )}
+                {selectedDepartments.length > 0 && (
+                  <div className="flex flex-wrap gap-1 pt-1">
+                    <span className="text-xs text-muted-foreground">Selected:</span>
+                    {selectedDepartments.map(d => (
+                      <Badge key={d} variant="secondary" className="text-xs gap-1">
+                        {d}
+                        <X className="h-3 w-3 cursor-pointer" onClick={() => toggleDepartment(d)} />
+                      </Badge>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setRoleDialogOpen(false)}>Cancel</Button>
+            <Button onClick={saveRole} disabled={roleSaving}>
+              {roleSaving ? "Saving..." : "Save Access"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

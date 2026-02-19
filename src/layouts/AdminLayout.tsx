@@ -15,7 +15,7 @@ import NotificationBell from "@/components/NotificationBell";
 import { useAdminNotifications } from "@/hooks/useNotifications";
 
 export default function AdminLayout() {
-  const { user, isAdminOf, isViewerOf, hasAccessTo, isApproved, loading, signOut } = useAuth();
+  const { user, isAdminOf, isViewerOf, isRosterAdminOf, getRosterAdminDepartments, hasAccessTo, isApproved, loading, signOut } = useAuth();
   const { business, businesses, setBusiness } = useBusiness();
   const location = useLocation();
   const { businessCode } = useParams();
@@ -56,23 +56,39 @@ export default function AdminLayout() {
   const currentBusinessId = business?.id || "";
   const isAdmin = isAdminOf(currentBusinessId);
   const isViewer = isViewerOf(currentBusinessId);
+  const isRosterAdmin = isRosterAdminOf(currentBusinessId);
   const hasAccess = hasAccessTo(currentBusinessId);
+  const rosterDepts = getRosterAdminDepartments(currentBusinessId);
 
   const basePath = `/b/${businessCode}/admin`;
 
-  const navItems = [
-    { path: basePath, label: "Dashboard", icon: BarChart3, tourId: "dashboard" },
-    { path: `${basePath}/employees`, label: "Employees", icon: Users, tourId: "employees" },
-    { path: `${basePath}/roster`, label: "Roster", icon: CalendarRange, tourId: "roster" },
-    { path: `${basePath}/live`, label: "Live Monitor", icon: Monitor, tourId: "live" },
-    { path: `${basePath}/timesheets`, label: "Timesheets", icon: CalendarDays, tourId: "timesheets" },
-    { path: `${basePath}/payroll`, label: "Payroll", icon: DollarSign, tourId: "payroll" },
-    { path: `${basePath}/requests`, label: "Requests", icon: CalendarOff, tourId: "requests" },
-    { path: `${basePath}/forum`, label: "Forum", icon: MessageSquare, tourId: "forum" },
-    { path: `${basePath}/audit-log`, label: "Audit Log", icon: FileText, tourId: "audit-log" },
-    { path: `${basePath}/users`, label: "User Management", icon: UserCog, tourId: "users" },
-    { path: `${basePath}/my-business`, label: "My Business", icon: Building2, tourId: "my-business" },
+  const allNavItems = [
+    { path: basePath, label: "Dashboard", icon: BarChart3, tourId: "dashboard", access: "full" },
+    { path: `${basePath}/employees`, label: "Employees", icon: Users, tourId: "employees", access: "full" },
+    { path: `${basePath}/roster`, label: "Roster", icon: CalendarRange, tourId: "roster", access: "roster" },
+    { path: `${basePath}/live`, label: "Live Monitor", icon: Monitor, tourId: "live", access: "full" },
+    { path: `${basePath}/timesheets`, label: "Timesheets", icon: CalendarDays, tourId: "timesheets", access: "roster" },
+    { path: `${basePath}/payroll`, label: "Payroll", icon: DollarSign, tourId: "payroll", access: "full" },
+    { path: `${basePath}/requests`, label: "Requests", icon: CalendarOff, tourId: "requests", access: "full" },
+    { path: `${basePath}/forum`, label: "Forum", icon: MessageSquare, tourId: "forum", access: "full" },
+    { path: `${basePath}/audit-log`, label: "Audit Log", icon: FileText, tourId: "audit-log", access: "full" },
+    { path: `${basePath}/users`, label: "User Management", icon: UserCog, tourId: "users", access: "admin_only" },
+    { path: `${basePath}/my-business`, label: "My Business", icon: Building2, tourId: "my-business", access: "full" },
   ];
+
+  // Filter nav items based on role
+  const navItems = allNavItems.filter(item => {
+    if (isAdmin) return true; // Full admins see everything
+    if (isRosterAdmin && !isAdmin && !isViewer) {
+      // Roster admins only see Roster and Timesheets
+      return item.access === "roster";
+    }
+    if (isViewer) {
+      // Viewers see everything except admin-only
+      return item.access !== "admin_only";
+    }
+    return true;
+  });
 
   if (loading) {
     return (
@@ -110,6 +126,13 @@ export default function AdminLayout() {
       </div>
     );
   }
+
+  // Determine role badge
+  const roleBadge = isRosterAdmin && !isAdmin && !isViewer
+    ? { label: `Roster Admin (${rosterDepts.join(", ")})`, variant: "outline" as const, className: "text-primary border-primary/30 text-[10px] font-medium" }
+    : isViewer && !isAdmin
+    ? { label: "View Only", variant: "outline" as const, className: "text-primary border-primary/30 text-[10px] font-medium" }
+    : null;
 
   return (
     <div className="min-h-screen bg-background flex">
@@ -202,10 +225,10 @@ export default function AdminLayout() {
             <Menu className="h-5 w-5" />
           </Button>
           <h2 className="text-lg font-semibold text-foreground tracking-tight">
-            {navItems.find((n) => n.path === location.pathname)?.label || "Admin"}
+            {allNavItems.find((n) => n.path === location.pathname)?.label || "Admin"}
           </h2>
-          {isViewer && !isAdmin && (
-            <Badge variant="outline" className="text-primary border-primary/30 text-[10px] font-medium">View Only</Badge>
+          {roleBadge && (
+            <Badge variant={roleBadge.variant} className={roleBadge.className}>{roleBadge.label}</Badge>
           )}
           <div className="ml-auto">
             <NotificationBell
