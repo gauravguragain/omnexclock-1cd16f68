@@ -169,19 +169,13 @@ export default function RosterDayEvents({ weekDates, fmtDate }: Props) {
                       {/* Event Type */}
                       <div className="space-y-1">
                         <Label className="text-[11px] text-muted-foreground">Event Type</Label>
-                        <Select
+                        <Input
                           value={ev.event_type || ""}
-                          onValueChange={v => updateEvent(ev.id, { event_type: v || null })}
+                          onChange={e => updateEvent(ev.id, { event_type: e.target.value || null })}
+                          placeholder="Enter event type..."
+                          className="h-8 text-xs"
                           disabled={isViewer}
-                        >
-                          <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Select..." /></SelectTrigger>
-                          <SelectContent>
-                            {eventTypes.map(s => (
-                              <SelectItem key={s.id} value={s.label}>{s.label}</SelectItem>
-                            ))}
-                            {eventTypes.length === 0 && <div className="px-3 py-2 text-xs text-muted-foreground">Add types in My Business settings</div>}
-                          </SelectContent>
-                        </Select>
+                        />
                       </div>
 
                       {/* Tablecloth Color */}
