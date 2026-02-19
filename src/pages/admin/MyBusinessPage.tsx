@@ -14,7 +14,7 @@ import MonthlyReportSection from "@/components/MonthlyReportSection";
 import { logAudit } from "@/lib/auditLog";
 
 export default function MyBusinessPage() {
-  const { isSuperAdminOf, isAdminOf } = useAuth();
+  const { isSuperAdminOf, isAdminOf, isViewerOf } = useAuth();
   const { runAction } = useActionLock();
   const { business, refreshBusiness, applyTheme } = useBusiness();
   const { toast } = useToast();
@@ -33,6 +33,8 @@ export default function MyBusinessPage() {
   const [selectedThemeIdx, setSelectedThemeIdx] = useState<number | null>(null);
 
   if (!business) return <div className="p-6 text-muted-foreground">No business selected.</div>;
+
+  const isViewer = isViewerOf(business.id) && !isAdminOf(business.id) && !isSuperAdminOf(business.id);
 
   const handleSave = async () => {
     await runAction(async () => {
@@ -170,23 +172,27 @@ export default function MyBusinessPage() {
               )}
             </div>
             <div className="space-y-2">
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/*"
-                className="hidden"
-                onChange={handleLogoUpload}
-              />
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => fileInputRef.current?.click()}
-                disabled={uploadingLogo}
-              >
-                {uploadingLogo ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Upload className="h-4 w-4 mr-2" />}
-                {uploadingLogo ? "Uploading..." : "Upload Logo"}
-              </Button>
-              <p className="text-xs text-muted-foreground">JPG, PNG or SVG. Max 5MB.</p>
+              {!isViewer && (
+                <>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={handleLogoUpload}
+                  />
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={uploadingLogo}
+                  >
+                    {uploadingLogo ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Upload className="h-4 w-4 mr-2" />}
+                    {uploadingLogo ? "Uploading..." : "Upload Logo"}
+                  </Button>
+                  <p className="text-xs text-muted-foreground">JPG, PNG or SVG. Max 5MB.</p>
+                </>
+              )}
             </div>
           </div>
 
@@ -206,107 +212,111 @@ export default function MyBusinessPage() {
         <CardContent className="space-y-4">
           <div className="space-y-2">
             <Label>Business Name</Label>
-            <Input value={name} onChange={(e) => setName(e.target.value)} />
+            <Input value={name} onChange={(e) => setName(e.target.value)} disabled={isViewer} />
           </div>
           <div className="space-y-2">
             <Label>Email</Label>
-            <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="business@example.com" />
+            <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="business@example.com" disabled={isViewer} />
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label>Phone</Label>
-              <Input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+61 ..." />
+              <Input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+61 ..." disabled={isViewer} />
             </div>
             <div className="space-y-2">
               <Label>Industry</Label>
-              <Input value={industry} onChange={(e) => setIndustry(e.target.value)} placeholder="e.g. Hospitality" />
+              <Input value={industry} onChange={(e) => setIndustry(e.target.value)} placeholder="e.g. Hospitality" disabled={isViewer} />
             </div>
           </div>
           <div className="space-y-2">
             <Label>Address</Label>
-            <Input value={address} onChange={(e) => setAddress(e.target.value)} placeholder="123 Main St..." />
+            <Input value={address} onChange={(e) => setAddress(e.target.value)} placeholder="123 Main St..." disabled={isViewer} />
           </div>
           <div className="space-y-2">
             <Label>Description</Label>
-            <Textarea value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Brief description of your business" rows={3} />
+            <Textarea value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Brief description of your business" rows={3} disabled={isViewer} />
           </div>
-          <Button onClick={handleSave} disabled={saving}>
-            {saving ? "Saving..." : "Save Details"}
-          </Button>
+          {!isViewer && (
+            <Button onClick={handleSave} disabled={saving}>
+              {saving ? "Saving..." : "Save Details"}
+            </Button>
+          )}
         </CardContent>
       </Card>
 
       {/* Theme */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Palette className="h-5 w-5" /> Theme
-          </CardTitle>
-          <CardDescription>
-            {business.logo_url
-              ? "Analyze your logo to get theme suggestions"
-              : "Upload a logo first to generate theme suggestions"}
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <Button
-            onClick={handleAnalyzeTheme}
-            disabled={analyzingTheme || !business.logo_url}
-            variant="outline"
-          >
-            {analyzingTheme ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Palette className="h-4 w-4 mr-2" />}
-            {analyzingTheme ? "Analyzing..." : "Generate Themes from Logo"}
-          </Button>
+      {!isViewer && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Palette className="h-5 w-5" /> Theme
+            </CardTitle>
+            <CardDescription>
+              {business.logo_url
+                ? "Analyze your logo to get theme suggestions"
+                : "Upload a logo first to generate theme suggestions"}
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <Button
+              onClick={handleAnalyzeTheme}
+              disabled={analyzingTheme || !business.logo_url}
+              variant="outline"
+            >
+              {analyzingTheme ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Palette className="h-4 w-4 mr-2" />}
+              {analyzingTheme ? "Analyzing..." : "Generate Themes from Logo"}
+            </Button>
 
-          {suggestedThemes.length > 0 && (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {suggestedThemes.map((t, idx) => (
-                <button
-                  key={idx}
-                  onClick={() => handleApplyTheme(idx)}
-                  className={`relative p-4 rounded-lg border transition-all text-left ${
-                    selectedThemeIdx === idx
-                      ? "border-primary ring-2 ring-primary/30"
-                      : "border-border hover:border-primary/50"
-                  }`}
-                >
-                  {selectedThemeIdx === idx && (
-                    <div className="absolute top-2 right-2">
-                      <Check className="h-4 w-4 text-primary" />
+            {suggestedThemes.length > 0 && (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {suggestedThemes.map((t, idx) => (
+                  <button
+                    key={idx}
+                    onClick={() => handleApplyTheme(idx)}
+                    className={`relative p-4 rounded-lg border transition-all text-left ${
+                      selectedThemeIdx === idx
+                        ? "border-primary ring-2 ring-primary/30"
+                        : "border-border hover:border-primary/50"
+                    }`}
+                  >
+                    {selectedThemeIdx === idx && (
+                      <div className="absolute top-2 right-2">
+                        <Check className="h-4 w-4 text-primary" />
+                      </div>
+                    )}
+                    <p className="text-sm font-medium mb-2">{t.name}</p>
+                    <div className="flex gap-1">
+                      {[t.theme.primary, t.theme.background, t.theme.accent, t.theme.card].map((c, i) => (
+                        <div
+                          key={i}
+                          className="h-6 w-6 rounded-full border border-border"
+                          style={{ backgroundColor: `hsl(${c})` }}
+                        />
+                      ))}
                     </div>
-                  )}
-                  <p className="text-sm font-medium mb-2">{t.name}</p>
-                  <div className="flex gap-1">
-                    {[t.theme.primary, t.theme.background, t.theme.accent, t.theme.card].map((c, i) => (
-                      <div
-                        key={i}
-                        className="h-6 w-6 rounded-full border border-border"
-                        style={{ backgroundColor: `hsl(${c})` }}
-                      />
-                    ))}
-                  </div>
-                </button>
-              ))}
-            </div>
-          )}
+                  </button>
+                ))}
+              </div>
+            )}
 
-          {/* Current theme preview */}
-          <div className="pt-2">
-            <p className="text-xs text-muted-foreground mb-2">Current Theme</p>
-            <div className="flex gap-2">
-              {business.theme && Object.entries(business.theme).map(([key, val]) => (
-                <div key={key} className="text-center">
-                  <div
-                    className="h-8 w-8 rounded-full border border-border mx-auto"
-                    style={{ backgroundColor: `hsl(${val})` }}
-                  />
-                  <span className="text-[10px] text-muted-foreground">{key}</span>
-                </div>
-              ))}
+            {/* Current theme preview */}
+            <div className="pt-2">
+              <p className="text-xs text-muted-foreground mb-2">Current Theme</p>
+              <div className="flex gap-2">
+                {business.theme && Object.entries(business.theme).map(([key, val]) => (
+                  <div key={key} className="text-center">
+                    <div
+                      className="h-8 w-8 rounded-full border border-border mx-auto"
+                      style={{ backgroundColor: `hsl(${val})` }}
+                    />
+                    <span className="text-[10px] text-muted-foreground">{key}</span>
+                  </div>
+                ))}
+              </div>
             </div>
-          </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Business Reports - Super Admin Only */}
       {isSuperAdminOf(business.id) && <MonthlyReportSection />}
