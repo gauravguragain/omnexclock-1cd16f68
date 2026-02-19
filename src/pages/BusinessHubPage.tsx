@@ -57,12 +57,12 @@ export default function BusinessHubPage() {
   if (businesses.length > 1) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-background p-4">
-        <div className="text-center space-y-2 mb-8">
-          <h1 className="text-2xl font-bold text-foreground">Your Businesses</h1>
+        <div className="text-center space-y-3 mb-8">
+          <h1 className="text-2xl font-bold text-foreground tracking-tight">Your Businesses</h1>
           <p className="text-muted-foreground text-sm">Select a business to manage</p>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 w-full max-w-xl mb-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 w-full max-w-xl mb-8">
           {businesses.map((biz) => {
             const isAdmin = isAdminOf(biz.id);
             const isViewerOnly = isViewerOf(biz.id) && !isAdmin;
@@ -73,18 +73,18 @@ export default function BusinessHubPage() {
                 onClick={() => { setBusiness(biz); applyTheme(biz.theme); }}
                 className="block"
               >
-                <Card className="border border-border cursor-pointer hover:border-primary/50 transition-all duration-300 group h-full">
-                  <CardContent className="p-6 flex flex-col items-center text-center space-y-3">
+                <Card className="border border-border/60 cursor-pointer hover:border-primary/50 hover:shadow-lg hover:shadow-primary/5 transition-all duration-300 group h-full">
+                  <CardContent className="p-7 flex flex-col items-center text-center space-y-4">
                     {biz.logo_url ? (
-                      <img src={biz.logo_url} alt={biz.name} className="h-14 w-14 rounded-full object-cover" />
+                      <img src={biz.logo_url} alt={biz.name} className="h-14 w-14 rounded-2xl object-cover shadow-sm" />
                     ) : (
-                      <div className="h-14 w-14 rounded-full bg-primary/15 flex items-center justify-center group-hover:bg-primary/25 transition-colors">
+                      <div className="h-14 w-14 rounded-2xl bg-primary/10 flex items-center justify-center group-hover:bg-primary/20 transition-colors">
                         <Building2 className="h-7 w-7 text-primary" />
                       </div>
                     )}
                     <div>
-                      <h2 className="text-lg font-semibold text-foreground">{biz.name}</h2>
-                      <p className="text-xs text-muted-foreground mt-1">
+                      <h2 className="text-base font-semibold text-foreground">{biz.name}</h2>
+                      <p className="text-xs text-muted-foreground mt-1.5 font-medium">
                         {isAdmin ? "Admin" : isViewerOnly ? "Viewer" : "Member"}
                       </p>
                     </div>
@@ -95,7 +95,7 @@ export default function BusinessHubPage() {
           })}
         </div>
 
-        <Button variant="ghost" className="text-muted-foreground" onClick={signOut}>
+        <Button variant="ghost" className="text-muted-foreground hover:text-foreground transition-colors" onClick={signOut}>
           <LogOut className="h-4 w-4 mr-2" />
           Sign Out
         </Button>
@@ -108,15 +108,15 @@ export default function BusinessHubPage() {
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-background p-4">
-      <div className="text-center space-y-2 mb-8">
+      <div className="text-center space-y-3 mb-8">
         {business.logo_url ? (
-          <img src={business.logo_url} alt={business.name} className="h-20 w-20 mx-auto rounded-full object-cover" />
+          <img src={business.logo_url} alt={business.name} className="h-20 w-20 mx-auto rounded-2xl object-cover shadow-lg shadow-primary/10" />
         ) : (
-          <div className="h-20 w-20 mx-auto rounded-full bg-primary/15 flex items-center justify-center">
+          <div className="h-20 w-20 mx-auto rounded-2xl bg-primary/10 flex items-center justify-center">
             <Building2 className="h-10 w-10 text-primary" />
           </div>
         )}
-        <h1 className="text-2xl font-bold text-foreground">{business.name}</h1>
+        <h1 className="text-2xl font-bold text-foreground tracking-tight">{business.name}</h1>
         <p className="text-muted-foreground text-sm">Business Administration</p>
       </div>
 
@@ -126,21 +126,21 @@ export default function BusinessHubPage() {
           onClick={() => applyTheme(business.theme)}
           className="block"
         >
-          <Card className="border border-border cursor-pointer hover:border-primary/50 transition-all duration-300 group">
-            <CardContent className="p-6 flex flex-col items-center text-center space-y-3">
-              <div className="h-14 w-14 rounded-full bg-primary/15 flex items-center justify-center group-hover:bg-primary/25 transition-colors">
+          <Card className="border border-border/60 cursor-pointer hover:border-primary/50 hover:shadow-lg hover:shadow-primary/5 transition-all duration-300 group">
+            <CardContent className="p-7 flex flex-col items-center text-center space-y-4">
+              <div className="h-14 w-14 rounded-2xl bg-primary/10 flex items-center justify-center group-hover:bg-primary/20 group-hover:scale-105 transition-all">
                 <ShieldCheck className="h-7 w-7 text-primary" />
               </div>
               <div>
-                <h2 className="text-lg font-semibold text-foreground">Admin Panel</h2>
-                <p className="text-xs text-muted-foreground mt-1">Manage employees, timesheets & more</p>
+                <h2 className="text-base font-semibold text-foreground">Admin Panel</h2>
+                <p className="text-xs text-muted-foreground mt-1.5 leading-relaxed">Manage employees, timesheets & more</p>
               </div>
             </CardContent>
           </Card>
         </Link>
       </div>
 
-      <Button variant="ghost" className="mt-8 text-muted-foreground" onClick={signOut}>
+      <Button variant="ghost" className="mt-8 text-muted-foreground hover:text-foreground transition-colors" onClick={signOut}>
         <LogOut className="h-4 w-4 mr-2" />
         Sign Out
       </Button>

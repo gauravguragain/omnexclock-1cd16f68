@@ -426,8 +426,8 @@ export default function KioskPage() {
           <ShieldCheck className="h-4 w-4 mr-1" />
           Admin Login
         </Button>
-        <p className="text-xs text-muted-foreground">
-          © 2024 Omnex Ventures Pty. Ltd. All rights reserved.
+        <p className="text-[11px] text-muted-foreground/60">
+          © {new Date().getFullYear()} Omnex Ventures Pty. Ltd. All rights reserved.
         </p>
       </div>
     </div>

@@ -114,41 +114,41 @@ export default function AdminLayout() {
   return (
     <div className="min-h-screen bg-background flex">
       {/* Sidebar */}
-      <aside className={`fixed inset-y-0 left-0 z-50 w-64 bg-card border-r border-border transform transition-transform lg:translate-x-0 flex flex-col ${sidebarOpen ? "translate-x-0" : "-translate-x-full"}`}>
-        <div className="flex items-center gap-3 p-4 border-b border-border">
+      <aside className={`fixed inset-y-0 left-0 z-50 w-64 bg-card border-r border-border/60 transform transition-transform lg:translate-x-0 flex flex-col ${sidebarOpen ? "translate-x-0" : "-translate-x-full"}`}>
+        <div className="flex items-center gap-3 p-4 border-b border-border/60">
           {business?.logo_url ? (
-            <img src={business.logo_url} alt="Logo" className="h-10 w-10 rounded-lg object-cover" />
+            <img src={business.logo_url} alt="Logo" className="h-10 w-10 rounded-xl object-cover shadow-sm" />
           ) : (
-            <div className="h-10 w-10 rounded-lg bg-primary/15 flex items-center justify-center">
+            <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center">
               <Building2 className="h-5 w-5 text-primary" />
             </div>
           )}
-          <div>
+          <div className="min-w-0 flex-1">
             <h1 className="text-sm font-bold text-primary truncate">{business?.name || "OmnexClock"}</h1>
-            <p className="text-xs text-muted-foreground">Admin Panel</p>
+            <p className="text-[11px] text-muted-foreground/70">Admin Panel</p>
           </div>
-          <Button variant="ghost" size="icon" className="lg:hidden ml-auto" onClick={() => setSidebarOpen(false)}>
+          <Button variant="ghost" size="icon" className="lg:hidden ml-auto shrink-0" onClick={() => setSidebarOpen(false)}>
             <X className="h-4 w-4" />
           </Button>
         </div>
 
-        <nav className="p-3 space-y-1 overflow-y-auto flex-1">
+        <nav className="p-3 space-y-0.5 overflow-y-auto flex-1 scrollbar-hide">
           {navItems.map(({ path, label, icon: Icon, tourId }) => (
             <Link
               key={path}
               to={path}
               data-tour={tourId}
               onClick={() => setSidebarOpen(false)}
-              className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors ${
+              className={`flex items-center gap-3 px-3 py-2 rounded-lg text-[13px] transition-all ${
                 location.pathname === path
-                  ? "bg-primary/10 text-primary font-medium"
-                  : "text-muted-foreground hover:text-foreground hover:bg-secondary"
+                  ? "bg-primary/10 text-primary font-semibold shadow-sm"
+                  : "text-muted-foreground hover:text-foreground hover:bg-secondary/50"
               }`}
             >
               <Icon className="h-4 w-4 flex-shrink-0" />
               {label}
               {label === "Requests" && pendingRequestCount > 0 && (
-                <Badge className="ml-auto bg-yellow-500 text-black text-[10px] px-1.5 py-0 min-w-[20px] justify-center">
+                <Badge className="ml-auto bg-warning text-warning-foreground text-[10px] px-1.5 py-0 min-w-[20px] justify-center font-semibold">
                   {pendingRequestCount}
                 </Badge>
               )}
@@ -156,12 +156,12 @@ export default function AdminLayout() {
           ))}
         </nav>
 
-        <div className="p-3 border-t border-border space-y-1 flex-shrink-0">
-          <div className="px-3 py-1.5">
-            <p className="text-sm font-medium text-foreground truncate">
+        <div className="p-3 border-t border-border/60 space-y-0.5 flex-shrink-0">
+          <div className="px-3 py-2">
+            <p className="text-[13px] font-medium text-foreground truncate">
               {user?.user_metadata?.full_name || "Admin"}
             </p>
-            <p className="text-xs text-muted-foreground truncate">{user?.email}</p>
+            <p className="text-[11px] text-muted-foreground/70 truncate">{user?.email}</p>
           </div>
           {isAdmin && (
             <Link
@@ -170,7 +170,7 @@ export default function AdminLayout() {
               onClick={async () => {
                 await signOut();
               }}
-              className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-muted-foreground hover:text-foreground hover:bg-secondary w-full"
+              className="flex items-center gap-3 px-3 py-2 rounded-lg text-[13px] text-muted-foreground hover:text-foreground hover:bg-secondary/50 w-full transition-colors"
             >
               <Clock className="h-4 w-4 flex-shrink-0" />
               Launch Kiosk
@@ -178,12 +178,12 @@ export default function AdminLayout() {
           )}
           <Link
             to="/hub"
-            className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-muted-foreground hover:text-foreground hover:bg-secondary w-full"
+            className="flex items-center gap-3 px-3 py-2 rounded-lg text-[13px] text-muted-foreground hover:text-foreground hover:bg-secondary/50 w-full transition-colors"
           >
             <Building2 className="h-4 w-4 flex-shrink-0" />
             Business Hub
           </Link>
-          <button onClick={signOut} className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-muted-foreground hover:text-foreground hover:bg-secondary w-full">
+          <button onClick={signOut} className="flex items-center gap-3 px-3 py-2 rounded-lg text-[13px] text-muted-foreground hover:text-foreground hover:bg-secondary/50 w-full transition-colors">
             <LogOut className="h-4 w-4 flex-shrink-0" />
             Sign Out
           </button>
@@ -197,15 +197,15 @@ export default function AdminLayout() {
 
       {/* Main */}
       <main className="flex-1 lg:ml-64 min-w-0">
-        <header className="sticky top-0 z-30 bg-card/80 backdrop-blur border-b border-border px-4 py-3 flex items-center gap-3 lg:px-6">
+        <header className="sticky top-0 z-30 bg-card/80 backdrop-blur-lg border-b border-border/60 px-4 py-3 flex items-center gap-3 lg:px-6">
           <Button variant="ghost" size="icon" className="lg:hidden" onClick={() => setSidebarOpen(true)}>
             <Menu className="h-5 w-5" />
           </Button>
-          <h2 className="text-lg font-semibold text-foreground">
+          <h2 className="text-lg font-semibold text-foreground tracking-tight">
             {navItems.find((n) => n.path === location.pathname)?.label || "Admin"}
           </h2>
           {isViewer && !isAdmin && (
-            <Badge variant="outline" className="text-primary border-primary/30 text-xs">View Only</Badge>
+            <Badge variant="outline" className="text-primary border-primary/30 text-[10px] font-medium">View Only</Badge>
           )}
           <div className="ml-auto">
             <NotificationBell

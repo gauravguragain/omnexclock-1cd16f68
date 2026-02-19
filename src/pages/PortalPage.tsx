@@ -412,8 +412,8 @@ export default function PortalPage() {
 
   const statusBadge = (status: string) => {
     switch (status) {
-      case "pending": return <Badge variant="outline" className="text-yellow-500 border-yellow-500/30 text-[10px] px-1.5 py-0">Pending</Badge>;
-      case "approved": return <Badge variant="outline" className="text-green-500 border-green-500/30 text-[10px] px-1.5 py-0">Approved</Badge>;
+      case "pending": return <Badge variant="outline" className="text-warning border-warning/30 text-[10px] px-1.5 py-0">Pending</Badge>;
+      case "approved": return <Badge variant="outline" className="text-success border-success/30 text-[10px] px-1.5 py-0">Approved</Badge>;
       case "rejected": return <Badge variant="outline" className="text-destructive border-destructive/30 text-[10px] px-1.5 py-0">Rejected</Badge>;
       default: return <Badge variant="outline" className="text-[10px] px-1.5 py-0">{status}</Badge>;
     }

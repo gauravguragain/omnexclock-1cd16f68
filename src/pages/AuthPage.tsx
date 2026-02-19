@@ -102,17 +102,17 @@ export default function AuthPage() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
       <div className="w-full max-w-md space-y-6">
-        <div className="text-center space-y-2">
-          <div className="h-20 w-20 mx-auto rounded-full bg-primary/15 flex items-center justify-center">
+        <div className="text-center space-y-3">
+          <div className="h-20 w-20 mx-auto rounded-2xl bg-primary/10 flex items-center justify-center shadow-lg shadow-primary/5">
             <IconComponent className="h-10 w-10 text-primary" />
           </div>
-          <h1 className="text-2xl font-bold text-foreground">{heading}</h1>
+          <h1 className="text-2xl font-bold text-foreground tracking-tight">{heading}</h1>
           <p className="text-muted-foreground text-sm">{subheading}</p>
         </div>
 
-        <Card className="border border-border">
-          <CardHeader>
-            <CardTitle>{title}</CardTitle>
+        <Card className="border border-border/60 shadow-sm">
+          <CardHeader className="pb-4">
+            <CardTitle className="text-lg">{title}</CardTitle>
             <CardDescription>{description}</CardDescription>
           </CardHeader>
           <CardContent>
@@ -131,7 +131,7 @@ export default function AuthPage() {
                 <Label htmlFor="password">Password</Label>
                 <Input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" required minLength={6} />
               </div>
-              <Button type="submit" className="w-full" disabled={loading}>
+              <Button type="submit" className="w-full h-11" disabled={loading}>
                 {loading ? "Loading..." : isMasterLogin
                   ? <><Crown className="mr-2 h-4 w-4" /> Master Sign In</>
                   : mode === "signUp"
@@ -139,7 +139,7 @@ export default function AuthPage() {
                     : <><LogIn className="mr-2 h-4 w-4" /> Sign In</>}
               </Button>
             </form>
-            <div className="mt-4 text-center space-y-2">
+            <div className="mt-5 text-center space-y-2">
               {isMasterLogin && (
                 <Link to="/reset-password?master=true" className="text-sm text-primary hover:underline block w-full">
                   Forgot password?
@@ -152,13 +152,13 @@ export default function AuthPage() {
                       <Link to="/reset-password" className="text-sm text-primary hover:underline block w-full">
                         Forgot password?
                       </Link>
-                      <button onClick={() => setMode("signUp")} className="text-sm text-muted-foreground hover:underline block w-full">
+                      <button onClick={() => setMode("signUp")} className="text-sm text-muted-foreground hover:text-foreground hover:underline block w-full transition-colors">
                         Need an account? Sign Up
                       </button>
                     </>
                   )}
                   {mode === "signUp" && (
-                    <button onClick={() => setMode("signIn")} className="text-sm text-muted-foreground hover:underline">
+                    <button onClick={() => setMode("signIn")} className="text-sm text-muted-foreground hover:text-foreground hover:underline transition-colors">
                       Already have an account? Sign In
                     </button>
                   )}
@@ -168,7 +168,7 @@ export default function AuthPage() {
           </CardContent>
         </Card>
 
-        <Link to="/" className="flex items-center justify-center text-sm text-muted-foreground hover:text-foreground">
+        <Link to="/" className="flex items-center justify-center text-sm text-muted-foreground hover:text-foreground transition-colors">
           ← Back to Home
         </Link>
       </div>

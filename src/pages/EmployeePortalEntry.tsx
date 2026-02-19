@@ -83,23 +83,23 @@ export default function EmployeePortalEntry() {
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-background p-4">
-      <div className="text-center space-y-2 mb-8">
-        <img src="/omnex-logo.jpg" alt="OmnexClock" className="h-20 w-20 mx-auto rounded-full object-cover" />
-        <h1 className="text-2xl font-bold text-foreground">Employee Portal</h1>
+      <div className="text-center space-y-3 mb-8">
+        <img src="/omnex-logo.jpg" alt="OmnexClock" className="h-20 w-20 mx-auto rounded-2xl object-cover shadow-lg shadow-primary/10" />
+        <h1 className="text-2xl font-bold text-foreground tracking-tight">Employee Portal</h1>
         <p className="text-muted-foreground text-sm">Enter your business code to access your portal</p>
       </div>
 
-      <Card className="w-full max-w-sm border border-border">
+      <Card className="w-full max-w-sm border border-border/60 shadow-sm">
         <CardContent className="p-6">
           <form onSubmit={handleSubmit} className="space-y-4">
             <Input
               value={businessCode}
               onChange={(e) => setBusinessCode(e.target.value.toUpperCase())}
               placeholder="e.g. PRP"
-              className="text-center text-lg tracking-widest uppercase"
+              className="text-center text-lg tracking-widest uppercase h-12"
               autoFocus
             />
-            <Button type="submit" className="w-full" disabled={loading}>
+            <Button type="submit" className="w-full h-11" disabled={loading}>
               {loading ? <Clock className="h-4 w-4 animate-spin" /> : "Continue"}
             </Button>
           </form>
@@ -113,7 +113,7 @@ export default function EmployeePortalEntry() {
           </Button>
         )}
         <Link to="/">
-          <Button variant="ghost" className="text-muted-foreground">
+          <Button variant="ghost" className="text-muted-foreground hover:text-foreground transition-colors">
             <ArrowLeft className="h-4 w-4 mr-2" /> Back to Home
           </Button>
         </Link>
