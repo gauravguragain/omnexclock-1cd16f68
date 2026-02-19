@@ -11,7 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Plus, Minus, Package, ShoppingCart, Trash2, AlertTriangle, CheckCircle2, Clock, XCircle, Download, ClipboardCheck, TrendingUp, TrendingDown } from "lucide-react";
+import { Plus, Package, ShoppingCart, Trash2, AlertTriangle, CheckCircle2, Clock, XCircle, Download, ClipboardCheck, TrendingUp, TrendingDown } from "lucide-react";
 
 export interface InventoryItem {
   id: string;
@@ -137,17 +137,6 @@ export default function InventorySection({
     }
   };
 
-  const updateCount = async (id: string, delta: number) => {
-    const item = items.find(i => i.id === id);
-    if (!item) return;
-    const nc = Math.max(0, item.current_count + delta);
-    const { error } = await supabase.from(itemsTable).update({ current_count: nc }).eq("id", id);
-    if (error) {
-      toast({ title: "Error", description: error.message, variant: "destructive" });
-    } else {
-      setItems(prev => prev.map(i => i.id === id ? { ...i, current_count: nc } : i));
-    }
-  };
 
   const deleteItem = async (id: string) => {
     const { error } = await supabase.from(itemsTable).delete().eq("id", id);
@@ -495,7 +484,7 @@ export default function InventorySection({
                     <TableHead className="text-xs text-center">Par Level</TableHead>
                     <TableHead className="text-xs text-center">Status</TableHead>
                     <TableHead className="text-xs text-center">On Order</TableHead>
-                    {canAdjustAndRequest && <TableHead className="text-xs text-center">Adjust</TableHead>}
+                    
                     {canManageItems && <TableHead className="text-xs w-10"></TableHead>}
                   </TableRow>
                 </TableHeader>
@@ -533,18 +522,6 @@ export default function InventorySection({
                             <span className="text-[10px] text-muted-foreground">—</span>
                           )}
                         </TableCell>
-                        {canAdjustAndRequest && (
-                          <TableCell className="text-center">
-                            <div className="flex items-center justify-center gap-1">
-                              <Button variant="outline" size="icon" className="h-6 w-6" onClick={() => updateCount(item.id, -1)} disabled={item.current_count === 0}>
-                                <Minus className="h-3 w-3" />
-                              </Button>
-                              <Button variant="outline" size="icon" className="h-6 w-6" onClick={() => updateCount(item.id, 1)}>
-                                <Plus className="h-3 w-3" />
-                              </Button>
-                            </div>
-                          </TableCell>
-                        )}
                         {canManageItems && (
                           <TableCell>
                             <AlertDialog>
