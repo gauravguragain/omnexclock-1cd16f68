@@ -234,7 +234,8 @@ export default function MonthlyReportSection() {
           
           const netHours = Math.max(0, totalHours - breakHours);
           const employeePay = Math.round(netHours * emp.pay_rate * 100) / 100;
-          const adminPay = Math.round((netHours * emp.admin_hourly_rate) / 1.10 * 100) / 100;
+          const adminPayInclGst = Math.round(netHours * emp.admin_hourly_rate * 100) / 100;
+          const adminPay = Math.round(adminPayInclGst / 1.10 * 100) / 100;
           
           computedPayroll.push({
             employee_id: empId,
@@ -247,6 +248,7 @@ export default function MonthlyReportSection() {
             break_hours: Math.round(breakHours * 100) / 100,
             employee_pay: employeePay,
             admin_pay: adminPay,
+            admin_pay_incl_gst: adminPayInclGst,
           });
         }
         
@@ -649,21 +651,22 @@ export default function MonthlyReportSection() {
         addSectionHeader("Admin Payroll", "Finance");
         const payroll = results.payroll;
         const totalAdminPay = payroll.reduce((s: number, p: any) => s + Number(p.admin_pay), 0);
+        const totalAdminPayIncl = payroll.reduce((s: number, p: any) => s + Number(p.admin_pay_incl_gst || 0), 0);
         const totalHours = payroll.reduce((s: number, p: any) => s + Number(p.net_hours), 0);
         const avgRate = totalHours > 0 ? totalAdminPay / totalHours : 0;
-        const gstAmount = totalAdminPay / 11;
+        const gstAmount = totalAdminPayIncl - totalAdminPay;
 
         addStatsRow([
-          { label: "Total Admin Cost (ex GST)", value: `$${totalAdminPay.toFixed(2)}`, color: [220, 38, 38] },
-          { label: "GST Component", value: `$${gstAmount.toFixed(2)}`, color: [180, 83, 9] },
-          { label: "Total Net Hours", value: totalHours.toFixed(1), color: [41, 98, 255] },
-          { label: "Avg $/Hr", value: `$${avgRate.toFixed(2)}`, color: [124, 58, 237] },
+          { label: "Admin Cost (incl GST)", value: `$${totalAdminPayIncl.toFixed(2)}`, color: [220, 38, 38] },
+          { label: "Admin Cost (ex GST)", value: `$${totalAdminPay.toFixed(2)}`, color: [180, 83, 9] },
+          { label: "GST Component", value: `$${gstAmount.toFixed(2)}`, color: [41, 98, 255] },
+          { label: "Avg $/Hr (ex GST)", value: `$${avgRate.toFixed(2)}`, color: [124, 58, 237] },
         ]);
 
         addSubHeader("Admin Pay Entries");
         addTable(
-          ["Employee", "Department", "Net Hours", "Admin Rate $/Hr", "Admin Cost (ex GST)"],
-          payroll.map((p: any) => [p.name, p.department, Number(p.net_hours).toFixed(2), `$${Number(p.admin_hourly_rate).toFixed(2)}`, `$${Number(p.admin_pay).toFixed(2)}`]),
+          ["Employee", "Department", "Net Hours", "Rate $/Hr (incl GST)", "Cost (ex GST)", "Cost (incl GST)"],
+          payroll.map((p: any) => [p.name, p.department, Number(p.net_hours).toFixed(2), `$${Number(p.admin_hourly_rate).toFixed(2)}`, `$${Number(p.admin_pay).toFixed(2)}`, `$${Number(p.admin_pay_incl_gst || 0).toFixed(2)}`]),
           SECTION_COLORS.Finance
         );
 
@@ -755,39 +758,44 @@ export default function MonthlyReportSection() {
         const payroll = results.payroll;
         const totalEmpPay = payroll.reduce((s: number, p: any) => s + Number(p.employee_pay), 0);
         const totalAdminPay = payroll.reduce((s: number, p: any) => s + Number(p.admin_pay), 0);
-        const totalMargin = totalAdminPay - totalEmpPay;
+        const totalAdminPayIncl = payroll.reduce((s: number, p: any) => s + Number(p.admin_pay_incl_gst || 0), 0);
+        const totalMarginEx = totalAdminPay - totalEmpPay;
+        const totalMarginIncl = totalAdminPayIncl - totalEmpPay;
         const totalHours = payroll.reduce((s: number, p: any) => s + Number(p.net_hours), 0);
-        const marginPct = totalAdminPay > 0 ? (totalMargin / totalAdminPay * 100) : 0;
+        const marginPct = totalAdminPay > 0 ? (totalMarginEx / totalAdminPay * 100) : 0;
 
         addStatsRow([
-          { label: "Total Margin", value: `$${totalMargin.toFixed(2)}`, color: [16, 124, 65] },
+          { label: "Margin (ex GST)", value: `$${totalMarginEx.toFixed(2)}`, color: [16, 124, 65] },
+          { label: "Margin (incl GST)", value: `$${totalMarginIncl.toFixed(2)}`, color: [16, 160, 80] },
           { label: "Margin %", value: `${marginPct.toFixed(1)}%`, color: [41, 98, 255] },
-          { label: "Admin Cost (ex GST)", value: `$${totalAdminPay.toFixed(2)}`, color: [180, 83, 9] },
           { label: "Employee Pay", value: `$${totalEmpPay.toFixed(2)}`, color: [124, 58, 237] },
         ]);
 
         addSubHeader("Individual Margin Breakdown");
         addTable(
-          ["Employee", "Department", "Net Hours", "Employee Pay", "Admin Cost", "Margin", "Margin %"],
+          ["Employee", "Dept", "Hrs", "Emp Pay", "Admin (ex)", "Admin (incl)", "Margin (ex)", "Margin (incl)", "%"],
           payroll.map((p: any) => {
-            const margin = Number(p.admin_pay) - Number(p.employee_pay);
-            const mPct = Number(p.admin_pay) > 0 ? (margin / Number(p.admin_pay) * 100) : 0;
+            const marginEx = Number(p.admin_pay) - Number(p.employee_pay);
+            const marginIncl = Number(p.admin_pay_incl_gst || 0) - Number(p.employee_pay);
+            const mPct = Number(p.admin_pay) > 0 ? (marginEx / Number(p.admin_pay) * 100) : 0;
             return [
               p.name, p.department || "-", Number(p.net_hours).toFixed(2),
               `$${Number(p.employee_pay).toFixed(2)}`, `$${Number(p.admin_pay).toFixed(2)}`,
-              `$${margin.toFixed(2)}`, `${mPct.toFixed(1)}%`
+              `$${Number(p.admin_pay_incl_gst || 0).toFixed(2)}`,
+              `$${marginEx.toFixed(2)}`, `$${marginIncl.toFixed(2)}`, `${mPct.toFixed(1)}%`
             ];
-          }).sort((a: string[], b: string[]) => parseFloat(b[5].replace('$', '')) - parseFloat(a[5].replace('$', ''))),
+          }).sort((a: string[], b: string[]) => parseFloat(b[6].replace('$', '')) - parseFloat(a[6].replace('$', ''))),
           SECTION_COLORS.Finance
         );
 
         // Department margin breakdown
-        const deptMargin: Record<string, { empPay: number; adminPay: number; hours: number; count: number }> = {};
+        const deptMargin: Record<string, { empPay: number; adminPay: number; adminPayIncl: number; hours: number; count: number }> = {};
         payroll.forEach((p: any) => {
           const dept = p.department || "Unassigned";
-          if (!deptMargin[dept]) deptMargin[dept] = { empPay: 0, adminPay: 0, hours: 0, count: 0 };
+          if (!deptMargin[dept]) deptMargin[dept] = { empPay: 0, adminPay: 0, adminPayIncl: 0, hours: 0, count: 0 };
           deptMargin[dept].empPay += Number(p.employee_pay);
           deptMargin[dept].adminPay += Number(p.admin_pay);
+          deptMargin[dept].adminPayIncl += Number(p.admin_pay_incl_gst || 0);
           deptMargin[dept].hours += Number(p.net_hours);
           deptMargin[dept].count++;
         });
@@ -795,17 +803,18 @@ export default function MonthlyReportSection() {
         if (Object.keys(deptMargin).length > 0) {
           addSubHeader("Margin by Department");
           addTable(
-            ["Department", "Employees", "Employee Pay", "Admin Cost", "Margin", "Margin %"],
+            ["Department", "Employees", "Emp Pay", "Admin (ex)", "Margin (ex)", "Margin (incl)", "%"],
             Object.entries(deptMargin).sort((a, b) => (b[1].adminPay - b[1].empPay) - (a[1].adminPay - a[1].empPay)).map(([dept, d]) => {
-              const margin = d.adminPay - d.empPay;
-              const mPct = d.adminPay > 0 ? (margin / d.adminPay * 100) : 0;
-              return [dept, String(d.count), `$${d.empPay.toFixed(2)}`, `$${d.adminPay.toFixed(2)}`, `$${margin.toFixed(2)}`, `${mPct.toFixed(1)}%`];
+              const marginEx = d.adminPay - d.empPay;
+              const marginIncl = d.adminPayIncl - d.empPay;
+              const mPct = d.adminPay > 0 ? (marginEx / d.adminPay * 100) : 0;
+              return [dept, String(d.count), `$${d.empPay.toFixed(2)}`, `$${d.adminPay.toFixed(2)}`, `$${marginEx.toFixed(2)}`, `$${marginIncl.toFixed(2)}`, `${mPct.toFixed(1)}%`];
             }),
             SECTION_COLORS.Finance
           );
         }
 
-        addNote("* Margin = Admin Cost (ex GST) - Employee Pay. This represents the earnings retained between charge-out and pay rates.");
+        addNote("* Margin (ex GST) = Admin Cost (ex GST) - Employee Pay. Margin (incl GST) = Admin Cost (incl GST) - Employee Pay. Represents earnings retained between charge-out and pay rates.");
       }
 
       // ==========================================
