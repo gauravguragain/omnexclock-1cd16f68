@@ -255,9 +255,14 @@ export default function RosterPage() {
       doc.text(`Filtered: ${departmentFilter} department only`, 14, 43);
     }
 
-    // Build table data
+    // Build table data — only include employees who have at least one shift this week
     const headers = ["Employee", ...DAYS.map((d, i) => `${d}\n${toAusFormatted(weekDates[i], { day: "numeric", month: "short" })}`), "Total"];
-    const tableData = filteredEmployees.map(emp => {
+    const rosteredEmployees = filteredEmployees.filter(emp => {
+      const empShifts = shiftMap[emp.id];
+      if (!empShifts) return false;
+      return Object.values(empShifts).some((dayShifts: any[]) => dayShifts.length > 0);
+    });
+    const tableData = rosteredEmployees.map(emp => {
       const row: string[] = [emp.name + (emp.department ? `\n${emp.department}` : "")];
       for (let dayIdx = 0; dayIdx < 7; dayIdx++) {
         const dayShifts = shiftMap[emp.id]?.[dayIdx] || [];
