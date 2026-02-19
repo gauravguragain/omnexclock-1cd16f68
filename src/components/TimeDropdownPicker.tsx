@@ -63,8 +63,13 @@ function ScrollColumn({
     <div
       ref={containerRef}
       onWheel={handleWheel}
-      className={cn("overflow-y-auto overscroll-contain py-1 touch-pan-y", width || "w-14")}
-      style={{ maxHeight: 220 }}
+      className={cn("overflow-y-auto overscroll-contain py-1", width || "w-14")}
+      style={{
+        maxHeight: 220,
+        WebkitOverflowScrolling: "touch",
+        touchAction: "pan-y",
+        overscrollBehavior: "contain",
+      }}
     >
       {items.map((item) => (
         <button

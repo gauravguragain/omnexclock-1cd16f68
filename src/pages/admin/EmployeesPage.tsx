@@ -11,7 +11,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Pencil, UserX, UserCheck, Search, ChevronRight, ChevronLeft, Check, Trash2, Mail } from "lucide-react";
+import { Plus, Pencil, UserX, UserCheck, Search, ChevronRight, ChevronLeft, Check, Trash2 } from "lucide-react";
 import type { Tables } from "@/integrations/supabase/types";
 import { logAudit } from "@/lib/auditLog";
 
@@ -58,7 +58,7 @@ export default function EmployeesPage() {
   const [togglingIds, setTogglingIds] = useState<Set<string>>(new Set());
   const [deleteTarget, setDeleteTarget] = useState<Employee | null>(null);
   const [deleting, setDeleting] = useState(false);
-  const [sendingInduction, setSendingInduction] = useState<Set<string>>(new Set());
+  
 
   const isSuperAdmin = business ? isSuperAdminOf(business.id) : false;
   const isAdminOnly = business ? isAdminOf(business.id) && !isSuperAdmin : false;
@@ -163,7 +163,8 @@ export default function EmployeesPage() {
                 businessCode: business.business_code,
                 portalUrl: "https://omnexclock.lovable.app/portal",
               },
-            }).then(() => {
+            }).then(async () => {
+              await logAudit("induction_email_sent", { employee_id: data?.id, employee_name: payload.name, email: payload.email });
               toast({ title: "Induction email sent", description: `Welcome packet sent to ${payload.email}` });
             }).catch(() => {});
           }
@@ -227,36 +228,6 @@ export default function EmployeesPage() {
     });
   };
 
-  const sendInductionEmail = async (emp: Employee) => {
-    if (!emp.email || !business) {
-      toast({ title: "No email address", description: "This employee doesn't have an email address on file.", variant: "destructive" });
-      return;
-    }
-    await runAction(async () => {
-      setSendingInduction(prev => new Set(prev).add(emp.id));
-      try {
-        const { error } = await supabase.functions.invoke("send-email", {
-          body: {
-            type: "employee_induction",
-            to: emp.email,
-            employeeName: emp.name,
-            employeeCode: emp.employee_code,
-            jobTitle: emp.job_title || "Team Member",
-            department: emp.department || "General",
-            businessName: business.name,
-            businessCode: business.business_code,
-            portalUrl: "https://omnexclock.lovable.app/portal",
-          },
-        });
-        if (error) throw error;
-        toast({ title: "Induction email sent!", description: `Welcome packet sent to ${emp.email}` });
-      } catch (err: any) {
-        toast({ title: "Failed to send", description: err.message, variant: "destructive" });
-      } finally {
-        setSendingInduction(prev => { const s = new Set(prev); s.delete(emp.id); return s; });
-      }
-    });
-  };
 
   const openEdit = (emp: Employee) => {
     setEditing(emp);
@@ -478,11 +449,6 @@ export default function EmployeesPage() {
                           <Button variant="ghost" size="icon" onClick={() => toggleActive(emp)} disabled={togglingIds.has(emp.id)} title={emp.active ? "Deactivate" : "Activate"} className="h-8 w-8">
                             {emp.active ? <UserX className="h-3.5 w-3.5" /> : <UserCheck className="h-3.5 w-3.5" />}
                           </Button>
-                          {emp.email && (
-                            <Button variant="ghost" size="icon" onClick={() => sendInductionEmail(emp)} disabled={sendingInduction.has(emp.id)} title="Send Induction Email" className="h-8 w-8">
-                              <Mail className="h-3.5 w-3.5" />
-                            </Button>
-                          )}
                           {isSuperAdmin && (
                             <Button variant="ghost" size="icon" onClick={() => setDeleteTarget(emp)} className="text-destructive hover:text-destructive hover:bg-destructive/10 h-8 w-8" title="Delete permanently">
                               <Trash2 className="h-3.5 w-3.5" />

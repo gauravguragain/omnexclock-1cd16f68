@@ -74,6 +74,9 @@ function ScrollColumn({
           paddingTop: CENTER_INDEX * ITEM_HEIGHT,
           paddingBottom: CENTER_INDEX * ITEM_HEIGHT,
           scrollSnapType: "y mandatory",
+          WebkitOverflowScrolling: "touch",
+          touchAction: "pan-y",
+          overscrollBehavior: "contain",
         }}
       >
         {items.map((item) => (
