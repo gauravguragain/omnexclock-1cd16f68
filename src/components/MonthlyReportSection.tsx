@@ -17,8 +17,9 @@ const REPORT_OPTIONS = [
   { id: "employees", label: "Employee Summary", description: "Active/inactive employees, departments, roles, pay rates", category: "People" },
   { id: "shifts", label: "Roster / Shifts", description: "Scheduled shifts, weekly hours breakdown by employee", category: "Operations" },
   { id: "timesheets", label: "Timesheets & Attendance", description: "Clock in/out, breaks, daily hours, attendance rate", category: "Operations" },
-  { id: "payroll", label: "Payroll Summary", description: "Pay entries, cost breakdown, department totals", category: "Finance" },
-  { id: "labour_cost", label: "Labour Cost Analysis", description: "Cost per department, average hourly rate, overtime", category: "Finance" },
+  { id: "employee_payroll", label: "Employee Payroll", description: "Employee pay entries, hours, department breakdown", category: "Finance" },
+  { id: "admin_payroll", label: "Admin Payroll", description: "Admin pay entries, GST-inclusive costs, department breakdown", category: "Finance" },
+  { id: "labour_cost", label: "Labour Cost Analysis", description: "Cost per department based on admin payroll, average hourly rate", category: "Finance" },
   { id: "requests", label: "Employee Requests", description: "Leave, availability, approval rates", category: "People" },
   { id: "inventory", label: "FOH Inventory", description: "Stock levels, low stock alerts, category breakdown", category: "Stock" },
   { id: "bar_inventory", label: "Bar Inventory & Orders", description: "Bar stock, order history, reorder alerts", category: "Stock" },
@@ -128,14 +129,14 @@ export default function MonthlyReportSection() {
       // Always fetch employees for cross-report analytics
       fetchers.employees = wrap(supabase.from("employees").select("*").eq("business_id", businessId).then(r => r.data || []));
 
-      if ((selectedReports.has("shifts") || selectedReports.has("dept_breakdown") || selectedReports.has("labour_cost")) && empIds.length > 0) {
+      if ((selectedReports.has("shifts") || selectedReports.has("dept_breakdown")) && empIds.length > 0) {
         fetchers.shifts = wrap(supabase.from("shifts").select("*, employees!inner(name, department, pay_rate, admin_hourly_rate, job_title)").gte("date", startStr).lte("date", endStr).in("employee_id", empIds).then(r => r.data || []));
       }
       if ((selectedReports.has("timesheets") || selectedReports.has("dept_breakdown")) && empIds.length > 0) {
         fetchers.clockEvents = wrap(supabase.from("clock_events").select("*, employees!inner(name, department)").gte("timestamp", `${startStr}T00:00:00`).lte("timestamp", `${endStr}T23:59:59`).in("employee_id", empIds).then(r => r.data || []));
       }
-      if ((selectedReports.has("payroll") || selectedReports.has("labour_cost")) && empIds.length > 0) {
-        fetchers.payroll = wrap(supabase.from("payroll_entries").select("*, employees!inner(name, department)").gte("period", startStr).lte("period", endStr).in("employee_id", empIds).then(r => r.data || []));
+      if ((selectedReports.has("employee_payroll") || selectedReports.has("admin_payroll") || selectedReports.has("labour_cost")) && empIds.length > 0) {
+        fetchers.payroll = wrap(supabase.from("payroll_entries").select("*, employees!inner(name, department, pay_rate, admin_hourly_rate)").gte("period", startStr).lte("period", endStr).in("employee_id", empIds).then(r => r.data || []));
       }
       if (selectedReports.has("requests") && empIds.length > 0) {
         fetchers.requests = wrap(supabase.from("employee_requests").select("*, employees!inner(name, department)").gte("created_at", `${startStr}T00:00:00`).lte("created_at", `${endStr}T23:59:59`).in("employee_id", empIds).then(r => r.data || []));
@@ -504,63 +505,141 @@ export default function MonthlyReportSection() {
       }
 
       // ==========================================
-      // SECTION: PAYROLL
+      // SECTION: EMPLOYEE PAYROLL
       // ==========================================
-      if (selectedReports.has("payroll") && results.payroll) {
-        addSectionHeader("Payroll Summary", "Finance");
+      if (selectedReports.has("employee_payroll") && results.payroll) {
+        addSectionHeader("Employee Payroll", "Finance");
         const payroll = results.payroll;
         const totalEmpPay = payroll.reduce((s: number, p: any) => s + Number(p.employee_pay), 0);
-        const totalAdminPay = payroll.reduce((s: number, p: any) => s + Number(p.admin_pay), 0);
         const totalHours = payroll.reduce((s: number, p: any) => s + Number(p.employee_hours), 0);
-        const paidCount = payroll.filter((p: any) => p.status === "paid").length;
+        const avgRate = totalHours > 0 ? totalEmpPay / totalHours : 0;
 
         addStatsRow([
-          { label: "Employee Pay Total", value: `$${totalEmpPay.toFixed(2)}`, color: [16, 124, 65] },
-          { label: "Admin Pay Total", value: `$${totalAdminPay.toFixed(2)}`, color: [41, 98, 255] },
-          { label: "Total Hours", value: totalHours.toFixed(1), color: [124, 58, 237] },
-          { label: "Paid / Total", value: `${paidCount}/${payroll.length}`, color: [180, 83, 9] },
+          { label: "Total Employee Pay", value: `$${totalEmpPay.toFixed(2)}`, color: [16, 124, 65] },
+          { label: "Total Hours", value: totalHours.toFixed(1), color: [41, 98, 255] },
+          { label: "Avg $/Hr", value: `$${avgRate.toFixed(2)}`, color: [124, 58, 237] },
+          { label: "Entries", value: String(payroll.length), color: [180, 83, 9] },
         ]);
 
-        addSubHeader("Payroll Entries");
+        addSubHeader("Employee Pay Entries");
         addTable(
-          ["Employee", "Department", "Period", "Hours", "Employee Pay", "Admin Pay", "Status"],
-          payroll.map((p: any) => [p.employees?.name || "-", p.employees?.department || "-", p.period, Number(p.employee_hours).toFixed(2), `$${Number(p.employee_pay).toFixed(2)}`, `$${Number(p.admin_pay).toFixed(2)}`, p.status]),
+          ["Employee", "Department", "Period", "Hours", "Employee Pay", "Rate $/Hr"],
+          payroll.map((p: any) => {
+            const hrs = Number(p.employee_hours);
+            const pay = Number(p.employee_pay);
+            return [p.employees?.name || "-", p.employees?.department || "-", p.period, hrs.toFixed(2), `$${pay.toFixed(2)}`, hrs > 0 ? `$${(pay / hrs).toFixed(2)}` : "-"];
+          }),
           SECTION_COLORS.Finance
         );
+
+        // Department breakdown
+        const deptPay: Record<string, { hours: number; pay: number; count: number }> = {};
+        payroll.forEach((p: any) => {
+          const dept = p.employees?.department || "Unassigned";
+          if (!deptPay[dept]) deptPay[dept] = { hours: 0, pay: 0, count: 0 };
+          deptPay[dept].hours += Number(p.employee_hours);
+          deptPay[dept].pay += Number(p.employee_pay);
+          deptPay[dept].count++;
+        });
+
+        if (Object.keys(deptPay).length > 0) {
+          addSubHeader("Employee Pay by Department");
+          addTable(
+            ["Department", "Entries", "Hours", "Total Pay", "% of Total", "Avg $/Hr"],
+            Object.entries(deptPay).sort((a, b) => b[1].pay - a[1].pay).map(([dept, d]) => [
+              dept, String(d.count), d.hours.toFixed(1), `$${d.pay.toFixed(2)}`,
+              totalEmpPay ? `${((d.pay / totalEmpPay) * 100).toFixed(1)}%` : "0%",
+              d.hours ? `$${(d.pay / d.hours).toFixed(2)}` : "-"
+            ]),
+            SECTION_COLORS.Finance
+          );
+        }
       }
 
       // ==========================================
-      // SECTION: LABOUR COST ANALYSIS
+      // SECTION: ADMIN PAYROLL
       // ==========================================
-      if (selectedReports.has("labour_cost") && (results.shifts || results.payroll)) {
-        addSectionHeader("Labour Cost Analysis", "Finance");
-        const shifts = results.shifts || [];
-        const payroll = results.payroll || [];
-        const employees = results.employees || [];
+      if (selectedReports.has("admin_payroll") && results.payroll) {
+        addSectionHeader("Admin Payroll", "Finance");
+        const payroll = results.payroll;
+        const totalAdminPay = payroll.reduce((s: number, p: any) => s + Number(p.admin_pay), 0);
+        const totalHours = payroll.reduce((s: number, p: any) => s + Number(p.employee_hours), 0);
+        const avgRate = totalHours > 0 ? totalAdminPay / totalHours : 0;
+        const gstAmount = totalAdminPay / 11; // GST component (1/11th of total)
 
-        // Cost by department
+        addStatsRow([
+          { label: "Total Admin Pay (Inc GST)", value: `$${totalAdminPay.toFixed(2)}`, color: [220, 38, 38] },
+          { label: "GST Component", value: `$${gstAmount.toFixed(2)}`, color: [180, 83, 9] },
+          { label: "Total Hours", value: totalHours.toFixed(1), color: [41, 98, 255] },
+          { label: "Avg $/Hr", value: `$${avgRate.toFixed(2)}`, color: [124, 58, 237] },
+        ]);
+
+        addSubHeader("Admin Pay Entries");
+        addTable(
+          ["Employee", "Department", "Period", "Hours", "Admin Pay", "Rate $/Hr"],
+          payroll.map((p: any) => {
+            const hrs = Number(p.employee_hours);
+            const pay = Number(p.admin_pay);
+            return [p.employees?.name || "-", p.employees?.department || "-", p.period, hrs.toFixed(2), `$${pay.toFixed(2)}`, hrs > 0 ? `$${(pay / hrs).toFixed(2)}` : "-"];
+          }),
+          SECTION_COLORS.Finance
+        );
+
+        // Department breakdown
+        const deptPay: Record<string, { hours: number; pay: number; count: number }> = {};
+        payroll.forEach((p: any) => {
+          const dept = p.employees?.department || "Unassigned";
+          if (!deptPay[dept]) deptPay[dept] = { hours: 0, pay: 0, count: 0 };
+          deptPay[dept].hours += Number(p.employee_hours);
+          deptPay[dept].pay += Number(p.admin_pay);
+          deptPay[dept].count++;
+        });
+
+        if (Object.keys(deptPay).length > 0) {
+          addSubHeader("Admin Pay by Department");
+          addTable(
+            ["Department", "Entries", "Hours", "Total Pay", "% of Total", "Avg $/Hr"],
+            Object.entries(deptPay).sort((a, b) => b[1].pay - a[1].pay).map(([dept, d]) => [
+              dept, String(d.count), d.hours.toFixed(1), `$${d.pay.toFixed(2)}`,
+              totalAdminPay ? `${((d.pay / totalAdminPay) * 100).toFixed(1)}%` : "0%",
+              d.hours ? `$${(d.pay / d.hours).toFixed(2)}` : "-"
+            ]),
+            SECTION_COLORS.Finance
+          );
+        }
+      }
+
+      // ==========================================
+      // SECTION: LABOUR COST ANALYSIS (based on Admin Payroll)
+      // ==========================================
+      if (selectedReports.has("labour_cost") && results.payroll) {
+        addSectionHeader("Labour Cost Analysis", "Finance");
+        const payroll = results.payroll;
+
+        // Aggregate by department from payroll entries using admin_pay
         const deptCosts: Record<string, { hours: number; cost: number; empCount: Set<string> }> = {};
-        shifts.forEach((sh: any) => {
-          const dept = sh.employees?.department || "Unassigned";
+        payroll.forEach((p: any) => {
+          const dept = p.employees?.department || "Unassigned";
           if (!deptCosts[dept]) deptCosts[dept] = { hours: 0, cost: 0, empCount: new Set() };
-          const hrs = Number(sh.hours_worked) || 0;
-          deptCosts[dept].hours += hrs;
-          deptCosts[dept].cost += hrs * (Number(sh.employees?.admin_hourly_rate) || Number(sh.employees?.pay_rate) || 0);
-          deptCosts[dept].empCount.add(sh.employee_id);
+          deptCosts[dept].hours += Number(p.employee_hours);
+          deptCosts[dept].cost += Number(p.admin_pay);
+          deptCosts[dept].empCount.add(p.employee_id);
         });
 
         const totalLabourCost = Object.values(deptCosts).reduce((s, d) => s + d.cost, 0);
         const totalLabourHours = Object.values(deptCosts).reduce((s, d) => s + d.hours, 0);
+        const gstComponent = totalLabourCost / 11;
 
         addStatsRow([
           { label: "Total Labour Cost", value: `$${totalLabourCost.toFixed(2)}`, color: [220, 38, 38] },
-          { label: "Total Labour Hours", value: totalLabourHours.toFixed(1), color: [41, 98, 255] },
-          { label: "Avg Cost/Hour", value: totalLabourHours ? `$${(totalLabourCost / totalLabourHours).toFixed(2)}` : "$0", color: [180, 83, 9] },
+          { label: "Excl. GST", value: `$${(totalLabourCost - gstComponent).toFixed(2)}`, color: [180, 83, 9] },
+          { label: "Total Hours", value: totalLabourHours.toFixed(1), color: [41, 98, 255] },
+          { label: "Avg Cost/Hour", value: totalLabourHours ? `$${(totalLabourCost / totalLabourHours).toFixed(2)}` : "$0", color: [124, 58, 237] },
         ]);
 
-        addSubHeader("Cost by Department");
+        addSubHeader("Cost by Department (Admin Payroll)");
         addTable(
-          ["Department", "Employees", "Hours", "Estimated Cost", "% of Total", "Avg $/Hr"],
+          ["Department", "Employees", "Hours", "Admin Pay Cost", "% of Total", "Avg $/Hr"],
           Object.entries(deptCosts).sort((a, b) => b[1].cost - a[1].cost).map(([dept, d]) => [
             dept, String(d.empCount.size), d.hours.toFixed(1), `$${d.cost.toFixed(2)}`,
             totalLabourCost ? `${((d.cost / totalLabourCost) * 100).toFixed(1)}%` : "0%",
@@ -569,22 +648,23 @@ export default function MonthlyReportSection() {
           SECTION_COLORS.Finance
         );
 
-        // Top earners
+        // Employee cost ranking from payroll
         const empCosts: Record<string, { name: string; hours: number; cost: number; dept: string }> = {};
-        shifts.forEach((sh: any) => {
-          const n = sh.employees?.name || "Unknown";
-          if (!empCosts[n]) empCosts[n] = { name: n, hours: 0, cost: 0, dept: sh.employees?.department || "-" };
-          const hrs = Number(sh.hours_worked) || 0;
-          empCosts[n].hours += hrs;
-          empCosts[n].cost += hrs * (Number(sh.employees?.admin_hourly_rate) || Number(sh.employees?.pay_rate) || 0);
+        payroll.forEach((p: any) => {
+          const n = p.employees?.name || "Unknown";
+          if (!empCosts[n]) empCosts[n] = { name: n, hours: 0, cost: 0, dept: p.employees?.department || "-" };
+          empCosts[n].hours += Number(p.employee_hours);
+          empCosts[n].cost += Number(p.admin_pay);
         });
 
-        addSubHeader("Employee Labour Cost Ranking");
+        addSubHeader("Employee Labour Cost Ranking (Admin Pay)");
         addTable(
-          ["Employee", "Department", "Hours", "Estimated Cost", "Avg $/Hr"],
+          ["Employee", "Department", "Hours", "Admin Pay Cost", "Avg $/Hr"],
           Object.values(empCosts).sort((a, b) => b.cost - a.cost).map(e => [e.name, e.dept, e.hours.toFixed(1), `$${e.cost.toFixed(2)}`, e.hours ? `$${(e.cost / e.hours).toFixed(2)}` : "-"]),
           SECTION_COLORS.Finance
         );
+
+        addNote("* Labour cost analysis is based on Admin Payroll (GST-inclusive rates) for accurate financial reporting.");
       }
 
       // ==========================================
