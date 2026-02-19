@@ -22,7 +22,7 @@ const REPORT_OPTIONS = [
   { id: "admin_payroll", label: "Admin Payroll", description: "Admin pay entries, GST-inclusive costs, department breakdown", category: "Finance" },
   { id: "labour_cost", label: "Labour Cost Analysis", description: "Cost per department based on admin payroll, average hourly rate", category: "Finance" },
   { id: "requests", label: "Employee Requests", description: "Leave, availability, approval rates", category: "People" },
-  { id: "inventory", label: "FOH Inventory", description: "Stock levels, low stock alerts, category breakdown", category: "Stock" },
+  { id: "inventory", label: "FOH Inventory & Orders", description: "FOH stock levels, low stock alerts, order history", category: "Stock" },
   { id: "bar_inventory", label: "Bar Inventory & Orders", description: "Bar stock, order history, reorder alerts", category: "Stock" },
   { id: "events", label: "Events & Functions", description: "Day events, banquet tiers, guest counts, setup details", category: "Operations" },
   { id: "service", label: "Service & Maintenance", description: "Task schedules, overdue items, compliance", category: "Compliance" },
@@ -150,6 +150,7 @@ export default function MonthlyReportSection() {
       }
       if (selectedReports.has("inventory")) {
         fetchers.inventory = wrap(supabase.from("inventory_items").select("*").eq("business_id", businessId).then(r => r.data || []));
+        fetchers.fohOrders = wrap(supabase.from("inventory_orders").select("*, inventory_items!inner(name)").eq("business_id", businessId).gte("created_at", `${startStr}T00:00:00`).lte("created_at", `${endStr}T23:59:59`).then(r => r.data || []));
       }
       if (selectedReports.has("bar_inventory")) {
         fetchers.barInventory = wrap(supabase.from("bar_inventory_items").select("*").eq("business_id", businessId).then(r => r.data || []));
@@ -780,15 +781,15 @@ export default function MonthlyReportSection() {
       // SECTION: INVENTORY
       // ==========================================
       if (selectedReports.has("inventory") && results.inventory) {
-        addSectionHeader("FOH Inventory", "Stock");
+        addSectionHeader("FOH Inventory & Orders", "Stock");
         const items = results.inventory;
+        const orders = results.fohOrders || [];
         const lowStock = items.filter((i: any) => i.current_count <= i.min_count);
-        const categories = [...new Set(items.map((i: any) => i.category || "General"))] as string[];
 
         addStatsRow([
-          { label: "Total Items", value: String(items.length), color: [124, 58, 237] },
-          { label: "Low Stock Alerts", value: String(lowStock.length), color: [220, 38, 38] },
-          { label: "Categories", value: String(categories.length), color: [41, 98, 255] },
+          { label: "FOH Items", value: String(items.length), color: [124, 58, 237] },
+          { label: "Low Stock", value: String(lowStock.length), color: [220, 38, 38] },
+          { label: "Orders This Period", value: String(orders.length), color: [41, 98, 255] },
         ]);
 
         if (lowStock.length > 0) {
@@ -800,12 +801,21 @@ export default function MonthlyReportSection() {
           );
         }
 
-        addSubHeader("Full Inventory");
+        addSubHeader("FOH Stock Levels");
         addTable(
-          ["Item", "Category", "Current Stock", "Min Stock", "Unit", "Status"],
+          ["Item", "Category", "Current", "Min", "Unit", "Status"],
           items.map((i: any) => [i.name, i.category || "-", String(i.current_count), String(i.min_count), i.unit || "-", i.current_count <= i.min_count ? "LOW STOCK" : "OK"]),
           SECTION_COLORS.Stock
         );
+
+        if (orders.length > 0) {
+          addSubHeader("Order History");
+          addTable(
+            ["Item", "Quantity", "Status", "Date"],
+            orders.map((o: any) => [o.inventory_items?.name || "-", String(o.quantity), o.status, format(new Date(o.created_at), "dd MMM")]),
+            SECTION_COLORS.Stock
+          );
+        }
       }
 
       // ==========================================
