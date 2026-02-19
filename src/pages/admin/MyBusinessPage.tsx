@@ -8,7 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Building2, Upload, Palette, Check, Loader2 } from "lucide-react";
+import { Building2, Upload, Palette, Check, Loader2, BookOpen } from "lucide-react";
 import { logMasterAudit } from "@/lib/auditLog";
 
 export default function MyBusinessPage() {
@@ -302,6 +302,27 @@ export default function MyBusinessPage() {
               ))}
             </div>
           </div>
+        </CardContent>
+      </Card>
+      {/* Instruction Manual */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <BookOpen className="h-5 w-5" /> Instruction Manual
+          </CardTitle>
+          <CardDescription>
+            Complete guide covering kiosk operations, admin workflows, and employee self-service features
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Button
+            variant="outline"
+            onClick={() => window.open("/induction-guide.html", "_blank")}
+            className="gap-2"
+          >
+            <BookOpen className="h-4 w-4" />
+            Open Instruction Manual
+          </Button>
         </CardContent>
       </Card>
     </div>
