@@ -22,6 +22,8 @@ export default defineConfig(({ mode }) => ({
       workbox: {
         navigateFallbackDenylist: [/^\/~oauth/],
         globPatterns: ["**/*.{js,css,html,ico,png,jpg,jpeg,svg,woff2}"],
+        skipWaiting: true,
+        clientsClaim: true,
       },
       manifest: {
         name: "OmnexClock",
