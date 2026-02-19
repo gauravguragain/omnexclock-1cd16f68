@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Navigate, Link, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -16,12 +16,34 @@ export default function AuthPage() {
   const { toast } = useToast();
   const [searchParams] = useSearchParams();
   const isMasterLogin = searchParams.get("master") === "true";
-  const [mode, setMode] = useState<AuthMode>("signIn");
+  const inviteToken = searchParams.get("invite");
+  const [mode, setMode] = useState<AuthMode>(inviteToken ? "signUp" : "signIn");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
   const [loading, setLoading] = useState(false);
   const [denied, setDenied] = useState(false);
+
+  // Accept invitation if token is present and user is logged in
+  useEffect(() => {
+    const acceptInvite = async () => {
+      const token = sessionStorage.getItem("invite_token");
+      if (!token || !user) return;
+      
+      try {
+        const { data, error } = await supabase.rpc("accept_invitation", { _token: token });
+        if (data) {
+          sessionStorage.removeItem("invite_token");
+          toast({ title: "Invitation accepted!", description: "Your role has been assigned. Redirecting..." });
+          // Force refresh roles
+          window.location.href = "/hub";
+        }
+      } catch (err) {
+        console.error("Accept invitation error:", err);
+      }
+    };
+    acceptInvite();
+  }, [user]);
 
   // Redirect based on login type - but not if access was just denied
   if (user && isApproved && !denied) {
@@ -59,6 +81,10 @@ export default function AuthPage() {
       if (error) {
         toast({ title: "Error", description: error, variant: "destructive" });
       } else {
+        // If there's an invite token, store it for after email confirmation
+        if (inviteToken) {
+          sessionStorage.setItem("invite_token", inviteToken);
+        }
         toast({ title: "Success", description: "Check your email to confirm your account." });
       }
     } else {

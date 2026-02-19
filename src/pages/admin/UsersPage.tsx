@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { UserCheck, UserX, Shield, ShieldOff, Search, Eye, EyeOff, CalendarRange, X } from "lucide-react";
+import { UserCheck, UserX, Shield, ShieldOff, Search, Eye, EyeOff, CalendarRange, X, Mail, Plus, Crown, Loader2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -20,17 +20,29 @@ interface UserProfile {
   full_name: string | null;
   approved: boolean;
   created_at: string;
+  has_super_admin_role: boolean;
   has_admin_role: boolean;
   has_viewer_role: boolean;
   has_roster_admin_role: boolean;
   roster_admin_departments: string[];
 }
 
+interface Invitation {
+  id: string;
+  email: string;
+  role: string;
+  departments: string[] | null;
+  status: string;
+  created_at: string;
+  expires_at: string;
+}
+
 export default function UsersPage() {
-  const { isViewerOf, isAdminOf } = useAuth();
+  const { isViewerOf, isAdminOf, isSuperAdminOf } = useAuth();
   const { business } = useBusiness();
   const { toast } = useToast();
   const [users, setUsers] = useState<UserProfile[]>([]);
+  const [invitations, setInvitations] = useState<Invitation[]>([]);
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState<Set<string>>(new Set());
@@ -38,13 +50,21 @@ export default function UsersPage() {
   // Role assignment dialog state
   const [roleDialogOpen, setRoleDialogOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<UserProfile | null>(null);
-  const [selectedRole, setSelectedRole] = useState<"admin" | "viewer" | "roster_admin">("admin");
+  const [selectedRole, setSelectedRole] = useState<"super_admin" | "admin" | "viewer" | "roster_admin">("admin");
   const [selectedDepartments, setSelectedDepartments] = useState<string[]>([]);
   const [availableDepartments, setAvailableDepartments] = useState<string[]>([]);
   const [roleSaving, setRoleSaving] = useState(false);
 
+  // Invite dialog state
+  const [inviteDialogOpen, setInviteDialogOpen] = useState(false);
+  const [inviteEmail, setInviteEmail] = useState("");
+  const [inviteRole, setInviteRole] = useState<"super_admin" | "admin" | "viewer" | "roster_admin">("admin");
+  const [inviteDepartments, setInviteDepartments] = useState<string[]>([]);
+  const [inviteSending, setInviteSending] = useState(false);
+
   const businessId = business?.id || "";
   const isViewer = isViewerOf(businessId) && !isAdminOf(businessId);
+  const isSuperAdmin = isSuperAdminOf(businessId);
 
   const fetchUsers = async () => {
     if (!businessId) { setLoading(false); return; }
@@ -61,6 +81,7 @@ export default function UsersPage() {
     }
 
     const userIds = [...new Set(roles.map(r => r.user_id))];
+    const superAdminUserIds = new Set(roles.filter(r => r.role === "super_admin").map(r => r.user_id));
     const adminUserIds = new Set(roles.filter(r => r.role === "admin").map(r => r.user_id));
     const viewerUserIds = new Set(roles.filter(r => r.role === "viewer").map(r => r.user_id));
     const rosterAdminMap = new Map<string, string[]>();
@@ -83,6 +104,7 @@ export default function UsersPage() {
     setUsers(
       (profiles || []).map((p) => ({
         ...p,
+        has_super_admin_role: superAdminUserIds.has(p.id),
         has_admin_role: adminUserIds.has(p.id),
         has_viewer_role: viewerUserIds.has(p.id),
         has_roster_admin_role: rosterAdminMap.has(p.id),
@@ -92,7 +114,17 @@ export default function UsersPage() {
     setLoading(false);
   };
 
-  // Fetch available departments from employees
+  const fetchInvitations = async () => {
+    if (!businessId) return;
+    const { data } = await supabase
+      .from("admin_invitations")
+      .select("*")
+      .eq("business_id", businessId)
+      .eq("status", "pending")
+      .order("created_at", { ascending: false });
+    setInvitations((data as Invitation[]) || []);
+  };
+
   const fetchDepartments = async () => {
     if (!businessId) return;
     const { data } = await supabase
@@ -106,7 +138,7 @@ export default function UsersPage() {
     setAvailableDepartments(depts);
   };
 
-  useEffect(() => { fetchUsers(); fetchDepartments(); }, [businessId]);
+  useEffect(() => { fetchUsers(); fetchInvitations(); fetchDepartments(); }, [businessId]);
 
   const revokeAndDelete = async (user: UserProfile) => {
     if (!confirm(`Remove ${user.email} from this business? This will revoke their roles for this business only.`)) return;
@@ -157,8 +189,9 @@ export default function UsersPage() {
 
   const openRoleDialog = (user: UserProfile) => {
     setSelectedUser(user);
-    // Determine current role
-    if (user.has_admin_role) {
+    if (user.has_super_admin_role) {
+      setSelectedRole("super_admin");
+    } else if (user.has_admin_role) {
       setSelectedRole("admin");
     } else if (user.has_roster_admin_role) {
       setSelectedRole("roster_admin");
@@ -176,40 +209,30 @@ export default function UsersPage() {
     setRoleSaving(true);
 
     try {
-      // Remove all existing roles for this user in this business
       await supabase
         .from("user_roles")
         .delete()
         .eq("user_id", selectedUser.id)
         .eq("business_id", businessId);
 
-      // Insert the new role
-      if (selectedRole === "admin") {
-        await supabase.from("user_roles").insert({ user_id: selectedUser.id, role: "admin" as any, business_id: businessId });
-        await logAudit("admin_role_granted", { user_id: selectedUser.id, email: selectedUser.email, role: "admin", business_id: businessId });
-      } else if (selectedRole === "viewer") {
-        await supabase.from("user_roles").insert({ user_id: selectedUser.id, role: "viewer" as any, business_id: businessId });
-        await logAudit("viewer_role_granted", { user_id: selectedUser.id, email: selectedUser.email, role: "viewer", business_id: businessId });
-      } else if (selectedRole === "roster_admin") {
+      const roleData: any = { user_id: selectedUser.id, role: selectedRole, business_id: businessId };
+      if (selectedRole === "roster_admin") {
         if (selectedDepartments.length === 0) {
           toast({ title: "Select departments", description: "Roster Admin must have at least one department assigned.", variant: "destructive" });
           setRoleSaving(false);
           return;
         }
-        await supabase.from("user_roles").insert({
-          user_id: selectedUser.id,
-          role: "roster_admin" as any,
-          business_id: businessId,
-          departments: selectedDepartments,
-        });
-        await logAudit("roster_admin_role_granted", {
-          user_id: selectedUser.id,
-          email: selectedUser.email,
-          role: "roster_admin",
-          departments: selectedDepartments,
-          business_id: businessId,
-        });
+        roleData.departments = selectedDepartments;
       }
+
+      await supabase.from("user_roles").insert(roleData);
+      await logAudit(`${selectedRole}_role_granted`, {
+        user_id: selectedUser.id,
+        email: selectedUser.email,
+        role: selectedRole,
+        departments: selectedRole === "roster_admin" ? selectedDepartments : undefined,
+        business_id: businessId,
+      });
 
       logMasterAudit("role_changed", {
         user_email: selectedUser.email,
@@ -219,7 +242,13 @@ export default function UsersPage() {
         action: "granted",
       });
 
-      toast({ title: "Role updated", description: `${selectedUser.email} is now ${selectedRole === "admin" ? "Full Admin" : selectedRole === "viewer" ? "View Only" : "Roster Admin"}.` });
+      const roleLabels: Record<string, string> = {
+        super_admin: "Super Admin",
+        admin: "Admin",
+        viewer: "View Only",
+        roster_admin: "Roster Admin",
+      };
+      toast({ title: "Role updated", description: `${selectedUser.email} is now ${roleLabels[selectedRole]}.` });
       setRoleDialogOpen(false);
       fetchUsers();
     } catch (err: any) {
@@ -235,8 +264,66 @@ export default function UsersPage() {
     );
   };
 
+  const toggleInviteDepartment = (dept: string) => {
+    setInviteDepartments(prev =>
+      prev.includes(dept) ? prev.filter(d => d !== dept) : [...prev, dept]
+    );
+  };
+
+  const sendInvitation = async () => {
+    if (!inviteEmail.trim() || !businessId) return;
+    setInviteSending(true);
+
+    try {
+      if (inviteRole === "roster_admin" && inviteDepartments.length === 0) {
+        toast({ title: "Select departments", description: "Roster Admin must have at least one department assigned.", variant: "destructive" });
+        setInviteSending(false);
+        return;
+      }
+
+      const { data, error } = await supabase.functions.invoke("invite-admin", {
+        body: {
+          email: inviteEmail.trim(),
+          role: inviteRole,
+          businessId,
+          departments: inviteRole === "roster_admin" ? inviteDepartments : null,
+          appUrl: window.location.origin,
+        },
+      });
+
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+
+      await logAudit("admin_invited", { email: inviteEmail.trim(), role: inviteRole, business_id: businessId });
+      toast({ title: "Invitation sent!", description: `Invitation email sent to ${inviteEmail.trim()}.` });
+      setInviteDialogOpen(false);
+      setInviteEmail("");
+      setInviteRole("admin");
+      setInviteDepartments([]);
+      fetchInvitations();
+    } catch (err: any) {
+      toast({ title: "Error sending invitation", description: err.message, variant: "destructive" });
+    }
+
+    setInviteSending(false);
+  };
+
+  const cancelInvitation = async (id: string) => {
+    const { error } = await supabase
+      .from("admin_invitations")
+      .update({ status: "cancelled" })
+      .eq("id", id);
+    if (error) {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    } else {
+      toast({ title: "Invitation cancelled" });
+      fetchInvitations();
+    }
+  };
+
   const getRoleBadge = (user: UserProfile) => {
-    if (user.has_admin_role) return <Badge className="bg-primary/20 text-primary">Full Admin</Badge>;
+    if (user.has_super_admin_role) return <Badge className="bg-primary/20 text-primary"><Crown className="h-3 w-3 mr-1" />Super Admin</Badge>;
+    if (user.has_admin_role) return <Badge className="bg-primary/20 text-primary">Admin</Badge>;
     if (user.has_roster_admin_role) return (
       <div className="flex flex-col gap-1">
         <Badge className="bg-accent/20 text-accent-foreground">Roster Admin</Badge>
@@ -261,6 +348,138 @@ export default function UsersPage() {
 
   const pendingCount = users.filter((u) => !u.approved).length;
 
+  const RoleSelector = ({
+    value,
+    onChange,
+    departments: depts,
+    onToggleDept,
+  }: {
+    value: string;
+    onChange: (v: "super_admin" | "admin" | "viewer" | "roster_admin") => void;
+    departments: string[];
+    onToggleDept: (d: string) => void;
+  }) => (
+    <div className="space-y-2">
+      {/* Super Admin */}
+      <button
+        type="button"
+        onClick={() => onChange("super_admin")}
+        className={`w-full text-left rounded-lg border p-3 transition-all ${
+          value === "super_admin"
+            ? "border-primary bg-primary/5 ring-1 ring-primary/30"
+            : "border-border hover:border-muted-foreground/30"
+        }`}
+      >
+        <div className="flex items-center gap-2">
+          <Crown className="h-4 w-4 text-primary" />
+          <span className="font-semibold text-sm text-foreground">Super Admin</span>
+        </div>
+        <p className="text-xs text-muted-foreground mt-1">
+          Full access to all features including user management, invitations, and role assignments.
+        </p>
+      </button>
+
+      {/* Admin */}
+      <button
+        type="button"
+        onClick={() => onChange("admin")}
+        className={`w-full text-left rounded-lg border p-3 transition-all ${
+          value === "admin"
+            ? "border-primary bg-primary/5 ring-1 ring-primary/30"
+            : "border-border hover:border-muted-foreground/30"
+        }`}
+      >
+        <div className="flex items-center gap-2">
+          <Shield className="h-4 w-4 text-primary" />
+          <span className="font-semibold text-sm text-foreground">Admin</span>
+        </div>
+        <p className="text-xs text-muted-foreground mt-1">
+          Full access to employees, roster, timesheets, payroll, reports, and settings. Cannot manage users or invite admins.
+        </p>
+      </button>
+
+      {/* View Only */}
+      <button
+        type="button"
+        onClick={() => onChange("viewer")}
+        className={`w-full text-left rounded-lg border p-3 transition-all ${
+          value === "viewer"
+            ? "border-primary bg-primary/5 ring-1 ring-primary/30"
+            : "border-border hover:border-muted-foreground/30"
+        }`}
+      >
+        <div className="flex items-center gap-2">
+          <Eye className="h-4 w-4 text-muted-foreground" />
+          <span className="font-semibold text-sm text-foreground">View Only</span>
+        </div>
+        <p className="text-xs text-muted-foreground mt-1">
+          Can view all data (dashboard, employees, roster, timesheets, etc.) but cannot edit anything.
+        </p>
+      </button>
+
+      {/* Roster Admin */}
+      <button
+        type="button"
+        onClick={() => onChange("roster_admin")}
+        className={`w-full text-left rounded-lg border p-3 transition-all ${
+          value === "roster_admin"
+            ? "border-primary bg-primary/5 ring-1 ring-primary/30"
+            : "border-border hover:border-muted-foreground/30"
+        }`}
+      >
+        <div className="flex items-center gap-2">
+          <CalendarRange className="h-4 w-4 text-accent-foreground" />
+          <span className="font-semibold text-sm text-foreground">Roster Admin</span>
+        </div>
+        <p className="text-xs text-muted-foreground mt-1">
+          Can view, edit, publish rosters and manage timesheets — restricted to assigned departments only.
+        </p>
+      </button>
+
+      {/* Department Selection (for Roster Admin) */}
+      {value === "roster_admin" && (
+        <div className="space-y-2 pt-1">
+          <Label className="text-sm font-medium">Assign Departments</Label>
+          {availableDepartments.length === 0 ? (
+            <p className="text-xs text-muted-foreground">
+              No departments found. Assign departments to employees first.
+            </p>
+          ) : (
+            <div className="grid grid-cols-2 gap-2">
+              {availableDepartments.map(dept => (
+                <label
+                  key={dept}
+                  className={`flex items-center gap-2 rounded-lg border px-3 py-2 cursor-pointer transition-all text-sm ${
+                    depts.includes(dept)
+                      ? "border-primary bg-primary/5"
+                      : "border-border hover:border-muted-foreground/30"
+                  }`}
+                >
+                  <Checkbox
+                    checked={depts.includes(dept)}
+                    onCheckedChange={() => onToggleDept(dept)}
+                  />
+                  <span className="text-foreground">{dept}</span>
+                </label>
+              ))}
+            </div>
+          )}
+          {depts.length > 0 && (
+            <div className="flex flex-wrap gap-1 pt-1">
+              <span className="text-xs text-muted-foreground">Selected:</span>
+              {depts.map(d => (
+                <Badge key={d} variant="secondary" className="text-xs gap-1">
+                  {d}
+                  <X className="h-3 w-3 cursor-pointer" onClick={() => onToggleDept(d)} />
+                </Badge>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+
   return (
     <div className="space-y-4">
       {pendingCount > 0 && (
@@ -282,7 +501,65 @@ export default function UsersPage() {
             className="pl-9"
           />
         </div>
+        {isSuperAdmin && (
+          <Button onClick={() => setInviteDialogOpen(true)} className="gap-2">
+            <Mail className="h-4 w-4" />
+            Invite Admin
+          </Button>
+        )}
       </div>
+
+      {/* Pending Invitations */}
+      {invitations.length > 0 && (
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm flex items-center gap-2">
+              <Mail className="h-4 w-4" /> Pending Invitations
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="p-0">
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Email</TableHead>
+                    <TableHead>Role</TableHead>
+                    <TableHead>Sent</TableHead>
+                    <TableHead>Expires</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {invitations.map(inv => (
+                    <TableRow key={inv.id}>
+                      <TableCell className="text-sm">{inv.email}</TableCell>
+                      <TableCell>
+                        <Badge variant="outline" className="text-xs">
+                          {inv.role === "super_admin" ? "Super Admin" : inv.role === "roster_admin" ? "Roster Admin" : inv.role === "admin" ? "Admin" : "Viewer"}
+                        </Badge>
+                        {inv.departments && inv.departments.length > 0 && (
+                          <div className="flex flex-wrap gap-0.5 mt-1">
+                            {inv.departments.map(d => (
+                              <Badge key={d} variant="outline" className="text-[9px] px-1 py-0">{d}</Badge>
+                            ))}
+                          </div>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-xs text-muted-foreground">{new Date(inv.created_at).toLocaleDateString()}</TableCell>
+                      <TableCell className="text-xs text-muted-foreground">{new Date(inv.expires_at).toLocaleDateString()}</TableCell>
+                      <TableCell className="text-right">
+                        <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive text-xs" onClick={() => cancelInvitation(inv.id)}>
+                          Cancel
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       <Card>
         <CardHeader>
@@ -388,119 +665,64 @@ export default function UsersPage() {
 
       {/* Role Assignment Dialog */}
       <Dialog open={roleDialogOpen} onOpenChange={setRoleDialogOpen}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="text-base">Manage Access — {selectedUser?.full_name || selectedUser?.email}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
             <p className="text-sm text-muted-foreground">Select the access level for this user:</p>
-
-            {/* Role Selection */}
-            <div className="space-y-2">
-              {/* Full Admin */}
-              <button
-                type="button"
-                onClick={() => setSelectedRole("admin")}
-                className={`w-full text-left rounded-lg border p-3 transition-all ${
-                  selectedRole === "admin"
-                    ? "border-primary bg-primary/5 ring-1 ring-primary/30"
-                    : "border-border hover:border-muted-foreground/30"
-                }`}
-              >
-                <div className="flex items-center gap-2">
-                  <Shield className="h-4 w-4 text-primary" />
-                  <span className="font-semibold text-sm text-foreground">Full Admin</span>
-                </div>
-                <p className="text-xs text-muted-foreground mt-1">
-                  Complete access to all features: employees, roster, timesheets, payroll, reports, settings, and user management.
-                </p>
-              </button>
-
-              {/* View Only */}
-              <button
-                type="button"
-                onClick={() => setSelectedRole("viewer")}
-                className={`w-full text-left rounded-lg border p-3 transition-all ${
-                  selectedRole === "viewer"
-                    ? "border-primary bg-primary/5 ring-1 ring-primary/30"
-                    : "border-border hover:border-muted-foreground/30"
-                }`}
-              >
-                <div className="flex items-center gap-2">
-                  <Eye className="h-4 w-4 text-muted-foreground" />
-                  <span className="font-semibold text-sm text-foreground">View Only</span>
-                </div>
-                <p className="text-xs text-muted-foreground mt-1">
-                  Can view all data (dashboard, employees, roster, timesheets, etc.) but cannot edit anything.
-                </p>
-              </button>
-
-              {/* Roster Admin */}
-              <button
-                type="button"
-                onClick={() => setSelectedRole("roster_admin")}
-                className={`w-full text-left rounded-lg border p-3 transition-all ${
-                  selectedRole === "roster_admin"
-                    ? "border-primary bg-primary/5 ring-1 ring-primary/30"
-                    : "border-border hover:border-muted-foreground/30"
-                }`}
-              >
-                <div className="flex items-center gap-2">
-                  <CalendarRange className="h-4 w-4 text-accent-foreground" />
-                  <span className="font-semibold text-sm text-foreground">Roster Admin</span>
-                </div>
-                <p className="text-xs text-muted-foreground mt-1">
-                  Can view, edit, publish rosters and manage timesheets — restricted to assigned departments only.
-                </p>
-              </button>
-            </div>
-
-            {/* Department Selection (for Roster Admin) */}
-            {selectedRole === "roster_admin" && (
-              <div className="space-y-2">
-                <Label className="text-sm font-medium">Assign Departments</Label>
-                {availableDepartments.length === 0 ? (
-                  <p className="text-xs text-muted-foreground">
-                    No departments found. Assign departments to employees first.
-                  </p>
-                ) : (
-                  <div className="grid grid-cols-2 gap-2">
-                    {availableDepartments.map(dept => (
-                      <label
-                        key={dept}
-                        className={`flex items-center gap-2 rounded-lg border px-3 py-2 cursor-pointer transition-all text-sm ${
-                          selectedDepartments.includes(dept)
-                            ? "border-primary bg-primary/5"
-                            : "border-border hover:border-muted-foreground/30"
-                        }`}
-                      >
-                        <Checkbox
-                          checked={selectedDepartments.includes(dept)}
-                          onCheckedChange={() => toggleDepartment(dept)}
-                        />
-                        <span className="text-foreground">{dept}</span>
-                      </label>
-                    ))}
-                  </div>
-                )}
-                {selectedDepartments.length > 0 && (
-                  <div className="flex flex-wrap gap-1 pt-1">
-                    <span className="text-xs text-muted-foreground">Selected:</span>
-                    {selectedDepartments.map(d => (
-                      <Badge key={d} variant="secondary" className="text-xs gap-1">
-                        {d}
-                        <X className="h-3 w-3 cursor-pointer" onClick={() => toggleDepartment(d)} />
-                      </Badge>
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
+            <RoleSelector
+              value={selectedRole}
+              onChange={setSelectedRole}
+              departments={selectedDepartments}
+              onToggleDept={toggleDepartment}
+            />
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setRoleDialogOpen(false)}>Cancel</Button>
             <Button onClick={saveRole} disabled={roleSaving}>
               {roleSaving ? "Saving..." : "Save Access"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Invite Admin Dialog */}
+      <Dialog open={inviteDialogOpen} onOpenChange={setInviteDialogOpen}>
+        <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="text-base flex items-center gap-2">
+              <Mail className="h-5 w-5" /> Invite Admin
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              Send an invitation email with a signup link and role-specific induction guide.
+            </p>
+            <div className="space-y-2">
+              <Label htmlFor="invite-email">Email Address</Label>
+              <Input
+                id="invite-email"
+                type="email"
+                value={inviteEmail}
+                onChange={e => setInviteEmail(e.target.value)}
+                placeholder="user@example.com"
+              />
+            </div>
+            <div>
+              <Label className="text-sm font-medium mb-2 block">Select Role</Label>
+              <RoleSelector
+                value={inviteRole}
+                onChange={setInviteRole}
+                departments={inviteDepartments}
+                onToggleDept={toggleInviteDepartment}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setInviteDialogOpen(false)}>Cancel</Button>
+            <Button onClick={sendInvitation} disabled={inviteSending || !inviteEmail.trim()}>
+              {inviteSending ? <><Loader2 className="h-4 w-4 mr-1 animate-spin" /> Sending...</> : <><Mail className="h-4 w-4 mr-1" /> Send Invitation</>}
             </Button>
           </DialogFooter>
         </DialogContent>
