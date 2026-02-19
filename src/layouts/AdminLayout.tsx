@@ -64,30 +64,39 @@ export default function AdminLayout() {
   const basePath = `/b/${businessCode}/admin`;
 
   const allNavItems = [
-    { path: basePath, label: "Dashboard", icon: BarChart3, tourId: "dashboard", access: "full" },
-    { path: `${basePath}/employees`, label: "Employees", icon: Users, tourId: "employees", access: "full" },
+    { path: basePath, label: "Dashboard", icon: BarChart3, tourId: "dashboard", access: "admin" },
+    { path: `${basePath}/employees`, label: "Employees", icon: Users, tourId: "employees", access: "admin" },
     { path: `${basePath}/roster`, label: "Roster", icon: CalendarRange, tourId: "roster", access: "roster" },
-    { path: `${basePath}/live`, label: "Live Monitor", icon: Monitor, tourId: "live", access: "full" },
+    { path: `${basePath}/live`, label: "Live Monitor", icon: Monitor, tourId: "live", access: "admin" },
     { path: `${basePath}/timesheets`, label: "Timesheets", icon: CalendarDays, tourId: "timesheets", access: "roster" },
-    { path: `${basePath}/payroll`, label: "Payroll", icon: DollarSign, tourId: "payroll", access: "full" },
-    { path: `${basePath}/requests`, label: "Requests", icon: CalendarOff, tourId: "requests", access: "full" },
-    { path: `${basePath}/forum`, label: "Forum", icon: MessageSquare, tourId: "forum", access: "full" },
-    { path: `${basePath}/audit-log`, label: "Audit Log", icon: FileText, tourId: "audit-log", access: "full" },
-    { path: `${basePath}/inventory`, label: "Inventory", icon: Package, tourId: "inventory", access: "roster" },
-    { path: `${basePath}/service`, label: "Service", icon: Wrench, tourId: "service", access: "full" },
+    { path: `${basePath}/payroll`, label: "Payroll", icon: DollarSign, tourId: "payroll", access: "admin" },
+    { path: `${basePath}/requests`, label: "Requests", icon: CalendarOff, tourId: "requests", access: "admin" },
+    { path: `${basePath}/forum`, label: "Forum", icon: MessageSquare, tourId: "forum", access: "admin" },
+    { path: `${basePath}/audit-log`, label: "Audit Log", icon: FileText, tourId: "audit-log", access: "admin" },
+    { path: `${basePath}/inventory`, label: "Inventory", icon: Package, tourId: "inventory", access: "inventory" },
+    { path: `${basePath}/service`, label: "Service", icon: Wrench, tourId: "service", access: "admin" },
     { path: `${basePath}/users`, label: "User Management", icon: UserCog, tourId: "users", access: "super_admin_only" },
-    { path: `${basePath}/my-business`, label: "My Business", icon: Building2, tourId: "my-business", access: "full" },
+    { path: `${basePath}/my-business`, label: "My Business", icon: Building2, tourId: "my-business", access: "admin" },
   ];
+
+  // Determine roster admin department type
+  const isRosterAdminFOH = isRosterAdmin && !isAdmin && !isSuperAdmin && rosterDepts.some(d => d.toUpperCase() === "FOH");
+  const isRosterAdminBOH = isRosterAdmin && !isAdmin && !isSuperAdmin && rosterDepts.some(d => d.toUpperCase() === "BOH");
 
   // Filter nav items based on role
   const navItems = allNavItems.filter(item => {
     if (item.access === "super_admin_only") {
-      return isSuperAdmin; // Only super admins see User Management
+      return isSuperAdmin;
     }
-    if (isAdmin) return true; // Full admins and super admins see everything else
-    if (isRosterAdmin && !isAdmin && !isViewer) {
-      return item.access === "roster";
+    // Admin and Super Admin see everything except super_admin_only items
+    if (isAdmin || isSuperAdmin) return true;
+    // Roster admin: only roster + timesheets, plus inventory for FOH
+    if (isRosterAdmin && !isAdmin && !isSuperAdmin && !isViewer) {
+      if (item.access === "roster") return true;
+      if (item.access === "inventory" && isRosterAdminFOH) return true;
+      return false;
     }
+    // Viewer: see everything except super_admin_only
     if (isViewer) {
       return item.access !== "super_admin_only";
     }
