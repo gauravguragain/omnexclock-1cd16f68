@@ -15,6 +15,7 @@ export default function MyBusinessPage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [name, setName] = useState(business?.name || "");
+  const [email, setEmail] = useState(business?.email || "");
   const [phone, setPhone] = useState(business?.phone || "");
   const [address, setAddress] = useState(business?.address || "");
   const [industry, setIndustry] = useState(business?.industry || "");
@@ -33,6 +34,7 @@ export default function MyBusinessPage() {
       .from("businesses")
       .update({
         name: name.trim(),
+        email: email.trim() || null,
         phone: phone.trim() || null,
         address: address.trim() || null,
         industry: industry.trim() || null,
@@ -190,6 +192,10 @@ export default function MyBusinessPage() {
           <div className="space-y-2">
             <Label>Business Name</Label>
             <Input value={name} onChange={(e) => setName(e.target.value)} />
+          </div>
+          <div className="space-y-2">
+            <Label>Email</Label>
+            <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="business@example.com" />
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-2">
