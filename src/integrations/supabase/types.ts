@@ -1134,6 +1134,10 @@ export type Database = {
               reaction: string
             }[]
           }
+      get_roster_admin_departments: {
+        Args: { _business_id: string }
+        Returns: string[]
+      }
       has_business_access: { Args: { _business_id: string }; Returns: boolean }
       has_role: {
         Args: {
@@ -1146,6 +1150,10 @@ export type Database = {
       is_admin_of_business: { Args: { _business_id: string }; Returns: boolean }
       is_approved: { Args: { _user_id: string }; Returns: boolean }
       is_master: { Args: never; Returns: boolean }
+      is_roster_admin_of_business: {
+        Args: { _business_id: string }
+        Returns: boolean
+      }
       is_viewer_of_business: {
         Args: { _business_id: string }
         Returns: boolean

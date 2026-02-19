@@ -5,7 +5,8 @@ import type { User } from "@supabase/supabase-js";
 
 interface UserBusinessRole {
   business_id: string | null;
-  role: "admin" | "viewer" | "user" | "master";
+  role: "admin" | "viewer" | "user" | "master" | "roster_admin";
+  departments?: string[] | null;
 }
 
 interface AuthContextType {
@@ -18,7 +19,11 @@ interface AuthContextType {
   isAdminOf: (businessId: string) => boolean;
   /** Check if user is viewer of a specific business */
   isViewerOf: (businessId: string) => boolean;
-  /** Check if user has any access (admin or viewer) to a business */
+  /** Check if user is roster admin of a specific business */
+  isRosterAdminOf: (businessId: string) => boolean;
+  /** Get roster admin departments for a specific business */
+  getRosterAdminDepartments: (businessId: string) => string[];
+  /** Check if user has any access (admin, viewer, or roster_admin) to a business */
   hasAccessTo: (businessId: string) => boolean;
   /** Check if user is a platform master admin */
   isMaster: boolean;
@@ -41,12 +46,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const fetchRoles = useCallback(async (userId: string) => {
     const [rolesResult, approvedResult] = await Promise.all([
-      supabase.from("user_roles").select("business_id, role").eq("user_id", userId),
+      supabase.from("user_roles").select("business_id, role, departments").eq("user_id", userId),
       supabase.rpc("is_approved", { _user_id: userId }),
     ]);
 
     const roles: UserBusinessRole[] = (rolesResult.data || [])
-      .map((r: any) => ({ business_id: r.business_id, role: r.role }));
+      .map((r: any) => ({ business_id: r.business_id, role: r.role, departments: r.departments }));
 
     setBusinessRoles(roles);
     setIsApproved(!!approvedResult.data);
@@ -86,8 +91,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return businessRoles.some(r => r.business_id === businessId && r.role === "viewer");
   }, [businessRoles]);
 
+  const isRosterAdminOf = useCallback((businessId: string) => {
+    return businessRoles.some(r => r.business_id === businessId && r.role === "roster_admin");
+  }, [businessRoles]);
+
+  const getRosterAdminDepartments = useCallback((businessId: string): string[] => {
+    const role = businessRoles.find(r => r.business_id === businessId && r.role === "roster_admin");
+    return role?.departments || [];
+  }, [businessRoles]);
+
   const hasAccessTo = useCallback((businessId: string) => {
-    return businessRoles.some(r => r.business_id === businessId && (r.role === "admin" || r.role === "viewer"));
+    return businessRoles.some(r => r.business_id === businessId && (r.role === "admin" || r.role === "viewer" || r.role === "roster_admin"));
   }, [businessRoles]);
 
   // Global checks
@@ -99,7 +113,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const { data, error } = await supabase.auth.signInWithPassword({ email, password });
     if (!error && data.user) {
       logAudit("user_sign_in", { email, user_id: data.user.id });
-      // Also log to master audit for platform-wide visibility
       logMasterAudit("user_sign_in", { email, user_id: data.user.id });
     }
     return { error: error?.message ?? null };
@@ -124,7 +137,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   return (
     <AuthContext.Provider value={{
       user, isApproved, loading, businessRoles,
-      isAdminOf, isViewerOf, hasAccessTo, isMaster,
+      isAdminOf, isViewerOf, isRosterAdminOf, getRosterAdminDepartments,
+      hasAccessTo, isMaster,
       isAdmin, isViewer,
       signIn, signUp, signOut,
     }}>
