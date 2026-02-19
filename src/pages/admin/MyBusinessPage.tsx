@@ -308,8 +308,8 @@ export default function MyBusinessPage() {
         </CardContent>
       </Card>
 
-      {/* Business Reports - Admin & Super Admin */}
-      {(isSuperAdminOf(business.id) || isAdminOf(business.id)) && <MonthlyReportSection />}
+      {/* Business Reports - Super Admin Only */}
+      {isSuperAdminOf(business.id) && <MonthlyReportSection />}
 
       {/* Instruction Manual */}
       <Card>
