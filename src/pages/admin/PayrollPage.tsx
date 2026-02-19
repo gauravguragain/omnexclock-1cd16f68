@@ -38,6 +38,7 @@ interface PayrollEntry {
   net_hours: number;
   employee_pay: number;
   admin_pay: number;
+  admin_pay_incl_gst: number;
 }
 
 type SortKey = "name" | "net_hours" | "employee_pay" | "admin_pay" | "total_hours";
@@ -232,7 +233,8 @@ export default function PayrollPage() {
 
       const netHours = Math.max(0, totalHours - breakHours);
       const employeePay = Math.round(netHours * emp.pay_rate * 100) / 100;
-      const adminPay = Math.round((netHours * emp.admin_hourly_rate) / 1.10 * 100) / 100;
+      const adminPayInclGst = Math.round(netHours * emp.admin_hourly_rate * 100) / 100;
+      const adminPay = Math.round(adminPayInclGst / 1.10 * 100) / 100;
 
       result.push({
         employee_id: empId,
@@ -245,6 +247,7 @@ export default function PayrollPage() {
         net_hours: Math.round(netHours * 100) / 100,
         employee_pay: employeePay,
         admin_pay: adminPay,
+        admin_pay_incl_gst: adminPayInclGst,
       });
     }
 
@@ -287,34 +290,40 @@ export default function PayrollPage() {
 
   const buildPayrollCSV = () => {
     if (activeTab === "margin") {
-      const headers = "Name,Department,Net Hours,Employee Pay,Admin Cost (ex GST),Margin,Margin %\n";
+      const headers = "Name,Department,Net Hours,Employee Pay,Admin Cost (ex GST),Admin Cost (incl GST),Margin (ex GST),Margin (incl GST),Margin %\n";
       const rows = filtered.map((e) => {
-        const margin = e.admin_pay - e.employee_pay;
-        const marginPct = e.admin_pay > 0 ? (margin / e.admin_pay * 100) : 0;
-        return `${e.name},${e.department || "-"},${e.net_hours.toFixed(2)},${e.employee_pay.toFixed(2)},${e.admin_pay.toFixed(2)},${margin.toFixed(2)},${marginPct.toFixed(1)}%`;
+        const marginEx = e.admin_pay - e.employee_pay;
+        const marginIncl = e.admin_pay_incl_gst - e.employee_pay;
+        const marginPct = e.admin_pay > 0 ? (marginEx / e.admin_pay * 100) : 0;
+        return `${e.name},${e.department || "-"},${e.net_hours.toFixed(2)},${e.employee_pay.toFixed(2)},${e.admin_pay.toFixed(2)},${e.admin_pay_incl_gst.toFixed(2)},${marginEx.toFixed(2)},${marginIncl.toFixed(2)},${marginPct.toFixed(1)}%`;
       }).join("\n");
       const totEmpPay = filtered.reduce((s, e) => s + e.employee_pay, 0);
       const totAdminPay = filtered.reduce((s, e) => s + e.admin_pay, 0);
-      const totMargin = totAdminPay - totEmpPay;
+      const totAdminPayIncl = filtered.reduce((s, e) => s + e.admin_pay_incl_gst, 0);
+      const totMarginEx = totAdminPay - totEmpPay;
+      const totMarginIncl = totAdminPayIncl - totEmpPay;
       const totNetHrs = filtered.reduce((s, e) => s + e.net_hours, 0);
-      const totalRow = `\nTOTAL,,${totNetHrs.toFixed(2)},${totEmpPay.toFixed(2)},${totAdminPay.toFixed(2)},${totMargin.toFixed(2)},${totAdminPay > 0 ? (totMargin / totAdminPay * 100).toFixed(1) : 0}%`;
+      const totalRow = `\nTOTAL,,${totNetHrs.toFixed(2)},${totEmpPay.toFixed(2)},${totAdminPay.toFixed(2)},${totAdminPayIncl.toFixed(2)},${totMarginEx.toFixed(2)},${totMarginIncl.toFixed(2)},${totAdminPay > 0 ? (totMarginEx / totAdminPay * 100).toFixed(1) : 0}%`;
       return headers + rows + totalRow;
     }
 
     const isEmp = activeTab === "employee";
     const headers = isEmp
       ? "Name,Rate ($/hr),Total Hours,Break Hours,Net Hours,Employee Pay\n"
-      : "Name,Admin Rate ($/hr),Total Hours,Break Hours,Net Hours,Admin Cost (ex GST)\n";
+      : "Name,Admin Rate ($/hr incl GST),Total Hours,Break Hours,Net Hours,Admin Cost (ex GST),Admin Cost (incl GST)\n";
     const rows = filtered.map((e) =>
       isEmp
         ? `${e.name},${e.pay_rate.toFixed(2)},${e.total_hours.toFixed(2)},${e.break_hours.toFixed(2)},${e.net_hours.toFixed(2)},${e.employee_pay.toFixed(2)}`
-        : `${e.name},${e.admin_hourly_rate.toFixed(2)},${e.total_hours.toFixed(2)},${e.break_hours.toFixed(2)},${e.net_hours.toFixed(2)},${e.admin_pay.toFixed(2)}`
+        : `${e.name},${e.admin_hourly_rate.toFixed(2)},${e.total_hours.toFixed(2)},${e.break_hours.toFixed(2)},${e.net_hours.toFixed(2)},${e.admin_pay.toFixed(2)},${e.admin_pay_incl_gst.toFixed(2)}`
     ).join("\n");
     const totTotalHrs = filtered.reduce((s, e) => s + e.total_hours, 0);
     const totBreakHrs = filtered.reduce((s, e) => s + e.break_hours, 0);
     const totNetHrs = filtered.reduce((s, e) => s + e.net_hours, 0);
     const totPay = filtered.reduce((s, e) => s + (isEmp ? e.employee_pay : e.admin_pay), 0);
-    const totalRow = `\nTOTAL,,${totTotalHrs.toFixed(2)},${totBreakHrs.toFixed(2)},${totNetHrs.toFixed(2)},${totPay.toFixed(2)}`;
+    const totPayIncl = isEmp ? 0 : filtered.reduce((s, e) => s + e.admin_pay_incl_gst, 0);
+    const totalRow = isEmp
+      ? `\nTOTAL,,${totTotalHrs.toFixed(2)},${totBreakHrs.toFixed(2)},${totNetHrs.toFixed(2)},${totPay.toFixed(2)}`
+      : `\nTOTAL,,${totTotalHrs.toFixed(2)},${totBreakHrs.toFixed(2)},${totNetHrs.toFixed(2)},${totPay.toFixed(2)},${totPayIncl.toFixed(2)}`;
     return headers + rows + totalRow;
   };
 
@@ -341,7 +350,9 @@ export default function PayrollPage() {
   const totalAdminPay = filtered.reduce((sum, e) => sum + e.admin_pay, 0);
   const totalNetHours = filtered.reduce((sum, e) => sum + e.net_hours, 0);
   const totalBreakHours = filtered.reduce((sum, e) => sum + e.break_hours, 0);
+  const totalAdminPayInclGst = filtered.reduce((sum, e) => sum + e.admin_pay_incl_gst, 0);
   const totalMargin = totalAdminPay - totalEmployeePay;
+  const totalMarginInclGst = totalAdminPayInclGst - totalEmployeePay;
   const marginPercentage = totalAdminPay > 0 ? (totalMargin / totalAdminPay * 100) : 0;
 
   const payKey = activeTab === "margin" ? "admin_pay" : (activeTab === "employee" ? "employee_pay" : "admin_pay");
@@ -359,16 +370,16 @@ export default function PayrollPage() {
   ];
 
   const adminSummaryCards = [
-    { title: "Total Admin Cost (ex GST)", value: `$${totalAdminPay.toFixed(2)}`, icon: DollarSign, color: "text-primary" },
+    { title: "Total Admin Cost (incl GST)", value: `$${totalAdminPayInclGst.toFixed(2)}`, icon: DollarSign, color: "text-primary" },
+    { title: "Total Admin Cost (ex GST)", value: `$${totalAdminPay.toFixed(2)}`, icon: DollarSign, color: "text-muted-foreground" },
     { title: "Total Net Hours", value: totalNetHours.toFixed(2), icon: ClockIcon, color: "text-green-500" },
-    { title: "Total Break Hours", value: totalBreakHours.toFixed(2), icon: Coffee, color: "text-yellow-500" },
     { title: "Employees", value: filtered.length, icon: Users, color: "text-primary" },
   ];
 
   const marginSummaryCards = [
-    { title: "Total Margin", value: `$${totalMargin.toFixed(2)}`, icon: TrendingUp, color: "text-green-500" },
+    { title: "Margin (ex GST)", value: `$${totalMargin.toFixed(2)}`, icon: TrendingUp, color: "text-green-500" },
+    { title: "Margin (incl GST)", value: `$${totalMarginInclGst.toFixed(2)}`, icon: TrendingUp, color: "text-green-400" },
     { title: "Margin %", value: `${marginPercentage.toFixed(1)}%`, icon: TrendingUp, color: "text-primary" },
-    { title: "Admin Cost (ex GST)", value: `$${totalAdminPay.toFixed(2)}`, icon: DollarSign, color: "text-blue-500" },
     { title: "Employee Pay", value: `$${totalEmployeePay.toFixed(2)}`, icon: DollarSign, color: "text-yellow-500" },
   ];
 
@@ -386,7 +397,7 @@ export default function PayrollPage() {
   const isEmployee = activeTab === "employee";
   const isMargin = activeTab === "margin";
   const payLabel = isEmployee ? "Employee Pay" : isMargin ? "Margin" : "Admin Cost (ex GST)";
-  const rateLabel = isEmployee ? "Rate ($/hr)" : "Admin Rate ($/hr)";
+  const rateLabel = isEmployee ? "Rate ($/hr)" : "Admin Rate ($/hr incl GST)";
   const totalPay = isEmployee ? totalEmployeePay : isMargin ? totalMargin : totalAdminPay;
 
   const renderMarginTable = () => (
@@ -403,21 +414,24 @@ export default function PayrollPage() {
       <CardContent className="p-0">
         <div className="overflow-x-auto">
           <Table>
-            <TableHeader>
+             <TableHeader>
               <TableRow>
                 <SortHeader label="Employee" sortKeyName="name" />
                 <TableHead>Department</TableHead>
                 <SortHeader label="Net Hrs" sortKeyName="net_hours" />
                 <SortHeader label="Employee Pay" sortKeyName="employee_pay" />
-                <SortHeader label="Admin Cost" sortKeyName="admin_pay" />
-                <TableHead className="text-right">Margin</TableHead>
+                <SortHeader label="Admin (ex GST)" sortKeyName="admin_pay" />
+                <TableHead>Admin (incl GST)</TableHead>
+                <TableHead className="text-right">Margin (ex GST)</TableHead>
+                <TableHead className="text-right">Margin (incl GST)</TableHead>
                 <TableHead className="text-right">Margin %</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {pageEntries.map((e) => {
-                const margin = e.admin_pay - e.employee_pay;
-                const marginPct = e.admin_pay > 0 ? (margin / e.admin_pay * 100) : 0;
+                const marginEx = e.admin_pay - e.employee_pay;
+                const marginIncl = e.admin_pay_incl_gst - e.employee_pay;
+                const marginPct = e.admin_pay > 0 ? (marginEx / e.admin_pay * 100) : 0;
                 return (
                   <TableRow key={e.employee_id}>
                     <TableCell className="font-medium">{e.name}</TableCell>
@@ -425,10 +439,14 @@ export default function PayrollPage() {
                     <TableCell>{e.net_hours.toFixed(2)}</TableCell>
                     <TableCell>${e.employee_pay.toFixed(2)}</TableCell>
                     <TableCell>${e.admin_pay.toFixed(2)}</TableCell>
-                    <TableCell className={`text-right font-semibold ${margin >= 0 ? "text-green-500" : "text-red-500"}`}>
-                      ${margin.toFixed(2)}
+                    <TableCell>${e.admin_pay_incl_gst.toFixed(2)}</TableCell>
+                    <TableCell className={`text-right font-semibold ${marginEx >= 0 ? "text-green-500" : "text-red-500"}`}>
+                      ${marginEx.toFixed(2)}
                     </TableCell>
-                    <TableCell className={`text-right ${margin >= 0 ? "text-green-500" : "text-red-500"}`}>
+                    <TableCell className={`text-right font-semibold ${marginIncl >= 0 ? "text-green-500" : "text-red-500"}`}>
+                      ${marginIncl.toFixed(2)}
+                    </TableCell>
+                    <TableCell className={`text-right ${marginEx >= 0 ? "text-green-500" : "text-red-500"}`}>
                       {marginPct.toFixed(1)}%
                     </TableCell>
                   </TableRow>
@@ -436,7 +454,7 @@ export default function PayrollPage() {
               })}
               {pageEntries.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
+                  <TableCell colSpan={9} className="text-center text-muted-foreground py-8">
                     {loading ? "Loading..." : "No approved payroll data for this period."}
                   </TableCell>
                 </TableRow>
@@ -450,8 +468,12 @@ export default function PayrollPage() {
                   <TableCell>{totalNetHours.toFixed(2)}</TableCell>
                   <TableCell>${totalEmployeePay.toFixed(2)}</TableCell>
                   <TableCell>${totalAdminPay.toFixed(2)}</TableCell>
+                  <TableCell>${totalAdminPayInclGst.toFixed(2)}</TableCell>
                   <TableCell className={`text-right ${totalMargin >= 0 ? "text-green-500" : "text-red-500"}`}>
                     ${totalMargin.toFixed(2)}
+                  </TableCell>
+                  <TableCell className={`text-right ${totalMarginInclGst >= 0 ? "text-green-500" : "text-red-500"}`}>
+                    ${totalMarginInclGst.toFixed(2)}
                   </TableCell>
                   <TableCell className={`text-right ${totalMargin >= 0 ? "text-green-500" : "text-red-500"}`}>
                     {marginPercentage.toFixed(1)}%
@@ -590,6 +612,7 @@ export default function PayrollPage() {
                 <TableHead>Breaks</TableHead>
                 <SortHeader label="Net Hrs" sortKeyName="net_hours" />
                 <SortHeader label={payLabel} sortKeyName={isEmployee ? "employee_pay" : "admin_pay"} />
+                {!isEmployee && <TableHead className="text-right">Incl GST</TableHead>}
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -601,11 +624,12 @@ export default function PayrollPage() {
                   <TableCell>{e.break_hours.toFixed(2)}</TableCell>
                   <TableCell>{e.net_hours.toFixed(2)}</TableCell>
                   <TableCell className="text-right font-semibold">${(isEmployee ? e.employee_pay : e.admin_pay).toFixed(2)}</TableCell>
+                  {!isEmployee && <TableCell className="text-right text-muted-foreground">${e.admin_pay_incl_gst.toFixed(2)}</TableCell>}
                 </TableRow>
               ))}
               {pageEntries.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
+                  <TableCell colSpan={isEmployee ? 6 : 7} className="text-center text-muted-foreground py-8">
                     {loading ? "Loading..." : "No approved payroll data for this period."}
                   </TableCell>
                 </TableRow>
@@ -620,6 +644,7 @@ export default function PayrollPage() {
                   <TableCell>{totalBreakHours.toFixed(2)}</TableCell>
                   <TableCell>{totalNetHours.toFixed(2)}</TableCell>
                   <TableCell className="text-right">${totalPay.toFixed(2)}</TableCell>
+                  {!isEmployee && <TableCell className="text-right text-muted-foreground">${totalAdminPayInclGst.toFixed(2)}</TableCell>}
                 </TableRow>
               </tfoot>
             )}
