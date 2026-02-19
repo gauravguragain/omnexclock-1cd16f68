@@ -49,6 +49,38 @@ export type Database = {
           },
         ]
       }
+      business_notes: {
+        Row: {
+          author_id: string
+          business_id: string
+          content: string
+          created_at: string
+          id: string
+        }
+        Insert: {
+          author_id: string
+          business_id: string
+          content: string
+          created_at?: string
+          id?: string
+        }
+        Update: {
+          author_id?: string
+          business_id?: string
+          content?: string
+          created_at?: string
+          id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "business_notes_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       businesses: {
         Row: {
           address: string | null
@@ -62,6 +94,7 @@ export type Database = {
           name: string
           owner_id: string
           phone: string | null
+          status: string
           theme: Json | null
           updated_at: string | null
         }
@@ -77,6 +110,7 @@ export type Database = {
           name: string
           owner_id: string
           phone?: string | null
+          status?: string
           theme?: Json | null
           updated_at?: string | null
         }
@@ -92,6 +126,7 @@ export type Database = {
           name?: string
           owner_id?: string
           phone?: string | null
+          status?: string
           theme?: Json | null
           updated_at?: string | null
         }
