@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OmnexClock – Inventory Management Guide</title>
+<style>
+  @media print { body { font-size: 11pt; } .no-print { display: none; } .page-break { page-break-before: always; } }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Segoe UI', Arial, sans-serif; color: #1a1a1a; line-height: 1.7; max-width: 900px; margin: 0 auto; padding: 40px 30px; }
+  h1 { font-size: 28pt; color: #c9a227; margin-bottom: 6px; }
+  h2 { font-size: 18pt; color: #c9a227; margin-top: 40px; margin-bottom: 12px; border-bottom: 2px solid #c9a227; padding-bottom: 6px; }
+  h3 { font-size: 14pt; color: #333; margin-top: 20px; margin-bottom: 8px; }
+  p, li { margin-bottom: 8px; }
+  ul, ol { padding-left: 24px; }
+  .cover { text-align: center; padding: 80px 0 40px; }
+  .cover img { width: 100px; height: 100px; border-radius: 50%; object-fit: cover; margin-bottom: 16px; }
+  .badge { display: inline-block; background: #c9a227; color: #000; padding: 2px 10px; border-radius: 12px; font-size: 10pt; font-weight: bold; }
+  .note { background: #fef9e7; border-left: 4px solid #c9a227; padding: 12px 16px; margin: 16px 0; border-radius: 0 8px 8px 0; }
+  .warning { background: #fef2f2; border-left: 4px solid #dc2626; padding: 12px 16px; margin: 16px 0; border-radius: 0 8px 8px 0; }
+  table { width: 100%; border-collapse: collapse; margin: 16px 0; }
+  th, td { border: 1px solid #ddd; padding: 10px 14px; text-align: left; }
+  th { background: #1a1a1a; color: #c9a227; }
+  tr:nth-child(even) { background: #f9f9f9; }
+  code { background: #f1f1f1; padding: 2px 6px; border-radius: 4px; font-size: 10pt; }
+  .btn-print { position: fixed; bottom: 20px; right: 20px; background: #c9a227; color: #000; border: none; padding: 12px 24px; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 12pt; box-shadow: 0 4px 12px rgba(0,0,0,0.2); }
+  .btn-print:hover { background: #b8941f; }
+  .step { counter-increment: step; margin-bottom: 12px; padding-left: 8px; }
+  .step::before { content: counter(step) ". "; font-weight: bold; color: #c9a227; }
+  .steps { counter-reset: step; }
+</style>
+</head>
+<body>
+
+<button class="btn-print no-print" onclick="window.print()">📄 Save as PDF / Print</button>
+
+<div class="cover">
+  <img src="/omnex-logo.jpg" alt="OmnexClock Logo">
+  <h1>OmnexClock</h1>
+  <p style="font-size: 14pt; color: #555;">Inventory Management Guide</p>
+  <p style="margin-top: 16px;"><span class="badge">INVENTORY</span></p>
+</div>
+
+<div class="page-break"></div>
+
+<h2>Overview</h2>
+<p>OmnexClock's Inventory module helps you track and manage stock levels across two sections:</p>
+<ul>
+  <li><strong>FOH (Front of House)</strong> — Glassware, Cutlery, Linen, Consumables, Equipment, Cleaning, General</li>
+  <li><strong>Bar</strong> — Spirits, Wine, Beer, Mixers, Garnishes, Bar Equipment, Glassware, General</li>
+</ul>
+<p>Each section uses separate data storage for clean isolation, with the same workflow and interface.</p>
+
+<h2>Access & Permissions</h2>
+<table>
+  <tr><th>Action</th><th>Super Admin</th><th>Admin</th><th>Roster Admin</th><th>Viewer</th></tr>
+  <tr><td>View inventory items & orders</td><td>✅</td><td>✅</td><td>✅</td><td>✅</td></tr>
+  <tr><td>Perform stocktake</td><td>✅</td><td>✅</td><td>✅</td><td>❌</td></tr>
+  <tr><td>Submit order requests</td><td>✅</td><td>✅</td><td>✅</td><td>❌</td></tr>
+  <tr><td>Add / delete items</td><td>✅</td><td>✅</td><td>❌</td><td>❌</td></tr>
+  <tr><td>Approve / reject orders</td><td>✅</td><td>✅</td><td>❌</td><td>❌</td></tr>
+  <tr><td>Mark orders as "Ordered"</td><td>✅</td><td>✅</td><td>❌</td><td>❌</td></tr>
+  <tr><td>Export CSV</td><td>✅</td><td>✅</td><td>✅</td><td>✅</td></tr>
+</table>
+
+<div class="page-break"></div>
+
+<h2>Key Concepts</h2>
+
+<h3>Par Level (Minimum Count)</h3>
+<p>Each item has a <strong>Par Level</strong> — the minimum stock count you want to maintain. When the current count falls <strong>strictly below</strong> the par level, the item shows a <strong>"Low Stock"</strong> alert. An item at exactly the par level is considered <strong>"OK"</strong>.</p>
+
+<h3>Stock Status</h3>
+<table>
+  <tr><th>Status</th><th>Condition</th><th>Indicator</th></tr>
+  <tr><td>OK</td><td>Current count ≥ Par level</td><td>Green badge</td></tr>
+  <tr><td>Low Stock</td><td>Current count &lt; Par level</td><td>Red/warning badge + alert</td></tr>
+</table>
+
+<h2>Adding Inventory Items</h2>
+<p><em>(Admin / Super Admin only)</em></p>
+<div class="steps">
+  <p class="step">Navigate to <strong>Inventory</strong> in the sidebar</p>
+  <p class="step">Select the tab — <strong>FOH</strong> or <strong>Bar</strong></p>
+  <p class="step">Click <strong>"Add Item"</strong></p>
+  <p class="step">Enter the item <strong>Name</strong> (e.g., "Wine Glasses")</p>
+  <p class="step">Select a <strong>Category</strong> (e.g., Glassware, Spirits)</p>
+  <p class="step">Set the <strong>Unit</strong> (e.g., pcs, bottles, boxes)</p>
+  <p class="step">Enter the <strong>Current Count</strong> and <strong>Par Level</strong></p>
+  <p class="step">Click <strong>"Add Item"</strong> to save</p>
+</div>
+
+<div class="note">
+  <strong>Tip:</strong> Set the Par Level to the minimum stock you want on hand. The system will flag items that drop below this level.
+</div>
+
+<div class="page-break"></div>
+
+<h2>Performing a Stocktake</h2>
+<p><em>(Admin, Super Admin, or Roster Admin)</em></p>
+<p>The stocktake is the primary way to update stock levels. It should be done regularly (e.g., weekly).</p>
+
+<div class="steps">
+  <p class="step">Click the <strong>"Stocktake"</strong> button at the top of the inventory section</p>
+  <p class="step">A dialog opens showing all items with their <strong>current recorded count</strong></p>
+  <p class="step">Count each item physically and update the number in the field</p>
+  <p class="step">Click <strong>"Save Stocktake"</strong></p>
+  <p class="step">A <strong>Stocktake Report</strong> is generated showing previous vs. new counts with differences</p>
+</div>
+
+<h3>Auto-Fulfillment</h3>
+<p>When a stocktake confirms that a previously low-stock item has reached or exceeded its par level, any <strong>"Ordered"</strong> order requests for that item are automatically marked as <strong>"Received"</strong>. This streamlines the receiving process.</p>
+
+<div class="note">
+  <strong>Example:</strong> If "Wine Glasses" had an order marked as "Ordered" and the stocktake shows the count is now at or above the par level, that order is automatically completed.
+</div>
+
+<h3>Stocktake Report</h3>
+<p>After saving, a comparison report displays:</p>
+<table>
+  <tr><th>Column</th><th>Description</th></tr>
+  <tr><td>Item</td><td>Item name</td></tr>
+  <tr><td>Previous</td><td>Count before stocktake</td></tr>
+  <tr><td>New</td><td>Count after stocktake</td></tr>
+  <tr><td>Difference</td><td>Change (↑ increase / ↓ decrease)</td></tr>
+  <tr><td>Par Level</td><td>Minimum target count</td></tr>
+  <tr><td>Status</td><td>OK or Low Stock</td></tr>
+</table>
+<p>You can <strong>export the stocktake report as CSV</strong> for record-keeping.</p>
+
+<div class="page-break"></div>
+
+<h2>Order Requests</h2>
+<p>When items fall below par level, you can submit order requests to replenish stock.</p>
+
+<h3>Submitting an Order Request</h3>
+<p><em>(Admin, Super Admin, or Roster Admin)</em></p>
+<div class="steps">
+  <p class="step">Click <strong>"Order Request"</strong> at the top of the inventory section</p>
+  <p class="step">Select the <strong>item</strong> from the dropdown (low-stock items are marked with ⚠️)</p>
+  <p class="step">Enter the <strong>quantity</strong> to order</p>
+  <p class="step">Add optional <strong>notes</strong> (e.g., supplier, urgency)</p>
+  <p class="step">Click <strong>"Submit Request"</strong></p>
+</div>
+
+<div class="note">
+  <strong>Quick Tip:</strong> The "Order Low Stock" button on the low-stock alert card pre-fills an order request for the first low-stock item with the quantity needed to reach par level.
+</div>
+
+<h3>Order Status Workflow</h3>
+<table>
+  <tr><th>Status</th><th>Meaning</th><th>Who Can Change</th></tr>
+  <tr><td><strong>Pending</strong></td><td>Request submitted, awaiting review</td><td>—</td></tr>
+  <tr><td><strong>Approved</strong></td><td>Request approved by admin</td><td>Admin / Super Admin</td></tr>
+  <tr><td><strong>Rejected</strong></td><td>Request denied by admin</td><td>Admin / Super Admin</td></tr>
+  <tr><td><strong>Ordered</strong></td><td>Order placed with supplier</td><td>Admin / Super Admin</td></tr>
+  <tr><td><strong>Received</strong></td><td>Stock received and counted</td><td>Auto (via stocktake) or Admin</td></tr>
+</table>
+
+<h3>Admin Order Actions</h3>
+<p><em>(Admin / Super Admin only)</em></p>
+<ul>
+  <li><strong>Approve</strong> — Accept a pending request</li>
+  <li><strong>Reject</strong> — Deny a pending request</li>
+  <li><strong>Mark Ordered</strong> — Indicate that the approved order has been placed with the supplier</li>
+  <li><strong>Received</strong> — Items arrive automatically when stocktake meets par, or can be marked manually</li>
+</ul>
+
+<div class="page-break"></div>
+
+<h2>Exporting Data</h2>
+<p>Three types of CSV exports are available:</p>
+<table>
+  <tr><th>Export</th><th>Contents</th><th>Button</th></tr>
+  <tr><td>Inventory Items</td><td>Name, Category, Current Count, Par Level, Unit, Status</td><td>📥 Items CSV (top of items table)</td></tr>
+  <tr><td>Order History</td><td>Item, Quantity, Status, Notes, Date</td><td>📥 Orders CSV (top of orders section)</td></tr>
+  <tr><td>Stocktake Report</td><td>Item, Previous, New, Difference, Par Level, Unit, Status</td><td>📥 Export CSV (on stocktake report card)</td></tr>
+</table>
+
+<h2>Best Practices</h2>
+<ul>
+  <li><strong>Weekly Stocktakes</strong> — Perform stocktakes at the same time each week for consistency</li>
+  <li><strong>Set Realistic Par Levels</strong> — Base par levels on average weekly usage plus a small buffer</li>
+  <li><strong>Use Notes</strong> — Add supplier info or special instructions to order requests</li>
+  <li><strong>Review Orders Promptly</strong> — Approve or reject pending orders quickly to maintain stock flow</li>
+  <li><strong>Export for Records</strong> — Export stocktake reports as CSV for auditing and compliance</li>
+  <li><strong>Separate FOH & Bar</strong> — Use the correct tab to avoid mixing stock between sections</li>
+</ul>
+
+<h2>Frequently Asked Questions</h2>
+
+<h3>Q: What's the difference between FOH and Bar inventory?</h3>
+<p>They are completely separate systems with different categories and storage. FOH covers front-of-house items (glassware, linen, etc.) while Bar covers beverage and bar-specific stock.</p>
+
+<h3>Q: How does auto-fulfillment work?</h3>
+<p>When you perform a stocktake and an item's count reaches or exceeds its par level, any orders for that item with status "Ordered" are automatically marked as "Received".</p>
+
+<h3>Q: Can Roster Admins approve orders?</h3>
+<p>No. Roster Admins can view inventory, perform stocktakes, and submit order requests. Only Admins and Super Admins can approve, reject, or mark orders as ordered.</p>
+
+<h3>Q: What happens if I set the par level to 0?</h3>
+<p>The item will never show as "Low Stock" since any count ≥ 0 meets the par level. Only set par level to 0 for items you don't want to track stock levels for.</p>
+
+<h3>Q: Can I delete an item that has active orders?</h3>
+<p>Yes, but the related orders will show "Unknown" as the item name. It's recommended to complete or reject all orders before deleting an item.</p>
+
+<hr style="margin: 40px 0; border-color: #c9a227;">
+
+<div style="text-align: center; color: #888; font-size: 10pt;">
+  <p>© 2024 Omnex Ventures Pty. Ltd. All rights reserved.</p>
+  <p>OmnexClock — Time & Workforce Management</p>
+  <p>For support, contact your platform administrator.</p>
+</div>
+
+</body>
+</html>
