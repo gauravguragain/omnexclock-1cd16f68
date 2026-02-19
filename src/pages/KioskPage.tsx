@@ -72,14 +72,10 @@ export default function KioskPage() {
     };
     loadBusiness();
     return () => {
-      // Reset theme on unmount
+      // Reset inline theme overrides on unmount so the CSS theme takes over
       const root = document.documentElement;
-      const defaults: Record<string, string> = {
-        primary: "43 72% 52%", background: "0 0% 0%", foreground: "0 0% 96%",
-        card: "0 0% 4%", border: "0 0% 16%", muted: "0 0% 10%", accent: "43 72% 52%",
-      };
-      Object.entries(defaults).forEach(([key, value]) => {
-        root.style.setProperty(`--${key}`, value);
+      ["primary", "background", "foreground", "card", "border", "muted", "accent"].forEach((key) => {
+        root.style.removeProperty(`--${key}`);
       });
     };
   }, [urlBusinessCode]);
@@ -258,21 +254,21 @@ export default function KioskPage() {
 
   const statusConfig: Record<EmployeeStatus, { label: string; color: string; icon: React.ReactNode }> = {
     clocked_out: { label: "Clocked Out", color: "bg-muted text-muted-foreground", icon: <LogOut className="h-4 w-4" /> },
-    clocked_in: { label: "Clocked In", color: "bg-success/20 text-success", icon: <LogIn className="h-4 w-4" /> },
-    on_break: { label: "On Break", color: "bg-warning/20 text-warning", icon: <Coffee className="h-4 w-4" /> },
+    clocked_in: { label: "Clocked In", color: "bg-green-500/15 text-green-600 dark:text-green-400", icon: <LogIn className="h-4 w-4" /> },
+    on_break: { label: "On Break", color: "bg-amber-500/15 text-amber-600 dark:text-amber-400", icon: <Coffee className="h-4 w-4" /> },
   };
 
   const actionLabels: Record<string, { label: string; icon: React.ReactNode; color: string }> = {
-    clock_in: { label: "Clock In", icon: <LogIn className="h-8 w-8" />, color: "bg-success text-success-foreground" },
-    clock_out: { label: "Clock Out", icon: <LogOut className="h-8 w-8" />, color: "bg-destructive text-destructive-foreground" },
-    break_start: { label: "Start Break", icon: <Coffee className="h-8 w-8" />, color: "bg-warning text-warning-foreground" },
-    break_end: { label: "End Break", icon: <Clock className="h-8 w-8" />, color: "bg-primary text-primary-foreground" },
+    clock_in: { label: "Clock In", icon: <LogIn className="h-8 w-8" />, color: "bg-green-600 hover:bg-green-700 text-white" },
+    clock_out: { label: "Clock Out", icon: <LogOut className="h-8 w-8" />, color: "bg-destructive hover:bg-destructive/90 text-destructive-foreground" },
+    break_start: { label: "Start Break", icon: <Coffee className="h-8 w-8" />, color: "bg-amber-500 hover:bg-amber-600 text-white" },
+    break_end: { label: "End Break", icon: <Clock className="h-8 w-8" />, color: "bg-primary hover:bg-primary/90 text-primary-foreground" },
   };
 
   const availableActions = getAvailableActions();
 
   return (
-    <div className="min-h-screen bg-background flex flex-col items-center justify-center p-4">
+    <div className="min-h-[100dvh] bg-background text-foreground flex flex-col items-center justify-center p-4">
       {/* Header */}
       <div className="text-center mb-6">
         {businessLogo ? (
@@ -282,7 +278,7 @@ export default function KioskPage() {
             <Clock className="h-8 w-8 text-primary" />
           </div>
         )}
-        <h1 className="text-xl font-bold text-primary">{businessName}</h1>
+        <h1 className="text-xl font-bold text-foreground">{businessName}</h1>
         <p className="text-3xl font-mono text-foreground mt-2">
           {toAusTime12WithSeconds(currentTime)}
         </p>
@@ -399,11 +395,11 @@ export default function KioskPage() {
       {step === "confirmation" && (
         <Card className="w-full max-w-sm gold-border border gold-glow">
           <CardContent className="p-8 text-center space-y-4">
-            <div className="h-20 w-20 mx-auto rounded-full bg-success/20 flex items-center justify-center">
+            <div className="h-20 w-20 mx-auto rounded-full bg-primary/15 flex items-center justify-center text-primary">
               {actionLabels[selectedAction]?.icon}
             </div>
             <h2 className="text-2xl font-bold text-foreground">{actionLabels[selectedAction]?.label}</h2>
-            <p className="text-xl gold-text font-semibold">{employeeName}</p>
+            <p className="text-xl text-primary font-semibold">{employeeName}</p>
             <p className="text-muted-foreground text-sm">
               {toAusTime12(currentTime)}
             </p>
