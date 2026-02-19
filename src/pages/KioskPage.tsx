@@ -6,8 +6,9 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Camera, Clock, Coffee, LogIn, LogOut, ArrowLeft, Delete, User, ShieldCheck } from "lucide-react";
+import { Camera, Clock, Coffee, LogIn, LogOut, ArrowLeft, Delete, User, ShieldCheck, MapPin, Loader2 } from "lucide-react";
 import { toAusTime12, toAusTime12WithSeconds, toAusFormatted } from "@/lib/dateUtils";
+import { captureGeolocation, type GeoResult } from "@/lib/geolocation";
 
 type KioskStep = "loading" | "code_entry" | "action_select" | "photo_capture" | "confirmation";
 type EmployeeStatus = "clocked_out" | "clocked_in" | "on_break";
@@ -32,6 +33,8 @@ export default function KioskPage() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const [currentTime, setCurrentTime] = useState(new Date());
+  const [geoStatus, setGeoStatus] = useState<string | null>(null);
+  const geoResultRef = useRef<GeoResult | null>(null);
 
   useEffect(() => {
     const timer = setInterval(() => setCurrentTime(new Date()), 1000);
@@ -132,6 +135,7 @@ export default function KioskPage() {
   const submitClock = useCallback(async (photo: string) => {
     setLoading(true);
     try {
+      const geoData = geoResultRef.current;
       const { data, error } = await supabase.functions.invoke("kiosk-clock", {
         body: {
           employee_code: codeRef.current,
@@ -139,6 +143,13 @@ export default function KioskPage() {
           photo_base64: photo,
           business_code: urlBusinessCode?.toUpperCase() || null,
           device_info: { userAgent: navigator.userAgent, screen: `${screen.width}x${screen.height}` },
+          geolocation: geoData ? {
+            lat: geoData.lat,
+            lng: geoData.lng,
+            locationName: geoData.locationName,
+            locationAccuracy: geoData.locationAccuracy,
+            locationStatus: geoData.locationStatus,
+          } : null,
         },
       });
 
@@ -209,6 +220,13 @@ export default function KioskPage() {
     actionRef.current = action;
     setStep("photo_capture");
 
+    // Start geolocation capture in parallel with camera
+    setGeoStatus("locating");
+    captureGeolocation().then((result) => {
+      geoResultRef.current = result;
+      setGeoStatus(result.locationStatus);
+    });
+
     await new Promise<void>((resolve) => {
       setTimeout(() => {
         startCamera().then(() => resolve());
@@ -228,6 +246,8 @@ export default function KioskPage() {
     setEmployeeId(null);
     setEmployeeStatus("clocked_out");
     setPhotoData(null);
+    setGeoStatus(null);
+    geoResultRef.current = null;
     stopCamera();
   };
 
@@ -367,6 +387,26 @@ export default function KioskPage() {
             <p className="text-center text-sm text-muted-foreground">
               {loading ? "Submitting..." : photoData ? "Photo captured!" : "Hold still — capturing photo..."}
             </p>
+            {geoStatus === "locating" && (
+              <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
+                <Loader2 className="h-3 w-3 animate-spin" />
+                Getting your location...
+              </div>
+            )}
+            {geoStatus === "denied" && (
+              <div className="flex items-center justify-center">
+                <Badge variant="outline" className="text-amber-500 border-amber-500/30 text-xs">
+                  <MapPin className="h-3 w-3 mr-1" /> Location Denied
+                </Badge>
+              </div>
+            )}
+            {geoStatus === "unavailable" && (
+              <div className="flex items-center justify-center">
+                <Badge variant="outline" className="text-muted-foreground text-xs">
+                  <MapPin className="h-3 w-3 mr-1" /> Location Unavailable
+                </Badge>
+              </div>
+            )}
             <div className="relative rounded-lg overflow-hidden bg-surface aspect-[4/3]">
               {photoData ? (
                 <img src={photoData} alt="Captured" className="w-full h-full object-cover" />

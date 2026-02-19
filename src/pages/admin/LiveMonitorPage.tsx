@@ -2,8 +2,11 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useBusiness } from "@/contexts/BusinessContext";
 import { Card, CardContent } from "@/components/ui/card";
-import { Clock, LogIn, LogOut, Coffee } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Clock, LogIn, LogOut, Coffee, MapPin, AlertTriangle } from "lucide-react";
 import { toAusTime12, ausStartOfToday, ausStartOfTomorrow } from "@/lib/dateUtils";
+import { formatGeoLocation } from "@/lib/geolocation";
 
 interface LiveEmployee {
   id: string;
@@ -12,6 +15,7 @@ interface LiveEmployee {
   lastTime: string;
   photoPath?: string;
   signedUrl?: string;
+  geolocation?: any;
 }
 
 export default function LiveMonitorPage() {
@@ -43,6 +47,7 @@ export default function LiveMonitorPage() {
           lastEvent: ev.event_type,
           lastTime: toAusTime12(new Date(ev.timestamp)),
           photoPath: ev.photo_url || undefined,
+          geolocation: ev.geolocation || null,
         });
       }
     }
@@ -101,43 +106,67 @@ export default function LiveMonitorPage() {
   };
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center gap-2">
-        <div className="h-3 w-3 rounded-full bg-success animate-pulse" />
-        <span className="text-sm text-muted-foreground">Live — updates in real-time</span>
-      </div>
-
-      {liveData.length === 0 ? (
-        <Card>
-          <CardContent className="py-12 text-center text-muted-foreground">
-            No activity today yet.
-          </CardContent>
-        </Card>
-      ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {liveData.map((emp) => (
-            <Card key={emp.id} className="overflow-hidden">
-              <CardContent className="p-4 flex items-center gap-4">
-                {emp.signedUrl ? (
-                  <img src={emp.signedUrl} alt={emp.name} className="h-14 w-14 rounded-lg object-cover" />
-                ) : (
-                  <div className="h-14 w-14 rounded-lg bg-secondary flex items-center justify-center text-muted-foreground font-bold text-lg">
-                    {emp.name.charAt(0)}
-                  </div>
-                )}
-                <div className="flex-1 min-w-0">
-                  <p className="font-semibold text-foreground truncate">{emp.name}</p>
-                  <div className="flex items-center gap-2 mt-1">
-                    {eventIcon(emp.lastEvent)}
-                    <span className="text-sm text-muted-foreground">{eventLabel(emp.lastEvent)}</span>
-                  </div>
-                  <p className="text-xs text-muted-foreground mt-0.5">{emp.lastTime}</p>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+    <TooltipProvider>
+      <div className="space-y-4">
+        <div className="flex items-center gap-2">
+          <div className="h-3 w-3 rounded-full bg-success animate-pulse" />
+          <span className="text-sm text-muted-foreground">Live — updates in real-time</span>
         </div>
-      )}
-    </div>
+
+        {liveData.length === 0 ? (
+          <Card>
+            <CardContent className="py-12 text-center text-muted-foreground">
+              No activity today yet.
+            </CardContent>
+          </Card>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {liveData.map((emp) => {
+              const geo = formatGeoLocation(emp.geolocation);
+              return (
+                <Card key={emp.id} className="overflow-hidden">
+                  <CardContent className="p-4 flex items-center gap-4">
+                    {emp.signedUrl ? (
+                      <img src={emp.signedUrl} alt={emp.name} className="h-14 w-14 rounded-lg object-cover" />
+                    ) : (
+                      <div className="h-14 w-14 rounded-lg bg-secondary flex items-center justify-center text-muted-foreground font-bold text-lg">
+                        {emp.name.charAt(0)}
+                      </div>
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <p className="font-semibold text-foreground truncate">{emp.name}</p>
+                      <div className="flex items-center gap-2 mt-1">
+                        {eventIcon(emp.lastEvent)}
+                        <span className="text-sm text-muted-foreground">{eventLabel(emp.lastEvent)}</span>
+                      </div>
+                      <p className="text-xs font-semibold text-foreground mt-0.5">{emp.lastTime}</p>
+                      {/* Location display */}
+                      {geo.status === "verified" || geo.status === "coordinates-only" ? (
+                        <div className="flex items-center gap-1 mt-1">
+                          <MapPin className="h-3 w-3 text-muted-foreground flex-shrink-0" />
+                          <span className="text-xs text-muted-foreground truncate">{geo.name}</span>
+                          {geo.accuracy && geo.accuracy > 200 && (
+                            <Tooltip>
+                              <TooltipTrigger>
+                                <AlertTriangle className="h-3 w-3 text-amber-500 flex-shrink-0" />
+                              </TooltipTrigger>
+                              <TooltipContent>Low GPS accuracy ({geo.accuracy}m)</TooltipContent>
+                            </Tooltip>
+                          )}
+                        </div>
+                      ) : geo.status === "denied" || geo.status === "unavailable" ? (
+                        <Badge variant="outline" className="text-amber-500 border-amber-500/30 text-[10px] px-1.5 py-0 mt-1">
+                          Location Unavailable
+                        </Badge>
+                      ) : null}
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    </TooltipProvider>
   );
 }
