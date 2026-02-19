@@ -6,7 +6,7 @@ import { toast } from "@/hooks/use-toast";
 import { logAudit } from "@/lib/auditLog";
 import { format, addDays, differenceInDays, parseISO } from "date-fns";
 import {
-  Wrench, Plus, Trash2, Edit2, CalendarCheck, CalendarClock, Mail, AlertTriangle, CheckCircle2, Clock
+  Wrench, Plus, Trash2, Edit2, CalendarCheck, CalendarClock, Mail, AlertTriangle, CheckCircle2, Clock, X
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -22,6 +22,16 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Popover, PopoverContent, PopoverTrigger
+} from "@/components/ui/popover";
+
+interface AdminUser {
+  id: string;
+  email: string;
+  full_name: string | null;
+}
 
 interface ServiceTask {
   id: string;
@@ -57,9 +67,28 @@ export default function ServiceMaintenancePage() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState(EMPTY_FORM);
   const [saving, setSaving] = useState(false);
+  const [adminUsers, setAdminUsers] = useState<AdminUser[]>([]);
+  const [selectedEmails, setSelectedEmails] = useState<string[]>([]);
 
   const businessId = business?.id || "";
   const isAdmin = isAdminOf(businessId) || isSuperAdminOf(businessId);
+
+  const fetchAdminUsers = async () => {
+    if (!businessId) return;
+    const { data: roles } = await supabase
+      .from("user_roles")
+      .select("user_id")
+      .eq("business_id", businessId)
+      .in("role", ["admin", "super_admin"]);
+    if (!roles || roles.length === 0) return;
+
+    const userIds = roles.map((r) => r.user_id);
+    const { data: profiles } = await supabase
+      .from("profiles")
+      .select("id, email, full_name")
+      .in("id", userIds);
+    setAdminUsers((profiles as AdminUser[]) || []);
+  };
 
   const fetchTasks = async () => {
     if (!businessId) return;
@@ -77,11 +106,12 @@ export default function ServiceMaintenancePage() {
     setLoading(false);
   };
 
-  useEffect(() => { fetchTasks(); }, [businessId]);
+  useEffect(() => { fetchTasks(); fetchAdminUsers(); }, [businessId]);
 
   const openAdd = () => {
     setEditingId(null);
     setForm(EMPTY_FORM);
+    setSelectedEmails([]);
     setDialogOpen(true);
   };
 
@@ -96,6 +126,7 @@ export default function ServiceMaintenancePage() {
       reminder_email: task.reminder_email || "",
       active: task.active,
     });
+    setSelectedEmails(task.reminder_email ? task.reminder_email.split(",").map(e => e.trim()).filter(Boolean) : []);
     setDialogOpen(true);
   };
 
@@ -119,7 +150,7 @@ export default function ServiceMaintenancePage() {
       frequency_days: form.frequency_days,
       last_service_date: form.last_service_date || null,
       next_service_date: nextDate || null,
-      reminder_email: form.reminder_email.trim() || null,
+      reminder_email: selectedEmails.length > 0 ? selectedEmails.join(", ") : null,
       active: form.active,
       reminder_sent: false, // Reset reminder when dates change
     };
@@ -244,7 +275,7 @@ export default function ServiceMaintenancePage() {
                     {task.reminder_email && (
                       <span className="flex items-center gap-1">
                         <Mail className="h-3 w-3" />
-                        {task.reminder_email}
+                        {task.reminder_email.split(",").length} recipient{task.reminder_email.split(",").length !== 1 ? "s" : ""}
                       </span>
                     )}
                   </div>
@@ -336,14 +367,67 @@ export default function ServiceMaintenancePage() {
               <p className="text-[10px] text-muted-foreground mt-1">Auto-calculated from last service + frequency if left empty.</p>
             </div>
             <div>
-              <Label className="text-xs">Reminder Email</Label>
-              <Input
-                type="email"
-                placeholder="admin@example.com"
-                value={form.reminder_email}
-                onChange={(e) => setForm({ ...form, reminder_email: e.target.value })}
-              />
-              <p className="text-[10px] text-muted-foreground mt-1">Receives an email reminder 7 days before next service.</p>
+              <Label className="text-xs">Reminder Recipients</Label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" className="w-full justify-start text-left font-normal h-auto min-h-9 py-1.5">
+                    {selectedEmails.length === 0 ? (
+                      <span className="text-muted-foreground text-sm">Select admins...</span>
+                    ) : (
+                      <div className="flex flex-wrap gap-1">
+                        {selectedEmails.map((email) => {
+                          const admin = adminUsers.find((a) => a.email === email);
+                          return (
+                            <Badge key={email} variant="secondary" className="text-[10px] gap-1 pr-1">
+                              {admin?.full_name || email}
+                              <button
+                                type="button"
+                                className="ml-0.5 hover:text-destructive"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setSelectedEmails((prev) => prev.filter((em) => em !== email));
+                                }}
+                              >
+                                <X className="h-2.5 w-2.5" />
+                              </button>
+                            </Badge>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-72 p-2 z-50 bg-popover" align="start">
+                  {adminUsers.length === 0 ? (
+                    <p className="text-xs text-muted-foreground p-2">No admins found.</p>
+                  ) : (
+                    <div className="space-y-1 max-h-48 overflow-y-auto">
+                      {adminUsers.map((admin) => (
+                        <label
+                          key={admin.id}
+                          className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-accent cursor-pointer text-sm"
+                        >
+                          <Checkbox
+                            checked={selectedEmails.includes(admin.email)}
+                            onCheckedChange={(checked) => {
+                              setSelectedEmails((prev) =>
+                                checked
+                                  ? [...prev, admin.email]
+                                  : prev.filter((e) => e !== admin.email)
+                              );
+                            }}
+                          />
+                          <div className="min-w-0">
+                            <div className="text-xs font-medium truncate">{admin.full_name || "Unnamed"}</div>
+                            <div className="text-[10px] text-muted-foreground truncate">{admin.email}</div>
+                          </div>
+                        </label>
+                      ))}
+                    </div>
+                  )}
+                </PopoverContent>
+              </Popover>
+              <p className="text-[10px] text-muted-foreground mt-1">Selected admins receive email reminders 7 days before next service.</p>
             </div>
             <div className="flex items-center gap-2">
               <Switch checked={form.active} onCheckedChange={(v) => setForm({ ...form, active: v })} />
