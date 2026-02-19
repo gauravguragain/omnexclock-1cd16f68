@@ -72,7 +72,7 @@ export default function AdminLayout() {
     { path: `${basePath}/payroll`, label: "Payroll", icon: DollarSign, tourId: "payroll", access: "admin" },
     { path: `${basePath}/requests`, label: "Requests", icon: CalendarOff, tourId: "requests", access: "admin" },
     { path: `${basePath}/forum`, label: "Forum", icon: MessageSquare, tourId: "forum", access: "admin" },
-    { path: `${basePath}/audit-log`, label: "Audit Log", icon: FileText, tourId: "audit-log", access: "admin" },
+    { path: `${basePath}/audit-log`, label: "Audit Log", icon: FileText, tourId: "audit-log", access: "admin_only" },
     { path: `${basePath}/inventory`, label: "Inventory", icon: Package, tourId: "inventory", access: "inventory" },
     { path: `${basePath}/service`, label: "Service", icon: Wrench, tourId: "service", access: "admin" },
     { path: `${basePath}/users`, label: "User Management", icon: UserCog, tourId: "users", access: "super_admin_only" },
@@ -96,9 +96,9 @@ export default function AdminLayout() {
       if (item.access === "inventory" && isRosterAdminFOH) return true;
       return false;
     }
-    // Viewer: see everything except super_admin_only
+    // Viewer: see everything except super_admin_only and admin_only
     if (isViewer) {
-      return item.access !== "super_admin_only";
+      return item.access !== "super_admin_only" && item.access !== "admin_only";
     }
     return true;
   });
