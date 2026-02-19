@@ -43,6 +43,17 @@ export default function RequestsPage() {
   const [reviewReq, setReviewReq] = useState<EmployeeRequest | null>(null);
   const [adminNote, setAdminNote] = useState("");
   const [saving, setSaving] = useState(false);
+  const [pendingCount, setPendingCount] = useState(0);
+
+  const fetchPendingCount = async () => {
+    if (!business) return;
+    const { count } = await supabase
+      .from("employee_requests")
+      .select("*, employees!inner(business_id)", { count: "exact", head: true })
+      .eq("employees.business_id", business.id)
+      .eq("status", "pending");
+    setPendingCount(count || 0);
+  };
 
   const fetchRequests = async () => {
     if (!business) return;
@@ -67,7 +78,7 @@ export default function RequestsPage() {
     setLoading(false);
   };
 
-  useEffect(() => { if (business) fetchRequests(); }, [filter, business]);
+  useEffect(() => { if (business) { fetchRequests(); fetchPendingCount(); } }, [filter, business]);
 
   const openReview = (req: EmployeeRequest) => {
     setReviewReq(req);
@@ -95,6 +106,7 @@ export default function RequestsPage() {
         employee_name: reviewReq.employee_name,
         request_type: reviewReq.request_type,
       });
+      fetchPendingCount();
       toast.success(`Request ${decision}`);
       setReviewOpen(false);
       fetchRequests();
@@ -150,9 +162,9 @@ export default function RequestsPage() {
         <div>
           <h2 className="text-lg font-semibold flex items-center gap-2">
             Leave & Unavailability Requests
-            {requests.filter(r => r.status === "pending").length > 0 && (
+            {pendingCount > 0 && (
               <Badge className="bg-yellow-500 text-black text-xs">
-                {requests.filter(r => r.status === "pending").length} pending
+                {pendingCount} pending
               </Badge>
             )}
           </h2>
