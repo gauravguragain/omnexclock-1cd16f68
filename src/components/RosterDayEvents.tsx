@@ -37,6 +37,7 @@ interface DayEvent {
   bev_package: string | null;
   notes: string | null;
   runsheet_url: string | null;
+  banquet_tier: string | null;
 }
 
 interface ConfigItem {
@@ -288,6 +289,7 @@ export default function RosterDayEvents({ weekDates, fmtDate }: Props) {
       if (data.host_name != null) updates.host_name = data.host_name;
       if (data.host_contact_number != null) updates.host_contact_number = data.host_contact_number;
       if (data.bev_package != null) updates.bev_package = data.bev_package;
+      if (data.banquet_tier != null) (updates as any).banquet_tier = data.banquet_tier;
       if (data.notes != null) updates.notes = data.notes;
 
       if (Object.keys(updates).length > 0) {
@@ -335,6 +337,7 @@ export default function RosterDayEvents({ weekDates, fmtDate }: Props) {
       if (data.host_name != null) updates.host_name = data.host_name;
       if (data.host_contact_number != null) updates.host_contact_number = data.host_contact_number;
       if (data.bev_package != null) updates.bev_package = data.bev_package;
+      if (data.banquet_tier != null) (updates as any).banquet_tier = data.banquet_tier;
       if (data.notes != null) updates.notes = data.notes;
 
       if (Object.keys(updates).length > 0) {
@@ -474,6 +477,7 @@ export default function RosterDayEvents({ weekDates, fmtDate }: Props) {
                           {totalGuests > 0 && <span className="flex items-center gap-0.5"><Users className="h-3 w-3" /> {totalGuests} guests</span>}
                           {ev.num_tables > 0 && <span>{ev.num_tables} tables</span>}
                           {ev.bev_package && <span>🍷 {ev.bev_package}</span>}
+                          {ev.banquet_tier && <span>🍽️ {ev.banquet_tier}</span>}
                         </div>
 
                         {/* Equipment badges */}
@@ -561,13 +565,17 @@ export default function RosterDayEvents({ weekDates, fmtDate }: Props) {
                             </div>
                           </div>
 
-                          {/* Bev Package & Notes */}
-                          <div className="grid grid-cols-2 gap-3">
+                          {/* Bev Package, Banquet Tier & Notes */}
+                          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                             <div className="space-y-1">
                               <Label className="text-[11px] text-muted-foreground">Bev Package</Label>
                               <DebouncedInput value={ev.bev_package || ""} onSave={v => updateEvent(ev.id, { bev_package: v || null })} placeholder="e.g. Gold, Silver, BYO..." className="h-8 text-xs" disabled={cannotEdit} />
                             </div>
                             <div className="space-y-1">
+                              <Label className="text-[11px] text-muted-foreground">🍽️ Banquet Tier</Label>
+                              <DebouncedInput value={ev.banquet_tier || ""} onSave={v => updateEvent(ev.id, { banquet_tier: v || null })} placeholder="e.g. Premium, Gold..." className="h-8 text-xs" disabled={cannotEdit} />
+                            </div>
+                            <div className="space-y-1 col-span-2 sm:col-span-1">
                               <Label className="text-[11px] text-muted-foreground">Notes</Label>
                               <DebouncedInput value={ev.notes || ""} onSave={v => updateEvent(ev.id, { notes: v || null })} placeholder="Additional info..." className="h-8 text-xs" disabled={cannotEdit} />
                             </div>
