@@ -4,6 +4,8 @@ import { portalTourSteps } from "@/components/tourSteps";
 import { useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useBusiness } from "@/contexts/BusinessContext";
+import NotificationBell from "@/components/NotificationBell";
+import { useEmployeeNotifications } from "@/hooks/useNotifications";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -90,6 +92,19 @@ function getMonday(d: Date): Date {
 function fmtTimestamp(ts: string | null): string {
   if (!ts) return "—";
   return toAusTime12(new Date(ts));
+}
+
+/* ── portal notification wrapper ─────────────────────────── */
+function PortalNotifications({ employeeCode, businessCode }: { employeeCode: string | null; businessCode: string | null }) {
+  const { notifications, unreadCount, markRead, markAllRead } = useEmployeeNotifications(employeeCode, businessCode);
+  return (
+    <NotificationBell
+      notifications={notifications}
+      unreadCount={unreadCount}
+      onMarkRead={markRead}
+      onMarkAllRead={markAllRead}
+    />
+  );
 }
 
 /* ── component ───────────────────────────────────────────── */
@@ -539,9 +554,12 @@ export default function PortalPage() {
               </div>
             </div>
           </div>
-          <Button variant="outline" size="sm" onClick={handleLogout}>
-            <LogOut className="mr-1.5 h-3.5 w-3.5" /> Exit
-          </Button>
+          <div className="flex items-center gap-2">
+            <PortalNotifications employeeCode={employeeCode} businessCode={urlBusinessCode?.toUpperCase() || null} />
+            <Button variant="outline" size="sm" onClick={handleLogout}>
+              <LogOut className="mr-1.5 h-3.5 w-3.5" /> Exit
+            </Button>
+          </div>
         </div>
       </header>
 

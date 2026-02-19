@@ -11,6 +11,8 @@ import { useSessionGuard } from "@/hooks/useSessionGuard";
 import { supabase } from "@/integrations/supabase/client";
 import WalkthroughTour from "@/components/WalkthroughTour";
 import { adminTourSteps } from "@/components/tourSteps";
+import NotificationBell from "@/components/NotificationBell";
+import { useAdminNotifications } from "@/hooks/useNotifications";
 
 export default function AdminLayout() {
   const { user, isAdminOf, isViewerOf, hasAccessTo, isApproved, loading, signOut } = useAuth();
@@ -19,6 +21,7 @@ export default function AdminLayout() {
   const { businessCode } = useParams();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [pendingRequestCount, setPendingRequestCount] = useState(0);
+  const { notifications, unreadCount, markRead, markAllRead, clearAll } = useAdminNotifications(business?.id || null);
   useSessionGuard();
 
   // Ensure the correct business is active based on URL
@@ -204,6 +207,15 @@ export default function AdminLayout() {
           {isViewer && !isAdmin && (
             <Badge variant="outline" className="text-primary border-primary/30 text-xs">View Only</Badge>
           )}
+          <div className="ml-auto">
+            <NotificationBell
+              notifications={notifications}
+              unreadCount={unreadCount}
+              onMarkRead={markRead}
+              onMarkAllRead={markAllRead}
+              onClearAll={clearAll}
+            />
+          </div>
         </header>
         <div className="p-4 lg:p-6">
           <Outlet />

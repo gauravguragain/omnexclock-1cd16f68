@@ -440,6 +440,60 @@ export type Database = {
         }
         Relationships: []
       }
+      notifications: {
+        Row: {
+          business_id: string
+          created_at: string
+          employee_id: string | null
+          id: string
+          message: string
+          metadata: Json | null
+          read: boolean
+          title: string
+          type: string
+          user_id: string | null
+        }
+        Insert: {
+          business_id: string
+          created_at?: string
+          employee_id?: string | null
+          id?: string
+          message: string
+          metadata?: Json | null
+          read?: boolean
+          title: string
+          type: string
+          user_id?: string | null
+        }
+        Update: {
+          business_id?: string
+          created_at?: string
+          employee_id?: string | null
+          id?: string
+          message?: string
+          metadata?: Json | null
+          read?: boolean
+          title?: string
+          type?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notifications_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notifications_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       password_reset_otps: {
         Row: {
           created_at: string
@@ -735,6 +789,18 @@ export type Database = {
               photo_url: string
             }[]
           }
+      get_employee_notifications: {
+        Args: { _business_code?: string; _employee_code: string }
+        Returns: {
+          created_at: string
+          id: string
+          message: string
+          metadata: Json
+          read: boolean
+          title: string
+          type: string
+        }[]
+      }
       get_employee_requests:
         | {
             Args: { _employee_code: string }
@@ -962,6 +1028,18 @@ export type Database = {
       is_master: { Args: never; Returns: boolean }
       is_viewer_of_business: {
         Args: { _business_id: string }
+        Returns: boolean
+      }
+      mark_all_employee_notifications_read: {
+        Args: { _business_code?: string; _employee_code: string }
+        Returns: boolean
+      }
+      mark_employee_notification_read: {
+        Args: {
+          _business_code?: string
+          _employee_code: string
+          _notification_id: string
+        }
         Returns: boolean
       }
       register_business: {
