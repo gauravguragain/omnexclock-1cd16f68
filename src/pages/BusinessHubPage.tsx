@@ -59,7 +59,7 @@ export default function BusinessHubPage() {
   // If user has multiple businesses, show a selection
   if (businesses.length > 1) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-background p-4 relative overflow-hidden">
+      <div className="min-h-[100dvh] flex flex-col items-center justify-center bg-background p-4 relative overflow-hidden standalone-top-pad safe-x">
         <div className="absolute top-1/4 -left-32 w-72 h-72 rounded-full bg-primary/[0.025] blur-[80px]" />
         <div className="absolute bottom-1/4 -right-32 w-80 h-80 rounded-full bg-primary/[0.02] blur-[80px]" />
 
@@ -113,7 +113,7 @@ export default function BusinessHubPage() {
   const businessCode = business.business_code;
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-background p-4 relative overflow-hidden">
+    <div className="min-h-[100dvh] flex flex-col items-center justify-center bg-background p-4 relative overflow-hidden standalone-top-pad safe-x">
       <div className="absolute top-1/4 -left-32 w-72 h-72 rounded-full bg-primary/[0.025] blur-[80px]" />
       <div className="absolute bottom-1/4 -right-32 w-80 h-80 rounded-full bg-primary/[0.02] blur-[80px]" />
 

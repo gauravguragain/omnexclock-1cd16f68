@@ -71,7 +71,7 @@ export default function RegisterBusinessPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background p-4 relative overflow-hidden">
+    <div className="min-h-[100dvh] flex items-center justify-center bg-background p-4 relative overflow-hidden">
       <div className="absolute top-1/3 -left-24 w-56 h-56 rounded-full bg-primary/[0.03] blur-[80px] float" />
       <div className="absolute bottom-1/3 -right-24 w-60 h-60 rounded-full bg-primary/[0.025] blur-[80px] float" style={{ animationDelay: '2s' }} />
 
