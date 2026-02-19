@@ -305,8 +305,8 @@ export default function MyBusinessPage() {
           </div>
         </CardContent>
       </Card>
-      {/* Event Setup */}
-      <EventSetupSettings />
+      {/* Event Setup - PRP only */}
+      {business?.business_code === "PRP" && <EventSetupSettings />}
 
       {/* Instruction Manual */}
       <Card>

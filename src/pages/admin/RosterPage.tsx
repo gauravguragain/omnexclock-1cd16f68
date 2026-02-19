@@ -597,15 +597,17 @@ export default function RosterPage() {
         )}
       </div>
 
-      {/* Day Events Panel */}
-      <Card className="overflow-hidden border-border/60 shadow-sm">
-        <CardContent className="p-3">
-          <div className="flex items-center gap-2 mb-2">
-            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Daily Event Setup</span>
-          </div>
-          <RosterDayEvents weekDates={weekDates} fmtDate={fmtDate} />
-        </CardContent>
-      </Card>
+      {/* Day Events Panel - PRP only */}
+      {business?.business_code === "PRP" && (
+        <Card className="overflow-hidden border-border/60 shadow-sm">
+          <CardContent className="p-3">
+            <div className="flex items-center gap-2 mb-2">
+              <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Daily Event Setup</span>
+            </div>
+            <RosterDayEvents weekDates={weekDates} fmtDate={fmtDate} />
+          </CardContent>
+        </Card>
+      )}
 
       {/* Grid */}
       <Card className="overflow-hidden border-border/60 shadow-sm">
