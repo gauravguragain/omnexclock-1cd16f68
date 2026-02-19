@@ -89,6 +89,14 @@ serve(async (req) => {
     // Delete audit logs for this business
     await supabase.from("audit_logs").delete().eq("business_id", business_id);
 
+    // Get all user IDs associated with this business (before deleting roles)
+    const { data: businessUserRoles } = await supabase
+      .from("user_roles")
+      .select("user_id")
+      .eq("business_id", business_id);
+
+    const businessUserIds = [...new Set((businessUserRoles || []).map(r => r.user_id))];
+
     // Delete user roles for this business
     await supabase.from("user_roles").delete().eq("business_id", business_id);
 
@@ -105,11 +113,33 @@ serve(async (req) => {
       });
     }
 
+    // Delete user accounts that no longer have any roles
+    for (const uid of businessUserIds) {
+      // Skip the caller (master admin)
+      if (uid === caller.id) continue;
+
+      // Check if user has any remaining roles
+      const { data: remainingRoles } = await supabase
+        .from("user_roles")
+        .select("id")
+        .eq("user_id", uid)
+        .limit(1);
+
+      if (!remainingRoles || remainingRoles.length === 0) {
+        // No more roles — delete profile and auth user
+        await supabase.from("profiles").delete().eq("id", uid);
+        const { error: delUserErr } = await supabase.auth.admin.deleteUser(uid);
+        if (delUserErr) {
+          console.error(`Failed to delete auth user ${uid}:`, delUserErr);
+        }
+      }
+    }
+
     // Audit log
     await supabase.from("audit_logs").insert({
       user_id: caller.id,
       action: "business_deleted",
-      details: { deleted_business_id: business_id },
+      details: { deleted_business_id: business_id, deleted_user_count: businessUserIds.length },
     });
 
     return new Response(JSON.stringify({ success: true }), {
