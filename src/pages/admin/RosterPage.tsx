@@ -494,47 +494,47 @@ export default function RosterPage() {
   const netHours = calcNetHours(form.start_time, form.end_time, parseInt(form.break_minutes) || 0);
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-5">
       {/* Toolbar */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="icon" onClick={() => setWeekStart(addDays(weekStart, -7))}>
+          <Button variant="outline" size="icon" className="h-9 w-9 rounded-lg border-border/60 hover:border-primary/40" onClick={() => setWeekStart(addDays(weekStart, -7))}>
             <ChevronLeft className="h-4 w-4" />
           </Button>
-          <div className="text-center min-w-[200px]">
-            <p className="text-sm font-semibold text-foreground">{weekLabel}</p>
-            <div className="flex items-center justify-center gap-1.5 mt-0.5">
-              <span className={`inline-block h-2 w-2 rounded-full ${
+          <div className="text-center min-w-[210px] px-2">
+            <p className="text-sm font-semibold text-foreground tracking-tight">{weekLabel}</p>
+            <div className="flex items-center justify-center gap-1.5 mt-1">
+              <span className={`inline-block h-2 w-2 rounded-full ring-2 ring-background ${
                 weekStatus === "published" ? "bg-success" :
                 weekStatus === "draft" ? "bg-warning" :
                 weekStatus === "mixed" ? "bg-primary" : "bg-muted-foreground"
               }`} />
-              <span className="text-xs text-muted-foreground capitalize">{weekStatus === "empty" ? "No shifts" : weekStatus}</span>
+              <span className="text-[11px] text-muted-foreground capitalize font-medium">{weekStatus === "empty" ? "No shifts" : weekStatus}</span>
             </div>
           </div>
-          <Button variant="outline" size="icon" onClick={() => setWeekStart(addDays(weekStart, 7))}>
+          <Button variant="outline" size="icon" className="h-9 w-9 rounded-lg border-border/60 hover:border-primary/40" onClick={() => setWeekStart(addDays(weekStart, 7))}>
             <ChevronRight className="h-4 w-4" />
           </Button>
-          <Button variant="ghost" size="sm" onClick={() => setWeekStart(getMonday(new Date()))} className="text-xs text-muted-foreground">
+          <Button variant="ghost" size="sm" onClick={() => setWeekStart(getMonday(new Date()))} className="text-xs text-muted-foreground hover:text-primary ml-1">
             Today
           </Button>
         </div>
 
         {!isViewer && (
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             {copiedShift && (
-              <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md border border-primary/30 bg-primary/10 text-xs text-primary">
+              <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-primary/30 bg-primary/10 text-xs text-primary animate-in fade-in duration-200">
                 <Clipboard className="h-3 w-3" />
-                <span className="font-medium">{formatTime12(copiedShift.start_time)} – {formatTime12(copiedShift.end_time)}</span>
-                <button onClick={() => setCopiedShift(null)} className="ml-1 hover:text-destructive transition-colors">
+                <span className="font-semibold">{formatTime12(copiedShift.start_time)} – {formatTime12(copiedShift.end_time)}</span>
+                <button onClick={() => setCopiedShift(null)} className="ml-1.5 hover:text-destructive transition-colors rounded-full p-0.5 hover:bg-destructive/10">
                   <X className="h-3 w-3" />
                 </button>
               </div>
             )}
-            <Button variant="outline" size="sm" onClick={handleCopyPrevWeek} disabled={loading}>
+            <Button variant="outline" size="sm" className="rounded-lg" onClick={handleCopyPrevWeek} disabled={loading}>
               <Copy className="mr-1.5 h-3.5 w-3.5" /> Copy Last Week
             </Button>
-            <Button size="sm" onClick={handlePublishWeek} disabled={publishing || weekStatus === "published" || weekStatus === "empty"}>
+            <Button size="sm" className="rounded-lg" onClick={handlePublishWeek} disabled={publishing || weekStatus === "published" || weekStatus === "empty"}>
               <Send className="mr-1.5 h-3.5 w-3.5" /> {publishing ? "Publishing..." : "Publish Week"}
             </Button>
           </div>
@@ -542,25 +542,25 @@ export default function RosterPage() {
       </div>
 
       {/* Grid */}
-      <Card className="overflow-hidden">
+      <Card className="overflow-hidden border-border/60 shadow-sm">
         <CardContent className="p-0">
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto scrollbar-hide">
             <table className="w-full text-sm" style={{ minWidth: '1070px' }}>
               <thead>
-                <tr className="border-b border-border">
-                  <th className="text-left px-3 py-2.5 text-muted-foreground font-medium w-[160px] min-w-[160px] sticky left-0 bg-card z-20 border-r border-border">Employee</th>
+                <tr className="border-b-2 border-border/80 bg-secondary/30">
+                  <th className="text-left px-3 py-3 text-muted-foreground font-semibold text-xs uppercase tracking-wider w-[160px] min-w-[160px] sticky left-0 bg-card z-20 border-r border-border/60">Employee</th>
                   {weekDates.map((d, i) => {
                     const isToday = fmtDate(d) === fmtDate(new Date());
                     return (
-                      <th key={i} className={`text-center px-2 py-2.5 min-w-[120px] font-medium ${isToday ? "text-primary" : "text-muted-foreground"}`}>
-                        <div>{DAYS[i]}</div>
-                        <div className={`text-xs ${isToday ? "text-primary" : "text-muted-foreground/70"}`}>
+                      <th key={i} className={`text-center px-2 py-3 min-w-[120px] ${isToday ? "bg-primary/5" : ""}`}>
+                        <div className={`text-xs font-semibold uppercase tracking-wide ${isToday ? "text-primary" : "text-muted-foreground"}`}>{DAYS[i]}</div>
+                        <div className={`text-[11px] mt-0.5 ${isToday ? "text-primary font-medium" : "text-muted-foreground/60"}`}>
                           {toAusFormatted(d, { day: "numeric", month: "short" })}
                         </div>
                       </th>
                     );
                   })}
-                  <th className="text-center px-3 py-2.5 text-muted-foreground font-medium w-[70px]">Total</th>
+                  <th className="text-center px-3 py-3 text-muted-foreground font-semibold text-xs uppercase tracking-wider w-[70px]">Total</th>
                 </tr>
               </thead>
               <tbody>
@@ -580,13 +580,14 @@ export default function RosterPage() {
                   </tr>
                 ) : (
                   employees.map(emp => (
-                    <tr key={emp.id} className="border-b border-border hover:bg-secondary/30 transition-colors">
-                      <td className="px-3 py-2 sticky left-0 bg-card z-20 border-r border-border">
-                        <div className="font-medium text-foreground truncate">{emp.name}</div>
-                        <div className="text-xs text-muted-foreground">{emp.job_title || emp.department || emp.employee_code}</div>
+                    <tr key={emp.id} className="border-b border-border/50 hover:bg-secondary/20 transition-colors group/row">
+                      <td className="px-3 py-2.5 sticky left-0 bg-card z-20 border-r border-border/60">
+                        <div className="font-medium text-foreground truncate text-[13px]">{emp.name}</div>
+                        <div className="text-[11px] text-muted-foreground/70">{emp.job_title || emp.department || emp.employee_code}</div>
                       </td>
                       {weekDates.map((wd, dayIdx) => {
                         const dayShifts = shiftMap[emp.id]?.[dayIdx] || [];
+                        const isToday = fmtDate(wd) === fmtDate(new Date());
                         const dayStr = fmtDate(wd);
                         const dayName = FULL_DAYS[dayIdx];
                         const dayRequests = approvedRequests.filter(r => {
@@ -602,10 +603,10 @@ export default function RosterPage() {
                           return false;
                         });
                         return (
-                          <td key={dayIdx} className="px-1 py-1.5 align-top">
-                            <div className="space-y-1 min-h-[48px]">
+                          <td key={dayIdx} className={`px-1.5 py-1.5 align-top ${isToday ? "bg-primary/[0.03]" : ""}`}>
+                            <div className="space-y-1.5 min-h-[52px]">
                               {dayRequests.map(req => (
-                                <div key={req.id} className={`w-full rounded-md px-2 py-1 text-[10px] border ${req.request_type === "leave" ? "bg-destructive/10 text-destructive border-destructive/20" : "bg-yellow-500/10 text-yellow-600 border-yellow-500/20"}`}>
+                                <div key={req.id} className={`w-full rounded-lg px-2 py-1.5 text-[10px] border ${req.request_type === "leave" ? "bg-destructive/10 text-destructive border-destructive/20" : "bg-warning/10 text-warning border-warning/20"}`}>
                                   <CalendarOff className="h-2.5 w-2.5 inline mr-0.5" />
                                   {req.request_type === "leave" ? "Leave" : "Unavailable"}
                                   {req.start_time && req.end_time && (
@@ -618,16 +619,16 @@ export default function RosterPage() {
                                   <button
                                     onClick={() => !isViewer && openEditShift(shift)}
                                     disabled={isViewer}
-                                    className={`w-full rounded-md px-2 py-1.5 text-left text-xs transition-colors ${
-                                      isViewer ? "cursor-default" : ""
+                                    className={`w-full rounded-lg px-2 py-2 text-left text-xs transition-all ${
+                                      isViewer ? "cursor-default" : "cursor-pointer"
                                     } ${
                                       shift.status === "published"
-                                        ? "bg-primary/15 text-primary hover:bg-primary/25 border border-primary/20"
-                                        : "bg-muted text-muted-foreground hover:bg-muted/80 border border-border border-dashed"
+                                        ? "bg-primary/15 text-primary hover:bg-primary/25 border border-primary/25 shadow-sm shadow-primary/5"
+                                        : "bg-muted/80 text-muted-foreground hover:bg-muted border border-border/60 border-dashed"
                                     }`}
                                   >
-                                    <div className="font-medium">{formatTime12(shift.start_time)} – {formatTime12(shift.end_time)}</div>
-                                    <div className="text-[10px] opacity-70">
+                                    <div className="font-semibold text-[11px] leading-tight">{formatTime12(shift.start_time)} – {formatTime12(shift.end_time)}</div>
+                                    <div className="text-[10px] opacity-60 mt-0.5">
                                       {(shift.hours_worked ?? calcNetHours(shift.start_time, shift.end_time, shift.break_minutes)).toFixed(1)}h
                                       {shift.break_minutes > 0 && ` · ${shift.break_minutes}m brk`}
                                     </div>
@@ -637,7 +638,7 @@ export default function RosterPage() {
                                       <TooltipTrigger asChild>
                                         <button
                                           onClick={(e) => { e.stopPropagation(); handleCopyShift(shift); }}
-                                          className="absolute -top-1.5 -right-1.5 h-5 w-5 rounded-full bg-card border border-border shadow-sm flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-primary hover:text-primary-foreground hover:border-primary"
+                                          className="absolute -top-1.5 -right-1.5 h-5 w-5 rounded-full bg-card border border-border/80 shadow-md flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all hover:bg-primary hover:text-primary-foreground hover:border-primary hover:scale-110"
                                         >
                                           <Clipboard className="h-2.5 w-2.5" />
                                         </button>
@@ -657,7 +658,7 @@ export default function RosterPage() {
                                   <div className="flex gap-1">
                                     <button
                                       onClick={() => openAddShift(emp.id, dayIdx)}
-                                      className="flex-1 rounded-md border border-dashed border-border hover:border-primary/50 hover:bg-primary/5 text-muted-foreground hover:text-primary text-xs py-1.5 transition-colors flex items-center justify-center gap-1"
+                                      className="flex-1 rounded-lg border border-dashed border-border/50 hover:border-primary/50 hover:bg-primary/5 text-muted-foreground/50 hover:text-primary text-xs py-2 transition-all flex items-center justify-center gap-1"
                                     >
                                       <Plus className="h-3 w-3" />
                                     </button>
@@ -666,7 +667,7 @@ export default function RosterPage() {
                                         <TooltipTrigger asChild>
                                           <button
                                             onClick={() => handlePasteShift(emp.id, dayIdx)}
-                                            className="rounded-md border border-dashed border-primary/40 bg-primary/5 hover:bg-primary/15 text-primary text-xs py-1.5 px-2 transition-colors flex items-center justify-center gap-1"
+                                            className="rounded-lg border border-dashed border-primary/40 bg-primary/5 hover:bg-primary/15 text-primary text-xs py-2 px-2.5 transition-all flex items-center justify-center gap-1 hover:scale-105"
                                           >
                                             <ClipboardPaste className="h-3 w-3" />
                                           </button>
@@ -683,8 +684,11 @@ export default function RosterPage() {
                           </td>
                         );
                       })}
-                      <td className="px-3 py-2 text-center font-mono font-medium text-foreground">
-                        {(weeklyTotals[emp.id] || 0).toFixed(1)}h
+                      <td className="px-3 py-2.5 text-center">
+                        <span className="font-mono font-bold text-foreground text-[13px]">
+                          {(weeklyTotals[emp.id] || 0).toFixed(1)}
+                        </span>
+                        <span className="text-[11px] text-muted-foreground/60 ml-0.5">h</span>
                       </td>
                     </tr>
                   ))
@@ -697,9 +701,9 @@ export default function RosterPage() {
 
       {/* Shift Dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-md rounded-xl">
           <DialogHeader>
-            <DialogTitle>{editingShift ? "Edit Shift" : "Add Shift"}</DialogTitle>
+            <DialogTitle className="text-lg">{editingShift ? "Edit Shift" : "Add Shift"}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
             {/* Employee (read-only in context) */}
@@ -730,7 +734,7 @@ export default function RosterPage() {
               });
               if (dayReqs.length === 0) return null;
               return dayReqs.map(r => (
-                <div key={r.id} className="flex items-start gap-2 rounded-md border border-yellow-500/30 bg-yellow-500/10 px-3 py-2 text-xs text-yellow-700 dark:text-yellow-400">
+                <div key={r.id} className="flex items-start gap-2 rounded-lg border border-warning/30 bg-warning/10 px-3 py-2 text-xs text-warning">
                   <AlertCircle className="h-3.5 w-3.5 mt-0.5 shrink-0" />
                   <div>
                     <span className="font-medium">
