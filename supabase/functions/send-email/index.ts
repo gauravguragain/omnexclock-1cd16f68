@@ -72,7 +72,12 @@ serve(async (req) => {
             </thead>
             <tbody>${shiftRows}</tbody>
           </table>
-          <p style="color:#6b7280;font-size:13px;">This is an automated notification. Please contact your manager if you have questions.</p>
+          <div style="margin-top:20px;padding:14px 16px;background:#fef9e7;border:1px solid #f5e6b8;border-radius:6px;">
+            <p style="margin:0;font-size:12px;color:#92400e;line-height:1.5;">
+              <strong>⚠️ Disclaimer:</strong> The shift and break times stated in this roster are indicative and may vary according to the operational needs of the business and at the discretion of management. You may be required to start earlier, finish later, or take breaks at different times depending on business demands. Please check with your manager if you have any concerns.
+            </p>
+          </div>
+          <p style="color:#6b7280;font-size:13px;margin-top:16px;">This is an automated notification. Please contact your manager if you have questions.</p>
         </div>
       `;
 
