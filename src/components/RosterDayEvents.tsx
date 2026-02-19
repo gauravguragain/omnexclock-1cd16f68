@@ -384,9 +384,7 @@ export default function RosterDayEvents({ weekDates, fmtDate }: Props) {
         return;
       }
     }
-    // Use Google Docs viewer as fallback for direct PDF viewing
-    const viewerUrl = `https://docs.google.com/viewer?url=${encodeURIComponent(url)}&embedded=true`;
-    window.open(viewerUrl, "_blank", "noopener,noreferrer");
+    window.open(url, "_blank", "noopener,noreferrer");
   };
 
   const getEquipmentBadges = (ev: DayEvent) => {
