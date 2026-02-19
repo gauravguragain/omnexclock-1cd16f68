@@ -132,21 +132,27 @@ export default function ResetPasswordPage() {
   const current = stepConfig[step];
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background p-4">
-      <div className="w-full max-w-md space-y-6">
-        <div className="text-center space-y-2">
-          <div className="h-20 w-20 mx-auto rounded-full bg-primary/15 flex items-center justify-center">
-            {isMasterReset ? <Crown className="h-10 w-10 text-primary" /> : <Clock className="h-10 w-10 text-primary" />}
+    <div className="min-h-[100dvh] flex items-center justify-center bg-background p-4 relative overflow-hidden">
+      {/* Ambient background — consistent with other pages */}
+      <div className="absolute top-1/3 -left-24 w-56 h-56 rounded-full bg-primary/[0.03] blur-[80px] float" />
+      <div className="absolute bottom-1/3 -right-24 w-60 h-60 rounded-full bg-primary/[0.025] blur-[80px] float" style={{ animationDelay: '2s' }} />
+
+      <div className="w-full max-w-md space-y-6 relative z-10 animate-fade-in">
+        <div className="text-center space-y-3">
+          <div className="h-18 w-18 mx-auto rounded-2xl bg-primary/8 flex items-center justify-center shadow-lg shadow-primary/5" style={{ height: '72px', width: '72px' }}>
+            {isMasterReset ? <Crown className="h-9 w-9 text-primary" /> : <Clock className="h-9 w-9 text-primary" />}
           </div>
-          <h1 className="text-2xl font-bold text-foreground">{isMasterReset ? "Master Admin" : "OmnexClock"}</h1>
-          <p className="text-muted-foreground text-sm">Password Recovery</p>
+          <div className="space-y-1">
+            <h1 className="text-2xl font-bold text-foreground tracking-tight">{isMasterReset ? "Master Admin" : "OmnexClock"}</h1>
+            <p className="text-muted-foreground text-sm">Password Recovery</p>
+          </div>
         </div>
 
-        <Card className="border border-border">
+        <Card className="border border-border/50 shadow-lg shadow-black/20">
           <CardHeader>
             <div className="flex items-center gap-2">
               <current.icon className="h-5 w-5 text-primary" />
-              <CardTitle>{current.title}</CardTitle>
+              <CardTitle className="text-lg">{current.title}</CardTitle>
             </div>
             <CardDescription>{current.description}</CardDescription>
             {/* Step indicator */}
@@ -183,12 +189,13 @@ export default function ResetPasswordPage() {
                     type="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    placeholder="admin@proregal.com"
+                    placeholder="you@business.com"
                     required
                     autoFocus
+                    className="h-11"
                   />
                 </div>
-                <Button type="submit" className="w-full" disabled={loading}>
+                <Button type="submit" className="w-full h-11 font-medium" disabled={loading}>
                   {loading ? "Sending..." : (
                     <>
                       <KeyRound className="mr-2 h-4 w-4" /> Send Verification Code
@@ -226,7 +233,7 @@ export default function ResetPasswordPage() {
                     </button>
                   </p>
                 </div>
-                <Button type="submit" className="w-full" disabled={loading || otp.length !== 6}>
+                <Button type="submit" className="w-full h-11 font-medium" disabled={loading || otp.length !== 6}>
                   {loading ? "Verifying..." : (
                     <>
                       <ShieldCheck className="mr-2 h-4 w-4" /> Verify Code
@@ -249,6 +256,7 @@ export default function ResetPasswordPage() {
                     required
                     minLength={6}
                     autoFocus
+                    className="h-11"
                   />
                 </div>
                 <div className="space-y-2">
@@ -261,9 +269,10 @@ export default function ResetPasswordPage() {
                     placeholder="••••••••"
                     required
                     minLength={6}
+                    className="h-11"
                   />
                 </div>
-                <Button type="submit" className="w-full" disabled={loading}>
+                <Button type="submit" className="w-full h-11 font-medium" disabled={loading}>
                   {loading ? "Updating..." : (
                     <>
                       <Lock className="mr-2 h-4 w-4" /> Reset Password
@@ -273,7 +282,7 @@ export default function ResetPasswordPage() {
               </form>
             )}
 
-            <div className="mt-4 text-center">
+            <div className="mt-5 text-center">
               <button
                 onClick={() => {
                   if (step === "otp") {
@@ -283,7 +292,7 @@ export default function ResetPasswordPage() {
                     navigate(isMasterReset ? "/auth?master=true" : "/auth");
                   }
                 }}
-                className="text-sm text-muted-foreground hover:underline inline-flex items-center gap-1"
+                className="text-sm text-muted-foreground hover:text-foreground hover:underline inline-flex items-center gap-1 transition-colors"
               >
                 <ArrowLeft className="h-3 w-3" />
                 {step === "otp" ? "Change email" : "Back to Sign In"}
@@ -292,8 +301,8 @@ export default function ResetPasswordPage() {
           </CardContent>
         </Card>
 
-        <p className="text-center text-xs text-muted-foreground">
-          © 2024 Omnex Ventures Pty. Ltd. All rights reserved.
+        <p className="text-center text-[11px] text-muted-foreground/40 tracking-wide">
+          © {new Date().getFullYear()} Omnex Ventures Pty. Ltd. All rights reserved.
         </p>
       </div>
     </div>
