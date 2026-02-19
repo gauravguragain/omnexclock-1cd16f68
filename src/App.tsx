@@ -29,6 +29,7 @@ import RosterPage from "./pages/admin/RosterPage";
 import ForumPage from "./pages/admin/ForumPage";
 import RequestsPage from "./pages/admin/RequestsPage";
 import MyBusinessPage from "./pages/admin/MyBusinessPage";
+import InventoryPage from "./pages/admin/InventoryPage";
 import MasterDashboardPage from "./pages/master/MasterDashboardPage";
 import MasterBusinessesPage from "./pages/master/MasterBusinessesPage";
 import MasterUsersPage from "./pages/master/MasterUsersPage";
@@ -68,6 +69,7 @@ const App = () => (
                   <Route path="forum" element={<ForumPage />} />
                   <Route path="requests" element={<RequestsPage />} />
                   <Route path="my-business" element={<MyBusinessPage />} />
+                  <Route path="inventory" element={<InventoryPage />} />
                 </Route>
 
                 {/* Master admin routes */}

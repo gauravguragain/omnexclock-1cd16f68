@@ -501,6 +501,104 @@ export type Database = {
           },
         ]
       }
+      inventory_items: {
+        Row: {
+          business_id: string
+          category: string | null
+          created_at: string
+          current_count: number
+          id: string
+          min_count: number
+          name: string
+          notes: string | null
+          unit: string | null
+          updated_at: string
+        }
+        Insert: {
+          business_id: string
+          category?: string | null
+          created_at?: string
+          current_count?: number
+          id?: string
+          min_count?: number
+          name: string
+          notes?: string | null
+          unit?: string | null
+          updated_at?: string
+        }
+        Update: {
+          business_id?: string
+          category?: string | null
+          created_at?: string
+          current_count?: number
+          id?: string
+          min_count?: number
+          name?: string
+          notes?: string | null
+          unit?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inventory_items_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      inventory_orders: {
+        Row: {
+          business_id: string
+          created_at: string
+          id: string
+          item_id: string
+          notes: string | null
+          quantity: number
+          requested_by: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          business_id: string
+          created_at?: string
+          id?: string
+          item_id: string
+          notes?: string | null
+          quantity?: number
+          requested_by: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          business_id?: string
+          created_at?: string
+          id?: string
+          item_id?: string
+          notes?: string | null
+          quantity?: number
+          requested_by?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inventory_orders_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_orders_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "inventory_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       master_audit_logs: {
         Row: {
           action: string
