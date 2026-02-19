@@ -416,9 +416,14 @@ export default function PayrollPage() {
       <CardContent className="p-0">
         <div className="overflow-x-auto">
           <Table>
-             <TableHeader>
+            <TableHeader>
               <TableRow>
-                <SortHeader label="Employee" sortKeyName="name" />
+                <TableHead className="cursor-pointer select-none sticky left-0 bg-card z-20 border-r border-border/60 min-w-[140px]" onClick={() => toggleSort("name")}>
+                  <div className="flex items-center gap-1">
+                    Employee
+                    <ArrowUpDown className={`h-3 w-3 ${sortKey === "name" ? "text-primary" : "text-muted-foreground"}`} />
+                  </div>
+                </TableHead>
                 <TableHead>Department</TableHead>
                 <SortHeader label="Net Hrs" sortKeyName="net_hours" />
                 <SortHeader label="Employee Pay" sortKeyName="employee_pay" />
@@ -436,7 +441,7 @@ export default function PayrollPage() {
                 const marginPct = e.admin_pay > 0 ? (marginEx / e.admin_pay * 100) : 0;
                 return (
                   <TableRow key={e.employee_id}>
-                    <TableCell className="font-medium">{e.name}</TableCell>
+                    <TableCell className="font-medium sticky left-0 bg-card z-20 border-r border-border/60">{e.name}</TableCell>
                     <TableCell>{e.department || "-"}</TableCell>
                     <TableCell>{e.net_hours.toFixed(2)}</TableCell>
                     <TableCell>${e.employee_pay.toFixed(2)}</TableCell>
@@ -465,7 +470,7 @@ export default function PayrollPage() {
             {pageEntries.length > 0 && (
               <tfoot>
                 <TableRow className="bg-muted/50 font-semibold">
-                  <TableCell>Totals</TableCell>
+                  <TableCell className="sticky left-0 bg-muted/50 z-20 border-r border-border/60">Totals</TableCell>
                   <TableCell />
                   <TableCell>{totalNetHours.toFixed(2)}</TableCell>
                   <TableCell>${totalEmployeePay.toFixed(2)}</TableCell>
@@ -606,9 +611,14 @@ export default function PayrollPage() {
       <CardContent className="p-0">
         <div className="overflow-x-auto">
           <Table>
-            <TableHeader>
+             <TableHeader>
               <TableRow>
-                <SortHeader label="Employee" sortKeyName="name" />
+                <TableHead className="cursor-pointer select-none sticky left-0 bg-card z-20 border-r border-border/60 min-w-[140px]" onClick={() => toggleSort("name")}>
+                  <div className="flex items-center gap-1">
+                    Employee
+                    <ArrowUpDown className={`h-3 w-3 ${sortKey === "name" ? "text-primary" : "text-muted-foreground"}`} />
+                  </div>
+                </TableHead>
                 <TableHead>{rateLabel}</TableHead>
                 <SortHeader label="Total Hrs" sortKeyName="total_hours" />
                 <TableHead>Breaks</TableHead>
@@ -620,7 +630,7 @@ export default function PayrollPage() {
             <TableBody>
               {pageEntries.map((e) => (
                 <TableRow key={e.employee_id}>
-                  <TableCell className="font-medium">{e.name}</TableCell>
+                  <TableCell className="font-medium sticky left-0 bg-card z-20 border-r border-border/60">{e.name}</TableCell>
                   <TableCell>${(isEmployee ? e.pay_rate : e.admin_hourly_rate).toFixed(2)}</TableCell>
                   <TableCell>{e.total_hours.toFixed(2)}</TableCell>
                   <TableCell>{e.break_hours.toFixed(2)}</TableCell>
@@ -640,7 +650,7 @@ export default function PayrollPage() {
             {pageEntries.length > 0 && (
               <tfoot>
                 <TableRow className="bg-muted/50 font-semibold">
-                  <TableCell>Totals</TableCell>
+                  <TableCell className="sticky left-0 bg-muted/50 z-20 border-r border-border/60">Totals</TableCell>
                   <TableCell />
                   <TableCell>{(entries.reduce((s, e) => s + e.total_hours, 0)).toFixed(2)}</TableCell>
                   <TableCell>{totalBreakHours.toFixed(2)}</TableCell>
