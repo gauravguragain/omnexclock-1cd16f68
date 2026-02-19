@@ -60,12 +60,8 @@ export default function RegisterBusinessPage() {
         : error.message;
       toast({ title: "Error", description: msg, variant: "destructive" });
     } else {
-      toast({ title: "Business Registered!", description: "You are now the admin. Redirecting to your dashboard..." });
+      toast({ title: "Business Registered!", description: "Your business has been registered. A platform administrator will review and approve your account shortly." });
       logMasterAudit("business_registered", { business_name: businessName.trim(), business_code: code });
-      // Small delay then redirect
-      setTimeout(() => {
-        window.location.href = "/hub";
-      }, 1500);
     }
     setLoading(false);
   };
