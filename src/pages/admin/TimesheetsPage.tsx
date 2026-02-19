@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useActionLock } from "@/contexts/ActionLockContext";
 import { useBusiness } from "@/contexts/BusinessContext";
 import { format, startOfWeek, endOfWeek, addWeeks, subWeeks } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
@@ -113,6 +114,7 @@ function DateRangeSelector({ dateFrom, dateTo, onChangeFrom, onChangeTo }: {
 
 
 export default function TimesheetsPage() {
+  const { runAction } = useActionLock();
   const { isViewer } = useAuth();
   const { business } = useBusiness();
   const [entries, setEntries] = useState<TimesheetEntry[]>([]);
@@ -332,31 +334,33 @@ export default function TimesheetsPage() {
 
   const approveAll = async () => {
     if (saving) return;
-    setSaving(true);
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      const unapproved = filtered.filter(e => !e.approved && !isShiftActive(e));
-      if (unapproved.length === 0) { toast.info("No completed shifts to approve"); setSaving(false); return; }
+    await runAction(async () => {
+      setSaving(true);
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        const unapproved = filtered.filter(e => !e.approved && !isShiftActive(e));
+        if (unapproved.length === 0) { toast.info("No completed shifts to approve"); setSaving(false); return; }
 
-      const records = unapproved.map(e => ({
-        employee_id: e.employee_id,
-        date: e.raw_date,
-        approved: true,
-        approved_by: user?.id || null,
-        approved_at: new Date().toISOString(),
-      }));
+        const records = unapproved.map(e => ({
+          employee_id: e.employee_id,
+          date: e.raw_date,
+          approved: true,
+          approved_by: user?.id || null,
+          approved_at: new Date().toISOString(),
+        }));
 
-      const { error } = await supabase.from("timesheet_approvals").upsert(records, { onConflict: "employee_id,date" });
-      if (error) { toast.error("Failed: " + error.message); return; }
-      const skippedCount = filtered.filter(e => !e.approved && isShiftActive(e)).length;
-      await logAudit("timesheet_approve_all", { count: unapproved.length, employees: unapproved.map(e => ({ id: e.employee_id, name: e.employee_name, date: e.date })) });
-      let msg = `Approved ${unapproved.length} timesheets`;
-      if (skippedCount > 0) msg += `. Skipped ${skippedCount} active shift(s).`;
-      toast.success(msg);
-      fetchTimesheets();
-    } finally {
-      setSaving(false);
-    }
+        const { error } = await supabase.from("timesheet_approvals").upsert(records, { onConflict: "employee_id,date" });
+        if (error) { toast.error("Failed: " + error.message); return; }
+        const skippedCount = filtered.filter(e => !e.approved && isShiftActive(e)).length;
+        await logAudit("timesheet_approve_all", { count: unapproved.length, employees: unapproved.map(e => ({ id: e.employee_id, name: e.employee_name, date: e.date })) });
+        let msg = `Approved ${unapproved.length} timesheets`;
+        if (skippedCount > 0) msg += `. Skipped ${skippedCount} active shift(s).`;
+        toast.success(msg);
+        fetchTimesheets();
+      } finally {
+        setSaving(false);
+      }
+    });
   };
 
   const toTimeInput = (isoTimestamp: string | null) => {
@@ -396,105 +400,111 @@ export default function TimesheetsPage() {
   const saveEdit = async () => {
     if (saving || !editingEntry) return;
     if (!editForm.comment.trim()) { toast.error("Comment is required when editing timesheets"); return; }
-    setSaving(true);
-    try {
-      for (const id of editingEntry.event_ids) {
-        await supabase.from("clock_events").delete().eq("id", id);
+    await runAction(async () => {
+      setSaving(true);
+      try {
+        for (const id of editingEntry.event_ids) {
+          await supabase.from("clock_events").delete().eq("id", id);
+        }
+        const events: { employee_id: string; event_type: "clock_in" | "clock_out" | "break_start" | "break_end"; timestamp: string; created_at: string }[] = [];
+        if (editForm.clock_in) events.push({ employee_id: editForm.employee_id, event_type: "clock_in", timestamp: buildAusTimestamp(editForm.date, editForm.clock_in), created_at: buildAusTimestamp(editForm.date, editForm.clock_in) });
+        if (editForm.break_start) events.push({ employee_id: editForm.employee_id, event_type: "break_start", timestamp: buildAusTimestamp(editForm.date, editForm.break_start), created_at: buildAusTimestamp(editForm.date, editForm.break_start) });
+        if (editForm.break_end) events.push({ employee_id: editForm.employee_id, event_type: "break_end", timestamp: buildAusTimestamp(editForm.date, editForm.break_end), created_at: buildAusTimestamp(editForm.date, editForm.break_end) });
+        if (editForm.clock_out) events.push({ employee_id: editForm.employee_id, event_type: "clock_out", timestamp: buildAusTimestamp(editForm.date, editForm.clock_out), created_at: buildAusTimestamp(editForm.date, editForm.clock_out) });
+        if (events.length > 0) {
+          const { error } = await supabase.from("clock_events").insert(events);
+          if (error) { toast.error("Failed to save: " + error.message); return; }
+        }
+        await logAudit("timesheet_edit", {
+          employee_id: editForm.employee_id,
+          employee_name: editingEntry.employee_name,
+          date: editForm.date,
+          comment: editForm.comment.trim(),
+          previous: {
+            clock_in: editingEntry.clock_in,
+            clock_out: editingEntry.clock_out,
+            break_start: editingEntry.break_start,
+            break_end: editingEntry.break_end,
+          },
+          updated: {
+            clock_in: editForm.clock_in || null,
+            clock_out: editForm.clock_out || null,
+            break_start: editForm.break_start || null,
+            break_end: editForm.break_end || null,
+          },
+        });
+        toast.success("Timesheet updated");
+        setEditDialog(false);
+        fetchTimesheets();
+      } finally {
+        setSaving(false);
       }
-      const events: { employee_id: string; event_type: "clock_in" | "clock_out" | "break_start" | "break_end"; timestamp: string; created_at: string }[] = [];
-      if (editForm.clock_in) events.push({ employee_id: editForm.employee_id, event_type: "clock_in", timestamp: buildAusTimestamp(editForm.date, editForm.clock_in), created_at: buildAusTimestamp(editForm.date, editForm.clock_in) });
-      if (editForm.break_start) events.push({ employee_id: editForm.employee_id, event_type: "break_start", timestamp: buildAusTimestamp(editForm.date, editForm.break_start), created_at: buildAusTimestamp(editForm.date, editForm.break_start) });
-      if (editForm.break_end) events.push({ employee_id: editForm.employee_id, event_type: "break_end", timestamp: buildAusTimestamp(editForm.date, editForm.break_end), created_at: buildAusTimestamp(editForm.date, editForm.break_end) });
-      if (editForm.clock_out) events.push({ employee_id: editForm.employee_id, event_type: "clock_out", timestamp: buildAusTimestamp(editForm.date, editForm.clock_out), created_at: buildAusTimestamp(editForm.date, editForm.clock_out) });
-      if (events.length > 0) {
-        const { error } = await supabase.from("clock_events").insert(events);
-        if (error) { toast.error("Failed to save: " + error.message); return; }
-      }
-      await logAudit("timesheet_edit", {
-        employee_id: editForm.employee_id,
-        employee_name: editingEntry.employee_name,
-        date: editForm.date,
-        comment: editForm.comment.trim(),
-        previous: {
-          clock_in: editingEntry.clock_in,
-          clock_out: editingEntry.clock_out,
-          break_start: editingEntry.break_start,
-          break_end: editingEntry.break_end,
-        },
-        updated: {
-          clock_in: editForm.clock_in || null,
-          clock_out: editForm.clock_out || null,
-          break_start: editForm.break_start || null,
-          break_end: editForm.break_end || null,
-        },
-      });
-      toast.success("Timesheet updated");
-      setEditDialog(false);
-      fetchTimesheets();
-    } finally {
-      setSaving(false);
-    }
+    });
   };
 
   const saveAdd = async () => {
     if (saving) return;
     if (!editForm.comment.trim()) { toast.error("Comment is required when adding timesheets"); return; }
-    setSaving(true);
-    try {
-      const events: { employee_id: string; event_type: "clock_in" | "clock_out" | "break_start" | "break_end"; timestamp: string; created_at: string }[] = [];
-      if (editForm.clock_in) events.push({ employee_id: editForm.employee_id, event_type: "clock_in", timestamp: buildAusTimestamp(editForm.date, editForm.clock_in), created_at: buildAusTimestamp(editForm.date, editForm.clock_in) });
-      if (editForm.break_start) events.push({ employee_id: editForm.employee_id, event_type: "break_start", timestamp: buildAusTimestamp(editForm.date, editForm.break_start), created_at: buildAusTimestamp(editForm.date, editForm.break_start) });
-      if (editForm.break_end) events.push({ employee_id: editForm.employee_id, event_type: "break_end", timestamp: buildAusTimestamp(editForm.date, editForm.break_end), created_at: buildAusTimestamp(editForm.date, editForm.break_end) });
-      if (editForm.clock_out) events.push({ employee_id: editForm.employee_id, event_type: "clock_out", timestamp: buildAusTimestamp(editForm.date, editForm.clock_out), created_at: buildAusTimestamp(editForm.date, editForm.clock_out) });
-      if (events.length === 0) { toast.error("Enter at least one time"); return; }
-      const { error } = await supabase.from("clock_events").insert(events);
-      if (error) { toast.error("Failed to add: " + error.message); return; }
-      const emp = employees.find(e => e.id === editForm.employee_id);
-      await logAudit("timesheet_add", {
-        employee_id: editForm.employee_id,
-        employee_name: emp?.name || "Unknown",
-        date: editForm.date,
-        comment: editForm.comment.trim(),
-        times: {
-          clock_in: editForm.clock_in || null,
-          clock_out: editForm.clock_out || null,
-          break_start: editForm.break_start || null,
-          break_end: editForm.break_end || null,
-        },
-      });
-      toast.success("Entry added");
-      setAddDialog(false);
-      fetchTimesheets();
-    } finally {
-      setSaving(false);
-    }
+    await runAction(async () => {
+      setSaving(true);
+      try {
+        const events: { employee_id: string; event_type: "clock_in" | "clock_out" | "break_start" | "break_end"; timestamp: string; created_at: string }[] = [];
+        if (editForm.clock_in) events.push({ employee_id: editForm.employee_id, event_type: "clock_in", timestamp: buildAusTimestamp(editForm.date, editForm.clock_in), created_at: buildAusTimestamp(editForm.date, editForm.clock_in) });
+        if (editForm.break_start) events.push({ employee_id: editForm.employee_id, event_type: "break_start", timestamp: buildAusTimestamp(editForm.date, editForm.break_start), created_at: buildAusTimestamp(editForm.date, editForm.break_start) });
+        if (editForm.break_end) events.push({ employee_id: editForm.employee_id, event_type: "break_end", timestamp: buildAusTimestamp(editForm.date, editForm.break_end), created_at: buildAusTimestamp(editForm.date, editForm.break_end) });
+        if (editForm.clock_out) events.push({ employee_id: editForm.employee_id, event_type: "clock_out", timestamp: buildAusTimestamp(editForm.date, editForm.clock_out), created_at: buildAusTimestamp(editForm.date, editForm.clock_out) });
+        if (events.length === 0) { toast.error("Enter at least one time"); return; }
+        const { error } = await supabase.from("clock_events").insert(events);
+        if (error) { toast.error("Failed to add: " + error.message); return; }
+        const emp = employees.find(e => e.id === editForm.employee_id);
+        await logAudit("timesheet_add", {
+          employee_id: editForm.employee_id,
+          employee_name: emp?.name || "Unknown",
+          date: editForm.date,
+          comment: editForm.comment.trim(),
+          times: {
+            clock_in: editForm.clock_in || null,
+            clock_out: editForm.clock_out || null,
+            break_start: editForm.break_start || null,
+            break_end: editForm.break_end || null,
+          },
+        });
+        toast.success("Entry added");
+        setAddDialog(false);
+        fetchTimesheets();
+      } finally {
+        setSaving(false);
+      }
+    });
   };
 
   const deleteEntry = async (entry: TimesheetEntry) => {
     if (entry.approved) { toast.error("Cannot delete an approved timesheet. Revoke approval first."); return; }
     if (saving) return;
     if (!confirm(`Delete all timesheet entries for ${entry.employee_name} on ${entry.date}?`)) return;
-    setSaving(true);
-    try {
-      for (const id of entry.event_ids) {
-        await supabase.from("clock_events").delete().eq("id", id);
+    await runAction(async () => {
+      setSaving(true);
+      try {
+        for (const id of entry.event_ids) {
+          await supabase.from("clock_events").delete().eq("id", id);
+        }
+        await logAudit("timesheet_delete", {
+          employee_id: entry.employee_id,
+          employee_name: entry.employee_name,
+          date: entry.date,
+          deleted_times: {
+            clock_in: entry.clock_in,
+            clock_out: entry.clock_out,
+            break_start: entry.break_start,
+            break_end: entry.break_end,
+          },
+        });
+        toast.success("Entry deleted");
+        fetchTimesheets();
+      } finally {
+        setSaving(false);
       }
-      await logAudit("timesheet_delete", {
-        employee_id: entry.employee_id,
-        employee_name: entry.employee_name,
-        date: entry.date,
-        deleted_times: {
-          clock_in: entry.clock_in,
-          clock_out: entry.clock_out,
-          break_start: entry.break_start,
-          break_end: entry.break_end,
-        },
-      });
-      toast.success("Entry deleted");
-      fetchTimesheets();
-    } finally {
-      setSaving(false);
-    }
+    });
   };
 
   const filtered = entries.filter((e) => {

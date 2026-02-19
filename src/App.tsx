@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { BusinessProvider } from "@/contexts/BusinessContext";
+import { ActionLockProvider } from "@/contexts/ActionLockContext";
 
 import NotFound from "./pages/NotFound";
 import Index from "./pages/Index";
@@ -41,50 +42,52 @@ const App = () => (
     <TooltipProvider>
       <AuthProvider>
         <BusinessProvider>
-          <Toaster />
-          <Sonner />
-          <BrowserRouter>
-            <Routes>
-              <Route path="/" element={<Index />} />
-              <Route path="/auth" element={<AuthPage />} />
-              <Route path="/reset-password" element={<ResetPasswordPage />} />
-              <Route path="/register-business" element={<RegisterBusinessPage />} />
-              <Route path="/hub" element={<BusinessHubPage />} />
+          <ActionLockProvider>
+            <Toaster />
+            <Sonner />
+            <BrowserRouter>
+              <Routes>
+                <Route path="/" element={<Index />} />
+                <Route path="/auth" element={<AuthPage />} />
+                <Route path="/reset-password" element={<ResetPasswordPage />} />
+                <Route path="/register-business" element={<RegisterBusinessPage />} />
+                <Route path="/hub" element={<BusinessHubPage />} />
 
-              {/* Business-scoped routes */}
-              <Route path="/b/:businessCode/kiosk" element={<KioskPage />} />
-              <Route path="/b/:businessCode/portal" element={<PortalPage />} />
-              <Route path="/b/:businessCode/admin" element={<AdminLayout />}>
-                <Route index element={<DashboardPage />} />
-                <Route path="employees" element={<EmployeesPage />} />
-                <Route path="roster" element={<RosterPage />} />
-                <Route path="live" element={<LiveMonitorPage />} />
-                <Route path="timesheets" element={<TimesheetsPage />} />
-                <Route path="payroll" element={<PayrollPage />} />
-                <Route path="audit-log" element={<AuditLogPage />} />
-                <Route path="users" element={<UsersPage />} />
-                <Route path="forum" element={<ForumPage />} />
-                <Route path="requests" element={<RequestsPage />} />
-                <Route path="my-business" element={<MyBusinessPage />} />
-              </Route>
+                {/* Business-scoped routes */}
+                <Route path="/b/:businessCode/kiosk" element={<KioskPage />} />
+                <Route path="/b/:businessCode/portal" element={<PortalPage />} />
+                <Route path="/b/:businessCode/admin" element={<AdminLayout />}>
+                  <Route index element={<DashboardPage />} />
+                  <Route path="employees" element={<EmployeesPage />} />
+                  <Route path="roster" element={<RosterPage />} />
+                  <Route path="live" element={<LiveMonitorPage />} />
+                  <Route path="timesheets" element={<TimesheetsPage />} />
+                  <Route path="payroll" element={<PayrollPage />} />
+                  <Route path="audit-log" element={<AuditLogPage />} />
+                  <Route path="users" element={<UsersPage />} />
+                  <Route path="forum" element={<ForumPage />} />
+                  <Route path="requests" element={<RequestsPage />} />
+                  <Route path="my-business" element={<MyBusinessPage />} />
+                </Route>
 
-              {/* Master admin routes */}
-              <Route path="/master" element={<MasterLayout />}>
-                <Route index element={<MasterDashboardPage />} />
-                <Route path="businesses" element={<MasterBusinessesPage />} />
-                <Route path="users" element={<MasterUsersPage />} />
-                <Route path="audit-log" element={<MasterAuditLogPage />} />
-                <Route path="settings" element={<MasterSettingsPage />} />
-              </Route>
+                {/* Master admin routes */}
+                <Route path="/master" element={<MasterLayout />}>
+                  <Route index element={<MasterDashboardPage />} />
+                  <Route path="businesses" element={<MasterBusinessesPage />} />
+                  <Route path="users" element={<MasterUsersPage />} />
+                  <Route path="audit-log" element={<MasterAuditLogPage />} />
+                  <Route path="settings" element={<MasterSettingsPage />} />
+                </Route>
 
-              {/* Legacy redirects */}
-              <Route path="/admin/*" element={<BusinessHubPage />} />
-              <Route path="/kiosk" element={<BusinessHubPage />} />
-              <Route path="/portal" element={<EmployeePortalEntry />} />
+                {/* Legacy redirects */}
+                <Route path="/admin/*" element={<BusinessHubPage />} />
+                <Route path="/kiosk" element={<BusinessHubPage />} />
+                <Route path="/portal" element={<EmployeePortalEntry />} />
 
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-          </BrowserRouter>
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+            </BrowserRouter>
+          </ActionLockProvider>
         </BusinessProvider>
       </AuthProvider>
     </TooltipProvider>

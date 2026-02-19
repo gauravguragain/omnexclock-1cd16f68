@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
+import { useActionLock } from "@/contexts/ActionLockContext";
 import WalkthroughTour from "@/components/WalkthroughTour";
 import { portalTourSteps } from "@/components/tourSteps";
 import { useParams } from "react-router-dom";
@@ -110,6 +111,7 @@ function PortalNotifications({ employeeCode, businessCode }: { employeeCode: str
 /* ── component ───────────────────────────────────────────── */
 
 export default function PortalPage() {
+  const { runAction } = useActionLock();
   const { toast } = useToast();
   const { businessCode: urlBusinessCode } = useParams();
   const { applyTheme, resetTheme } = useBusiness();
@@ -193,42 +195,44 @@ export default function PortalPage() {
       return;
     }
 
-    setLoading(true);
-    try {
-      const bizCode = urlBusinessCode?.toUpperCase() || null;
-      const { data: statusData } = await supabase.rpc("get_employee_status", { _employee_code: code, _business_code: bizCode });
-      if (!statusData || statusData.length === 0) {
-        toast({ title: "Invalid Code", description: "Employee not found.", variant: "destructive" });
-        setLoading(false);
-        return;
+    await runAction(async () => {
+      setLoading(true);
+      try {
+        const bizCode = urlBusinessCode?.toUpperCase() || null;
+        const { data: statusData } = await supabase.rpc("get_employee_status", { _employee_code: code, _business_code: bizCode });
+        if (!statusData || statusData.length === 0) {
+          toast({ title: "Invalid Code", description: "Employee not found.", variant: "destructive" });
+          setLoading(false);
+          return;
+        }
+
+        const info = statusData[0] as EmployeeInfo;
+        setEmployeeInfo(info);
+        setEmployeeCode(code);
+
+        const [shiftsRes, tsRes, forumRes, requestsRes, approvalsRes] = await Promise.all([
+          supabase.rpc("get_employee_shifts", { _employee_code: code, _business_code: bizCode }),
+          supabase.rpc("get_employee_timesheets", { _employee_code: code, _business_code: bizCode }),
+          supabase.rpc("get_forum_posts", { _employee_code: code, _business_code: bizCode }),
+          supabase.rpc("get_employee_requests", { _employee_code: code, _business_code: bizCode }),
+          supabase.rpc("get_employee_timesheet_approvals", { _employee_code: code, _business_code: bizCode }),
+        ]);
+
+        setShifts((shiftsRes.data as PortalShift[]) || []);
+        setTimesheets((tsRes.data as TimesheetEntry[]) || []);
+        setForumPosts(forumRes.data || []);
+        setMyRequests(requestsRes.data || []);
+        const approvalMap = new Map<string, boolean>();
+        for (const a of (approvalsRes.data || []) as any[]) {
+          approvalMap.set(a.approval_date, a.is_approved);
+        }
+        setTimesheetApprovals(approvalMap);
+        setAuthenticated(true);
+      } catch {
+        toast({ title: "Error", description: "Unable to load portal.", variant: "destructive" });
       }
-
-      const info = statusData[0] as EmployeeInfo;
-      setEmployeeInfo(info);
-      setEmployeeCode(code);
-
-      const [shiftsRes, tsRes, forumRes, requestsRes, approvalsRes] = await Promise.all([
-        supabase.rpc("get_employee_shifts", { _employee_code: code, _business_code: bizCode }),
-        supabase.rpc("get_employee_timesheets", { _employee_code: code, _business_code: bizCode }),
-        supabase.rpc("get_forum_posts", { _employee_code: code, _business_code: bizCode }),
-        supabase.rpc("get_employee_requests", { _employee_code: code, _business_code: bizCode }),
-        supabase.rpc("get_employee_timesheet_approvals", { _employee_code: code, _business_code: bizCode }),
-      ]);
-
-      setShifts((shiftsRes.data as PortalShift[]) || []);
-      setTimesheets((tsRes.data as TimesheetEntry[]) || []);
-      setForumPosts(forumRes.data || []);
-      setMyRequests(requestsRes.data || []);
-      const approvalMap = new Map<string, boolean>();
-      for (const a of (approvalsRes.data || []) as any[]) {
-        approvalMap.set(a.approval_date, a.is_approved);
-      }
-      setTimesheetApprovals(approvalMap);
-      setAuthenticated(true);
-    } catch {
-      toast({ title: "Error", description: "Unable to load portal.", variant: "destructive" });
-    }
-    setLoading(false);
+      setLoading(false);
+    });
   };
 
   const handleLogout = () => {
@@ -274,13 +278,14 @@ export default function PortalPage() {
 
   const sendComment = async () => {
     if (!newComment.trim() || !selectedForumPost) return;
-    const bizCode = urlBusinessCode?.toUpperCase() || null;
-    await supabase.rpc("add_forum_comment", { _employee_code: employeeCode, _post_id: selectedForumPost.id, _content: newComment.trim(), _business_code: bizCode });
-    setNewComment("");
-    loadForumPost(selectedForumPost);
-    // Refresh post counts
-    const { data } = await supabase.rpc("get_forum_posts", { _employee_code: employeeCode, _business_code: bizCode });
-    setForumPosts(data || []);
+    await runAction(async () => {
+      const bizCode = urlBusinessCode?.toUpperCase() || null;
+      await supabase.rpc("add_forum_comment", { _employee_code: employeeCode, _post_id: selectedForumPost.id, _content: newComment.trim(), _business_code: bizCode });
+      setNewComment("");
+      loadForumPost(selectedForumPost);
+      const { data } = await supabase.rpc("get_forum_posts", { _employee_code: employeeCode, _business_code: bizCode });
+      setForumPosts(data || []);
+    });
   };
 
   const toggleReaction = async (emoji: string) => {
@@ -303,53 +308,55 @@ export default function PortalPage() {
   const DAYS_OF_WEEK = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
 
   const submitRequest = async () => {
-    setReqSaving(true);
-    const bizCode = urlBusinessCode?.toUpperCase() || null;
-    const params: any = {
-      _employee_code: employeeCode,
-      _request_type: reqType,
-      _business_code: bizCode,
-      _is_recurring: reqIsRecurring,
-      _reason: reqReason.trim() || null,
-      _start_time: reqType === "unavailability" && reqStartTime && reqStartTime !== "none" ? reqStartTime : null,
-      _end_time: reqType === "unavailability" && reqEndTime && reqEndTime !== "none" ? reqEndTime : null,
-    };
-    if (reqIsRecurring) {
-      params._recurring_days = reqDays;
-      params._recurring_start_date = reqRecurringStart ? format(reqRecurringStart, "yyyy-MM-dd") : null;
-      params._recurring_end_date = reqRecurringEnd ? format(reqRecurringEnd, "yyyy-MM-dd") : null;
-    } else {
-      params._start_date = reqStartDate ? format(reqStartDate, "yyyy-MM-dd") : null;
-      params._end_date = reqEndDate ? format(reqEndDate, "yyyy-MM-dd") : null;
-    }
-    if (editingRequestId) {
-      const updateParams: any = {
-        ...params,
-        _request_id: editingRequestId,
+    await runAction(async () => {
+      setReqSaving(true);
+      const bizCode = urlBusinessCode?.toUpperCase() || null;
+      const params: any = {
+        _employee_code: employeeCode,
+        _request_type: reqType,
+        _business_code: bizCode,
+        _is_recurring: reqIsRecurring,
+        _reason: reqReason.trim() || null,
+        _start_time: reqType === "unavailability" && reqStartTime && reqStartTime !== "none" ? reqStartTime : null,
+        _end_time: reqType === "unavailability" && reqEndTime && reqEndTime !== "none" ? reqEndTime : null,
       };
-      const { data } = await supabase.rpc("update_employee_request", updateParams);
-      if (data) {
-        toast({ title: "Request Updated" });
-        setRequestOpen(false);
-        resetRequestForm();
-        const { data: updated } = await supabase.rpc("get_employee_requests", { _employee_code: employeeCode, _business_code: bizCode });
-        setMyRequests(updated || []);
+      if (reqIsRecurring) {
+        params._recurring_days = reqDays;
+        params._recurring_start_date = reqRecurringStart ? format(reqRecurringStart, "yyyy-MM-dd") : null;
+        params._recurring_end_date = reqRecurringEnd ? format(reqRecurringEnd, "yyyy-MM-dd") : null;
       } else {
-        toast({ title: "Error", description: "Failed to update request.", variant: "destructive" });
+        params._start_date = reqStartDate ? format(reqStartDate, "yyyy-MM-dd") : null;
+        params._end_date = reqEndDate ? format(reqEndDate, "yyyy-MM-dd") : null;
       }
-    } else {
-      const { data } = await supabase.rpc("submit_employee_request", params);
-      if (data) {
-        toast({ title: "Request Submitted", description: "Your request has been sent for admin approval." });
-        setRequestOpen(false);
-        resetRequestForm();
-        const { data: updated } = await supabase.rpc("get_employee_requests", { _employee_code: employeeCode, _business_code: bizCode });
-        setMyRequests(updated || []);
+      if (editingRequestId) {
+        const updateParams: any = {
+          ...params,
+          _request_id: editingRequestId,
+        };
+        const { data } = await supabase.rpc("update_employee_request", updateParams);
+        if (data) {
+          toast({ title: "Request Updated" });
+          setRequestOpen(false);
+          resetRequestForm();
+          const { data: updated } = await supabase.rpc("get_employee_requests", { _employee_code: employeeCode, _business_code: bizCode });
+          setMyRequests(updated || []);
+        } else {
+          toast({ title: "Error", description: "Failed to update request.", variant: "destructive" });
+        }
       } else {
-        toast({ title: "Error", description: "Failed to submit request.", variant: "destructive" });
+        const { data } = await supabase.rpc("submit_employee_request", params);
+        if (data) {
+          toast({ title: "Request Submitted", description: "Your request has been sent for admin approval." });
+          setRequestOpen(false);
+          resetRequestForm();
+          const { data: updated } = await supabase.rpc("get_employee_requests", { _employee_code: employeeCode, _business_code: bizCode });
+          setMyRequests(updated || []);
+        } else {
+          toast({ title: "Error", description: "Failed to submit request.", variant: "destructive" });
+        }
       }
-    }
-    setReqSaving(false);
+      setReqSaving(false);
+    });
   };
 
   const resetRequestForm = () => {
@@ -367,15 +374,17 @@ export default function PortalPage() {
   };
 
   const deleteRequest = async (requestId: string) => {
-    const bizCode = urlBusinessCode?.toUpperCase() || null;
-    const { data } = await supabase.rpc("delete_employee_request", { _employee_code: employeeCode, _request_id: requestId, _business_code: bizCode });
-    if (data) {
-      toast({ title: "Request deleted" });
-      const { data: updated } = await supabase.rpc("get_employee_requests", { _employee_code: employeeCode, _business_code: bizCode });
-      setMyRequests(updated || []);
-    } else {
-      toast({ title: "Error", description: "Failed to delete request.", variant: "destructive" });
-    }
+    await runAction(async () => {
+      const bizCode = urlBusinessCode?.toUpperCase() || null;
+      const { data } = await supabase.rpc("delete_employee_request", { _employee_code: employeeCode, _request_id: requestId, _business_code: bizCode });
+      if (data) {
+        toast({ title: "Request deleted" });
+        const { data: updated } = await supabase.rpc("get_employee_requests", { _employee_code: employeeCode, _business_code: bizCode });
+        setMyRequests(updated || []);
+      } else {
+        toast({ title: "Error", description: "Failed to delete request.", variant: "destructive" });
+      }
+    });
   };
 
   const openEditRequest = (req: any) => {

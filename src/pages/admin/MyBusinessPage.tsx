@@ -1,4 +1,5 @@
 import { useState, useRef } from "react";
+import { useActionLock } from "@/contexts/ActionLockContext";
 import { useBusiness, BusinessTheme } from "@/contexts/BusinessContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,6 +12,7 @@ import { Building2, Upload, Palette, Check, Loader2 } from "lucide-react";
 import { logMasterAudit } from "@/lib/auditLog";
 
 export default function MyBusinessPage() {
+  const { runAction } = useActionLock();
   const { business, refreshBusiness, applyTheme } = useBusiness();
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -30,31 +32,33 @@ export default function MyBusinessPage() {
   if (!business) return <div className="p-6 text-muted-foreground">No business selected.</div>;
 
   const handleSave = async () => {
-    setSaving(true);
-    const { error } = await supabase
-      .from("businesses")
-      .update({
-        name: name.trim(),
-        email: email.trim() || null,
-        phone: phone.trim() || null,
-        address: address.trim() || null,
-        industry: industry.trim() || null,
-        description: description.trim() || null,
-      })
-      .eq("id", business.id);
+    await runAction(async () => {
+      setSaving(true);
+      const { error } = await supabase
+        .from("businesses")
+        .update({
+          name: name.trim(),
+          email: email.trim() || null,
+          phone: phone.trim() || null,
+          address: address.trim() || null,
+          industry: industry.trim() || null,
+          description: description.trim() || null,
+        })
+        .eq("id", business.id);
 
-    if (error) {
-      toast({ title: "Error", description: error.message, variant: "destructive" });
-    } else {
-      toast({ title: "Saved", description: "Business details updated." });
-      logMasterAudit("business_details_updated", {
-        business_id: business.id,
-        business_name: name.trim(),
-        fields_updated: ["name", "email", "phone", "address", "industry", "description"],
-      });
-      await refreshBusiness();
-    }
-    setSaving(false);
+      if (error) {
+        toast({ title: "Error", description: error.message, variant: "destructive" });
+      } else {
+        toast({ title: "Saved", description: "Business details updated." });
+        logMasterAudit("business_details_updated", {
+          business_id: business.id,
+          business_name: name.trim(),
+          fields_updated: ["name", "email", "phone", "address", "industry", "description"],
+        });
+        await refreshBusiness();
+      }
+      setSaving(false);
+    });
   };
 
   const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {

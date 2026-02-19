@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useActionLock } from "@/contexts/ActionLockContext";
 import { toAusLocaleString } from "@/lib/dateUtils";
 import { useAuth } from "@/contexts/AuthContext";
 import { useBusiness } from "@/contexts/BusinessContext";
@@ -31,6 +32,7 @@ interface Comment {
 }
 
 export default function ForumPage() {
+  const { runAction } = useActionLock();
   const { isViewer } = useAuth();
   const { business } = useBusiness();
   const [posts, setPosts] = useState<ForumPost[]>([]);
@@ -82,32 +84,36 @@ export default function ForumPage() {
       toast.error("Title and content are required");
       return;
     }
-    setSaving(true);
-    const { error } = await supabase.from("forum_posts").insert({ title: title.trim(), content: content.trim(), business_id: business?.id || null });
-    if (error) {
-      toast.error(error.message);
-    } else {
-      await logAudit("forum_post_create", { title: title.trim() });
-      toast.success("Post published");
-      setTitle("");
-      setContent("");
-      setCreateOpen(false);
-      fetchPosts();
-    }
-    setSaving(false);
+    await runAction(async () => {
+      setSaving(true);
+      const { error } = await supabase.from("forum_posts").insert({ title: title.trim(), content: content.trim(), business_id: business?.id || null });
+      if (error) {
+        toast.error(error.message);
+      } else {
+        await logAudit("forum_post_create", { title: title.trim() });
+        toast.success("Post published");
+        setTitle("");
+        setContent("");
+        setCreateOpen(false);
+        fetchPosts();
+      }
+      setSaving(false);
+    });
   };
 
   const handleDelete = async (postId: string) => {
     if (!confirm("Delete this post and all its comments/reactions?")) return;
-    const { error } = await supabase.from("forum_posts").delete().eq("id", postId);
-    if (error) {
-      toast.error(error.message);
-    } else {
-      await logAudit("forum_post_delete", { post_id: postId });
-      toast.success("Post deleted");
-      if (selectedPost?.id === postId) setSelectedPost(null);
-      fetchPosts();
-    }
+    await runAction(async () => {
+      const { error } = await supabase.from("forum_posts").delete().eq("id", postId);
+      if (error) {
+        toast.error(error.message);
+      } else {
+        await logAudit("forum_post_delete", { post_id: postId });
+        toast.success("Post deleted");
+        if (selectedPost?.id === postId) setSelectedPost(null);
+        fetchPosts();
+      }
+    });
   };
 
   const viewComments = async (post: ForumPost) => {
