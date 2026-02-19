@@ -14,9 +14,10 @@ interface EmailCSVDialogProps {
   csvData: string;
   csvFilename: string;
   subject: string;
+  skipAudit?: boolean;
 }
 
-export function EmailCSVDialog({ open, onOpenChange, csvData, csvFilename, subject }: EmailCSVDialogProps) {
+export function EmailCSVDialog({ open, onOpenChange, csvData, csvFilename, subject, skipAudit }: EmailCSVDialogProps) {
   const [email, setEmail] = useState("");
   const [sending, setSending] = useState(false);
 
@@ -44,12 +45,14 @@ export function EmailCSVDialog({ open, onOpenChange, csvData, csvFilename, subje
       if (error) throw error;
       if (data?.success === false) throw new Error(data.error || "Failed to send email");
       toast.success(`Report sent to ${email.trim()}`);
-      logAudit("csv_email_sent", {
-        recipient_email: email.trim(),
-        subject,
-        filename: csvFilename,
-        device: getDeviceInfo(),
-      });
+      if (!skipAudit) {
+        logAudit("csv_email_sent", {
+          recipient_email: email.trim(),
+          subject,
+          filename: csvFilename,
+          device: getDeviceInfo(),
+        });
+      }
       setEmail("");
       onOpenChange(false);
     } catch (err: any) {

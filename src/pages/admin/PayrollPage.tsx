@@ -338,12 +338,14 @@ export default function PayrollPage() {
     a.href = url;
     a.download = payrollCsvFilename;
     a.click();
-    logAudit("csv_download", {
-      source: "payroll",
-      tab: activeTab,
-      filename: payrollCsvFilename,
-      device: getDeviceInfo(),
-    });
+    if (activeTab !== "margin") {
+      logAudit("csv_download", {
+        source: "payroll",
+        tab: activeTab,
+        filename: payrollCsvFilename,
+        device: getDeviceInfo(),
+      });
+    }
   };
 
   const totalEmployeePay = filtered.reduce((sum, e) => sum + e.employee_pay, 0);
@@ -863,6 +865,7 @@ export default function PayrollPage() {
         csvData={buildPayrollCSV()}
         csvFilename={payrollCsvFilename}
         subject={payrollCsvSubject}
+        skipAudit={activeTab === "margin"}
       />
     </div>
   );
