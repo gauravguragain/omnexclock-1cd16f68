@@ -1,8 +1,9 @@
 import { useState } from "react";
 import { useBusiness } from "@/contexts/BusinessContext";
 import { useAuth } from "@/contexts/AuthContext";
-import { Package, Wine } from "lucide-react";
+import { Package, Wine, BookOpen } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Button } from "@/components/ui/button";
 import InventorySection from "@/components/InventorySection";
 
 const FOH_CATEGORIES = ["Glassware", "Cutlery", "Linen", "Consumables", "Equipment", "Cleaning", "General"];
@@ -21,10 +22,18 @@ export default function InventoryPage() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center gap-3">
+      <div className="flex items-center justify-between gap-3">
         <h2 className="text-lg font-bold text-foreground flex items-center gap-2">
           <Package className="h-5 w-5 text-primary" /> Inventory
         </h2>
+        <Button
+          variant="outline"
+          size="sm"
+          className="gap-1.5"
+          onClick={() => window.open("/induction-guide-inventory.html", "_blank")}
+        >
+          <BookOpen className="h-3.5 w-3.5" /> Manual
+        </Button>
       </div>
 
       <Tabs value={activeSection} onValueChange={setActiveSection}>
