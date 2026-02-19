@@ -346,8 +346,9 @@ export default function ServiceMaintenancePage() {
                 <Input
                   type="number"
                   min={1}
-                  value={form.frequency_days}
-                  onChange={(e) => setForm({ ...form, frequency_days: parseInt(e.target.value) || 30 })}
+                  value={form.frequency_days === 0 ? "" : form.frequency_days}
+                  onChange={(e) => setForm({ ...form, frequency_days: e.target.value === "" ? 0 : parseInt(e.target.value) || 0 })}
+                  onBlur={() => { if (!form.frequency_days) setForm({ ...form, frequency_days: 30 }); }}
                 />
               </div>
               <div>
