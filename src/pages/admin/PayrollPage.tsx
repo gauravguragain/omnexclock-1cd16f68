@@ -1,5 +1,6 @@
 import { useEffect, useState, useMemo } from "react";
 import { useBusiness } from "@/contexts/BusinessContext";
+import { useAuth } from "@/contexts/AuthContext";
 import { ausNow, toAusDate, ausStartOfDay, ausEndOfDay } from "@/lib/dateUtils";
 import { format, startOfWeek, endOfWeek, addWeeks, subWeeks } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
@@ -10,7 +11,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Download, DollarSign, Clock as ClockIcon, Users, Coffee, Search, ChevronLeft, ChevronRight, ArrowUpDown, CalendarIcon, CheckCircle2, Mail } from "lucide-react";
+import { Download, DollarSign, Clock as ClockIcon, Users, Coffee, Search, ChevronLeft, ChevronRight, ArrowUpDown, CalendarIcon, CheckCircle2, Mail, TrendingUp } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from "recharts";
 import { Badge } from "@/components/ui/badge";
@@ -100,6 +101,7 @@ function DateRangeSelector({ dateFrom, dateTo, onChangeFrom, onChangeTo }: {
 
 export default function PayrollPage() {
   const { business } = useBusiness();
+  const { isSuperAdminOf } = useAuth();
   const [entries, setEntries] = useState<PayrollEntry[]>([]);
   const [allEmployees, setAllEmployees] = useState<{ id: string; name: string; department: string | null }[]>([]);
   const [loading, setLoading] = useState(false);
@@ -112,8 +114,11 @@ export default function PayrollPage() {
   const [sortKey, setSortKey] = useState<SortKey>("employee_pay");
   const [sortDir, setSortDir] = useState<SortDir>("desc");
   const [chartLimit, setChartLimit] = useState(25);
-  const [activeTab, setActiveTab] = useState<"employee" | "admin">("employee");
+  const [activeTab, setActiveTab] = useState<"employee" | "admin" | "margin">("employee");
   const [emailDialogOpen, setEmailDialogOpen] = useState(false);
+
+  const currentBusinessId = business?.id || "";
+  const isSuperAdmin = isSuperAdminOf(currentBusinessId);
 
   useEffect(() => {
     if (business) fetchPayroll();
@@ -166,7 +171,6 @@ export default function PayrollPage() {
 
     if (!employees) { setLoading(false); return; }
 
-    // Build approved set: "employee_id-YYYY-MM-DD"
     const approvedSet = new Set<string>();
     if (approvalData) {
       for (const a of approvalData) {
@@ -177,11 +181,10 @@ export default function PayrollPage() {
     const empMap = new Map(employees.map((e) => [e.id, e]));
     const eventsByEmp = new Map<string, typeof events>();
 
-    // Only include events for approved days
     for (const ev of events) {
       const dayStr = toAusDate(new Date(ev.timestamp));
       const key = `${ev.employee_id}-${dayStr}`;
-      if (!approvedSet.has(key)) continue; // Skip unapproved
+      if (!approvedSet.has(key)) continue;
 
       if (!eventsByEmp.has(ev.employee_id)) eventsByEmp.set(ev.employee_id, []);
       eventsByEmp.get(ev.employee_id)!.push(ev);
@@ -229,7 +232,6 @@ export default function PayrollPage() {
 
       const netHours = Math.max(0, totalHours - breakHours);
       const employeePay = Math.round(netHours * emp.pay_rate * 100) / 100;
-      // Admin pay: GST-inclusive rate, back-calculate by dividing by 1.10
       const adminPay = Math.round((netHours * emp.admin_hourly_rate) / 1.10 * 100) / 100;
 
       result.push({
@@ -284,6 +286,21 @@ export default function PayrollPage() {
   };
 
   const buildPayrollCSV = () => {
+    if (activeTab === "margin") {
+      const headers = "Name,Department,Net Hours,Employee Pay,Admin Cost (ex GST),Margin,Margin %\n";
+      const rows = filtered.map((e) => {
+        const margin = e.admin_pay - e.employee_pay;
+        const marginPct = e.admin_pay > 0 ? (margin / e.admin_pay * 100) : 0;
+        return `${e.name},${e.department || "-"},${e.net_hours.toFixed(2)},${e.employee_pay.toFixed(2)},${e.admin_pay.toFixed(2)},${margin.toFixed(2)},${marginPct.toFixed(1)}%`;
+      }).join("\n");
+      const totEmpPay = filtered.reduce((s, e) => s + e.employee_pay, 0);
+      const totAdminPay = filtered.reduce((s, e) => s + e.admin_pay, 0);
+      const totMargin = totAdminPay - totEmpPay;
+      const totNetHrs = filtered.reduce((s, e) => s + e.net_hours, 0);
+      const totalRow = `\nTOTAL,,${totNetHrs.toFixed(2)},${totEmpPay.toFixed(2)},${totAdminPay.toFixed(2)},${totMargin.toFixed(2)},${totAdminPay > 0 ? (totMargin / totAdminPay * 100).toFixed(1) : 0}%`;
+      return headers + rows + totalRow;
+    }
+
     const isEmp = activeTab === "employee";
     const headers = isEmp
       ? "Name,Rate ($/hr),Total Hours,Break Hours,Net Hours,Employee Pay\n"
@@ -302,7 +319,7 @@ export default function PayrollPage() {
   };
 
   const payrollCsvFilename = `${activeTab}-payroll-${format(dateFrom, "yyyy-MM-dd")}-to-${format(dateTo, "yyyy-MM-dd")}.csv`;
-  const payrollCsvSubject = `${activeTab === "employee" ? "Employee" : "Admin"} Payroll Report – ${format(dateFrom, "dd MMM")} to ${format(dateTo, "dd MMM yyyy")}`;
+  const payrollCsvSubject = `${activeTab === "employee" ? "Employee" : activeTab === "admin" ? "Admin" : "Margin"} Payroll Report – ${format(dateFrom, "dd MMM")} to ${format(dateTo, "dd MMM yyyy")}`;
 
   const exportCSV = () => {
     const csv = buildPayrollCSV();
@@ -324,21 +341,15 @@ export default function PayrollPage() {
   const totalAdminPay = filtered.reduce((sum, e) => sum + e.admin_pay, 0);
   const totalNetHours = filtered.reduce((sum, e) => sum + e.net_hours, 0);
   const totalBreakHours = filtered.reduce((sum, e) => sum + e.break_hours, 0);
+  const totalMargin = totalAdminPay - totalEmployeePay;
+  const marginPercentage = totalAdminPay > 0 ? (totalMargin / totalAdminPay * 100) : 0;
 
-  const payKey = activeTab === "employee" ? "employee_pay" : "admin_pay";
+  const payKey = activeTab === "margin" ? "admin_pay" : (activeTab === "employee" ? "employee_pay" : "admin_pay");
   const topByPay = [...filtered].sort((a, b) => (b[payKey] as number) - (a[payKey] as number)).slice(0, chartLimit);
   const topByHours = [...filtered].sort((a, b) => b.net_hours - a.net_hours).slice(0, chartLimit);
   const othersPayCount = filtered.length - topByPay.length;
   const othersPay = filtered.reduce((s, e) => s + (e[payKey] as number), 0) - topByPay.reduce((s, e) => s + (e[payKey] as number), 0);
   const othersHours = filtered.reduce((s, e) => s + e.net_hours, 0) - topByHours.reduce((s, e) => s + e.net_hours, 0);
-
-  const barData = othersPayCount > 0
-    ? [...topByPay.map(e => ({ name: e.name, pay: e[payKey] as number })), { name: `Others (${othersPayCount})`, pay: Math.round(othersPay * 100) / 100 }]
-    : topByPay.map(e => ({ name: e.name, pay: e[payKey] as number }));
-
-  const pieData = filtered.length > chartLimit
-    ? [...topByHours.map(e => ({ name: e.name, net_hours: e.net_hours })), { name: `Others (${filtered.length - chartLimit})`, net_hours: Math.round(othersHours * 100) / 100 }]
-    : (topByHours.length > 0 ? topByHours : filtered).map(e => ({ name: e.name, net_hours: e.net_hours }));
 
   const empSummaryCards = [
     { title: "Total Employee Pay", value: `$${totalEmployeePay.toFixed(2)}`, icon: DollarSign, color: "text-primary" },
@@ -354,7 +365,14 @@ export default function PayrollPage() {
     { title: "Employees", value: filtered.length, icon: Users, color: "text-primary" },
   ];
 
-  const summaryCards = activeTab === "employee" ? empSummaryCards : adminSummaryCards;
+  const marginSummaryCards = [
+    { title: "Total Margin", value: `$${totalMargin.toFixed(2)}`, icon: TrendingUp, color: "text-green-500" },
+    { title: "Margin %", value: `${marginPercentage.toFixed(1)}%`, icon: TrendingUp, color: "text-primary" },
+    { title: "Admin Cost (ex GST)", value: `$${totalAdminPay.toFixed(2)}`, icon: DollarSign, color: "text-blue-500" },
+    { title: "Employee Pay", value: `$${totalEmployeePay.toFixed(2)}`, icon: DollarSign, color: "text-yellow-500" },
+  ];
+
+  const summaryCards = activeTab === "employee" ? empSummaryCards : activeTab === "admin" ? adminSummaryCards : marginSummaryCards;
 
   const SortHeader = ({ label, sortKeyName }: { label: string; sortKeyName: SortKey }) => (
     <TableHead className="cursor-pointer select-none" onClick={() => toggleSort(sortKeyName)}>
@@ -366,9 +384,189 @@ export default function PayrollPage() {
   );
 
   const isEmployee = activeTab === "employee";
-  const payLabel = isEmployee ? "Employee Pay" : "Admin Cost (ex GST)";
+  const isMargin = activeTab === "margin";
+  const payLabel = isEmployee ? "Employee Pay" : isMargin ? "Margin" : "Admin Cost (ex GST)";
   const rateLabel = isEmployee ? "Rate ($/hr)" : "Admin Rate ($/hr)";
-  const totalPay = isEmployee ? totalEmployeePay : totalAdminPay;
+  const totalPay = isEmployee ? totalEmployeePay : isMargin ? totalMargin : totalAdminPay;
+
+  const renderMarginTable = () => (
+    <Card>
+      <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
+        <CardTitle className="text-sm font-medium text-muted-foreground">
+          Margin Breakdown ({filtered.length} employee{filtered.length !== 1 ? "s" : ""})
+        </CardTitle>
+        <div className="relative w-full sm:w-64">
+          <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input placeholder="Search employees..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-8" />
+        </div>
+      </CardHeader>
+      <CardContent className="p-0">
+        <div className="overflow-x-auto">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <SortHeader label="Employee" sortKeyName="name" />
+                <TableHead>Department</TableHead>
+                <SortHeader label="Net Hrs" sortKeyName="net_hours" />
+                <SortHeader label="Employee Pay" sortKeyName="employee_pay" />
+                <SortHeader label="Admin Cost" sortKeyName="admin_pay" />
+                <TableHead className="text-right">Margin</TableHead>
+                <TableHead className="text-right">Margin %</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {pageEntries.map((e) => {
+                const margin = e.admin_pay - e.employee_pay;
+                const marginPct = e.admin_pay > 0 ? (margin / e.admin_pay * 100) : 0;
+                return (
+                  <TableRow key={e.employee_id}>
+                    <TableCell className="font-medium">{e.name}</TableCell>
+                    <TableCell>{e.department || "-"}</TableCell>
+                    <TableCell>{e.net_hours.toFixed(2)}</TableCell>
+                    <TableCell>${e.employee_pay.toFixed(2)}</TableCell>
+                    <TableCell>${e.admin_pay.toFixed(2)}</TableCell>
+                    <TableCell className={`text-right font-semibold ${margin >= 0 ? "text-green-500" : "text-red-500"}`}>
+                      ${margin.toFixed(2)}
+                    </TableCell>
+                    <TableCell className={`text-right ${margin >= 0 ? "text-green-500" : "text-red-500"}`}>
+                      {marginPct.toFixed(1)}%
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
+              {pageEntries.length === 0 && (
+                <TableRow>
+                  <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
+                    {loading ? "Loading..." : "No approved payroll data for this period."}
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+            {pageEntries.length > 0 && (
+              <tfoot>
+                <TableRow className="bg-muted/50 font-semibold">
+                  <TableCell>Totals</TableCell>
+                  <TableCell />
+                  <TableCell>{totalNetHours.toFixed(2)}</TableCell>
+                  <TableCell>${totalEmployeePay.toFixed(2)}</TableCell>
+                  <TableCell>${totalAdminPay.toFixed(2)}</TableCell>
+                  <TableCell className={`text-right ${totalMargin >= 0 ? "text-green-500" : "text-red-500"}`}>
+                    ${totalMargin.toFixed(2)}
+                  </TableCell>
+                  <TableCell className={`text-right ${totalMargin >= 0 ? "text-green-500" : "text-red-500"}`}>
+                    {marginPercentage.toFixed(1)}%
+                  </TableCell>
+                </TableRow>
+              </tfoot>
+            )}
+          </Table>
+        </div>
+
+        {totalPages > 1 && (
+          <div className="flex items-center justify-between px-4 py-3 border-t border-border">
+            <p className="text-xs text-muted-foreground">
+              Showing {page * PAGE_SIZE + 1}–{Math.min((page + 1) * PAGE_SIZE, filtered.length)} of {filtered.length}
+            </p>
+            <div className="flex gap-1">
+              <Button variant="ghost" size="sm" disabled={page === 0} onClick={() => setPage(page - 1)}>
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
+              <Button variant="ghost" size="sm" disabled={page >= totalPages - 1} onClick={() => setPage(page + 1)}>
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+
+  const renderMarginCharts = () => {
+    const marginData = [...filtered]
+      .map(e => ({ name: e.name, margin: Math.round((e.admin_pay - e.employee_pay) * 100) / 100 }))
+      .sort((a, b) => b.margin - a.margin)
+      .slice(0, chartLimit);
+
+    const deptMargin: Record<string, { empPay: number; adminPay: number }> = {};
+    filtered.forEach(e => {
+      const dept = e.department || "Unassigned";
+      if (!deptMargin[dept]) deptMargin[dept] = { empPay: 0, adminPay: 0 };
+      deptMargin[dept].empPay += e.employee_pay;
+      deptMargin[dept].adminPay += e.admin_pay;
+    });
+    const deptData = Object.entries(deptMargin).map(([dept, d]) => ({
+      name: dept,
+      margin: Math.round((d.adminPay - d.empPay) * 100) / 100,
+    })).sort((a, b) => b.margin - a.margin);
+
+    return (
+      <>
+        <div className="flex items-center gap-2 text-sm">
+          <span className="text-muted-foreground">Show top</span>
+          <Select value={String(chartLimit)} onValueChange={(v) => setChartLimit(Number(v))}>
+            <SelectTrigger className="w-20 h-8">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {[10, 25, 50, 100].map((n) => (
+                <SelectItem key={n} value={String(n)}>{n}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <span className="text-muted-foreground">employees in charts</span>
+        </div>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-sm font-medium text-muted-foreground">
+                Margin by Employee{filtered.length > chartLimit ? ` (Top ${chartLimit} of ${filtered.length})` : ""}
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {marginData.length > 0 ? (
+                <ResponsiveContainer width="100%" height={250}>
+                  <BarChart data={marginData}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                    <XAxis dataKey="name" tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} interval={0} angle={-30} textAnchor="end" height={60} />
+                    <YAxis tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} />
+                    <Tooltip contentStyle={{ backgroundColor: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 8, color: "hsl(var(--foreground))" }} />
+                    <Bar dataKey="margin" name="Margin ($)" fill="hsl(142, 71%, 45%)" radius={[4, 4, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              ) : (
+                <p className="text-center text-muted-foreground py-16">No data</p>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-sm font-medium text-muted-foreground">
+                Margin by Department
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {deptData.length > 0 ? (
+                <ResponsiveContainer width="100%" height={250}>
+                  <PieChart>
+                    <Pie data={deptData} dataKey="margin" nameKey="name" cx="50%" cy="50%" outerRadius={90} labelLine={false}>
+                      {deptData.map((_, i) => (
+                        <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />
+                      ))}
+                    </Pie>
+                    <Tooltip contentStyle={{ backgroundColor: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 8, color: "hsl(var(--foreground))" }} />
+                    <Legend />
+                  </PieChart>
+                </ResponsiveContainer>
+              ) : (
+                <p className="text-center text-muted-foreground py-16">No data</p>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+      </>
+    );
+  };
 
   const renderTable = () => (
     <Card>
@@ -446,6 +644,14 @@ export default function PayrollPage() {
       </CardContent>
     </Card>
   );
+
+  const barData = othersPayCount > 0
+    ? [...topByPay.map(e => ({ name: e.name, pay: e[payKey] as number })), { name: `Others (${othersPayCount})`, pay: Math.round(othersPay * 100) / 100 }]
+    : topByPay.map(e => ({ name: e.name, pay: e[payKey] as number }));
+
+  const pieData = filtered.length > chartLimit
+    ? [...topByHours.map(e => ({ name: e.name, net_hours: e.net_hours })), { name: `Others (${filtered.length - chartLimit})`, net_hours: Math.round(othersHours * 100) / 100 }]
+    : (topByHours.length > 0 ? topByHours : filtered).map(e => ({ name: e.name, net_hours: e.net_hours }));
 
   const renderCharts = () => (
     <>
@@ -558,16 +764,20 @@ export default function PayrollPage() {
         <CheckCircle2 className="mr-1 h-3 w-3" /> Showing approved timesheets only
       </Badge>
 
-      <Tabs value={activeTab} onValueChange={(v) => { setActiveTab(v as "employee" | "admin"); setPage(0); }}>
+      <Tabs value={activeTab} onValueChange={(v) => { setActiveTab(v as "employee" | "admin" | "margin"); setPage(0); }}>
         <TabsList>
           <TabsTrigger value="employee">Employee Payroll</TabsTrigger>
           <TabsTrigger value="admin">Admin Payroll</TabsTrigger>
+          {isSuperAdmin && (
+            <TabsTrigger value="margin" className="gap-1.5">
+              <TrendingUp className="h-3.5 w-3.5" /> Margin Analysis
+            </TabsTrigger>
+          )}
         </TabsList>
 
-        <TabsContent value={activeTab} className="space-y-4 mt-4">
-          {/* Summary Cards */}
+        <TabsContent value="employee" className="space-y-4 mt-4">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            {summaryCards.map(({ title, value, icon: Icon, color }) => (
+            {empSummaryCards.map(({ title, value, icon: Icon, color }) => (
               <Card key={title}>
                 <CardHeader className="flex flex-row items-center justify-between pb-2">
                   <CardTitle className="text-sm font-medium text-muted-foreground">{title}</CardTitle>
@@ -579,10 +789,47 @@ export default function PayrollPage() {
               </Card>
             ))}
           </div>
-
           {renderCharts()}
           {renderTable()}
         </TabsContent>
+
+        <TabsContent value="admin" className="space-y-4 mt-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            {adminSummaryCards.map(({ title, value, icon: Icon, color }) => (
+              <Card key={title}>
+                <CardHeader className="flex flex-row items-center justify-between pb-2">
+                  <CardTitle className="text-sm font-medium text-muted-foreground">{title}</CardTitle>
+                  <Icon className={`h-4 w-4 ${color}`} />
+                </CardHeader>
+                <CardContent>
+                  <p className="text-2xl font-bold">{value}</p>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+          {renderCharts()}
+          {renderTable()}
+        </TabsContent>
+
+        {isSuperAdmin && (
+          <TabsContent value="margin" className="space-y-4 mt-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              {marginSummaryCards.map(({ title, value, icon: Icon, color }) => (
+                <Card key={title}>
+                  <CardHeader className="flex flex-row items-center justify-between pb-2">
+                    <CardTitle className="text-sm font-medium text-muted-foreground">{title}</CardTitle>
+                    <Icon className={`h-4 w-4 ${color}`} />
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-2xl font-bold">{value}</p>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+            {renderMarginCharts()}
+            {renderMarginTable()}
+          </TabsContent>
+        )}
       </Tabs>
 
       <EmailCSVDialog
