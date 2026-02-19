@@ -70,30 +70,21 @@ async function reverseGeocode(lat: number, lng: number): Promise<string | null> 
 export async function captureGeolocation(): Promise<GeoResult> {
   // Check if geolocation is supported
   if (!navigator.geolocation) {
-    console.warn("[Geo] Geolocation API not available");
-    return { lat: null, lng: null, locationName: null, locationAccuracy: null, locationStatus: "unavailable" };
-  }
-
-  // Check if running in insecure context (non-HTTPS)
-  if (typeof window !== "undefined" && window.isSecureContext === false) {
-    console.warn("[Geo] Insecure context — geolocation blocked");
     return { lat: null, lng: null, locationName: null, locationAccuracy: null, locationStatus: "unavailable" };
   }
 
   try {
-    console.log("[Geo] Requesting position...");
     const position = await new Promise<GeolocationPosition>((resolve, reject) => {
       navigator.geolocation.getCurrentPosition(resolve, reject, {
         enableHighAccuracy: true,
-        timeout: 15000,
-        maximumAge: 60000,
+        timeout: 10000,
+        maximumAge: 0,
       });
     });
 
     const lat = position.coords.latitude;
     const lng = position.coords.longitude;
     const accuracy = Math.round(position.coords.accuracy);
-    console.log(`[Geo] Got position: ${lat.toFixed(5)}, ${lng.toFixed(5)} (±${accuracy}m)`);
 
     // Try reverse geocoding
     const locationName = await reverseGeocode(lat, lng);
@@ -110,15 +101,11 @@ export async function captureGeolocation(): Promise<GeoResult> {
       locationStatus: "coordinates-only",
     };
   } catch (error: any) {
-    const code = error?.code;
-    const msg = error?.message || "Unknown error";
-    console.warn(`[Geo] Error code=${code}, message=${msg}`);
-    
-    if (code === 1) {
+    if (error?.code === 1) {
       // Permission denied
       return { lat: null, lng: null, locationName: null, locationAccuracy: null, locationStatus: "denied" };
     }
-    // code 2 = position unavailable, code 3 = timeout
+    // Timeout or unavailable
     return { lat: null, lng: null, locationName: null, locationAccuracy: null, locationStatus: "unavailable" };
   }
 }
