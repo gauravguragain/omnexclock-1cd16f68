@@ -14,9 +14,10 @@ import { logAudit } from "@/lib/auditLog";
 import { notifyEmployees } from "@/lib/notifications";
 import { useAuth } from "@/contexts/AuthContext";
 import {
-  ChevronLeft, ChevronRight, Plus, Trash2, Copy, Send, Clock, AlertCircle, CalendarOff, Clipboard, ClipboardPaste, X, Mail,
+  ChevronLeft, ChevronRight, Plus, Trash2, Copy, Send, Clock, AlertCircle, CalendarOff, Clipboard, ClipboardPaste, X, Mail, Download, FileDown,
 } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import type { Tables } from "@/integrations/supabase/types";
@@ -218,7 +219,7 @@ export default function RosterPage() {
     setEmailDialogOpen(true);
   };
 
-  const generateRosterPDF = (): string => {
+  const buildRosterPDFDoc = (): jsPDF => {
     const doc = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
     const pageWidth = doc.internal.pageSize.getWidth();
 
@@ -300,13 +301,8 @@ export default function RosterPage() {
       alternateRowStyles: { fillColor: [248, 249, 250] },
     });
 
-    // Day events section
-    const dayEventsY = (doc as any).lastAutoTable?.finalY || 50;
-    // Fetch day events if available - we'll check in the data we already have
-    // For now we include a summary section
-
     // Footer
-    const finalY = (doc as any).lastAutoTable?.finalY || dayEventsY;
+    const finalY = (doc as any).lastAutoTable?.finalY || 50;
     doc.setFontSize(7);
     doc.setTextColor(146, 64, 14);
     doc.setFont("helvetica", "italic");
@@ -324,8 +320,20 @@ export default function RosterPage() {
       disclaimerY + 4
     );
 
-    // Return as base64
+    return doc;
+  };
+
+  const generateRosterPDF = (): string => {
+    const doc = buildRosterPDFDoc();
     return doc.output("datauristring").split(",")[1];
+  };
+
+  const handleDownloadPDF = () => {
+    const doc = buildRosterPDFDoc();
+    const filename = `roster-${fmtDate(weekStart)}-to-${fmtDate(addDays(weekStart, 6))}.pdf`;
+    doc.save(filename);
+    toast({ title: "PDF downloaded", description: filename });
+    logAudit("roster_pdf_downloaded", { week_start: fmtDate(weekStart) });
   };
 
   const handleSendRosterEmail = async () => {
@@ -812,9 +820,21 @@ export default function RosterPage() {
             <Button size="sm" className="rounded-lg" onClick={handlePublishWeek} disabled={publishing || weekStatus === "published" || weekStatus === "empty"}>
               <Send className="mr-1.5 h-3.5 w-3.5" /> {publishing ? "Publishing..." : "Publish Week"}
             </Button>
-            <Button variant="outline" size="sm" className="rounded-lg" onClick={openEmailDialog} disabled={shifts.length === 0}>
-              <Mail className="mr-1.5 h-3.5 w-3.5" /> Email Roster
-            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm" className="rounded-lg" disabled={shifts.length === 0}>
+                  <FileDown className="mr-1.5 h-3.5 w-3.5" /> Export
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={handleDownloadPDF}>
+                  <Download className="mr-2 h-4 w-4" /> Download PDF
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={openEmailDialog}>
+                  <Mail className="mr-2 h-4 w-4" /> Email PDF
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         )}
         </div>
