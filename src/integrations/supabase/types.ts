@@ -705,6 +705,7 @@ export type Database = {
           notes: string | null
           num_tables: number | null
           red_carpet: boolean | null
+          runsheet_url: string | null
           tablecloth_color: string | null
           updated_at: string | null
         }
@@ -722,6 +723,7 @@ export type Database = {
           notes?: string | null
           num_tables?: number | null
           red_carpet?: boolean | null
+          runsheet_url?: string | null
           tablecloth_color?: string | null
           updated_at?: string | null
         }
@@ -739,6 +741,7 @@ export type Database = {
           notes?: string | null
           num_tables?: number | null
           red_carpet?: boolean | null
+          runsheet_url?: string | null
           tablecloth_color?: string | null
           updated_at?: string | null
         }
