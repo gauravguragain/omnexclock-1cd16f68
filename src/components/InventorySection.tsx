@@ -12,6 +12,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Plus, Package, ShoppingCart, Trash2, AlertTriangle, CheckCircle2, Clock, XCircle, Download, ClipboardCheck, TrendingUp, TrendingDown } from "lucide-react";
+import { logAudit } from "@/lib/auditLog";
 
 export interface InventoryItem {
   id: string;
@@ -131,6 +132,7 @@ export default function InventorySection({
       toast({ title: "Error", description: error.message, variant: "destructive" });
     } else {
       toast({ title: "Item added" });
+      await logAudit("inventory_item_add", { section: sectionLabel, name: newName.trim(), category: newCategory, count: parseInt(newCount) || 0, min_count: parseInt(newMinCount) || 0 });
       setNewName(""); setNewCount("0"); setNewMinCount("0"); setNewUnit("pcs"); setNewCategory(categories[categories.length - 1] || "General");
       setAddOpen(false);
       fetchData();
@@ -143,7 +145,9 @@ export default function InventorySection({
     if (error) {
       toast({ title: "Error", description: error.message, variant: "destructive" });
     } else {
+      const item = items.find(i => i.id === id);
       toast({ title: "Item deleted" });
+      await logAudit("inventory_item_delete", { section: sectionLabel, item_name: item?.name || "Unknown" });
       fetchData();
     }
   };
@@ -160,8 +164,9 @@ export default function InventorySection({
     if (error) {
       toast({ title: "Error", description: error.message, variant: "destructive" });
     } else {
+      const item = items.find(i => i.id === orderItemId);
       toast({ title: "Order request submitted" });
-      setOrderItemId(""); setOrderQty("1"); setOrderNotes("");
+      await logAudit("inventory_order_request", { section: sectionLabel, item_name: item?.name || "Unknown", quantity: parseInt(orderQty) || 1 });
       setOrderOpen(false);
       fetchData();
     }
@@ -172,8 +177,10 @@ export default function InventorySection({
     if (error) {
       toast({ title: "Error", description: error.message, variant: "destructive" });
     } else {
+      const order = orders.find(o => o.id === id);
       setOrders(prev => prev.map(o => o.id === id ? { ...o, status } : o));
       toast({ title: `Order ${status}` });
+      await logAudit("inventory_order_status_change", { section: sectionLabel, item_name: order?.item_name || "Unknown", new_status: status });
     }
   };
 
@@ -233,6 +240,8 @@ export default function InventorySection({
         ? `Stocktake saved. ${autoCompletedCount} order(s) auto-completed (par level reached).`
         : "Stocktake saved successfully.";
       toast({ title: "Stocktake Complete", description: msg });
+      const changedItems = reportEntries.filter(e => e.newCount !== e.previousCount);
+      await logAudit("inventory_stocktake", { section: sectionLabel, items_updated: changedItems.length, auto_completed_orders: autoCompletedCount });
     }
 
     setStocktakeReport({
