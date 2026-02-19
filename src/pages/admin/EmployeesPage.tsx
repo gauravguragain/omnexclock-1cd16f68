@@ -9,8 +9,9 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Pencil, UserX, UserCheck, Search, ChevronRight, ChevronLeft, Check } from "lucide-react";
+import { Plus, Pencil, UserX, UserCheck, Search, ChevronRight, ChevronLeft, Check, Trash2, Mail } from "lucide-react";
 import type { Tables } from "@/integrations/supabase/types";
 import { logAudit } from "@/lib/auditLog";
 
@@ -44,7 +45,7 @@ function generateEmployeeCode(existing: string[]): string {
 
 export default function EmployeesPage() {
   const { runAction } = useActionLock();
-  const { isViewer } = useAuth();
+  const { isViewer, isSuperAdminOf } = useAuth();
   const { business } = useBusiness();
   const { toast } = useToast();
   const [employees, setEmployees] = useState<Employee[]>([]);
@@ -55,6 +56,11 @@ export default function EmployeesPage() {
   const [step, setStep] = useState(0);
   const [saving, setSaving] = useState(false);
   const [togglingIds, setTogglingIds] = useState<Set<string>>(new Set());
+  const [deleteTarget, setDeleteTarget] = useState<Employee | null>(null);
+  const [deleting, setDeleting] = useState(false);
+  const [sendingInduction, setSendingInduction] = useState<Set<string>>(new Set());
+
+  const isSuperAdmin = business ? isSuperAdminOf(business.id) : false;
 
   const fetchEmployees = async () => {
     if (!business) return;
@@ -140,6 +146,25 @@ export default function EmployeesPage() {
           if (error) { toast({ title: "Error", description: error.message, variant: "destructive" }); return; }
           await logAudit("employee_add", { employee_id: data?.id, ...payload });
           toast({ title: "Employee added", description: `Code: ${payload.employee_code}` });
+
+          // Auto-send induction email if employee has email
+          if (payload.email && business) {
+            supabase.functions.invoke("send-email", {
+              body: {
+                type: "employee_induction",
+                to: payload.email,
+                employeeName: payload.name,
+                employeeCode: payload.employee_code,
+                jobTitle: payload.job_title || "Team Member",
+                department: payload.department || "General",
+                businessName: business.name,
+                businessCode: business.business_code,
+                portalUrl: "https://omnexclock.lovable.app/portal",
+              },
+            }).then(() => {
+              toast({ title: "Induction email sent", description: `Welcome packet sent to ${payload.email}` });
+            }).catch(() => {});
+          }
         }
         setDialogOpen(false);
         setEditing(null);
@@ -163,6 +188,67 @@ export default function EmployeesPage() {
         fetchEmployees();
       } finally {
         setTogglingIds(prev => { const s = new Set(prev); s.delete(emp.id); return s; });
+      }
+    });
+  };
+
+  const handleDeleteEmployee = async () => {
+    if (!deleteTarget || deleting) return;
+    await runAction(async () => {
+      setDeleting(true);
+      try {
+        // Delete related records first
+        await supabase.from("clock_events").delete().eq("employee_id", deleteTarget.id);
+        await supabase.from("shifts").delete().eq("employee_id", deleteTarget.id);
+        await supabase.from("employee_requests").delete().eq("employee_id", deleteTarget.id);
+        await supabase.from("timesheet_approvals").delete().eq("employee_id", deleteTarget.id);
+        await supabase.from("notifications").delete().eq("employee_id", deleteTarget.id);
+        await supabase.from("forum_comments").delete().eq("employee_id", deleteTarget.id);
+        await supabase.from("forum_reactions").delete().eq("employee_id", deleteTarget.id);
+        await supabase.from("payroll_entries").delete().eq("employee_id", deleteTarget.id);
+
+        const { error } = await supabase.from("employees").delete().eq("id", deleteTarget.id);
+        if (error) throw error;
+
+        await logAudit("employee_delete", { employee_id: deleteTarget.id, name: deleteTarget.name, employee_code: deleteTarget.employee_code });
+        toast({ title: "Employee deleted", description: `${deleteTarget.name} has been permanently removed.` });
+        setDeleteTarget(null);
+        fetchEmployees();
+      } catch (err: any) {
+        toast({ title: "Error deleting employee", description: err.message, variant: "destructive" });
+      } finally {
+        setDeleting(false);
+      }
+    });
+  };
+
+  const sendInductionEmail = async (emp: Employee) => {
+    if (!emp.email || !business) {
+      toast({ title: "No email address", description: "This employee doesn't have an email address on file.", variant: "destructive" });
+      return;
+    }
+    await runAction(async () => {
+      setSendingInduction(prev => new Set(prev).add(emp.id));
+      try {
+        const { error } = await supabase.functions.invoke("send-email", {
+          body: {
+            type: "employee_induction",
+            to: emp.email,
+            employeeName: emp.name,
+            employeeCode: emp.employee_code,
+            jobTitle: emp.job_title || "Team Member",
+            department: emp.department || "General",
+            businessName: business.name,
+            businessCode: business.business_code,
+            portalUrl: "https://omnexclock.lovable.app/portal",
+          },
+        });
+        if (error) throw error;
+        toast({ title: "Induction email sent!", description: `Welcome packet sent to ${emp.email}` });
+      } catch (err: any) {
+        toast({ title: "Failed to send", description: err.message, variant: "destructive" });
+      } finally {
+        setSendingInduction(prev => { const s = new Set(prev); s.delete(emp.id); return s; });
       }
     });
   };
@@ -380,14 +466,24 @@ export default function EmployeesPage() {
                       {isViewer ? (
                         <span className="text-xs text-muted-foreground">View only</span>
                       ) : (
-                        <>
-                          <Button variant="ghost" size="icon" onClick={() => openEdit(emp)} disabled={saving}>
+                        <div className="flex items-center justify-end gap-1">
+                          <Button variant="ghost" size="icon" onClick={() => openEdit(emp)} disabled={saving} title="Edit">
                             <Pencil className="h-4 w-4" />
                           </Button>
-                          <Button variant="ghost" size="icon" onClick={() => toggleActive(emp)} disabled={togglingIds.has(emp.id)}>
+                          <Button variant="ghost" size="icon" onClick={() => toggleActive(emp)} disabled={togglingIds.has(emp.id)} title={emp.active ? "Deactivate" : "Activate"}>
                             {emp.active ? <UserX className="h-4 w-4" /> : <UserCheck className="h-4 w-4" />}
                           </Button>
-                        </>
+                          {emp.email && (
+                            <Button variant="ghost" size="icon" onClick={() => sendInductionEmail(emp)} disabled={sendingInduction.has(emp.id)} title="Send Induction Email">
+                              <Mail className="h-4 w-4" />
+                            </Button>
+                          )}
+                          {isSuperAdmin && (
+                            <Button variant="ghost" size="icon" onClick={() => setDeleteTarget(emp)} className="text-destructive hover:text-destructive hover:bg-destructive/10" title="Delete permanently">
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          )}
+                        </div>
                       )}
                     </TableCell>
                   </TableRow>
@@ -402,6 +498,24 @@ export default function EmployeesPage() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Delete Confirmation Dialog - Super Admin Only */}
+      <AlertDialog open={!!deleteTarget} onOpenChange={(open) => { if (!open) setDeleteTarget(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Permanently Delete Employee?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently remove <strong>{deleteTarget?.name}</strong> (Code: {deleteTarget?.employee_code}) and all their associated data including clock events, shifts, timesheets, requests, and payroll entries. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteEmployee} disabled={deleting} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              {deleting ? "Deleting..." : "Delete Permanently"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
