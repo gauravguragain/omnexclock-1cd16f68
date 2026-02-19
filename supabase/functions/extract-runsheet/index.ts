@@ -41,9 +41,9 @@ serve(async (req) => {
             content: `You are a data extraction assistant. You will receive a PDF runsheet for an event venue. Extract the following fields from the document. If a field is not found, set it to null.
 
 Rules:
-- event_space: The name of the event space/room/venue area.
-- event_type: The type of event (e.g. Wedding, Birthday, Corporate, etc.)
-- tablecloth_color: The tablecloth color. If not specified, default to "black".
+- event_space: The name of the event space/room/venue area. Extract the exact text from the runsheet, do NOT use a dropdown value. Write it exactly as it appears in the PDF.
+- event_type: The type of event (e.g. Wedding, Birthday, Corporate, etc.). Extract the exact text from the runsheet.
+- tablecloth_color: The tablecloth color. If not specified or says "standard", default to "black".
 - adult_guests: Number of adult guests. Integer only.
 - kids_guests: Number of kids/children guests. Integer only.
 - chairs_per_table: Number of chairs per table. Default is 8. If stated as 10, use 10.
@@ -55,6 +55,8 @@ Rules:
 - decor_access: true/false - whether decor access is included/required.
 - live_stall: true/false - whether there is a live food stall or live station.
 - live_stall_details: If live_stall is true, describe what's included (e.g. "Live pasta station, dessert bar"). Otherwise null.
+- host_name: The name of the host/client. Look for "Client", "Host", "Customer Name", or similar labels in the runsheet.
+- host_contact_number: The contact phone number of the host/client. Look for phone/mobile/contact number associated with the client.
 - notes: Any other important details or special requests mentioned.
 
 Return ONLY valid JSON, no markdown, no extra text.`,

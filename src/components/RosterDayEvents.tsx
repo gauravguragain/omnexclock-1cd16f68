@@ -12,7 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
-import { ChevronDown, ChevronUp, Plus, Trash2, PartyPopper, Sparkles, Wind, Ribbon, Palette, Upload, FileText, X, Loader2, Flame, Users, Baby, UtensilsCrossed } from "lucide-react";
+import { ChevronDown, ChevronUp, Plus, Trash2, PartyPopper, Sparkles, Wind, Ribbon, Palette, Upload, FileText, X, Loader2, Flame, Users, Baby, UtensilsCrossed, User, Phone } from "lucide-react";
 
 interface DayEvent {
   id: string;
@@ -31,6 +31,8 @@ interface DayEvent {
   live_stall_details: string | null;
   adult_guests: number;
   kids_guests: number;
+  host_name: string | null;
+  host_contact_number: string | null;
   notes: string | null;
   runsheet_url: string | null;
 }
@@ -96,6 +98,8 @@ export default function RosterDayEvents({ weekDates, fmtDate }: Props) {
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState<string | null>(null);
   const [extracting, setExtracting] = useState<string | null>(null);
+  const [dayUploading, setDayUploading] = useState<number | null>(null);
+  const [dayExtracting, setDayExtracting] = useState<number | null>(null);
 
   // Roster admins with only BOH access cannot edit events
   const isRosterAdminBOHOnly = business
@@ -201,10 +205,58 @@ export default function RosterDayEvents({ weekDates, fmtDate }: Props) {
     } else {
       setEvents(prev => prev.map(e => e.id === eventId ? { ...e, runsheet_url: urlData.publicUrl } : e));
       toast({ title: "Runsheet uploaded, extracting data..." });
-      // Trigger AI extraction
       extractRunsheetData(eventId, urlData.publicUrl);
     }
     setUploading(null);
+  };
+
+  /** Upload PDF at day-level: creates event if none exists, then extracts */
+  const handleDayPdfUpload = async (dayIdx: number, file: File) => {
+    if (!business) return;
+    if (file.type !== "application/pdf") {
+      toast({ title: "Invalid file", description: "Only PDF files are accepted.", variant: "destructive" });
+      return;
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      toast({ title: "File too large", description: "Maximum file size is 10MB.", variant: "destructive" });
+      return;
+    }
+    setDayUploading(dayIdx);
+    const dateStr = fmtDate(weekDates[dayIdx]);
+
+    // Create a new event for this day
+    const { data: inserted, error: insertErr } = await supabase.from("roster_day_events").insert({
+      business_id: business.id,
+      date: dateStr,
+    }).select().single();
+
+    if (insertErr || !inserted) {
+      toast({ title: "Error creating event", description: insertErr?.message || "Unknown error", variant: "destructive" });
+      setDayUploading(null);
+      return;
+    }
+
+    const eventId = inserted.id;
+    const filePath = `${business.id}/${eventId}/${Date.now()}_${file.name}`;
+    const { error: uploadError } = await supabase.storage.from("event-runsheets").upload(filePath, file, { upsert: true });
+    if (uploadError) {
+      toast({ title: "Upload failed", description: uploadError.message, variant: "destructive" });
+      setDayUploading(null);
+      return;
+    }
+    const { data: urlData } = supabase.storage.from("event-runsheets").getPublicUrl(filePath);
+    await supabase.from("roster_day_events").update({ runsheet_url: urlData.publicUrl, updated_at: new Date().toISOString() }).eq("id", eventId);
+
+    await fetchData();
+    setDayUploading(null);
+
+    // Open the day
+    setOpenDays(prev => new Set(prev).add(dayIdx));
+
+    toast({ title: "Runsheet uploaded, extracting data..." });
+    setDayExtracting(dayIdx);
+    await extractRunsheetData(eventId, urlData.publicUrl);
+    setDayExtracting(null);
   };
 
   const extractRunsheetData = async (eventId: string, pdfUrl: string) => {
@@ -216,7 +268,6 @@ export default function RosterDayEvents({ weekDates, fmtDate }: Props) {
       if (error) throw error;
       if (!data) throw new Error("No data returned");
 
-      // Build updates from extracted data, only set non-null values
       const updates: Partial<DayEvent> = {};
       if (data.event_space != null) updates.event_space = data.event_space;
       if (data.event_type != null) updates.event_type = data.event_type;
@@ -232,6 +283,8 @@ export default function RosterDayEvents({ weekDates, fmtDate }: Props) {
       if (data.decor_access != null) updates.decor_access = data.decor_access;
       if (data.live_stall != null) updates.live_stall = data.live_stall;
       if (data.live_stall_details != null) updates.live_stall_details = data.live_stall_details;
+      if (data.host_name != null) updates.host_name = data.host_name;
+      if (data.host_contact_number != null) updates.host_contact_number = data.host_contact_number;
       if (data.notes != null) updates.notes = data.notes;
 
       if (Object.keys(updates).length > 0) {
@@ -261,8 +314,6 @@ export default function RosterDayEvents({ weekDates, fmtDate }: Props) {
 
   const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
-  const hasAnyEvents = events.length > 0;
-
   return (
     <div className="space-y-1">
       {weekDates.map((wd, dayIdx) => {
@@ -281,61 +332,95 @@ export default function RosterDayEvents({ weekDates, fmtDate }: Props) {
                     {dayEvents.length} event{dayEvents.length > 1 ? "s" : ""}
                   </Badge>
                 )}
+                {(dayUploading === dayIdx || dayExtracting === dayIdx) && (
+                  <Loader2 className="h-3 w-3 animate-spin text-primary" />
+                )}
               </div>
               {isOpen ? <ChevronUp className="h-3.5 w-3.5 text-muted-foreground" /> : <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />}
             </CollapsibleTrigger>
             <CollapsibleContent className="px-1 pb-2 pt-1">
               <div className="space-y-2">
+                {/* Day-level PDF upload */}
+                {!cannotEdit && (
+                  <div className="flex items-center gap-2 px-2 py-1.5 rounded-md bg-muted/20 border border-dashed border-border/50">
+                    <Upload className="h-3.5 w-3.5 text-muted-foreground" />
+                    <span className="text-[11px] text-muted-foreground">Upload runsheet PDF to auto-create event:</span>
+                    <label className="cursor-pointer ml-auto">
+                      <input
+                        type="file"
+                        accept=".pdf,application/pdf"
+                        className="hidden"
+                        onChange={e => {
+                          const f = e.target.files?.[0];
+                          if (f) handleDayPdfUpload(dayIdx, f);
+                          e.target.value = "";
+                        }}
+                        disabled={dayUploading === dayIdx}
+                      />
+                      <span className="inline-flex items-center gap-1 text-[11px] text-primary hover:underline font-medium">
+                        {dayUploading === dayIdx ? <Loader2 className="h-3 w-3 animate-spin" /> : <FileText className="h-3 w-3" />}
+                        {dayUploading === dayIdx ? "Uploading..." : "Upload PDF"}
+                      </span>
+                    </label>
+                  </div>
+                )}
+
                 {dayEvents.map(ev => (
                   <div key={ev.id} className="rounded-lg border border-border/60 bg-card p-3 space-y-3">
+                    {/* Host Details Section */}
+                    <div className="grid grid-cols-2 gap-3 pb-2 border-b border-border/30">
+                      <div className="space-y-1">
+                        <Label className="text-[11px] text-muted-foreground flex items-center gap-1"><User className="h-3 w-3" /> Host Name</Label>
+                        <DebouncedInput
+                          value={ev.host_name || ""}
+                          onSave={v => updateEvent(ev.id, { host_name: v || null })}
+                          placeholder="Client name..."
+                          className="h-8 text-xs"
+                          disabled={cannotEdit}
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-[11px] text-muted-foreground flex items-center gap-1"><Phone className="h-3 w-3" /> Host Contact</Label>
+                        <DebouncedInput
+                          value={ev.host_contact_number || ""}
+                          onSave={v => updateEvent(ev.id, { host_contact_number: v || null })}
+                          placeholder="Contact number..."
+                          className="h-8 text-xs"
+                          disabled={cannotEdit}
+                        />
+                      </div>
+                    </div>
+
                     <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                      {/* Event Space */}
+                      {/* Event Space - always text input, no dropdown */}
                       <div className="space-y-1">
                         <Label className="text-[11px] text-muted-foreground">Event Space</Label>
-                        <DebouncedSelect
+                        <DebouncedInput
                           value={ev.event_space || ""}
                           onSave={v => updateEvent(ev.id, { event_space: v || null })}
+                          placeholder="Enter event space..."
+                          className="h-8 text-xs"
                           disabled={cannotEdit}
-                          placeholder="Select..."
-                        >
-                          {eventSpaces.map(s => (
-                            <SelectItem key={s.id} value={s.label}>{s.label}</SelectItem>
-                          ))}
-                          {eventSpaces.length === 0 && <div className="px-3 py-2 text-xs text-muted-foreground">Add spaces in My Business settings</div>}
-                        </DebouncedSelect>
+                        />
                       </div>
 
-                      {/* Event Type */}
+                      {/* Event Type - always text input */}
                       <div className="space-y-1">
                         <Label className="text-[11px] text-muted-foreground">Event Type</Label>
-                        {business?.business_code === "PRP" ? (
-                          <DebouncedInput
-                            value={ev.event_type || ""}
-                            onSave={v => updateEvent(ev.id, { event_type: v || null })}
-                            placeholder="Enter event type..."
-                            className="h-8 text-xs"
-                            disabled={cannotEdit}
-                          />
-                        ) : (
-                          <DebouncedSelect
-                            value={ev.event_type || ""}
-                            onSave={v => updateEvent(ev.id, { event_type: v || null })}
-                            disabled={cannotEdit}
-                            placeholder="Select..."
-                          >
-                            {eventTypes.map(s => (
-                              <SelectItem key={s.id} value={s.label}>{s.label}</SelectItem>
-                            ))}
-                            {eventTypes.length === 0 && <div className="px-3 py-2 text-xs text-muted-foreground">Add types in My Business settings</div>}
-                          </DebouncedSelect>
-                        )}
+                        <DebouncedInput
+                          value={ev.event_type || ""}
+                          onSave={v => updateEvent(ev.id, { event_type: v || null })}
+                          placeholder="Enter event type..."
+                          className="h-8 text-xs"
+                          disabled={cannotEdit}
+                        />
                       </div>
 
-                      {/* Tablecloth Color */}
+                      {/* Tablecloth Color - dropdown for admin manual input */}
                       <div className="space-y-1">
                         <Label className="text-[11px] text-muted-foreground">Tablecloth Color</Label>
                         <DebouncedSelect
-                          value={ev.tablecloth_color || "white"}
+                          value={ev.tablecloth_color || "black"}
                           onSave={v => updateEvent(ev.id, { tablecloth_color: v })}
                           disabled={cannotEdit}
                         >
@@ -471,7 +556,7 @@ export default function RosterDayEvents({ weekDates, fmtDate }: Props) {
                       </div>
                     )}
 
-                    {/* Runsheet Upload */}
+                    {/* Runsheet Upload per event */}
                     <div className="flex items-center gap-2 pt-1 border-t border-border/40">
                       <FileText className="h-3.5 w-3.5 text-muted-foreground" />
                       <Label className="text-[11px] text-muted-foreground">Runsheet</Label>

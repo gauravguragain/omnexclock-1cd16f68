@@ -898,6 +898,8 @@ export type Database = {
           dry_ice: boolean | null
           event_space: string | null
           event_type: string | null
+          host_contact_number: string | null
+          host_name: string | null
           id: string
           kids_guests: number | null
           live_stall: boolean | null
@@ -921,6 +923,8 @@ export type Database = {
           dry_ice?: boolean | null
           event_space?: string | null
           event_type?: string | null
+          host_contact_number?: string | null
+          host_name?: string | null
           id?: string
           kids_guests?: number | null
           live_stall?: boolean | null
@@ -944,6 +948,8 @@ export type Database = {
           dry_ice?: boolean | null
           event_space?: string | null
           event_type?: string | null
+          host_contact_number?: string | null
+          host_name?: string | null
           id?: string
           kids_guests?: number | null
           live_stall?: boolean | null
@@ -1210,6 +1216,7 @@ export type Database = {
       get_employee_day_events: {
         Args: { _business_code?: string; _employee_code: string }
         Returns: {
+          adult_guests: number
           chairs_per_table: number
           cold_sparkles: boolean
           date: string
@@ -1217,10 +1224,16 @@ export type Database = {
           dry_ice: boolean
           event_space: string
           event_type: string
+          host_contact_number: string
+          host_name: string
           id: string
+          kids_guests: number
+          live_stall: boolean
+          live_stall_details: string
           notes: string
           num_tables: number
           red_carpet: boolean
+          smoke_machine: boolean
           tablecloth_color: string
         }[]
       }
