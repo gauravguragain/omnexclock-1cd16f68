@@ -18,7 +18,7 @@ export default defineConfig(({ mode }) => ({
     mode === "development" && componentTagger(),
     VitePWA({
       registerType: "autoUpdate",
-      includeAssets: ["favicon.ico", "logo.jpeg"],
+      includeAssets: ["favicon.ico", "logo.jpeg", "omnex-logo.jpg"],
       workbox: {
         navigateFallbackDenylist: [/^\/~oauth/],
         globPatterns: ["**/*.{js,css,html,ico,png,jpg,jpeg,svg,woff2}"],
@@ -31,17 +31,21 @@ export default defineConfig(({ mode }) => ({
         background_color: "#000000",
         display: "standalone",
         orientation: "portrait",
-        start_url: "/",
+        start_url: "/portal",
+        scope: "/",
+        categories: ["business", "productivity"],
         icons: [
           {
-            src: "/logo.jpeg",
+            src: "/omnex-logo.jpg",
             sizes: "192x192",
             type: "image/jpeg",
+            purpose: "any",
           },
           {
-            src: "/logo.jpeg",
+            src: "/omnex-logo.jpg",
             sizes: "512x512",
             type: "image/jpeg",
+            purpose: "any maskable",
           },
         ],
       },
