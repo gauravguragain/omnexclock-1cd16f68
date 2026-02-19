@@ -349,6 +349,9 @@ export default function MasterBusinessesPage() {
                 </CardHeader>
 
                 <CardContent className="space-y-3 text-sm">
+                  {biz.description && (
+                    <p className="text-muted-foreground italic text-xs">{biz.description}</p>
+                  )}
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 text-muted-foreground">
                     {biz.email && (
                       <div className="flex items-center gap-2">
