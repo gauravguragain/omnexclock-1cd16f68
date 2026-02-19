@@ -24,6 +24,7 @@ import {
   ArrowLeft, Delete, CalendarRange, Clock, LogIn, LogOut, Coffee, User, FileText,
   MessageSquare, CalendarOff, Send, Plus, RefreshCw, CalendarIcon, Trash2, Pencil,
   History, CheckCircle2, XCircle, PartyPopper, ChevronDown, ChevronUp, Users, Baby,
+  Smartphone, Monitor, Tablet, Download,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
@@ -379,26 +380,6 @@ function TodayTab({ employeeCode, businessCode, shifts, employeeName, businessNa
         </Card>
       ) : null}
 
-      {/* Portal Access Instructions */}
-      <Card>
-        <CardHeader className="pb-2 px-4 pt-4">
-          <CardTitle className="text-sm font-medium flex items-center gap-2">
-            <LogIn className="h-4 w-4 text-primary" /> Portal Access Info
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="px-4 pb-4">
-          <div className="text-xs space-y-2 text-muted-foreground">
-            <p className="font-medium text-foreground">How to access your Employee Portal:</p>
-            <ol className="list-decimal pl-4 space-y-1">
-              <li>Open <span className="font-mono text-primary break-all">https://omnexclock.lovable.app/portal</span> in your browser</li>
-              <li>Enter the Business Code: <span className="font-mono font-bold text-foreground">{businessCode || "—"}</span></li>
-              <li>Enter your 4-digit Employee Code (provided by your manager)</li>
-              <li>View your shifts, timesheets, forum, and requests</li>
-            </ol>
-            <p className="text-[10px] mt-2 opacity-70">Your employee code is confidential. Do not share it with others.</p>
-          </div>
-        </CardContent>
-      </Card>
     </div>
   );
 }
@@ -452,7 +433,8 @@ export default function PortalPage() {
   const [tsHistoryDate, setTsHistoryDate] = useState<string>("");
   const [tsHistoryLogs, setTsHistoryLogs] = useState<any[]>([]);
   const [tsHistoryLoading, setTsHistoryLoading] = useState(false);
-
+  const [accessInfoOpen, setAccessInfoOpen] = useState(false);
+  const [selectedDevice, setSelectedDevice] = useState("iphone");
   useEffect(() => {
     const timer = setInterval(() => setCurrentTime(new Date()), 1000);
     return () => clearInterval(timer);
@@ -842,10 +824,14 @@ export default function PortalPage() {
               <img src="/omnex-logo.jpg" alt="Logo" className="h-8 w-8 rounded-full object-cover" />
             )}
             <div>
-              <div className="flex items-center gap-2">
+              <button
+                className="flex items-center gap-2 hover:opacity-80 transition-opacity"
+                onClick={() => setAccessInfoOpen(true)}
+              >
                 <User className="h-4 w-4 text-primary" />
                 <span className="font-semibold text-foreground">{employeeInfo?.employee_name}</span>
-              </div>
+                <Download className="h-3 w-3 text-muted-foreground" />
+              </button>
               <div className="flex items-center gap-2 mt-0.5">
                 <Badge variant="outline" className="text-[10px] px-1.5 py-0 font-mono">{employeeCode}</Badge>
                 <Badge className={`text-[10px] px-1.5 py-0 ${
@@ -1452,8 +1438,117 @@ export default function PortalPage() {
         </DialogContent>
       </Dialog>
 
+      {/* Portal Access / PWA Install Instructions Dialog */}
+      <Dialog open={accessInfoOpen} onOpenChange={setAccessInfoOpen}>
+        <DialogContent className="sm:max-w-md max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Download className="h-5 w-5 text-primary" />
+              Install Employee Portal
+            </DialogTitle>
+            <p className="text-sm text-muted-foreground">
+              Add OmnexClock to your home screen for quick access — works like a native app.
+            </p>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            {/* Portal URL */}
+            <div className="rounded-lg bg-secondary/50 border border-border/60 p-3 space-y-1.5">
+              <p className="text-xs font-medium text-foreground">Portal URL</p>
+              <p className="font-mono text-xs text-primary break-all select-all">https://omnexclock.lovable.app/portal</p>
+              <p className="text-[10px] text-muted-foreground">
+                Business Code: <span className="font-mono font-bold text-foreground">{urlBusinessCode?.toUpperCase() || "—"}</span>
+              </p>
+            </div>
+
+            {/* Device selector */}
+            <div className="space-y-2">
+              <Label className="text-xs font-medium">Select your device</Label>
+              <Select value={selectedDevice} onValueChange={setSelectedDevice}>
+                <SelectTrigger className="bg-card">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="bg-card border border-border z-[200]">
+                  <SelectItem value="iphone">
+                    <div className="flex items-center gap-2"><Smartphone className="h-4 w-4" /> iPhone (Safari)</div>
+                  </SelectItem>
+                  <SelectItem value="android">
+                    <div className="flex items-center gap-2"><Smartphone className="h-4 w-4" /> Android (Chrome)</div>
+                  </SelectItem>
+                  <SelectItem value="ipad">
+                    <div className="flex items-center gap-2"><Tablet className="h-4 w-4" /> iPad (Safari)</div>
+                  </SelectItem>
+                  <SelectItem value="desktop">
+                    <div className="flex items-center gap-2"><Monitor className="h-4 w-4" /> Desktop (Chrome / Edge)</div>
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Instructions based on device */}
+            <div className="rounded-lg border border-border/60 bg-card p-4 space-y-3">
+              {selectedDevice === "iphone" && (
+                <>
+                  <p className="text-sm font-semibold text-foreground">iPhone — Safari</p>
+                  <ol className="text-xs text-muted-foreground space-y-2 list-decimal pl-4">
+                    <li>Open <span className="font-mono text-primary">Safari</span> (this must be Safari, not Chrome)</li>
+                    <li>Navigate to <span className="font-mono text-primary break-all">https://omnexclock.lovable.app/portal</span></li>
+                    <li>Tap the <span className="font-semibold text-foreground">Share</span> button (square with an arrow pointing up) at the bottom of the screen</li>
+                    <li>Scroll down and tap <span className="font-semibold text-foreground">"Add to Home Screen"</span></li>
+                    <li>Tap <span className="font-semibold text-foreground">"Add"</span> in the top-right corner</li>
+                    <li>The app icon will appear on your home screen — tap it to launch the portal full-screen</li>
+                  </ol>
+                </>
+              )}
+              {selectedDevice === "android" && (
+                <>
+                  <p className="text-sm font-semibold text-foreground">Android — Chrome</p>
+                  <ol className="text-xs text-muted-foreground space-y-2 list-decimal pl-4">
+                    <li>Open <span className="font-mono text-primary">Google Chrome</span></li>
+                    <li>Navigate to <span className="font-mono text-primary break-all">https://omnexclock.lovable.app/portal</span></li>
+                    <li>Tap the <span className="font-semibold text-foreground">three-dot menu</span> (⋮) in the top-right corner</li>
+                    <li>Tap <span className="font-semibold text-foreground">"Add to Home screen"</span> or <span className="font-semibold text-foreground">"Install app"</span></li>
+                    <li>Confirm by tapping <span className="font-semibold text-foreground">"Add"</span> or <span className="font-semibold text-foreground">"Install"</span></li>
+                    <li>The app will appear on your home screen and in your app drawer</li>
+                  </ol>
+                </>
+              )}
+              {selectedDevice === "ipad" && (
+                <>
+                  <p className="text-sm font-semibold text-foreground">iPad — Safari</p>
+                  <ol className="text-xs text-muted-foreground space-y-2 list-decimal pl-4">
+                    <li>Open <span className="font-mono text-primary">Safari</span> on your iPad</li>
+                    <li>Navigate to <span className="font-mono text-primary break-all">https://omnexclock.lovable.app/portal</span></li>
+                    <li>Tap the <span className="font-semibold text-foreground">Share</span> button (square with arrow) — it may be in the top-right or bottom bar depending on your iPad layout</li>
+                    <li>Tap <span className="font-semibold text-foreground">"Add to Home Screen"</span></li>
+                    <li>Tap <span className="font-semibold text-foreground">"Add"</span> to confirm</li>
+                    <li>Launch the app from your home screen for a full-screen experience</li>
+                  </ol>
+                </>
+              )}
+              {selectedDevice === "desktop" && (
+                <>
+                  <p className="text-sm font-semibold text-foreground">Desktop — Chrome / Edge</p>
+                  <ol className="text-xs text-muted-foreground space-y-2 list-decimal pl-4">
+                    <li>Open <span className="font-mono text-primary">Google Chrome</span> or <span className="font-mono text-primary">Microsoft Edge</span></li>
+                    <li>Navigate to <span className="font-mono text-primary break-all">https://omnexclock.lovable.app/portal</span></li>
+                    <li>Click the <span className="font-semibold text-foreground">install icon</span> (⊕) in the address bar, or click the three-dot menu → <span className="font-semibold text-foreground">"Install OmnexClock"</span></li>
+                    <li>Click <span className="font-semibold text-foreground">"Install"</span> in the prompt</li>
+                    <li>The app will open in its own window and appear in your Start menu / Dock</li>
+                  </ol>
+                </>
+              )}
+            </div>
+
+            <p className="text-[10px] text-muted-foreground/70">
+              💡 Your employee code is confidential. Do not share it with others. Once installed, you'll be remembered on this device.
+            </p>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       <footer className="text-center py-6">
-        <p className="text-xs text-muted-foreground">© 2024 Omnex Ventures Pty. Ltd. All rights reserved.</p>
+        <p className="text-xs text-muted-foreground">© {new Date().getFullYear()} Omnex Ventures Pty. Ltd. All rights reserved.</p>
       </footer>
 
       {/* First-time employee walkthrough */}
