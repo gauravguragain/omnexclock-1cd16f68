@@ -100,10 +100,14 @@ export default function AuthPage() {
   const subheading = isMasterLogin ? "Platform management access" : "Access your business dashboard";
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background p-4">
-      <div className="w-full max-w-md space-y-6">
+    <div className="min-h-screen flex items-center justify-center bg-background p-4 relative overflow-hidden">
+      {/* Ambient background */}
+      <div className="absolute top-1/3 -left-24 w-56 h-56 rounded-full bg-primary/[0.04] blur-3xl float" />
+      <div className="absolute bottom-1/3 -right-24 w-60 h-60 rounded-full bg-primary/[0.03] blur-3xl float" style={{ animationDelay: '2s' }} />
+
+      <div className="w-full max-w-md space-y-6 relative z-10">
         <div className="text-center space-y-3">
-          <div className="h-20 w-20 mx-auto rounded-2xl bg-primary/10 flex items-center justify-center shadow-lg shadow-primary/5">
+          <div className="h-20 w-20 mx-auto rounded-2xl bg-primary/10 flex items-center justify-center shadow-lg shadow-primary/5 pulse-ring">
             <IconComponent className="h-10 w-10 text-primary" />
           </div>
           <h1 className="text-2xl font-bold text-foreground tracking-tight">{heading}</h1>

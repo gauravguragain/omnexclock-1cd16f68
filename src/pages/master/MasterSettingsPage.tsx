@@ -4,7 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Settings, Server, Database, Shield, Globe, KeyRound, Mail, User, Loader2, Eye, EyeOff } from "lucide-react";
+import { Settings, Server, Database, Shield, Globe, KeyRound, Mail, User, Loader2, Eye, EyeOff, BookOpen } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -300,6 +300,32 @@ export default function MasterSettingsPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Instruction Manual */}
+      <h2 className="text-lg font-semibold text-foreground flex items-center gap-2">
+        <BookOpen className="h-5 w-5 text-primary" />
+        Documentation
+      </h2>
+
+      <Card className="bg-card border-border">
+        <CardHeader>
+          <CardTitle className="text-sm flex items-center gap-2">
+            <BookOpen className="h-4 w-4 text-primary" />
+            Instruction Manual
+          </CardTitle>
+          <CardDescription>Complete platform guide covering all system roles, kiosk operations, and admin workflows</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Button
+            variant="outline"
+            onClick={() => window.open("/induction-guide.html", "_blank")}
+            className="gap-2"
+          >
+            <BookOpen className="h-4 w-4" />
+            Open Instruction Manual
+          </Button>
+        </CardContent>
+      </Card>
     </div>
   );
 }
