@@ -103,11 +103,18 @@ serve(async (req) => {
 
     if (empError || !employee) {
       // Log failed attempt
-      await supabase.from("audit_logs").insert({
-        user_id: null,
-        action: "kiosk_invalid_code",
-        details: { employee_code, ip: clientIp },
-      });
+    // Try to find the business_id for audit logging
+    let invalidBizId: string | null = null;
+    if (business_code && typeof business_code === "string") {
+      const { data: biz2 } = await supabase.from("businesses").select("id").eq("business_code", business_code).maybeSingle();
+      if (biz2) invalidBizId = biz2.id;
+    }
+    await supabase.from("audit_logs").insert({
+      user_id: null,
+      action: "kiosk_invalid_code",
+      details: { employee_code, ip: clientIp },
+      business_id: invalidBizId,
+    });
       return new Response(JSON.stringify({ error: "Invalid employee code" }), {
         status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -189,11 +196,12 @@ serve(async (req) => {
       .single();
 
     if (clockError) {
-      await supabase.from("audit_logs").insert({
-        user_id: null,
-        action: "kiosk_error",
-        details: { error: clockError.message, code: clockError.code, employee_code, ip: clientIp },
-      });
+    await supabase.from("audit_logs").insert({
+      user_id: null,
+      action: "kiosk_error",
+      details: { error: clockError.message, code: clockError.code, employee_code, ip: clientIp },
+      business_id: employee.business_id,
+    });
       return new Response(JSON.stringify({ error: getSafeErrorMessage(clockError) }), {
         status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -203,6 +211,7 @@ serve(async (req) => {
       user_id: null,
       action: `kiosk_${event_type}`,
       details: { employee_id: employee.id, employee_name: employee.name, event_type },
+      business_id: employee.business_id,
     });
 
     return new Response(
