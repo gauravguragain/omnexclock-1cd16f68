@@ -110,35 +110,66 @@ function PortalNotifications({ employeeCode, businessCode }: { employeeCode: str
 
 /* ── Event Card (reusable) ────────────────────────────────── */
 function EventCard({ ev }: { ev: any }) {
+  const detailRow = (label: string, value: string | null | undefined) => {
+    if (!value) return null;
+    return (
+      <div className="flex justify-between text-xs">
+        <span className="text-muted-foreground">{label}</span>
+        <span className="font-semibold text-foreground">{value}</span>
+      </div>
+    );
+  };
+
   return (
-    <div className="rounded-lg border border-border/60 bg-secondary/30 p-3 space-y-2">
-      {ev.event_space && (
-        <div className="flex justify-between text-xs">
-          <span className="text-muted-foreground">Event Space</span>
-          <span className="font-semibold text-foreground">{ev.event_space}</span>
+    <div className="rounded-lg border border-border/60 bg-secondary/30 p-3 space-y-2.5">
+      {/* Host Details */}
+      {(ev.host_name || ev.host_contact_number) && (
+        <div className="pb-2 border-b border-border/30 space-y-1">
+          <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Client Details</p>
+          {detailRow("Host Name", ev.host_name)}
+          {detailRow("Contact", ev.host_contact_number)}
         </div>
       )}
-      {ev.event_type && (
-        <div className="flex justify-between text-xs">
-          <span className="text-muted-foreground">Event Type</span>
-          <span className="font-semibold text-foreground">{ev.event_type}</span>
+
+      {/* Event Info */}
+      {detailRow("Event Space", ev.event_space)}
+      {detailRow("Event Type", ev.event_type)}
+
+      {/* Guest & Table Setup */}
+      {(ev.adult_guests > 0 || ev.kids_guests > 0) && (
+        <div className="grid grid-cols-2 gap-x-4 gap-y-1">
+          {detailRow("Adult Guests", ev.adult_guests > 0 ? String(ev.adult_guests) : null)}
+          {detailRow("Kids Guests", ev.kids_guests > 0 ? String(ev.kids_guests) : null)}
         </div>
       )}
-      <div className="flex justify-between text-xs">
-        <span className="text-muted-foreground">Tables</span>
-        <span className="font-semibold text-foreground">{ev.num_tables} ({ev.chairs_per_table} chairs each)</span>
-      </div>
-      <div className="flex justify-between text-xs">
-        <span className="text-muted-foreground">Tablecloth</span>
-        <span className="font-semibold text-foreground">{ev.tablecloth_color === "black" ? "⬛ Black" : "⬜ White"}</span>
-      </div>
-      <div className="flex flex-wrap gap-2 pt-1">
-        {ev.cold_sparkles && <Badge variant="secondary" className="text-[10px]">✨ Cold Sparkles</Badge>}
-        {ev.dry_ice && <Badge variant="secondary" className="text-[10px]">🌫️ Dry Ice</Badge>}
-        {ev.red_carpet && <Badge variant="secondary" className="text-[10px]">🔴 Red Carpet</Badge>}
-        {ev.decor_access && <Badge variant="secondary" className="text-[10px]">🎨 Decor Access</Badge>}
-      </div>
-      {ev.notes && <p className="text-xs text-muted-foreground italic mt-1">{ev.notes}</p>}
+      {detailRow("Tables", ev.num_tables > 0 ? `${ev.num_tables} (${ev.chairs_per_table || 8} chairs each)` : null)}
+      {detailRow("Tablecloth", ev.tablecloth_color === "black" ? "⬛ Black" : ev.tablecloth_color === "white" ? "⬜ White" : ev.tablecloth_color)}
+
+      {/* Bev Package */}
+      {detailRow("Bev Package", ev.bev_package)}
+
+      {/* Equipment Badges */}
+      {(ev.cold_sparkles || ev.dry_ice || ev.red_carpet || ev.smoke_machine || ev.decor_access || ev.live_stall) && (
+        <div className="flex flex-wrap gap-1.5 pt-1">
+          {ev.cold_sparkles && <Badge variant="secondary" className="text-[10px]">✨ Cold Sparkles</Badge>}
+          {ev.dry_ice && <Badge variant="secondary" className="text-[10px]">🌫️ Dry Ice</Badge>}
+          {ev.red_carpet && <Badge variant="secondary" className="text-[10px]">🔴 Red Carpet</Badge>}
+          {ev.smoke_machine && <Badge variant="secondary" className="text-[10px]">💨 Smoke Machine</Badge>}
+          {ev.decor_access && <Badge variant="secondary" className="text-[10px]">🎨 Decor Access</Badge>}
+          {ev.live_stall && <Badge variant="secondary" className="text-[10px]">🍳 Live Stall</Badge>}
+        </div>
+      )}
+
+      {/* Live Stall Details */}
+      {ev.live_stall && ev.live_stall_details && (
+        <div className="text-xs">
+          <span className="text-muted-foreground">Live Stall: </span>
+          <span className="text-foreground">{ev.live_stall_details}</span>
+        </div>
+      )}
+
+      {/* Notes */}
+      {ev.notes && <p className="text-xs text-muted-foreground italic mt-1">📝 {ev.notes}</p>}
     </div>
   );
 }

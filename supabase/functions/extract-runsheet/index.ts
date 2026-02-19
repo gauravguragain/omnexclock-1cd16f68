@@ -57,6 +57,7 @@ Rules:
 - live_stall_details: If live_stall is true, describe what's included (e.g. "Live pasta station, dessert bar"). Otherwise null.
 - host_name: The name of the host/client. Look for "Client", "Host", "Customer Name", or similar labels in the runsheet.
 - host_contact_number: The contact phone number of the host/client. Look for phone/mobile/contact number associated with the client.
+- bev_package: The beverage package selected for the event (e.g. "Gold Package", "Silver Package", "BYO", "Premium Bar", etc.). Look for "Beverage", "Bev Package", "Drinks Package", "Bar Package" or similar labels.
 - notes: Any other important details or special requests mentioned.
 
 Return ONLY valid JSON, no markdown, no extra text.`,
