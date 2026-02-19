@@ -15,7 +15,7 @@ import NotificationBell from "@/components/NotificationBell";
 import { useAdminNotifications } from "@/hooks/useNotifications";
 
 export default function AdminLayout() {
-  const { user, isAdminOf, isViewerOf, isRosterAdminOf, getRosterAdminDepartments, hasAccessTo, isApproved, loading, signOut } = useAuth();
+  const { user, isAdminOf, isSuperAdminOf, isViewerOf, isRosterAdminOf, getRosterAdminDepartments, hasAccessTo, isApproved, loading, signOut } = useAuth();
   const { business, businesses, setBusiness } = useBusiness();
   const location = useLocation();
   const { businessCode } = useParams();
@@ -55,6 +55,7 @@ export default function AdminLayout() {
 
   const currentBusinessId = business?.id || "";
   const isAdmin = isAdminOf(currentBusinessId);
+  const isSuperAdmin = isSuperAdminOf(currentBusinessId);
   const isViewer = isViewerOf(currentBusinessId);
   const isRosterAdmin = isRosterAdminOf(currentBusinessId);
   const hasAccess = hasAccessTo(currentBusinessId);
@@ -72,20 +73,21 @@ export default function AdminLayout() {
     { path: `${basePath}/requests`, label: "Requests", icon: CalendarOff, tourId: "requests", access: "full" },
     { path: `${basePath}/forum`, label: "Forum", icon: MessageSquare, tourId: "forum", access: "full" },
     { path: `${basePath}/audit-log`, label: "Audit Log", icon: FileText, tourId: "audit-log", access: "full" },
-    { path: `${basePath}/users`, label: "User Management", icon: UserCog, tourId: "users", access: "admin_only" },
+    { path: `${basePath}/users`, label: "User Management", icon: UserCog, tourId: "users", access: "super_admin_only" },
     { path: `${basePath}/my-business`, label: "My Business", icon: Building2, tourId: "my-business", access: "full" },
   ];
 
   // Filter nav items based on role
   const navItems = allNavItems.filter(item => {
-    if (isAdmin) return true; // Full admins see everything
+    if (item.access === "super_admin_only") {
+      return isSuperAdmin; // Only super admins see User Management
+    }
+    if (isAdmin) return true; // Full admins and super admins see everything else
     if (isRosterAdmin && !isAdmin && !isViewer) {
-      // Roster admins only see Roster and Timesheets
       return item.access === "roster";
     }
     if (isViewer) {
-      // Viewers see everything except admin-only
-      return item.access !== "admin_only";
+      return item.access !== "super_admin_only";
     }
     return true;
   });
@@ -132,6 +134,8 @@ export default function AdminLayout() {
     ? { label: `Roster Admin (${rosterDepts.join(", ")})`, variant: "outline" as const, className: "text-primary border-primary/30 text-[10px] font-medium" }
     : isViewer && !isAdmin
     ? { label: "View Only", variant: "outline" as const, className: "text-primary border-primary/30 text-[10px] font-medium" }
+    : isSuperAdmin
+    ? { label: "Super Admin", variant: "outline" as const, className: "text-primary border-primary/30 text-[10px] font-medium" }
     : null;
 
   return (

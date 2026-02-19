@@ -5,7 +5,7 @@ import type { User } from "@supabase/supabase-js";
 
 interface UserBusinessRole {
   business_id: string | null;
-  role: "admin" | "viewer" | "user" | "master" | "roster_admin";
+  role: "admin" | "viewer" | "user" | "master" | "roster_admin" | "super_admin";
   departments?: string[] | null;
 }
 
@@ -15,15 +15,17 @@ interface AuthContextType {
   loading: boolean;
   /** All business roles for this user */
   businessRoles: UserBusinessRole[];
-  /** Check if user is admin of a specific business */
+  /** Check if user is admin (or super_admin) of a specific business */
   isAdminOf: (businessId: string) => boolean;
+  /** Check if user is super_admin of a specific business */
+  isSuperAdminOf: (businessId: string) => boolean;
   /** Check if user is viewer of a specific business */
   isViewerOf: (businessId: string) => boolean;
   /** Check if user is roster admin of a specific business */
   isRosterAdminOf: (businessId: string) => boolean;
   /** Get roster admin departments for a specific business */
   getRosterAdminDepartments: (businessId: string) => string[];
-  /** Check if user has any access (admin, viewer, or roster_admin) to a business */
+  /** Check if user has any access (admin, super_admin, viewer, or roster_admin) to a business */
   hasAccessTo: (businessId: string) => boolean;
   /** Check if user is a platform master admin */
   isMaster: boolean;
@@ -84,7 +86,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const isAdminOf = useCallback((businessId: string) => {
-    return businessRoles.some(r => r.business_id === businessId && r.role === "admin");
+    return businessRoles.some(r => r.business_id === businessId && (r.role === "admin" || r.role === "super_admin"));
+  }, [businessRoles]);
+
+  const isSuperAdminOf = useCallback((businessId: string) => {
+    return businessRoles.some(r => r.business_id === businessId && r.role === "super_admin");
   }, [businessRoles]);
 
   const isViewerOf = useCallback((businessId: string) => {
@@ -101,12 +107,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [businessRoles]);
 
   const hasAccessTo = useCallback((businessId: string) => {
-    return businessRoles.some(r => r.business_id === businessId && (r.role === "admin" || r.role === "viewer" || r.role === "roster_admin"));
+    return businessRoles.some(r => r.business_id === businessId && (r.role === "admin" || r.role === "super_admin" || r.role === "viewer" || r.role === "roster_admin"));
   }, [businessRoles]);
 
   // Global checks
   const isMaster = businessRoles.some(r => r.role === "master" && !r.business_id);
-  const isAdmin = businessRoles.some(r => r.role === "admin");
+  const isAdmin = businessRoles.some(r => r.role === "admin" || r.role === "super_admin");
   const isViewer = businessRoles.some(r => r.role === "viewer");
 
   const signIn = async (email: string, password: string) => {
@@ -137,7 +143,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   return (
     <AuthContext.Provider value={{
       user, isApproved, loading, businessRoles,
-      isAdminOf, isViewerOf, isRosterAdminOf, getRosterAdminDepartments,
+      isAdminOf, isSuperAdminOf, isViewerOf, isRosterAdminOf, getRosterAdminDepartments,
       hasAccessTo, isMaster,
       isAdmin, isViewer,
       signIn, signUp, signOut,

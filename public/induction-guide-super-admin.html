@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OmnexClock – Super Admin Induction Guide</title>
+<style>
+  @media print { body { font-size: 11pt; } .no-print { display: none; } .page-break { page-break-before: always; } }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Segoe UI', Arial, sans-serif; color: #1a1a1a; line-height: 1.7; max-width: 900px; margin: 0 auto; padding: 40px 30px; }
+  h1 { font-size: 28pt; color: #c9a227; margin-bottom: 6px; }
+  h2 { font-size: 18pt; color: #c9a227; margin-top: 40px; margin-bottom: 12px; border-bottom: 2px solid #c9a227; padding-bottom: 6px; }
+  h3 { font-size: 14pt; color: #333; margin-top: 20px; margin-bottom: 8px; }
+  p, li { margin-bottom: 8px; }
+  ul, ol { padding-left: 24px; }
+  .cover { text-align: center; padding: 80px 0 40px; }
+  .cover img { width: 100px; height: 100px; border-radius: 50%; object-fit: cover; margin-bottom: 16px; }
+  .badge { display: inline-block; background: #c9a227; color: #000; padding: 2px 10px; border-radius: 12px; font-size: 10pt; font-weight: bold; }
+  .note { background: #fef9e7; border-left: 4px solid #c9a227; padding: 12px 16px; margin: 16px 0; border-radius: 0 8px 8px 0; }
+  .warning { background: #fef2f2; border-left: 4px solid #dc2626; padding: 12px 16px; margin: 16px 0; border-radius: 0 8px 8px 0; }
+  table { width: 100%; border-collapse: collapse; margin: 16px 0; }
+  th, td { border: 1px solid #ddd; padding: 10px 14px; text-align: left; }
+  th { background: #1a1a1a; color: #c9a227; }
+  tr:nth-child(even) { background: #f9f9f9; }
+  code { background: #f1f1f1; padding: 2px 6px; border-radius: 4px; font-size: 10pt; }
+  .btn-print { position: fixed; bottom: 20px; right: 20px; background: #c9a227; color: #000; border: none; padding: 12px 24px; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 12pt; box-shadow: 0 4px 12px rgba(0,0,0,0.2); }
+  .btn-print:hover { background: #b8941f; }
+  .step { counter-increment: step; margin-bottom: 12px; padding-left: 8px; }
+  .step::before { content: counter(step) ". "; font-weight: bold; color: #c9a227; }
+  .steps { counter-reset: step; }
+</style>
+</head>
+<body>
+
+<button class="btn-print no-print" onclick="window.print()">📄 Save as PDF / Print</button>
+
+<div class="cover">
+  <img src="/omnex-logo.jpg" alt="OmnexClock Logo">
+  <h1>OmnexClock</h1>
+  <p style="font-size: 14pt; color: #555;">Super Admin Induction Guide</p>
+  <p style="margin-top: 16px;"><span class="badge">SUPER ADMIN</span></p>
+</div>
+
+<div class="page-break"></div>
+
+<h2>Welcome, Super Admin!</h2>
+<p>As a <strong>Super Admin</strong>, you have the highest level of access to your business on OmnexClock. This guide covers everything you need to know to manage your business effectively.</p>
+
+<h2>Your Access & Responsibilities</h2>
+<p>You have <strong>full access</strong> to all features:</p>
+<table>
+  <tr><th>Feature</th><th>Access</th></tr>
+  <tr><td>Dashboard & Analytics</td><td>✅ Full access</td></tr>
+  <tr><td>Employee Management</td><td>✅ Add, edit, deactivate employees</td></tr>
+  <tr><td>Roster Scheduling</td><td>✅ Create, publish, manage rosters</td></tr>
+  <tr><td>Live Monitor</td><td>✅ Real-time clock status</td></tr>
+  <tr><td>Timesheets</td><td>✅ View, edit, approve timesheets</td></tr>
+  <tr><td>Payroll</td><td>✅ Generate & manage payroll</td></tr>
+  <tr><td>Employee Requests</td><td>✅ Approve/reject leave & availability</td></tr>
+  <tr><td>Forum / Noticeboard</td><td>✅ Create posts & moderate</td></tr>
+  <tr><td>Audit Log</td><td>✅ Full history</td></tr>
+  <tr><td><strong>User Management</strong></td><td>✅ <strong>Invite admins, assign roles, manage users</strong></td></tr>
+  <tr><td>Business Settings</td><td>✅ Logo, theme, configuration</td></tr>
+  <tr><td>Kiosk</td><td>✅ Launch on-site kiosk</td></tr>
+</table>
+
+<div class="note">
+  <strong>Exclusive to Super Admin:</strong> Only Super Admins can access User Management to invite new admins, assign roles (Admin, Viewer, Roster Admin), and remove users from the business. Regular Admins cannot access this feature.
+</div>
+
+<h2>Getting Started</h2>
+<div class="steps">
+  <p class="step">Log in at the landing page by clicking <strong>"Business Admin"</strong></p>
+  <p class="step">Select your business from the <strong>Business Hub</strong></p>
+  <p class="step">You'll see the full sidebar navigation with all modules</p>
+  <p class="step">Start by reviewing the <strong>Dashboard</strong> for a business overview</p>
+</div>
+
+<h2>Inviting Team Members</h2>
+<p>One of your key responsibilities is managing who has access to the admin panel:</p>
+<div class="steps">
+  <p class="step">Navigate to <strong>User Management</strong> in the sidebar</p>
+  <p class="step">Click <strong>"Invite Admin"</strong> in the top right</p>
+  <p class="step">Enter the person's email address</p>
+  <p class="step">Select their role: <strong>Super Admin</strong>, <strong>Admin</strong>, <strong>Viewer</strong>, or <strong>Roster Admin</strong></p>
+  <p class="step">For Roster Admin, select which departments they should manage</p>
+  <p class="step">Click <strong>"Send Invitation"</strong> — they'll receive an email with signup instructions and their own induction guide</p>
+</div>
+
+<h3>Understanding Roles</h3>
+<table>
+  <tr><th>Role</th><th>Can Do</th><th>Cannot Do</th></tr>
+  <tr><td><span class="badge">Super Admin</span></td><td>Everything</td><td>—</td></tr>
+  <tr><td>Admin</td><td>All business features</td><td>User management, invitations</td></tr>
+  <tr><td>Viewer</td><td>View all data</td><td>Make any changes</td></tr>
+  <tr><td>Roster Admin</td><td>Manage roster & timesheets for assigned departments</td><td>Access other modules or departments</td></tr>
+</table>
+
+<h2>Key Modules Overview</h2>
+
+<h3>Employees</h3>
+<p>Add and manage employee profiles with 4-digit codes, departments, job titles, and pay rates. Employees use their code to clock in at the Kiosk.</p>
+
+<h3>Roster</h3>
+<p>Create weekly rosters with shift assignments. Publish to make them visible to employees. Email notifications can be sent when publishing.</p>
+
+<h3>Kiosk</h3>
+<p>The on-site clock-in/out station. Launch from the sidebar — it requires employees to enter their code and take a photo.</p>
+
+<h3>Timesheets</h3>
+<p>Automatically generated from clock events. Review, edit, and approve timesheets before generating payroll.</p>
+
+<h3>Payroll</h3>
+<p>Generate payroll entries from approved timesheets. Export as CSV and email reports.</p>
+
+<h2>Security Best Practices</h2>
+<ul>
+  <li>Only grant Super Admin access to trusted managers</li>
+  <li>Use strong, unique passwords</li>
+  <li>Regularly review user access in User Management</li>
+  <li>Remove access for departing team members immediately</li>
+  <li>Review the Audit Log periodically for unusual activity</li>
+</ul>
+
+<div class="warning">
+  <strong>Important:</strong> As Super Admin, you can modify all data and manage all users. Handle this access responsibly and ensure that your login credentials are secure.
+</div>
+
+<h2>Need Help?</h2>
+<p>For the complete platform documentation, visit the full <a href="/induction-guide.html" style="color:#c9a227;">OmnexClock Induction Guide</a>.</p>
+<p>Contact your platform administrator or email support for assistance.</p>
+
+</body>
+</html>

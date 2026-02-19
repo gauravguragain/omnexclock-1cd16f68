@@ -2,3 +2,6 @@ project_id = "oulvbpeofotxxnkxndzv"
 
 [functions.analyze-theme]
 verify_jwt = false
+
+[functions.invite-admin]
+verify_jwt = false

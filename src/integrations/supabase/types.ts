@@ -14,6 +14,53 @@ export type Database = {
   }
   public: {
     Tables: {
+      admin_invitations: {
+        Row: {
+          business_id: string
+          created_at: string
+          departments: string[] | null
+          email: string
+          expires_at: string
+          id: string
+          invited_by: string
+          role: Database["public"]["Enums"]["app_role"]
+          status: string
+          token: string
+        }
+        Insert: {
+          business_id: string
+          created_at?: string
+          departments?: string[] | null
+          email: string
+          expires_at?: string
+          id?: string
+          invited_by: string
+          role: Database["public"]["Enums"]["app_role"]
+          status?: string
+          token: string
+        }
+        Update: {
+          business_id?: string
+          created_at?: string
+          departments?: string[] | null
+          email?: string
+          expires_at?: string
+          id?: string
+          invited_by?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          status?: string
+          token?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "admin_invitations_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       audit_logs: {
         Row: {
           action: string
@@ -842,6 +889,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      accept_invitation: { Args: { _token: string }; Returns: boolean }
       add_forum_comment:
         | {
             Args: { _content: string; _employee_code: string; _post_id: string }
@@ -1151,6 +1199,10 @@ export type Database = {
       is_approved: { Args: { _user_id: string }; Returns: boolean }
       is_master: { Args: never; Returns: boolean }
       is_roster_admin_of_business: {
+        Args: { _business_id: string }
+        Returns: boolean
+      }
+      is_super_admin_of_business: {
         Args: { _business_id: string }
         Returns: boolean
       }
