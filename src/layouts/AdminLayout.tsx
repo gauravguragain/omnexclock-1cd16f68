@@ -78,15 +78,22 @@ export default function AdminLayout() {
   }
 
   if (!user) return <Navigate to="/auth" replace />;
-  if (!isApproved || !hasAccess) {
+
+  // Check if business is suspended or deactivated
+  const businessStatus = business && (business as any).status;
+  const isSuspended = businessStatus === "suspended" || businessStatus === "deactivated";
+
+  if (!isApproved || !hasAccess || isSuspended) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="text-center space-y-4">
           <h1 className="text-xl font-bold text-foreground">
-            {!isApproved ? "Account Pending Approval" : "Access Denied"}
+            {isSuspended ? "Business Unavailable" : !isApproved ? "Account Pending Approval" : "Access Denied"}
           </h1>
           <p className="text-muted-foreground">
-            {!isApproved
+            {isSuspended
+              ? `This business has been ${businessStatus} by the platform administrator. Please contact support for assistance.`
+              : !isApproved
               ? "Your account is awaiting approval from an administrator."
               : "You don't have access to this business."}
           </p>

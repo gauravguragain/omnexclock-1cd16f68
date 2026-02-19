@@ -44,10 +44,17 @@ export default function KioskPage() {
     const loadBusiness = async () => {
       const { data } = await supabase
         .from("businesses")
-        .select("name, logo_url, theme")
+        .select("name, logo_url, theme, status")
         .eq("business_code", urlBusinessCode.toUpperCase())
         .maybeSingle();
       if (data) {
+        // Block suspended/deactivated businesses from kiosk
+        if (data.status === "suspended" || data.status === "deactivated") {
+          setBusinessName(data.name);
+          setBusinessLogo(data.logo_url);
+          toast({ title: "Business Unavailable", description: `This business has been ${data.status} by the platform administrator.`, variant: "destructive" });
+          return;
+        }
         setBusinessName(data.name);
         setBusinessLogo(data.logo_url);
         setStep("code_entry");
