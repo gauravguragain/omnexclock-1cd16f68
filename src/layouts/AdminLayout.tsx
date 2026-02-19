@@ -58,17 +58,17 @@ export default function AdminLayout() {
   const basePath = `/b/${businessCode}/admin`;
 
   const navItems = [
-    { path: basePath, label: "Dashboard", icon: BarChart3 },
-    { path: `${basePath}/employees`, label: "Employees", icon: Users },
-    { path: `${basePath}/roster`, label: "Roster", icon: CalendarRange },
-    { path: `${basePath}/live`, label: "Live Monitor", icon: Monitor },
-    { path: `${basePath}/timesheets`, label: "Timesheets", icon: CalendarDays },
-    { path: `${basePath}/payroll`, label: "Payroll", icon: DollarSign },
-    { path: `${basePath}/requests`, label: "Requests", icon: CalendarOff },
-    { path: `${basePath}/forum`, label: "Forum", icon: MessageSquare },
-    { path: `${basePath}/audit-log`, label: "Audit Log", icon: FileText },
-    { path: `${basePath}/users`, label: "User Management", icon: UserCog },
-    { path: `${basePath}/my-business`, label: "My Business", icon: Building2 },
+    { path: basePath, label: "Dashboard", icon: BarChart3, tourId: "dashboard" },
+    { path: `${basePath}/employees`, label: "Employees", icon: Users, tourId: "employees" },
+    { path: `${basePath}/roster`, label: "Roster", icon: CalendarRange, tourId: "roster" },
+    { path: `${basePath}/live`, label: "Live Monitor", icon: Monitor, tourId: "live" },
+    { path: `${basePath}/timesheets`, label: "Timesheets", icon: CalendarDays, tourId: "timesheets" },
+    { path: `${basePath}/payroll`, label: "Payroll", icon: DollarSign, tourId: "payroll" },
+    { path: `${basePath}/requests`, label: "Requests", icon: CalendarOff, tourId: "requests" },
+    { path: `${basePath}/forum`, label: "Forum", icon: MessageSquare, tourId: "forum" },
+    { path: `${basePath}/audit-log`, label: "Audit Log", icon: FileText, tourId: "audit-log" },
+    { path: `${basePath}/users`, label: "User Management", icon: UserCog, tourId: "users" },
+    { path: `${basePath}/my-business`, label: "My Business", icon: Building2, tourId: "my-business" },
   ];
 
   if (loading) {
@@ -130,10 +130,11 @@ export default function AdminLayout() {
         </div>
 
         <nav className="p-3 space-y-1 overflow-y-auto flex-1">
-          {navItems.map(({ path, label, icon: Icon }) => (
+          {navItems.map(({ path, label, icon: Icon, tourId }) => (
             <Link
               key={path}
               to={path}
+              data-tour={tourId}
               onClick={() => setSidebarOpen(false)}
               className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors ${
                 location.pathname === path
@@ -162,6 +163,7 @@ export default function AdminLayout() {
           {isAdmin && (
             <Link
               to={`/b/${businessCode}/kiosk`}
+              data-tour="kiosk"
               onClick={async () => {
                 await signOut();
               }}
