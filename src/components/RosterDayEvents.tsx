@@ -461,8 +461,8 @@ export default function RosterDayEvents({ weekDates, fmtDate }: Props) {
                               className="h-6 px-1.5 text-[10px]"
                               onClick={() => toggleEventExpand(ev.id)}
                             >
-                              {isExpanded ? <ChevronUp className="h-3 w-3 mr-0.5" /> : <Edit2 className="h-3 w-3 mr-0.5" />}
-                              {isExpanded ? "Collapse" : "Edit"}
+                              {isExpanded ? <ChevronUp className="h-3 w-3 mr-0.5" /> : <ChevronDown className="h-3 w-3 mr-0.5" />}
+                              {isExpanded ? "Collapse" : "Expand"}
                             </Button>
                           </div>
                         </div>
