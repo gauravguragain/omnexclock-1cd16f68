@@ -61,7 +61,7 @@ serve(async (req) => {
       });
     }
 
-    const { employee_code, event_type, photo_base64, device_info, business_code } = body;
+    const { employee_code, event_type, photo_base64, device_info, business_code, geolocation } = body;
 
     // Input validation
     if (!employee_code || typeof employee_code !== "string" || !CODE_REGEX.test(employee_code)) {
@@ -183,6 +183,7 @@ serve(async (req) => {
         event_type,
         photo_url,
         device_info: device_info || null,
+        geolocation: geolocation || null,
       })
       .select()
       .single();

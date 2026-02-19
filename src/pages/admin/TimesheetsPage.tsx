@@ -11,7 +11,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import { CalendarIcon, Search, Pencil, Trash2, Plus, ChevronLeft, ChevronRight, CheckCircle2, XCircle, Download, Mail, History } from "lucide-react";
+import { CalendarIcon, Search, Pencil, Trash2, Plus, ChevronLeft, ChevronRight, CheckCircle2, XCircle, Download, Mail, History, MapPin, AlertTriangle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
@@ -20,7 +20,8 @@ import { logAudit, getDeviceInfo } from "@/lib/auditLog";
 import { toAusDate, toAusDisplayDate, toAusTime24, toAusTime12, buildAusTimestamp, ausToday, ausNow, ausStartOfDay, ausEndOfDay, ensureTime12 } from "@/lib/dateUtils";
 import { useAuth } from "@/contexts/AuthContext";
 import { EmailCSVDialog } from "@/components/EmailCSVDialog";
-
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { formatGeoLocation } from "@/lib/geolocation";
 
 interface TimesheetEntry {
   employee_id: string;
@@ -41,6 +42,7 @@ interface TimesheetEntry {
   raw_break_end: string | null;
   event_ids: string[];
   approved: boolean;
+  clock_in_geo: any;
 }
 
 interface EditForm {
@@ -228,7 +230,7 @@ export default function TimesheetsPage() {
           raw_break_start: null,
           raw_break_end: null,
           event_ids: [],
-          
+          clock_in_geo: null,
         });
       }
 
@@ -241,6 +243,7 @@ export default function TimesheetsPage() {
           if (!entry.clock_in || time < new Date(entry.clock_in)) {
             entry.clock_in = ev.timestamp;
             entry.raw_clock_in = ev.timestamp;
+            entry.clock_in_geo = ev.geolocation || null;
           }
           break;
         case "clock_out":
@@ -291,6 +294,7 @@ export default function TimesheetsPage() {
         raw_break_end: e.raw_break_end,
         event_ids: e.event_ids,
         approved: appMap.get(approvalKey) || false,
+        clock_in_geo: e.clock_in_geo,
       };
     });
 
@@ -622,7 +626,40 @@ export default function TimesheetsPage() {
     </div>
   );
 
+  const renderLocationCell = (geo: any) => {
+    const loc = formatGeoLocation(geo);
+    if (loc.status === "verified" || loc.status === "coordinates-only") {
+      return (
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <span className="flex items-center gap-1 text-xs cursor-default">
+              <MapPin className="h-3 w-3 text-muted-foreground flex-shrink-0" />
+              <span className="truncate max-w-[120px]">{loc.name}</span>
+              {loc.accuracy && loc.accuracy > 200 && (
+                <AlertTriangle className="h-3 w-3 text-amber-500 flex-shrink-0" />
+              )}
+            </span>
+          </TooltipTrigger>
+          <TooltipContent>
+            <p>Lat: {loc.lat?.toFixed(5)}, Lng: {loc.lng?.toFixed(5)}</p>
+            <p>Accuracy: {loc.accuracy}m</p>
+          </TooltipContent>
+        </Tooltip>
+      );
+    }
+    if (loc.status === "denied" || loc.status === "unavailable") {
+      return (
+        <span className="flex items-center gap-1 text-xs text-muted-foreground">
+          <span className="h-1.5 w-1.5 rounded-full bg-amber-500 flex-shrink-0" />
+          —
+        </span>
+      );
+    }
+    return <span className="text-xs text-muted-foreground">—</span>;
+  };
+
   return (
+    <TooltipProvider>
     <div className="space-y-4">
       {/* Filters row */}
       <div className="flex flex-col gap-3">
@@ -744,6 +781,16 @@ export default function TimesheetsPage() {
                   <span className="text-foreground">{e.total_hours}h</span>
                   <span className="text-foreground font-semibold">{e.net_hours}h</span>
                 </div>
+                {/* Location row on mobile */}
+                {(() => {
+                  const loc = formatGeoLocation(e.clock_in_geo);
+                  return (loc.status === "verified" || loc.status === "coordinates-only") ? (
+                    <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                      <MapPin className="h-3 w-3 flex-shrink-0" />
+                      <span className="truncate">{loc.name}</span>
+                    </div>
+                  ) : null;
+                })()}
               </div>
             ))}
             {filtered.length === 0 && (
@@ -762,6 +809,7 @@ export default function TimesheetsPage() {
                   <TableHead>Employee</TableHead>
                   <TableHead>Date</TableHead>
                   <TableHead>Clock In</TableHead>
+                  <TableHead className="hidden xl:table-cell">Location</TableHead>
                   <TableHead>Clock Out</TableHead>
                   <TableHead className="hidden lg:table-cell">Break Start</TableHead>
                   <TableHead className="hidden lg:table-cell">Break End</TableHead>
@@ -792,6 +840,7 @@ export default function TimesheetsPage() {
                     <TableCell className="font-medium">{e.employee_name}</TableCell>
                     <TableCell className="whitespace-nowrap">{e.date}</TableCell>
                     <TableCell>{e.clock_in || "-"}</TableCell>
+                    <TableCell className="hidden xl:table-cell">{renderLocationCell(e.clock_in_geo)}</TableCell>
                     <TableCell>{e.clock_out || "-"}</TableCell>
                     <TableCell className="hidden lg:table-cell">{e.break_start || "-"}</TableCell>
                     <TableCell className="hidden lg:table-cell">{e.break_end || "-"}</TableCell>
@@ -819,7 +868,7 @@ export default function TimesheetsPage() {
                 ))}
                 {filtered.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={11} className="text-center text-muted-foreground py-8">
+                    <TableCell colSpan={12} className="text-center text-muted-foreground py-8">
                       No timesheet data for this period.
                     </TableCell>
                   </TableRow>
@@ -946,5 +995,6 @@ export default function TimesheetsPage() {
         </DialogContent>
       </Dialog>
     </div>
+    </TooltipProvider>
   );
 }
