@@ -579,7 +579,7 @@ export default function PortalPage() {
           <Card>
             <CardContent className="p-4 text-center">
               <p className="text-xs text-muted-foreground mb-1">This Week</p>
-              <p className="text-2xl font-mono font-bold text-foreground">{thisWeekHours.toFixed(1)}h</p>
+              <p className="text-2xl font-mono font-bold text-foreground">{thisWeekHours.toFixed(2)}h</p>
               <p className="text-xs text-muted-foreground">scheduled</p>
             </CardContent>
           </Card>
@@ -642,7 +642,7 @@ export default function PortalPage() {
                         <CardTitle className="text-sm font-medium text-muted-foreground">
                           {toAusFormatted(ws, { day: "numeric", month: "short" })} – {toAusFormatted(we, { day: "numeric", month: "short" })}
                         </CardTitle>
-                        <Badge variant="outline" className="font-mono text-xs">{weekTotal.toFixed(1)}h</Badge>
+                        <Badge variant="outline" className="font-mono text-xs">{weekTotal.toFixed(2)}h</Badge>
                       </div>
                     </CardHeader>
                     <CardContent className="px-4 pb-4 space-y-2">
@@ -659,7 +659,7 @@ export default function PortalPage() {
                               {formatTime12(shift.start_time)} – {formatTime12(shift.end_time)}
                             </p>
                             <p className="text-xs text-muted-foreground">
-                              {(shift.hours_worked ?? calcNetHours(shift.start_time, shift.end_time, shift.break_minutes)).toFixed(1)}h
+                              {(shift.hours_worked ?? calcNetHours(shift.start_time, shift.end_time, shift.break_minutes)).toFixed(2)}h
                               {shift.break_minutes > 0 && ` · ${shift.break_minutes}m brk`}
                             </p>
                           </div>
@@ -687,7 +687,7 @@ export default function PortalPage() {
                 <Card>
                   <CardContent className="p-3 flex items-center justify-between">
                     <span className="text-sm text-muted-foreground">Total worked</span>
-                    <span className="font-mono font-bold text-foreground">{timesheetTotalHours.toFixed(1)}h</span>
+                    <span className="font-mono font-bold text-foreground">{timesheetTotalHours.toFixed(2)}h</span>
                   </CardContent>
                 </Card>
 
@@ -731,7 +731,7 @@ export default function PortalPage() {
                               <History className="h-3.5 w-3.5" />
                             </Button>
                             <span className="font-mono font-semibold text-foreground text-sm">
-                              {ts.net_hours.toFixed(1)}h
+                              {ts.net_hours.toFixed(2)}h
                             </span>
                           </div>
                         </div>
@@ -763,7 +763,7 @@ export default function PortalPage() {
                         </div>
                         {ts.break_minutes > 0 && (
                           <p className="text-[10px] text-muted-foreground mt-1.5">
-                            {ts.break_minutes}m break · {ts.total_hours.toFixed(1)}h gross
+                            {ts.break_minutes}m break · {ts.total_hours.toFixed(2)}h gross
                           </p>
                         )}
                       </CardContent>

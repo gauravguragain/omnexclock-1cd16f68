@@ -629,7 +629,7 @@ export default function RosterPage() {
                                   >
                                     <div className="font-semibold text-[11px] leading-tight">{formatTime12(shift.start_time)} – {formatTime12(shift.end_time)}</div>
                                     <div className="text-[10px] opacity-60 mt-0.5">
-                                      {(shift.hours_worked ?? calcNetHours(shift.start_time, shift.end_time, shift.break_minutes)).toFixed(1)}h
+                                      {(shift.hours_worked ?? calcNetHours(shift.start_time, shift.end_time, shift.break_minutes)).toFixed(2)}h
                                       {shift.break_minutes > 0 && ` · ${shift.break_minutes}m brk`}
                                     </div>
                                   </button>
@@ -686,7 +686,7 @@ export default function RosterPage() {
                       })}
                       <td className="px-3 py-2.5 text-center">
                         <span className="font-mono font-bold text-foreground text-[13px]">
-                          {(weeklyTotals[emp.id] || 0).toFixed(1)}
+                          {(weeklyTotals[emp.id] || 0).toFixed(2)}
                         </span>
                         <span className="text-[11px] text-muted-foreground/60 ml-0.5">h</span>
                       </td>
@@ -785,7 +785,7 @@ export default function RosterPage() {
             <div className="flex items-center gap-2 text-sm">
               <Clock className="h-4 w-4 text-muted-foreground" />
               <span className="text-muted-foreground">Net hours:</span>
-              <span className="font-mono font-semibold text-foreground">{netHours.toFixed(1)}h</span>
+              <span className="font-mono font-semibold text-foreground">{netHours.toFixed(2)}h</span>
             </div>
 
             <div className="flex justify-between pt-2">

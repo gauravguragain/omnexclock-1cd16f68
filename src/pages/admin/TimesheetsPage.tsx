@@ -527,8 +527,8 @@ export default function TimesheetsPage() {
       e.break_start || "",
       e.break_end || "",
       e.break_minutes.toString(),
-      e.total_hours.toString(),
-      e.net_hours.toString(),
+      e.total_hours.toFixed(2),
+      e.net_hours.toFixed(2),
     ]);
     return [headers, ...rows].map(r => r.map(c => `"${c}"`).join(",")).join("\n");
   };
@@ -752,8 +752,8 @@ export default function TimesheetsPage() {
                 <div className="grid grid-cols-3 gap-x-4 gap-y-1 text-xs text-muted-foreground">
                   <span>Break</span><span>Total</span><span className="font-medium">Net</span>
                   <span className="text-foreground">{e.break_minutes}m</span>
-                  <span className="text-foreground">{e.total_hours}h</span>
-                  <span className="text-foreground font-semibold">{e.net_hours}h</span>
+                  <span className="text-foreground">{e.total_hours.toFixed(2)}h</span>
+                  <span className="text-foreground font-semibold">{e.net_hours.toFixed(2)}h</span>
                 </div>
               </div>
             ))}
@@ -809,8 +809,8 @@ export default function TimesheetsPage() {
                     <TableCell className="hidden lg:table-cell">{e.break_start || "-"}</TableCell>
                     <TableCell className="hidden lg:table-cell">{e.break_end || "-"}</TableCell>
                     <TableCell>{e.break_minutes}m</TableCell>
-                    <TableCell>{e.total_hours}h</TableCell>
-                    <TableCell className="font-semibold">{e.net_hours}h</TableCell>
+                    <TableCell>{e.total_hours.toFixed(2)}h</TableCell>
+                    <TableCell className="font-semibold">{e.net_hours.toFixed(2)}h</TableCell>
                     <TableCell className="text-right">
                       <div className="flex gap-1 justify-end">
                         <Button variant="ghost" size="sm" onClick={() => openHistory(e)} className="h-7 w-7 p-0 text-muted-foreground hover:text-primary">
