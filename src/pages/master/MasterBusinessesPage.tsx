@@ -10,7 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import {
   Building2, Mail, Phone, MapPin, Calendar, Users, Trash2,
-  Search, ShieldOff, StickyNote, Send, X, AlertTriangle, CheckCircle2, Pause
+  Search, ShieldOff, StickyNote, Send, X, AlertTriangle, CheckCircle2, Pause, Clock, Palette, Hash, User
 } from "lucide-react";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
@@ -32,8 +32,11 @@ interface BusinessInfo {
   description: string | null;
   logo_url: string | null;
   created_at: string | null;
+  updated_at: string | null;
   status: string;
+  theme: Record<string, string> | null;
   owner_email?: string;
+  owner_name?: string;
   employee_count?: number;
 }
 
@@ -67,17 +70,17 @@ export default function MasterBusinessesPage() {
   const load = useCallback(async () => {
     const { data } = await supabase
       .from("businesses")
-      .select("id, name, business_code, email, phone, address, industry, description, logo_url, created_at, owner_id, status")
+      .select("id, name, business_code, email, phone, address, industry, description, logo_url, created_at, updated_at, owner_id, status, theme")
       .order("created_at", { ascending: false });
 
     if (data) {
       const ownerIds = [...new Set(data.map(b => b.owner_id))];
       const { data: profiles } = await supabase
         .from("profiles")
-        .select("id, email")
+        .select("id, email, full_name")
         .in("id", ownerIds);
 
-      const profileMap = new Map(profiles?.map(p => [p.id, p.email]) || []);
+      const profileMap = new Map(profiles?.map(p => [p.id, { email: p.email, name: p.full_name }]) || []);
 
       const { data: employees } = await supabase
         .from("employees")
@@ -91,7 +94,9 @@ export default function MasterBusinessesPage() {
 
       setBusinesses(data.map(b => ({
         ...b,
-        owner_email: profileMap.get(b.owner_id) || "Unknown",
+        theme: b.theme as Record<string, string> | null,
+        owner_email: profileMap.get(b.owner_id)?.email || "Unknown",
+        owner_name: profileMap.get(b.owner_id)?.name || undefined,
         employee_count: countMap.get(b.id) || 0,
       })));
     }
@@ -352,28 +357,26 @@ export default function MasterBusinessesPage() {
                   {biz.description && (
                     <p className="text-muted-foreground italic text-xs">{biz.description}</p>
                   )}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 text-muted-foreground">
-                    {biz.email && (
-                      <div className="flex items-center gap-2">
-                        <Mail className="h-3.5 w-3.5 flex-shrink-0" />
-                        <span className="truncate">{biz.email}</span>
-                      </div>
-                    )}
-                    {biz.phone && (
-                      <div className="flex items-center gap-2">
-                        <Phone className="h-3.5 w-3.5 flex-shrink-0" />
-                        <span>{biz.phone}</span>
-                      </div>
-                    )}
-                    {biz.address && (
-                      <div className="flex items-center gap-2">
-                        <MapPin className="h-3.5 w-3.5 flex-shrink-0" />
-                        <span className="truncate">{biz.address}</span>
-                      </div>
-                    )}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-1.5 text-muted-foreground">
                     <div className="flex items-center gap-2">
-                      <Users className="h-3.5 w-3.5 flex-shrink-0" />
-                      <span>Owner: {biz.owner_email}</span>
+                      <Mail className="h-3.5 w-3.5 flex-shrink-0" />
+                      <span className="truncate">{biz.email || "No email"}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Phone className="h-3.5 w-3.5 flex-shrink-0" />
+                      <span>{biz.phone || "No phone"}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <MapPin className="h-3.5 w-3.5 flex-shrink-0" />
+                      <span className="truncate">{biz.address || "No address"}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <User className="h-3.5 w-3.5 flex-shrink-0" />
+                      <span className="truncate">Owner: {biz.owner_name || biz.owner_email}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Mail className="h-3.5 w-3.5 flex-shrink-0" />
+                      <span className="truncate">Owner Email: {biz.owner_email}</span>
                     </div>
                     <div className="flex items-center gap-2">
                       <Users className="h-3.5 w-3.5 flex-shrink-0" />
@@ -385,7 +388,35 @@ export default function MasterBusinessesPage() {
                         <span>Registered {format(new Date(biz.created_at), "MMM d, yyyy")}</span>
                       </div>
                     )}
+                    {biz.updated_at && (
+                      <div className="flex items-center gap-2">
+                        <Clock className="h-3.5 w-3.5 flex-shrink-0" />
+                        <span>Updated {format(new Date(biz.updated_at), "MMM d, yyyy")}</span>
+                      </div>
+                    )}
+                    <div className="flex items-center gap-2">
+                      <Hash className="h-3.5 w-3.5 flex-shrink-0" />
+                      <span className="truncate text-xs font-mono">ID: {biz.id.slice(0, 8)}...</span>
+                    </div>
                   </div>
+
+                  {/* Theme preview */}
+                  {biz.theme && Object.keys(biz.theme).length > 0 && (
+                    <div className="flex items-center gap-2 pt-1">
+                      <Palette className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />
+                      <span className="text-xs text-muted-foreground mr-1">Theme:</span>
+                      <div className="flex gap-1">
+                        {Object.entries(biz.theme).map(([key, val]) => (
+                          <div
+                            key={key}
+                            className="h-5 w-5 rounded-full border border-border"
+                            style={{ backgroundColor: `hsl(${val})` }}
+                            title={key}
+                          />
+                        ))}
+                      </div>
+                    </div>
+                  )}
 
                   {isExpanded && (
                     <div className="border-t border-border pt-3 space-y-3">
