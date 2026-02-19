@@ -888,6 +888,7 @@ export type Database = {
       }
       roster_day_events: {
         Row: {
+          adult_guests: number | null
           business_id: string
           chairs_per_table: number | null
           cold_sparkles: boolean | null
@@ -898,14 +899,19 @@ export type Database = {
           event_space: string | null
           event_type: string | null
           id: string
+          kids_guests: number | null
+          live_stall: boolean | null
+          live_stall_details: string | null
           notes: string | null
           num_tables: number | null
           red_carpet: boolean | null
           runsheet_url: string | null
+          smoke_machine: boolean | null
           tablecloth_color: string | null
           updated_at: string | null
         }
         Insert: {
+          adult_guests?: number | null
           business_id: string
           chairs_per_table?: number | null
           cold_sparkles?: boolean | null
@@ -916,14 +922,19 @@ export type Database = {
           event_space?: string | null
           event_type?: string | null
           id?: string
+          kids_guests?: number | null
+          live_stall?: boolean | null
+          live_stall_details?: string | null
           notes?: string | null
           num_tables?: number | null
           red_carpet?: boolean | null
           runsheet_url?: string | null
+          smoke_machine?: boolean | null
           tablecloth_color?: string | null
           updated_at?: string | null
         }
         Update: {
+          adult_guests?: number | null
           business_id?: string
           chairs_per_table?: number | null
           cold_sparkles?: boolean | null
@@ -934,10 +945,14 @@ export type Database = {
           event_space?: string | null
           event_type?: string | null
           id?: string
+          kids_guests?: number | null
+          live_stall?: boolean | null
+          live_stall_details?: string | null
           notes?: string | null
           num_tables?: number | null
           red_carpet?: boolean | null
           runsheet_url?: string | null
+          smoke_machine?: boolean | null
           tablecloth_color?: string | null
           updated_at?: string | null
         }

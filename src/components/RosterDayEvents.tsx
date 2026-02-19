@@ -12,7 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
-import { ChevronDown, ChevronUp, Plus, Trash2, PartyPopper, Sparkles, Wind, Ribbon, Palette, Upload, FileText, X, Loader2 } from "lucide-react";
+import { ChevronDown, ChevronUp, Plus, Trash2, PartyPopper, Sparkles, Wind, Ribbon, Palette, Upload, FileText, X, Loader2, Flame, Users, Baby, UtensilsCrossed } from "lucide-react";
 
 interface DayEvent {
   id: string;
@@ -26,6 +26,11 @@ interface DayEvent {
   dry_ice: boolean;
   red_carpet: boolean;
   decor_access: boolean;
+  smoke_machine: boolean;
+  live_stall: boolean;
+  live_stall_details: string | null;
+  adult_guests: number;
+  kids_guests: number;
   notes: string | null;
   runsheet_url: string | null;
 }
@@ -90,6 +95,7 @@ export default function RosterDayEvents({ weekDates, fmtDate }: Props) {
   const [openDays, setOpenDays] = useState<Set<number>>(new Set());
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState<string | null>(null);
+  const [extracting, setExtracting] = useState<string | null>(null);
 
   // Roster admins with only BOH access cannot edit events
   const isRosterAdminBOHOnly = business
@@ -194,9 +200,51 @@ export default function RosterDayEvents({ weekDates, fmtDate }: Props) {
       toast({ title: "Error saving URL", description: updateError.message, variant: "destructive" });
     } else {
       setEvents(prev => prev.map(e => e.id === eventId ? { ...e, runsheet_url: urlData.publicUrl } : e));
-      toast({ title: "Runsheet uploaded" });
+      toast({ title: "Runsheet uploaded, extracting data..." });
+      // Trigger AI extraction
+      extractRunsheetData(eventId, urlData.publicUrl);
     }
     setUploading(null);
+  };
+
+  const extractRunsheetData = async (eventId: string, pdfUrl: string) => {
+    setExtracting(eventId);
+    try {
+      const { data, error } = await supabase.functions.invoke("extract-runsheet", {
+        body: { pdfUrl },
+      });
+      if (error) throw error;
+      if (!data) throw new Error("No data returned");
+
+      // Build updates from extracted data, only set non-null values
+      const updates: Partial<DayEvent> = {};
+      if (data.event_space != null) updates.event_space = data.event_space;
+      if (data.event_type != null) updates.event_type = data.event_type;
+      if (data.tablecloth_color != null) updates.tablecloth_color = data.tablecloth_color;
+      if (data.adult_guests != null) updates.adult_guests = data.adult_guests;
+      if (data.kids_guests != null) updates.kids_guests = data.kids_guests;
+      if (data.chairs_per_table != null) updates.chairs_per_table = data.chairs_per_table;
+      if (data.num_tables != null) updates.num_tables = data.num_tables;
+      if (data.cold_sparkles != null) updates.cold_sparkles = data.cold_sparkles;
+      if (data.dry_ice != null) updates.dry_ice = data.dry_ice;
+      if (data.red_carpet != null) updates.red_carpet = data.red_carpet;
+      if (data.smoke_machine != null) updates.smoke_machine = data.smoke_machine;
+      if (data.decor_access != null) updates.decor_access = data.decor_access;
+      if (data.live_stall != null) updates.live_stall = data.live_stall;
+      if (data.live_stall_details != null) updates.live_stall_details = data.live_stall_details;
+      if (data.notes != null) updates.notes = data.notes;
+
+      if (Object.keys(updates).length > 0) {
+        await updateEvent(eventId, updates);
+        toast({ title: "Data extracted!", description: "Event fields populated from runsheet. Review and fill any blanks." });
+      } else {
+        toast({ title: "No data extracted", description: "Could not find event details in this PDF.", variant: "destructive" });
+      }
+    } catch (e: any) {
+      console.error("Extraction error:", e);
+      toast({ title: "Extraction failed", description: e.message || "Could not extract data from PDF.", variant: "destructive" });
+    }
+    setExtracting(null);
   };
 
   const removeRunsheet = async (eventId: string) => {
@@ -296,14 +344,39 @@ export default function RosterDayEvents({ weekDates, fmtDate }: Props) {
                         </DebouncedSelect>
                       </div>
 
-                      {/* Num Tables */}
+                      {/* Adult Guests */}
                       <div className="space-y-1">
-                        <Label className="text-[11px] text-muted-foreground">No. of Tables</Label>
+                        <Label className="text-[11px] text-muted-foreground flex items-center gap-1"><Users className="h-3 w-3" /> Adult Guests</Label>
                         <DebouncedInput
                           type="number"
                           min={0}
-                          value={String(ev.num_tables)}
-                          onSave={v => updateEvent(ev.id, { num_tables: parseInt(v) || 0 })}
+                          value={String(ev.adult_guests || 0)}
+                          onSave={v => {
+                            const adults = parseInt(v) || 0;
+                            const totalGuests = adults + (ev.kids_guests || 0);
+                            const chairs = ev.chairs_per_table || 8;
+                            const tables = totalGuests > 0 ? Math.ceil(totalGuests / chairs) : 0;
+                            updateEvent(ev.id, { adult_guests: adults, num_tables: tables });
+                          }}
+                          className="h-8 text-xs"
+                          disabled={cannotEdit}
+                        />
+                      </div>
+
+                      {/* Kids Guests */}
+                      <div className="space-y-1">
+                        <Label className="text-[11px] text-muted-foreground flex items-center gap-1"><Baby className="h-3 w-3" /> Kids Guests</Label>
+                        <DebouncedInput
+                          type="number"
+                          min={0}
+                          value={String(ev.kids_guests || 0)}
+                          onSave={v => {
+                            const kids = parseInt(v) || 0;
+                            const totalGuests = (ev.adult_guests || 0) + kids;
+                            const chairs = ev.chairs_per_table || 8;
+                            const tables = totalGuests > 0 ? Math.ceil(totalGuests / chairs) : 0;
+                            updateEvent(ev.id, { kids_guests: kids, num_tables: tables });
+                          }}
                           className="h-8 text-xs"
                           disabled={cannotEdit}
                         />
@@ -314,9 +387,27 @@ export default function RosterDayEvents({ weekDates, fmtDate }: Props) {
                         <Label className="text-[11px] text-muted-foreground">Chairs/Table</Label>
                         <DebouncedInput
                           type="number"
+                          min={1}
+                          value={String(ev.chairs_per_table || 8)}
+                          onSave={v => {
+                            const chairs = parseInt(v) || 8;
+                            const totalGuests = (ev.adult_guests || 0) + (ev.kids_guests || 0);
+                            const tables = totalGuests > 0 ? Math.ceil(totalGuests / chairs) : ev.num_tables;
+                            updateEvent(ev.id, { chairs_per_table: chairs, num_tables: tables });
+                          }}
+                          className="h-8 text-xs"
+                          disabled={cannotEdit}
+                        />
+                      </div>
+
+                      {/* Num Tables (auto-calculated, but editable) */}
+                      <div className="space-y-1">
+                        <Label className="text-[11px] text-muted-foreground">No. of Tables</Label>
+                        <DebouncedInput
+                          type="number"
                           min={0}
-                          value={String(ev.chairs_per_table)}
-                          onSave={v => updateEvent(ev.id, { chairs_per_table: parseInt(v) || 0 })}
+                          value={String(ev.num_tables || 0)}
+                          onSave={v => updateEvent(ev.id, { num_tables: parseInt(v) || 0 })}
                           className="h-8 text-xs"
                           disabled={cannotEdit}
                         />
@@ -341,7 +432,9 @@ export default function RosterDayEvents({ weekDates, fmtDate }: Props) {
                         { key: "cold_sparkles", label: "Cold Sparkles", icon: Sparkles },
                         { key: "dry_ice", label: "Dry Ice", icon: Wind },
                         { key: "red_carpet", label: "Red Carpet", icon: Ribbon },
+                        { key: "smoke_machine", label: "Smoke Machine", icon: Flame },
                         { key: "decor_access", label: "Decor Access", icon: Palette },
+                        { key: "live_stall", label: "Live Stall", icon: UtensilsCrossed },
                       ].map(({ key, label, icon: Icon }) => (
                         <div key={key} className="flex items-center gap-1.5">
                           <DebouncedSwitch
@@ -355,6 +448,28 @@ export default function RosterDayEvents({ weekDates, fmtDate }: Props) {
                         </div>
                       ))}
                     </div>
+
+                    {/* Live Stall Details - shown when live_stall is true */}
+                    {ev.live_stall && (
+                      <div className="space-y-1">
+                        <Label className="text-[11px] text-muted-foreground flex items-center gap-1"><UtensilsCrossed className="h-3 w-3" /> Live Stall Details</Label>
+                        <DebouncedInput
+                          value={ev.live_stall_details || ""}
+                          onSave={v => updateEvent(ev.id, { live_stall_details: v || null })}
+                          placeholder="e.g. Live pasta station, dessert bar..."
+                          className="h-8 text-xs"
+                          disabled={cannotEdit}
+                        />
+                      </div>
+                    )}
+
+                    {/* Extracting indicator */}
+                    {extracting === ev.id && (
+                      <div className="flex items-center gap-2 py-2 text-xs text-primary">
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                        Extracting event data from PDF...
+                      </div>
+                    )}
 
                     {/* Runsheet Upload */}
                     <div className="flex items-center gap-2 pt-1 border-t border-border/40">
