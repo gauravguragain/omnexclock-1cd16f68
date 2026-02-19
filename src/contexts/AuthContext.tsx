@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useEffect, useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { logAudit } from "@/lib/auditLog";
+import { logAudit, logMasterAudit } from "@/lib/auditLog";
 import type { User } from "@supabase/supabase-js";
 
 interface UserBusinessRole {
@@ -99,6 +99,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const { data, error } = await supabase.auth.signInWithPassword({ email, password });
     if (!error && data.user) {
       logAudit("user_sign_in", { email, user_id: data.user.id });
+      // Also log to master audit for platform-wide visibility
+      logMasterAudit("user_sign_in", { email, user_id: data.user.id });
     }
     return { error: error?.message ?? null };
   };
