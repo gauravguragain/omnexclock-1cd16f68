@@ -281,11 +281,11 @@ export default function RosterDayEvents({ weekDates, fmtDate }: Props) {
                       {/* Num Tables */}
                       <div className="space-y-1">
                         <Label className="text-[11px] text-muted-foreground">No. of Tables</Label>
-                        <Input
+                        <DebouncedInput
                           type="number"
                           min={0}
-                          value={ev.num_tables}
-                          onChange={e => updateEvent(ev.id, { num_tables: parseInt(e.target.value) || 0 })}
+                          value={String(ev.num_tables)}
+                          onSave={v => updateEvent(ev.id, { num_tables: parseInt(v) || 0 })}
                           className="h-8 text-xs"
                           disabled={cannotEdit}
                         />
@@ -294,11 +294,11 @@ export default function RosterDayEvents({ weekDates, fmtDate }: Props) {
                       {/* Chairs per Table */}
                       <div className="space-y-1">
                         <Label className="text-[11px] text-muted-foreground">Chairs/Table</Label>
-                        <Input
+                        <DebouncedInput
                           type="number"
                           min={0}
-                          value={ev.chairs_per_table}
-                          onChange={e => updateEvent(ev.id, { chairs_per_table: parseInt(e.target.value) || 0 })}
+                          value={String(ev.chairs_per_table)}
+                          onSave={v => updateEvent(ev.id, { chairs_per_table: parseInt(v) || 0 })}
                           className="h-8 text-xs"
                           disabled={cannotEdit}
                         />
@@ -307,9 +307,9 @@ export default function RosterDayEvents({ weekDates, fmtDate }: Props) {
                       {/* Notes */}
                       <div className="space-y-1">
                         <Label className="text-[11px] text-muted-foreground">Notes</Label>
-                        <Input
+                        <DebouncedInput
                           value={ev.notes || ""}
-                          onChange={e => updateEvent(ev.id, { notes: e.target.value || null })}
+                          onSave={v => updateEvent(ev.id, { notes: v || null })}
                           placeholder="Additional info..."
                           className="h-8 text-xs"
                           disabled={cannotEdit}
