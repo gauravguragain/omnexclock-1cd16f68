@@ -1,0 +1,296 @@
+import { useState, useEffect, useCallback } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { useBusiness } from "@/contexts/BusinessContext";
+import { useActionLock } from "@/contexts/ActionLockContext";
+import { useAuth } from "@/contexts/AuthContext";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
+import { Badge } from "@/components/ui/badge";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { useToast } from "@/hooks/use-toast";
+import { ChevronDown, ChevronUp, Plus, Trash2, PartyPopper, Sparkles, Wind, Ribbon, Palette } from "lucide-react";
+
+interface DayEvent {
+  id: string;
+  date: string;
+  event_space: string | null;
+  event_type: string | null;
+  num_tables: number;
+  chairs_per_table: number;
+  tablecloth_color: string | null;
+  cold_sparkles: boolean;
+  dry_ice: boolean;
+  red_carpet: boolean;
+  decor_access: boolean;
+  notes: string | null;
+}
+
+interface ConfigItem {
+  id: string;
+  config_type: string;
+  label: string;
+}
+
+interface Props {
+  weekDates: Date[];
+  fmtDate: (d: Date) => string;
+}
+
+export default function RosterDayEvents({ weekDates, fmtDate }: Props) {
+  const { runAction } = useActionLock();
+  const { isViewer } = useAuth();
+  const { business } = useBusiness();
+  const { toast } = useToast();
+  const [events, setEvents] = useState<DayEvent[]>([]);
+  const [config, setConfig] = useState<ConfigItem[]>([]);
+  const [openDays, setOpenDays] = useState<Set<number>>(new Set());
+  const [saving, setSaving] = useState(false);
+
+  const eventSpaces = config.filter(c => c.config_type === "event_space");
+  const eventTypes = config.filter(c => c.config_type === "event_type");
+
+  const fetchData = useCallback(async () => {
+    if (!business) return;
+    const dates = weekDates.map(d => fmtDate(d));
+    const [evRes, cfgRes] = await Promise.all([
+      supabase.from("roster_day_events").select("*").eq("business_id", business.id).in("date", dates),
+      supabase.from("event_setup_config").select("*").eq("business_id", business.id).eq("active", true).order("sort_order"),
+    ]);
+    setEvents((evRes.data as DayEvent[]) || []);
+    setConfig((cfgRes.data as ConfigItem[]) || []);
+  }, [business, weekDates, fmtDate]);
+
+  useEffect(() => { fetchData(); }, [fetchData]);
+
+  const toggleDay = (idx: number) => {
+    setOpenDays(prev => {
+      const next = new Set(prev);
+      next.has(idx) ? next.delete(idx) : next.add(idx);
+      return next;
+    });
+  };
+
+  const getDayEvents = (dayIdx: number) => {
+    const dateStr = fmtDate(weekDates[dayIdx]);
+    return events.filter(e => e.date === dateStr);
+  };
+
+  const addEvent = async (dayIdx: number) => {
+    if (!business) return;
+    await runAction(async () => {
+      setSaving(true);
+      const { error } = await supabase.from("roster_day_events").insert({
+        business_id: business.id,
+        date: fmtDate(weekDates[dayIdx]),
+      });
+      if (error) {
+        toast({ title: "Error", description: error.message, variant: "destructive" });
+      } else {
+        fetchData();
+      }
+      setSaving(false);
+    });
+  };
+
+  const updateEvent = async (id: string, updates: Partial<DayEvent>) => {
+    await runAction(async () => {
+      const { error } = await supabase.from("roster_day_events").update({ ...updates, updated_at: new Date().toISOString() }).eq("id", id);
+      if (error) {
+        toast({ title: "Error", description: error.message, variant: "destructive" });
+      } else {
+        setEvents(prev => prev.map(e => e.id === id ? { ...e, ...updates } : e));
+      }
+    });
+  };
+
+  const deleteEvent = async (id: string) => {
+    await runAction(async () => {
+      const { error } = await supabase.from("roster_day_events").delete().eq("id", id);
+      if (error) {
+        toast({ title: "Error", description: error.message, variant: "destructive" });
+      } else {
+        fetchData();
+        toast({ title: "Event removed" });
+      }
+    });
+  };
+
+  const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+
+  const hasAnyEvents = events.length > 0;
+
+  return (
+    <div className="space-y-1">
+      {weekDates.map((wd, dayIdx) => {
+        const dayEvents = getDayEvents(dayIdx);
+        const isOpen = openDays.has(dayIdx);
+        const isToday = fmtDate(wd) === fmtDate(new Date());
+        const dateLabel = wd.toLocaleDateString("en-AU", { day: "numeric", month: "short" });
+
+        return (
+          <Collapsible key={dayIdx} open={isOpen} onOpenChange={() => toggleDay(dayIdx)}>
+            <CollapsibleTrigger className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs transition-colors hover:bg-secondary/50 ${isToday ? "bg-primary/5 border border-primary/20" : "bg-muted/30 border border-border/40"}`}>
+              <div className="flex items-center gap-2">
+                <span className={`font-semibold ${isToday ? "text-primary" : "text-foreground"}`}>{DAYS[dayIdx]} {dateLabel}</span>
+                {dayEvents.length > 0 && (
+                  <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-4">
+                    {dayEvents.length} event{dayEvents.length > 1 ? "s" : ""}
+                  </Badge>
+                )}
+              </div>
+              {isOpen ? <ChevronUp className="h-3.5 w-3.5 text-muted-foreground" /> : <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />}
+            </CollapsibleTrigger>
+            <CollapsibleContent className="px-1 pb-2 pt-1">
+              <div className="space-y-2">
+                {dayEvents.map(ev => (
+                  <div key={ev.id} className="rounded-lg border border-border/60 bg-card p-3 space-y-3">
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                      {/* Event Space */}
+                      <div className="space-y-1">
+                        <Label className="text-[11px] text-muted-foreground">Event Space</Label>
+                        <Select
+                          value={ev.event_space || ""}
+                          onValueChange={v => updateEvent(ev.id, { event_space: v || null })}
+                          disabled={isViewer}
+                        >
+                          <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Select..." /></SelectTrigger>
+                          <SelectContent>
+                            {eventSpaces.map(s => (
+                              <SelectItem key={s.id} value={s.label}>{s.label}</SelectItem>
+                            ))}
+                            {eventSpaces.length === 0 && <div className="px-3 py-2 text-xs text-muted-foreground">Add spaces in My Business settings</div>}
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      {/* Event Type */}
+                      <div className="space-y-1">
+                        <Label className="text-[11px] text-muted-foreground">Event Type</Label>
+                        <Select
+                          value={ev.event_type || ""}
+                          onValueChange={v => updateEvent(ev.id, { event_type: v || null })}
+                          disabled={isViewer}
+                        >
+                          <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Select..." /></SelectTrigger>
+                          <SelectContent>
+                            {eventTypes.map(s => (
+                              <SelectItem key={s.id} value={s.label}>{s.label}</SelectItem>
+                            ))}
+                            {eventTypes.length === 0 && <div className="px-3 py-2 text-xs text-muted-foreground">Add types in My Business settings</div>}
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      {/* Tablecloth Color */}
+                      <div className="space-y-1">
+                        <Label className="text-[11px] text-muted-foreground">Tablecloth Color</Label>
+                        <Select
+                          value={ev.tablecloth_color || "white"}
+                          onValueChange={v => updateEvent(ev.id, { tablecloth_color: v })}
+                          disabled={isViewer}
+                        >
+                          <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="white">⬜ White</SelectItem>
+                            <SelectItem value="black">⬛ Black</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      {/* Num Tables */}
+                      <div className="space-y-1">
+                        <Label className="text-[11px] text-muted-foreground">No. of Tables</Label>
+                        <Input
+                          type="number"
+                          min={0}
+                          value={ev.num_tables}
+                          onChange={e => updateEvent(ev.id, { num_tables: parseInt(e.target.value) || 0 })}
+                          className="h-8 text-xs"
+                          disabled={isViewer}
+                        />
+                      </div>
+
+                      {/* Chairs per Table */}
+                      <div className="space-y-1">
+                        <Label className="text-[11px] text-muted-foreground">Chairs/Table</Label>
+                        <Input
+                          type="number"
+                          min={0}
+                          value={ev.chairs_per_table}
+                          onChange={e => updateEvent(ev.id, { chairs_per_table: parseInt(e.target.value) || 0 })}
+                          className="h-8 text-xs"
+                          disabled={isViewer}
+                        />
+                      </div>
+
+                      {/* Notes */}
+                      <div className="space-y-1">
+                        <Label className="text-[11px] text-muted-foreground">Notes</Label>
+                        <Input
+                          value={ev.notes || ""}
+                          onChange={e => updateEvent(ev.id, { notes: e.target.value || null })}
+                          placeholder="Additional info..."
+                          className="h-8 text-xs"
+                          disabled={isViewer}
+                        />
+                      </div>
+                    </div>
+
+                    {/* Toggle switches */}
+                    <div className="flex flex-wrap gap-4 pt-1">
+                      {[
+                        { key: "cold_sparkles", label: "Cold Sparkles", icon: Sparkles },
+                        { key: "dry_ice", label: "Dry Ice", icon: Wind },
+                        { key: "red_carpet", label: "Red Carpet", icon: Ribbon },
+                        { key: "decor_access", label: "Decor Access", icon: Palette },
+                      ].map(({ key, label, icon: Icon }) => (
+                        <div key={key} className="flex items-center gap-1.5">
+                          <Switch
+                            checked={ev[key as keyof DayEvent] as boolean}
+                            onCheckedChange={v => updateEvent(ev.id, { [key]: v })}
+                            disabled={isViewer}
+                            className="scale-75"
+                          />
+                          <Label className="text-[11px] text-muted-foreground flex items-center gap-1 cursor-pointer">
+                            <Icon className="h-3 w-3" /> {label}
+                          </Label>
+                        </div>
+                      ))}
+                    </div>
+
+                    {!isViewer && (
+                      <div className="flex justify-end">
+                        <Button variant="ghost" size="sm" className="h-7 text-xs text-destructive hover:text-destructive hover:bg-destructive/10" onClick={() => deleteEvent(ev.id)}>
+                          <Trash2 className="h-3 w-3 mr-1" /> Remove
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                ))}
+
+                {!isViewer && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-full h-8 text-xs border-dashed"
+                    onClick={() => addEvent(dayIdx)}
+                    disabled={saving}
+                  >
+                    <Plus className="h-3 w-3 mr-1" /> Add Event for {DAYS[dayIdx]}
+                  </Button>
+                )}
+
+                {dayEvents.length === 0 && isViewer && (
+                  <div className="text-xs text-muted-foreground text-center py-2">No events configured for this day.</div>
+                )}
+              </div>
+            </CollapsibleContent>
+          </Collapsible>
+        );
+      })}
+    </div>
+  );
+}

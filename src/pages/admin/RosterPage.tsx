@@ -20,6 +20,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { Badge } from "@/components/ui/badge";
 import type { Tables } from "@/integrations/supabase/types";
 import { toAusDate, toAusFormatted } from "@/lib/dateUtils";
+import RosterDayEvents from "@/components/RosterDayEvents";
 
 type Employee = Tables<"employees">;
 type Shift = Tables<"shifts">;
@@ -395,6 +396,16 @@ export default function RosterPage() {
       allByEmployee.get(s.employee_id)!.push(s);
     }
 
+    // Fetch day events for this week
+    let dayEventsData: any[] = [];
+    if (business) {
+      const dates = weekDates.map(d => fmtDate(d));
+      const { data } = await supabase.from("roster_day_events").select("*").eq("business_id", business.id).in("date", dates);
+      dayEventsData = data || [];
+    }
+
+    const portalUrl = `${window.location.origin}/portal`;
+
     let sentCount = 0;
     for (const [empId, empShifts] of allByEmployee) {
       const emp = employees.find(e => e.id === empId);
@@ -411,6 +422,24 @@ export default function RosterPage() {
           notes: s.notes || undefined,
         }));
 
+      // Get events for dates this employee has shifts
+      const empDates = new Set(empShifts.map(s => s.date));
+      const empDayEvents = dayEventsData
+        .filter(ev => empDates.has(ev.date))
+        .map(ev => ({
+          date: new Date(ev.date + "T00:00:00").toLocaleDateString("en-AU", { day: "numeric", month: "short" }),
+          event_space: ev.event_space,
+          event_type: ev.event_type,
+          num_tables: ev.num_tables,
+          chairs_per_table: ev.chairs_per_table,
+          tablecloth_color: ev.tablecloth_color,
+          cold_sparkles: ev.cold_sparkles,
+          dry_ice: ev.dry_ice,
+          red_carpet: ev.red_carpet,
+          decor_access: ev.decor_access,
+          notes: ev.notes,
+        }));
+
       try {
         await supabase.functions.invoke("send-email", {
           body: {
@@ -419,6 +448,9 @@ export default function RosterPage() {
             employeeName: emp.name,
             weekLabel: weekLabel,
             shifts: shiftData,
+            dayEvents: empDayEvents,
+            portalUrl,
+            businessCode: business?.business_code,
           },
         });
         sentCount++;
@@ -564,6 +596,16 @@ export default function RosterPage() {
           </div>
         )}
       </div>
+
+      {/* Day Events Panel */}
+      <Card className="overflow-hidden border-border/60 shadow-sm">
+        <CardContent className="p-3">
+          <div className="flex items-center gap-2 mb-2">
+            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Daily Event Setup</span>
+          </div>
+          <RosterDayEvents weekDates={weekDates} fmtDate={fmtDate} />
+        </CardContent>
+      </Card>
 
       {/* Grid */}
       <Card className="overflow-hidden border-border/60 shadow-sm">

@@ -300,6 +300,44 @@ export type Database = {
           },
         ]
       }
+      event_setup_config: {
+        Row: {
+          active: boolean | null
+          business_id: string
+          config_type: string
+          created_at: string | null
+          id: string
+          label: string
+          sort_order: number | null
+        }
+        Insert: {
+          active?: boolean | null
+          business_id: string
+          config_type: string
+          created_at?: string | null
+          id?: string
+          label: string
+          sort_order?: number | null
+        }
+        Update: {
+          active?: boolean | null
+          business_id?: string
+          config_type?: string
+          created_at?: string | null
+          id?: string
+          label?: string
+          sort_order?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "event_setup_config_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       forum_comments: {
         Row: {
           content: string
@@ -605,6 +643,68 @@ export type Database = {
         }
         Relationships: []
       }
+      roster_day_events: {
+        Row: {
+          business_id: string
+          chairs_per_table: number | null
+          cold_sparkles: boolean | null
+          created_at: string | null
+          date: string
+          decor_access: boolean | null
+          dry_ice: boolean | null
+          event_space: string | null
+          event_type: string | null
+          id: string
+          notes: string | null
+          num_tables: number | null
+          red_carpet: boolean | null
+          tablecloth_color: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          business_id: string
+          chairs_per_table?: number | null
+          cold_sparkles?: boolean | null
+          created_at?: string | null
+          date: string
+          decor_access?: boolean | null
+          dry_ice?: boolean | null
+          event_space?: string | null
+          event_type?: string | null
+          id?: string
+          notes?: string | null
+          num_tables?: number | null
+          red_carpet?: boolean | null
+          tablecloth_color?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          business_id?: string
+          chairs_per_table?: number | null
+          cold_sparkles?: boolean | null
+          created_at?: string | null
+          date?: string
+          decor_access?: boolean | null
+          dry_ice?: boolean | null
+          event_space?: string | null
+          event_type?: string | null
+          id?: string
+          notes?: string | null
+          num_tables?: number | null
+          red_carpet?: boolean | null
+          tablecloth_color?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "roster_day_events_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       shifts: {
         Row: {
           break_minutes: number
@@ -789,6 +889,23 @@ export type Database = {
               photo_url: string
             }[]
           }
+      get_employee_day_events: {
+        Args: { _business_code?: string; _employee_code: string }
+        Returns: {
+          chairs_per_table: number
+          cold_sparkles: boolean
+          date: string
+          decor_access: boolean
+          dry_ice: boolean
+          event_space: string
+          event_type: string
+          id: string
+          notes: string
+          num_tables: number
+          red_carpet: boolean
+          tablecloth_color: string
+        }[]
+      }
       get_employee_notifications: {
         Args: { _business_code?: string; _employee_code: string }
         Returns: {
