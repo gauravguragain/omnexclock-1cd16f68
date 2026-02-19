@@ -7,7 +7,7 @@ const corsHeaders = {
 };
 
 interface EmailRequest {
-  type: "roster_notification" | "csv_export";
+  type: "roster_notification" | "csv_export" | "employee_induction";
   // roster_notification fields
   to?: string;
   employeeName?: string;
@@ -21,6 +21,11 @@ interface EmailRequest {
   subject?: string;
   csvData?: string;
   csvFilename?: string;
+  // employee_induction fields
+  employeeCode?: string;
+  jobTitle?: string;
+  department?: string;
+  businessName?: string;
 }
 
 serve(async (req) => {
@@ -122,7 +127,6 @@ serve(async (req) => {
         throw new Error("Missing required fields for CSV export");
       }
 
-      // Convert CSV string to base64 for attachment
       const csvBase64 = btoa(unescape(encodeURIComponent(body.csvData)));
 
       emailPayload = {
@@ -143,6 +147,148 @@ serve(async (req) => {
             type: "text/csv",
           },
         ],
+      };
+    } else if (body.type === "employee_induction") {
+      if (!body.to || !body.employeeName) {
+        throw new Error("Missing required fields for employee induction");
+      }
+
+      const portalUrl = body.portalUrl || "https://omnexclock.lovable.app/portal";
+
+      const html = `
+        <div style="font-family:'Segoe UI',Arial,sans-serif;max-width:600px;margin:0 auto;color:#1a1a1a;background:#ffffff;">
+          <!-- Header -->
+          <div style="text-align:center;padding:40px 20px 20px;background:linear-gradient(135deg,#1a1a1a 0%,#2d2d2d 100%);border-radius:12px 12px 0 0;">
+            <h1 style="color:#c9a227;font-size:28px;margin:0;letter-spacing:1px;">OmnexClock</h1>
+            <p style="color:#a0a0a0;font-size:12px;margin:6px 0 0;text-transform:uppercase;letter-spacing:2px;">Time & Workforce Management</p>
+          </div>
+          
+          <!-- Welcome Banner -->
+          <div style="background:#fef9e7;padding:24px 30px;border-left:4px solid #c9a227;">
+            <h2 style="margin:0 0 8px;font-size:22px;color:#1a1a1a;">Welcome to the Team, ${body.employeeName}! 🎉</h2>
+            <p style="color:#555;font-size:14px;margin:0;line-height:1.6;">
+              We're thrilled to have you join <strong>${body.businessName || "our team"}</strong>. This packet contains everything you need to get started.
+            </p>
+          </div>
+          
+          <!-- Your Details Card -->
+          <div style="padding:24px 30px;">
+            <h3 style="color:#1a1a1a;font-size:16px;margin:0 0 16px;border-bottom:2px solid #c9a227;padding-bottom:8px;">📋 Your Details</h3>
+            <table style="width:100%;font-size:14px;border-collapse:collapse;">
+              <tr>
+                <td style="padding:10px 12px;background:#f8f9fa;border-radius:6px 0 0 0;font-weight:600;color:#555;width:40%;">Full Name</td>
+                <td style="padding:10px 12px;background:#f8f9fa;border-radius:0 6px 0 0;">${body.employeeName}</td>
+              </tr>
+              <tr>
+                <td style="padding:10px 12px;font-weight:600;color:#555;">Position</td>
+                <td style="padding:10px 12px;">${body.jobTitle || "Team Member"}</td>
+              </tr>
+              <tr>
+                <td style="padding:10px 12px;background:#f8f9fa;font-weight:600;color:#555;">Department</td>
+                <td style="padding:10px 12px;background:#f8f9fa;">${body.department || "General"}</td>
+              </tr>
+              <tr>
+                <td style="padding:10px 12px;font-weight:600;color:#555;">Employee Code</td>
+                <td style="padding:10px 12px;"><span style="font-family:monospace;font-size:18px;font-weight:bold;color:#c9a227;background:#1a1a1a;padding:4px 12px;border-radius:4px;letter-spacing:3px;">${body.employeeCode || "—"}</span></td>
+              </tr>
+            </table>
+          </div>
+          
+          <!-- Getting Started -->
+          <div style="padding:0 30px 24px;">
+            <h3 style="color:#1a1a1a;font-size:16px;margin:0 0 16px;border-bottom:2px solid #c9a227;padding-bottom:8px;">🚀 Getting Started</h3>
+            
+            <!-- Step 1 -->
+            <div style="display:flex;margin-bottom:16px;">
+              <div style="flex-shrink:0;width:32px;height:32px;background:#c9a227;color:#000;border-radius:50%;text-align:center;line-height:32px;font-weight:bold;font-size:14px;margin-right:12px;">1</div>
+              <div>
+                <p style="margin:0;font-weight:600;font-size:14px;color:#1a1a1a;">Access the Employee Portal</p>
+                <p style="margin:4px 0 0;font-size:13px;color:#666;line-height:1.5;">Visit <a href="${portalUrl}" style="color:#c9a227;text-decoration:underline;">${portalUrl}</a> and enter your Business Code: <strong>${body.businessCode || ""}</strong></p>
+              </div>
+            </div>
+            
+            <!-- Step 2 -->
+            <div style="display:flex;margin-bottom:16px;">
+              <div style="flex-shrink:0;width:32px;height:32px;background:#c9a227;color:#000;border-radius:50%;text-align:center;line-height:32px;font-weight:bold;font-size:14px;margin-right:12px;">2</div>
+              <div>
+                <p style="margin:0;font-weight:600;font-size:14px;color:#1a1a1a;">Log In With Your Employee Code</p>
+                <p style="margin:4px 0 0;font-size:13px;color:#666;line-height:1.5;">Use your 4-digit employee code <strong style="font-family:monospace;color:#c9a227;">${body.employeeCode || "—"}</strong> to clock in/out and view your shifts.</p>
+              </div>
+            </div>
+            
+            <!-- Step 3 -->
+            <div style="display:flex;margin-bottom:16px;">
+              <div style="flex-shrink:0;width:32px;height:32px;background:#c9a227;color:#000;border-radius:50%;text-align:center;line-height:32px;font-weight:bold;font-size:14px;margin-right:12px;">3</div>
+              <div>
+                <p style="margin:0;font-weight:600;font-size:14px;color:#1a1a1a;">Check Your Roster</p>
+                <p style="margin:4px 0 0;font-size:13px;color:#666;line-height:1.5;">Once logged in, you can view your upcoming shifts, submit leave requests, and check event details for your rostered days.</p>
+              </div>
+            </div>
+            
+            <!-- Step 4 -->
+            <div style="display:flex;margin-bottom:0;">
+              <div style="flex-shrink:0;width:32px;height:32px;background:#c9a227;color:#000;border-radius:50%;text-align:center;line-height:32px;font-weight:bold;font-size:14px;margin-right:12px;">4</div>
+              <div>
+                <p style="margin:0;font-weight:600;font-size:14px;color:#1a1a1a;">Clock In & Out</p>
+                <p style="margin:4px 0 0;font-size:13px;color:#666;line-height:1.5;">Use the kiosk at your workplace or the Employee Portal to clock in, take breaks, and clock out. Your hours are tracked automatically.</p>
+              </div>
+            </div>
+          </div>
+          
+          <!-- What You Can Do -->
+          <div style="padding:0 30px 24px;">
+            <h3 style="color:#1a1a1a;font-size:16px;margin:0 0 16px;border-bottom:2px solid #c9a227;padding-bottom:8px;">📱 What You Can Do on the Portal</h3>
+            <div style="display:grid;gap:8px;">
+              <div style="padding:10px 14px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:6px;font-size:13px;">
+                ✅ <strong>View Roster</strong> — See your upcoming shifts and event details
+              </div>
+              <div style="padding:10px 14px;background:#eff6ff;border:1px solid #bfdbfe;border-radius:6px;font-size:13px;">
+                ⏰ <strong>Clock In/Out</strong> — Record your attendance and breaks
+              </div>
+              <div style="padding:10px 14px;background:#fef3c7;border:1px solid #fde68a;border-radius:6px;font-size:13px;">
+                📝 <strong>Submit Requests</strong> — Apply for leave or flag availability changes
+              </div>
+              <div style="padding:10px 14px;background:#fce7f3;border:1px solid #fbcfe8;border-radius:6px;font-size:13px;">
+                📊 <strong>View Timesheets</strong> — Review your worked hours and approved timesheets
+              </div>
+              <div style="padding:10px 14px;background:#f3e8ff;border:1px solid #e9d5ff;border-radius:6px;font-size:13px;">
+                💬 <strong>Team Forum</strong> — Stay connected with announcements and discussions
+              </div>
+            </div>
+          </div>
+          
+          <!-- CTA Button -->
+          <div style="text-align:center;padding:0 30px 30px;">
+            <a href="${portalUrl}" style="display:inline-block;background:#c9a227;color:#000;text-decoration:none;padding:14px 40px;border-radius:8px;font-weight:bold;font-size:15px;letter-spacing:0.5px;">
+              Go to Employee Portal →
+            </a>
+          </div>
+          
+          <!-- Important Notes -->
+          <div style="padding:20px 30px;background:#fef2f2;border-top:1px solid #fecaca;">
+            <h4 style="margin:0 0 8px;font-size:13px;color:#991b1b;">🔒 Important Security Notes</h4>
+            <ul style="margin:0;padding:0 0 0 16px;font-size:12px;color:#7f1d1d;line-height:1.7;">
+              <li>Keep your employee code <strong>confidential</strong> — do not share it with others.</li>
+              <li>Always clock out at the end of your shift.</li>
+              <li>Contact your manager if you have any issues accessing the portal.</li>
+            </ul>
+          </div>
+          
+          <!-- Footer -->
+          <div style="text-align:center;padding:20px 30px;background:#f8f9fa;border-radius:0 0 12px 12px;">
+            <p style="color:#999;font-size:11px;margin:0;">
+              This is an automated welcome email from <strong>${body.businessName || "OmnexClock"}</strong>.<br/>
+              If you received this in error, please contact your manager.
+            </p>
+          </div>
+        </div>
+      `;
+
+      emailPayload = {
+        from: `${body.businessName || "OmnexClock"} <noreply@omnexventures.com>`,
+        to: [body.to],
+        subject: `Welcome to ${body.businessName || "the team"}, ${body.employeeName}! 🎉 — Your Induction Packet`,
+        html,
       };
     } else {
       throw new Error("Invalid email type");
