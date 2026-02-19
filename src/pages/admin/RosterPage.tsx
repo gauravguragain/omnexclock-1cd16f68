@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/hooks/use-toast";
 import { TimeDropdownPicker } from "@/components/TimeDropdownPicker";
 import { logAudit } from "@/lib/auditLog";
+import { notifyEmployees } from "@/lib/notifications";
 import { useAuth } from "@/contexts/AuthContext";
 import {
   ChevronLeft, ChevronRight, Plus, Trash2, Copy, Send, Clock, AlertCircle, CalendarOff,
@@ -336,6 +337,19 @@ export default function RosterPage() {
       await logAudit("roster_publish", { week_start: fmtDate(weekStart), count: draftIds.length });
       toast({ title: "Roster published", description: `${draftIds.length} shift(s) are now visible to employees.` });
       fetchData();
+
+      // Notify affected employees (non-blocking)
+      const affectedEmployeeIds = [...new Set(draftShifts.map(s => s.employee_id))];
+      if (business) {
+        notifyEmployees({
+          businessId: business.id,
+          employeeIds: affectedEmployeeIds,
+          type: "shift_change",
+          title: "Roster Updated",
+          message: `Your roster for the week of ${fmtDate(weekStart)} has been published.`,
+          metadata: { week_start: fmtDate(weekStart) },
+        });
+      }
 
       // Email affected employees (non-blocking)
       sendRosterEmails(draftShifts);

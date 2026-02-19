@@ -13,6 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Check, X, CalendarOff, Clock, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 import { logAudit } from "@/lib/auditLog";
+import { notifyEmployees } from "@/lib/notifications";
 
 interface EmployeeRequest {
   id: string;
@@ -106,6 +107,19 @@ export default function RequestsPage() {
         employee_name: reviewReq.employee_name,
         request_type: reviewReq.request_type,
       });
+
+      // Notify the employee
+      if (business) {
+        notifyEmployees({
+          businessId: business.id,
+          employeeIds: [reviewReq.employee_id],
+          type: "request_update",
+          title: `Request ${decision === "approved" ? "Approved" : "Rejected"}`,
+          message: `Your ${reviewReq.request_type} request has been ${decision}.${adminNote.trim() ? ` Note: ${adminNote.trim()}` : ""}`,
+          metadata: { request_id: reviewReq.id, decision },
+        });
+      }
+
       fetchPendingCount();
       toast.success(`Request ${decision}`);
       setReviewOpen(false);
