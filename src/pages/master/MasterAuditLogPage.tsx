@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Search, Shield, FileText, Building2, UserX, UserCheck, StickyNote, ShieldOff, RefreshCw, LogIn, Edit, Image, Palette, PlusCircle, Users } from "lucide-react";
+import { Search, Shield, FileText, Building2, UserX, UserCheck, StickyNote, ShieldOff, RefreshCw, LogIn, Edit, Image, Palette, PlusCircle, Users, KeyRound, User } from "lucide-react";
 import { format } from "date-fns";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
@@ -36,6 +36,8 @@ const ACTION_CONFIG: Record<string, { label: string; icon: typeof Building2; col
   user_deleted: { label: "User Deleted", icon: UserX, color: "text-red-400" },
   password_reset: { label: "Password Reset", icon: Shield, color: "text-orange-400" },
   user_force_logout: { label: "Force Logout", icon: UserX, color: "text-orange-400" },
+  master_profile_updated: { label: "Profile Updated", icon: User, color: "text-blue-400" },
+  master_password_changed: { label: "Password Changed", icon: KeyRound, color: "text-yellow-400" },
 };
 
 export default function MasterAuditLogPage() {
@@ -128,6 +130,10 @@ export default function MasterAuditLogPage() {
         return <span>Password reset for <strong>{d.user_email}</strong></span>;
       case "user_force_logout":
         return <span>Force logout for <strong>{d.user_email}</strong></span>;
+      case "master_profile_updated":
+        return <span>Master profile updated ({d.field})</span>;
+      case "master_password_changed":
+        return <span>Master password changed</span>;
       default:
         return <span className="text-xs text-muted-foreground">{JSON.stringify(d)}</span>;
     }
