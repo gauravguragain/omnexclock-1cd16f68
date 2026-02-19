@@ -35,6 +35,7 @@ export default function KioskPage() {
   const [currentTime, setCurrentTime] = useState(new Date());
   const [geoStatus, setGeoStatus] = useState<string | null>(null);
   const geoResultRef = useRef<GeoResult | null>(null);
+  const geoPromiseRef = useRef<Promise<GeoResult> | null>(null);
 
   useEffect(() => {
     const timer = setInterval(() => setCurrentTime(new Date()), 1000);
@@ -135,6 +136,10 @@ export default function KioskPage() {
   const submitClock = useCallback(async (photo: string) => {
     setLoading(true);
     try {
+      // Wait for geolocation to finish if still in progress
+      if (geoPromiseRef.current) {
+        await geoPromiseRef.current;
+      }
       const geoData = geoResultRef.current;
       const { data, error } = await supabase.functions.invoke("kiosk-clock", {
         body: {
@@ -222,10 +227,12 @@ export default function KioskPage() {
 
     // Start geolocation capture in parallel with camera
     setGeoStatus("locating");
-    captureGeolocation().then((result) => {
+    const geoPromise = captureGeolocation().then((result) => {
       geoResultRef.current = result;
       setGeoStatus(result.locationStatus);
+      return result;
     });
+    geoPromiseRef.current = geoPromise;
 
     await new Promise<void>((resolve) => {
       setTimeout(() => {
@@ -248,6 +255,7 @@ export default function KioskPage() {
     setPhotoData(null);
     setGeoStatus(null);
     geoResultRef.current = null;
+    geoPromiseRef.current = null;
     stopCamera();
   };
 
