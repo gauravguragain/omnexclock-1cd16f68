@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { UserCheck, UserX, Shield, ShieldOff, Search, Eye, EyeOff } from "lucide-react";
 import { Input } from "@/components/ui/input";
-import { logAudit } from "@/lib/auditLog";
+import { logAudit, logMasterAudit } from "@/lib/auditLog";
 import { useAuth } from "@/contexts/AuthContext";
 import { useBusiness } from "@/contexts/BusinessContext";
 
@@ -92,6 +92,7 @@ export default function UsersPage() {
       toast({ title: "Error", description: error.message, variant: "destructive" });
     } else {
       await logAudit("user_removed_from_business", { user_id: user.id, email: user.email, business_id: businessId });
+      logMasterAudit("user_removed_from_business", { user_email: user.email, business_name: business?.name, business_id: businessId });
       toast({ title: "User removed", description: `${user.email} has been removed from this business.` });
       fetchUsers();
     }
@@ -147,6 +148,7 @@ export default function UsersPage() {
           await logAudit("viewer_role_removed", { user_id: user.id, email: user.email, business_id: businessId });
         }
         await logAudit("admin_role_removed", { user_id: user.id, email: user.email, business_id: businessId });
+        logMasterAudit("role_changed", { user_email: user.email, business_name: business?.name, role: "admin", action: "removed" });
         toast({ title: "Admin role removed", description: user.has_viewer_role ? "Viewer role also removed." : undefined });
         fetchUsers();
       }
@@ -158,6 +160,7 @@ export default function UsersPage() {
         toast({ title: "Error", description: error.message, variant: "destructive" });
       } else {
         await logAudit("admin_role_granted", { user_id: user.id, email: user.email, business_id: businessId });
+        logMasterAudit("role_changed", { user_email: user.email, business_name: business?.name, role: "admin", action: "granted" });
         toast({ title: "Admin role granted" });
         fetchUsers();
       }
@@ -184,6 +187,7 @@ export default function UsersPage() {
         toast({ title: "Error", description: error.message, variant: "destructive" });
       } else {
         await logAudit("viewer_role_removed", { user_id: user.id, email: user.email, business_id: businessId });
+        logMasterAudit("role_changed", { user_email: user.email, business_name: business?.name, role: "viewer", action: "removed" });
         toast({ title: "Viewer role removed" });
         fetchUsers();
       }
@@ -195,6 +199,7 @@ export default function UsersPage() {
         toast({ title: "Error", description: error.message, variant: "destructive" });
       } else {
         await logAudit("viewer_role_granted", { user_id: user.id, email: user.email, business_id: businessId });
+        logMasterAudit("role_changed", { user_email: user.email, business_name: business?.name, role: "viewer", action: "granted" });
         toast({ title: "Viewer role granted" });
         fetchUsers();
       }

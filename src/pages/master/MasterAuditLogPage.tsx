@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Search, Shield, FileText, Building2, UserX, UserCheck, StickyNote, ShieldOff, RefreshCw } from "lucide-react";
+import { Search, Shield, FileText, Building2, UserX, UserCheck, StickyNote, ShieldOff, RefreshCw, LogIn, Edit, Image, Palette, PlusCircle, Users } from "lucide-react";
 import { format } from "date-fns";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
@@ -21,9 +21,16 @@ interface MasterLog {
 }
 
 const ACTION_CONFIG: Record<string, { label: string; icon: typeof Building2; color: string }> = {
+  user_sign_in: { label: "Sign In", icon: LogIn, color: "text-blue-400" },
+  business_registered: { label: "Business Registered", icon: PlusCircle, color: "text-green-400" },
+  business_details_updated: { label: "Business Updated", icon: Edit, color: "text-blue-400" },
+  business_logo_updated: { label: "Logo Updated", icon: Image, color: "text-purple-400" },
+  business_theme_changed: { label: "Theme Changed", icon: Palette, color: "text-pink-400" },
   business_status_changed: { label: "Status Changed", icon: ShieldOff, color: "text-yellow-400" },
   business_deleted: { label: "Business Deleted", icon: Building2, color: "text-red-400" },
   business_note_added: { label: "Note Added", icon: StickyNote, color: "text-blue-400" },
+  role_changed: { label: "Role Changed", icon: Shield, color: "text-cyan-400" },
+  user_removed_from_business: { label: "User Removed", icon: UserX, color: "text-orange-400" },
   user_approved: { label: "User Approved", icon: UserCheck, color: "text-green-400" },
   user_unapproved: { label: "User Unapproved", icon: UserX, color: "text-yellow-400" },
   user_deleted: { label: "User Deleted", icon: UserX, color: "text-red-400" },
@@ -84,6 +91,16 @@ export default function MasterAuditLogPage() {
     const d = log.details;
 
     switch (log.action) {
+      case "user_sign_in":
+        return <span><strong>{d.email}</strong> signed in</span>;
+      case "business_registered":
+        return <span><strong>{d.business_name}</strong> registered (code: {d.business_code})</span>;
+      case "business_details_updated":
+        return <span><strong>{d.business_name}</strong> details updated</span>;
+      case "business_logo_updated":
+        return <span><strong>{d.business_name}</strong> logo updated</span>;
+      case "business_theme_changed":
+        return <span><strong>{d.business_name}</strong> theme changed to "{d.theme_name}"</span>;
       case "business_status_changed":
         return (
           <span>
@@ -98,6 +115,10 @@ export default function MasterAuditLogPage() {
         );
       case "business_note_added":
         return <span>Note added to <strong>{d.business_name}</strong></span>;
+      case "role_changed":
+        return <span><strong>{d.user_email}</strong> — {d.role} role {d.action} at <strong>{d.business_name}</strong></span>;
+      case "user_removed_from_business":
+        return <span><strong>{d.user_email}</strong> removed from <strong>{d.business_name}</strong></span>;
       case "user_approved":
       case "user_unapproved":
         return <span><strong>{d.user_email}</strong></span>;

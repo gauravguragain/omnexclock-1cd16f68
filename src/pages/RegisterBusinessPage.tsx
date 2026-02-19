@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { Building2, ArrowLeft } from "lucide-react";
+import { logMasterAudit } from "@/lib/auditLog";
 
 export default function RegisterBusinessPage() {
   const { user, signUp } = useAuth();
@@ -60,6 +61,7 @@ export default function RegisterBusinessPage() {
       toast({ title: "Error", description: msg, variant: "destructive" });
     } else {
       toast({ title: "Business Registered!", description: "You are now the admin. Redirecting to your dashboard..." });
+      logMasterAudit("business_registered", { business_name: businessName.trim(), business_code: code });
       // Small delay then redirect
       setTimeout(() => {
         window.location.href = "/hub";

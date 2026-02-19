@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { Building2, Upload, Palette, Check, Loader2 } from "lucide-react";
+import { logMasterAudit } from "@/lib/auditLog";
 
 export default function MyBusinessPage() {
   const { business, refreshBusiness, applyTheme } = useBusiness();
@@ -46,6 +47,11 @@ export default function MyBusinessPage() {
       toast({ title: "Error", description: error.message, variant: "destructive" });
     } else {
       toast({ title: "Saved", description: "Business details updated." });
+      logMasterAudit("business_details_updated", {
+        business_id: business.id,
+        business_name: name.trim(),
+        fields_updated: ["name", "email", "phone", "address", "industry", "description"],
+      });
       await refreshBusiness();
     }
     setSaving(false);
@@ -83,6 +89,7 @@ export default function MyBusinessPage() {
 
     await refreshBusiness();
     toast({ title: "Logo Updated", description: "Your business logo has been uploaded." });
+    logMasterAudit("business_logo_updated", { business_id: business.id, business_name: business.name });
     setUploadingLogo(false);
   };
 
@@ -131,6 +138,7 @@ export default function MyBusinessPage() {
       toast({ title: "Error", description: error.message, variant: "destructive" });
     } else {
       toast({ title: "Theme Applied", description: `"${chosen.name}" theme is now active.` });
+      logMasterAudit("business_theme_changed", { business_id: business.id, business_name: business.name, theme_name: chosen.name });
       await refreshBusiness();
     }
   };
