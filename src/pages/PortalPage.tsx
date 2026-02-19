@@ -23,9 +23,10 @@ import { useToast } from "@/hooks/use-toast";
 import {
   ArrowLeft, Delete, CalendarRange, Clock, LogIn, LogOut, Coffee, User, FileText,
   MessageSquare, CalendarOff, Send, Plus, RefreshCw, CalendarIcon, Trash2, Pencil,
-  History, CheckCircle2, XCircle, PartyPopper,
+  History, CheckCircle2, XCircle, PartyPopper, ChevronDown, ChevronUp, Users, Baby,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { ausToday, toAusFormatted, toAusTime12, toAusDate, toAusLocaleString, ensureTime12 } from "@/lib/dateUtils";
 import { format } from "date-fns";
 
@@ -110,66 +111,102 @@ function PortalNotifications({ employeeCode, businessCode }: { employeeCode: str
 
 /* ── Event Card (reusable) ────────────────────────────────── */
 function EventCard({ ev }: { ev: any }) {
+  const [expanded, setExpanded] = useState(false);
+
+  const totalGuests = (ev.adult_guests || 0) + (ev.kids_guests || 0);
+  const activeBadges = [
+    ev.cold_sparkles && "✨ Cold Sparkles",
+    ev.dry_ice && "🌫️ Dry Ice",
+    ev.red_carpet && "🔴 Red Carpet",
+    ev.smoke_machine && "💨 Smoke Machine",
+    ev.decor_access && "🎨 Decor Access",
+    ev.live_stall && "🍳 Live Stall",
+  ].filter(Boolean) as string[];
+
   const detailRow = (label: string, value: string | null | undefined) => {
     if (!value) return null;
     return (
-      <div className="flex justify-between text-xs">
+      <div className="flex justify-between text-xs py-0.5">
         <span className="text-muted-foreground">{label}</span>
-        <span className="font-semibold text-foreground">{value}</span>
+        <span className="font-semibold text-foreground text-right">{value}</span>
       </div>
     );
   };
 
   return (
-    <div className="rounded-lg border border-border/60 bg-secondary/30 p-3 space-y-2.5">
-      {/* Host Details */}
-      {(ev.host_name || ev.host_contact_number) && (
-        <div className="pb-2 border-b border-border/30 space-y-1">
-          <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Client Details</p>
-          {detailRow("Host Name", ev.host_name)}
-          {detailRow("Contact", ev.host_contact_number)}
+    <div className="rounded-lg border border-border/60 bg-secondary/30 overflow-hidden">
+      {/* Summary - always visible */}
+      <button
+        className="w-full px-3 py-2.5 text-left flex items-center justify-between hover:bg-secondary/50 transition-colors"
+        onClick={() => setExpanded(!expanded)}
+      >
+        <div className="flex items-center gap-2 flex-1 min-w-0">
+          {ev.event_type && <Badge variant="outline" className="text-[10px] shrink-0">{ev.event_type}</Badge>}
+          {ev.host_name && <span className="text-xs font-medium text-foreground truncate">{ev.host_name}</span>}
+          {!ev.event_type && !ev.host_name && <span className="text-xs text-muted-foreground italic">Event</span>}
+        </div>
+        <div className="flex items-center gap-2 shrink-0 ml-2">
+          {ev.event_time && <span className="text-[10px] text-muted-foreground flex items-center gap-0.5"><Clock className="h-3 w-3" /> {ev.event_time}</span>}
+          {totalGuests > 0 && <span className="text-[10px] text-muted-foreground"><Users className="h-3 w-3 inline" /> {totalGuests}</span>}
+          {expanded ? <ChevronUp className="h-3.5 w-3.5 text-muted-foreground" /> : <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />}
+        </div>
+      </button>
+
+      {/* Expanded details */}
+      {expanded && (
+        <div className="px-3 pb-3 pt-1 border-t border-border/30 space-y-2.5">
+          {/* Client Details */}
+          {(ev.host_name || ev.host_contact_number) && (
+            <div className="space-y-0.5">
+              <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Client Details</p>
+              {detailRow("Host Name", ev.host_name)}
+              {detailRow("Contact", ev.host_contact_number)}
+            </div>
+          )}
+
+          {/* Event Info */}
+          <div className="space-y-0.5">
+            <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Event Info</p>
+            {detailRow("Event Time", ev.event_time)}
+            {detailRow("Event Space", ev.event_space)}
+            {detailRow("Event Type", ev.event_type)}
+            {detailRow("Bev Package", ev.bev_package)}
+          </div>
+
+          {/* Guest & Table Setup */}
+          {(totalGuests > 0 || ev.num_tables > 0) && (
+            <div className="space-y-0.5">
+              <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Guest Setup</p>
+              {detailRow("Adult Guests", ev.adult_guests > 0 ? String(ev.adult_guests) : null)}
+              {detailRow("Kids Guests", ev.kids_guests > 0 ? String(ev.kids_guests) : null)}
+              {detailRow("Total Guests", totalGuests > 0 ? String(totalGuests) : null)}
+              {detailRow("Tables", ev.num_tables > 0 ? `${ev.num_tables} (${ev.chairs_per_table || 8} chairs each)` : null)}
+              {detailRow("Tablecloth", ev.tablecloth_color === "black" ? "⬛ Black" : ev.tablecloth_color === "white" ? "⬜ White" : ev.tablecloth_color)}
+            </div>
+          )}
+
+          {/* Equipment */}
+          {activeBadges.length > 0 && (
+            <div className="space-y-1">
+              <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Equipment</p>
+              <div className="flex flex-wrap gap-1.5">
+                {activeBadges.map(b => <Badge key={b} variant="secondary" className="text-[10px]">{b}</Badge>)}
+              </div>
+            </div>
+          )}
+
+          {/* Live Stall Details */}
+          {ev.live_stall && ev.live_stall_details && (
+            <div className="text-xs">
+              <span className="text-muted-foreground">Live Stall Details: </span>
+              <span className="text-foreground">{ev.live_stall_details}</span>
+            </div>
+          )}
+
+          {/* Notes */}
+          {ev.notes && <p className="text-xs text-muted-foreground italic">📝 {ev.notes}</p>}
         </div>
       )}
-
-      {/* Event Info */}
-      {detailRow("Event Space", ev.event_space)}
-      {detailRow("Event Type", ev.event_type)}
-
-      {/* Guest & Table Setup */}
-      {(ev.adult_guests > 0 || ev.kids_guests > 0) && (
-        <div className="grid grid-cols-2 gap-x-4 gap-y-1">
-          {detailRow("Adult Guests", ev.adult_guests > 0 ? String(ev.adult_guests) : null)}
-          {detailRow("Kids Guests", ev.kids_guests > 0 ? String(ev.kids_guests) : null)}
-        </div>
-      )}
-      {detailRow("Tables", ev.num_tables > 0 ? `${ev.num_tables} (${ev.chairs_per_table || 8} chairs each)` : null)}
-      {detailRow("Tablecloth", ev.tablecloth_color === "black" ? "⬛ Black" : ev.tablecloth_color === "white" ? "⬜ White" : ev.tablecloth_color)}
-
-      {/* Bev Package */}
-      {detailRow("Bev Package", ev.bev_package)}
-
-      {/* Equipment Badges */}
-      {(ev.cold_sparkles || ev.dry_ice || ev.red_carpet || ev.smoke_machine || ev.decor_access || ev.live_stall) && (
-        <div className="flex flex-wrap gap-1.5 pt-1">
-          {ev.cold_sparkles && <Badge variant="secondary" className="text-[10px]">✨ Cold Sparkles</Badge>}
-          {ev.dry_ice && <Badge variant="secondary" className="text-[10px]">🌫️ Dry Ice</Badge>}
-          {ev.red_carpet && <Badge variant="secondary" className="text-[10px]">🔴 Red Carpet</Badge>}
-          {ev.smoke_machine && <Badge variant="secondary" className="text-[10px]">💨 Smoke Machine</Badge>}
-          {ev.decor_access && <Badge variant="secondary" className="text-[10px]">🎨 Decor Access</Badge>}
-          {ev.live_stall && <Badge variant="secondary" className="text-[10px]">🍳 Live Stall</Badge>}
-        </div>
-      )}
-
-      {/* Live Stall Details */}
-      {ev.live_stall && ev.live_stall_details && (
-        <div className="text-xs">
-          <span className="text-muted-foreground">Live Stall: </span>
-          <span className="text-foreground">{ev.live_stall_details}</span>
-        </div>
-      )}
-
-      {/* Notes */}
-      {ev.notes && <p className="text-xs text-muted-foreground italic mt-1">📝 {ev.notes}</p>}
     </div>
   );
 }

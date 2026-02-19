@@ -41,24 +41,26 @@ serve(async (req) => {
             content: `You are a data extraction assistant. You will receive a PDF runsheet for an event venue. Extract the following fields from the document. If a field is not found, set it to null.
 
 Rules:
-- event_space: The name of the event space/room/venue area. Extract the exact text from the runsheet, do NOT use a dropdown value. Write it exactly as it appears in the PDF.
-- event_type: The type of event (e.g. Wedding, Birthday, Corporate, etc.). Extract the exact text from the runsheet.
-- tablecloth_color: The tablecloth color. If not specified or says "standard", default to "black".
+- event_date: The date of the event in YYYY-MM-DD format. Look for "Date", "Event Date", or similar. If not found, set to null.
+- event_time: The time of the event as a readable string (e.g. "6:00 PM - 11:00 PM", "7pm start"). Look for "Time", "Event Time", "Start Time", "Doors Open" etc. If not found, set to null.
+- event_space: The name of the event space/room/venue area. Extract the exact text.
+- event_type: The type of event (e.g. Wedding, Birthday, Corporate, etc.).
+- tablecloth_color: The tablecloth color. Default to "black" if not specified.
 - adult_guests: Number of adult guests. Integer only.
 - kids_guests: Number of kids/children guests. Integer only.
-- chairs_per_table: Number of chairs per table. Default is 8. If stated as 10, use 10.
-- num_tables: Calculate as Math.ceil((adult_guests + kids_guests) / chairs_per_table). Must be a whole number, round UP always. If explicitly stated in the document, use the stated number instead.
-- cold_sparkles: true/false - whether cold sparkles are included.
-- dry_ice: true/false - whether dry ice is included.
-- red_carpet: true/false - whether red carpet is included.
-- smoke_machine: true/false - whether a smoke machine / fog machine is included.
-- decor_access: true/false - whether decor access is included/required.
-- live_stall: true/false - whether there is a live food stall or live station.
-- live_stall_details: If live_stall is true, describe what's included (e.g. "Live pasta station, dessert bar"). Otherwise null.
-- host_name: The name of the host/client. Look for "Client", "Host", "Customer Name", or similar labels in the runsheet.
-- host_contact_number: The contact phone number of the host/client. Look for phone/mobile/contact number associated with the client.
-- bev_package: The beverage package selected for the event (e.g. "Gold Package", "Silver Package", "BYO", "Premium Bar", etc.). Look for "Beverage", "Bev Package", "Drinks Package", "Bar Package" or similar labels.
-- notes: Any other important details or special requests mentioned.
+- chairs_per_table: Number of chairs per table. Default is 8.
+- num_tables: Calculate as Math.ceil((adult_guests + kids_guests) / chairs_per_table). Use stated number if explicit.
+- cold_sparkles: true/false
+- dry_ice: true/false
+- red_carpet: true/false
+- smoke_machine: true/false
+- decor_access: true/false
+- live_stall: true/false
+- live_stall_details: Details if live_stall is true, otherwise null.
+- host_name: The name of the host/client.
+- host_contact_number: The contact phone number of the host/client.
+- bev_package: The beverage package (e.g. "Gold Package", "Silver", "BYO", etc.).
+- notes: Any other important details or special requests.
 
 Return ONLY valid JSON, no markdown, no extra text.`,
           },
