@@ -14,10 +14,13 @@ export default function InventoryPage() {
   const { user, isAdminOf, isSuperAdminOf, isRosterAdminOf } = useAuth();
   const [activeSection, setActiveSection] = useState("foh");
 
+  const { getRosterAdminDepartments } = useAuth();
   const currentBusinessId = business?.id || "";
   const isAdmin = isAdminOf(currentBusinessId) || isSuperAdminOf(currentBusinessId);
   const isRosterAdmin = isRosterAdminOf(currentBusinessId);
-  const canManageItems = isAdmin;
+  const rosterDepts = getRosterAdminDepartments(currentBusinessId);
+  const isRosterAdminFOH = isRosterAdmin && !isAdmin && rosterDepts.some(d => d.toUpperCase() === "FOH");
+  const canManageItems = isAdmin || isRosterAdminFOH;
   const canAdjustAndRequest = isAdmin || isRosterAdmin;
 
   return (
