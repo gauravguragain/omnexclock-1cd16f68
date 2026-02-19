@@ -123,10 +123,47 @@ export default function EventSetupSettings() {
         </div>
 
 
+        {/* Event Types - hidden for PRP business */}
+        {business.business_code !== "PRP" && (
+          <div className="space-y-3">
+            <Label className="text-sm font-semibold flex items-center gap-2">
+              <PartyPopper className="h-4 w-4" /> Event Types
+            </Label>
+            <div className="flex flex-wrap gap-2">
+              {eventTypes.map(s => (
+                <Badge key={s.id} variant="secondary" className="gap-1 pr-1 py-1">
+                  {s.label}
+                  <button onClick={() => removeItem(s.id)} className="ml-1 rounded-full hover:bg-destructive/20 p-0.5 transition-colors">
+                    <X className="h-3 w-3" />
+                  </button>
+                </Badge>
+              ))}
+              {eventTypes.length === 0 && <span className="text-xs text-muted-foreground">No event types added yet.</span>}
+            </div>
+            <div className="flex gap-2">
+              <Input
+                value={newEventType}
+                onChange={e => setNewEventType(e.target.value)}
+                placeholder="e.g. Wedding Reception"
+                className="h-9 text-sm"
+                onKeyDown={e => { if (e.key === "Enter") { addItem("event_type", newEventType); setNewEventType(""); } }}
+              />
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => { addItem("event_type", newEventType); setNewEventType(""); }}
+                disabled={!newEventType.trim()}
+              >
+                <Plus className="h-3.5 w-3.5 mr-1" /> Add
+              </Button>
+            </div>
+          </div>
+        )}
+
         {/* Info */}
         <div className="text-xs text-muted-foreground bg-muted/50 rounded-lg p-3 border border-border/50">
-          <strong>How it works:</strong> Event spaces you add here will appear as dropdown options in the roster's daily event panel. Event type is a free-text field on the roster.
-          Tablecloth color (Black/White), number of tables, chairs per table, and extras (Cold Sparkles, Dry Ice, Red Carpet, Decor Access) are built-in options.
+          <strong>How it works:</strong> Event spaces{business.business_code !== "PRP" ? " and types" : ""} you add here will appear as dropdown options in the roster's daily event panel.{business.business_code === "PRP" ? " Event type is a free-text field on the roster." : ""}
+          {" "}Tablecloth color (Black/White), number of tables, chairs per table, and extras (Cold Sparkles, Dry Ice, Red Carpet, Decor Access) are built-in options.
         </div>
       </CardContent>
     </Card>
