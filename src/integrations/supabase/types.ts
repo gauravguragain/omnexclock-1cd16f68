@@ -806,6 +806,7 @@ export type Database = {
         Row: {
           business_id: string | null
           created_at: string
+          departments: string[] | null
           id: string
           role: Database["public"]["Enums"]["app_role"]
           user_id: string
@@ -813,6 +814,7 @@ export type Database = {
         Insert: {
           business_id?: string | null
           created_at?: string
+          departments?: string[] | null
           id?: string
           role: Database["public"]["Enums"]["app_role"]
           user_id: string
@@ -820,6 +822,7 @@ export type Database = {
         Update: {
           business_id?: string | null
           created_at?: string
+          departments?: string[] | null
           id?: string
           role?: Database["public"]["Enums"]["app_role"]
           user_id?: string
@@ -1253,7 +1256,7 @@ export type Database = {
           }
     }
     Enums: {
-      app_role: "admin" | "user" | "viewer" | "master"
+      app_role: "admin" | "user" | "viewer" | "master" | "roster_admin"
       clock_event_type: "clock_in" | "clock_out" | "break_start" | "break_end"
     }
     CompositeTypes: {
@@ -1382,7 +1385,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["admin", "user", "viewer", "master"],
+      app_role: ["admin", "user", "viewer", "master", "roster_admin"],
       clock_event_type: ["clock_in", "clock_out", "break_start", "break_end"],
     },
   },
