@@ -121,9 +121,8 @@ serve(async (req) => {
     );
   } catch (error: unknown) {
     console.error("Service reminder error:", error);
-    const message = error instanceof Error ? error.message : "Unknown error";
     return new Response(
-      JSON.stringify({ success: false, error: message }),
+      JSON.stringify({ success: false, error: "Unable to process service reminders." }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }

@@ -116,7 +116,7 @@ Make themes distinct: one dark luxury, one modern minimal, one bold vibrant, one
   } catch (e) {
     console.error("analyze-theme error:", e);
     return new Response(
-      JSON.stringify({ error: e instanceof Error ? e.message : "Unknown error" }),
+      JSON.stringify({ error: "Unable to analyze theme. Please try again." }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }

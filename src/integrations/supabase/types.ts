@@ -1186,6 +1186,7 @@ export type Database = {
             }
             Returns: boolean
           }
+      delete_employee: { Args: { _employee_id: string }; Returns: boolean }
       delete_employee_request:
         | {
             Args: { _employee_code: string; _request_id: string }
@@ -1501,6 +1502,10 @@ export type Database = {
       }
       is_viewer_of_business: {
         Args: { _business_id: string }
+        Returns: boolean
+      }
+      log_audit_entry: {
+        Args: { _action: string; _business_id: string; _details: Json }
         Returns: boolean
       }
       mark_all_employee_notifications_read: {

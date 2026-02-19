@@ -123,7 +123,17 @@ function EventCard({ ev }: { ev: any }) {
     ev.live_stall && "🍳 Live Stall",
   ].filter(Boolean) as string[];
 
-  const viewPdf = (url: string) => {
+  const viewPdf = async (urlOrPath: string) => {
+    let url = urlOrPath;
+    // If it's a file path (not a full URL), generate a signed URL
+    if (!urlOrPath.startsWith("http")) {
+      const { data } = await supabase.storage.from("event-runsheets").createSignedUrl(urlOrPath, 3600);
+      if (data?.signedUrl) {
+        url = data.signedUrl;
+      } else {
+        return;
+      }
+    }
     const viewerUrl = `https://docs.google.com/viewer?url=${encodeURIComponent(url)}&embedded=true`;
     window.open(viewerUrl, "_blank", "noopener,noreferrer");
   };

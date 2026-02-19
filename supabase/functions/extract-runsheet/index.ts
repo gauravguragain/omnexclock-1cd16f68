@@ -129,7 +129,7 @@ Return ONLY valid JSON, no markdown, no extra text.`,
   } catch (e) {
     console.error("extract-runsheet error:", e);
     return new Response(
-      JSON.stringify({ error: e instanceof Error ? e.message : "Unknown error" }),
+      JSON.stringify({ error: "Unable to extract runsheet data. Please try again." }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
