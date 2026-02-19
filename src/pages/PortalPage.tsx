@@ -123,6 +123,11 @@ function EventCard({ ev }: { ev: any }) {
     ev.live_stall && "🍳 Live Stall",
   ].filter(Boolean) as string[];
 
+  const viewPdf = (url: string) => {
+    const viewerUrl = `https://docs.google.com/viewer?url=${encodeURIComponent(url)}&embedded=true`;
+    window.open(viewerUrl, "_blank", "noopener,noreferrer");
+  };
+
   const detailRow = (label: string, value: string | null | undefined) => {
     if (!value) return null;
     return (
@@ -205,6 +210,16 @@ function EventCard({ ev }: { ev: any }) {
 
           {/* Notes */}
           {ev.notes && <p className="text-xs text-muted-foreground italic">📝 {ev.notes}</p>}
+
+          {/* View Runsheet PDF */}
+          {ev.runsheet_url && (
+            <button
+              onClick={(e) => { e.stopPropagation(); viewPdf(ev.runsheet_url); }}
+              className="flex items-center gap-1.5 text-xs text-primary hover:underline mt-1"
+            >
+              <FileText className="h-3.5 w-3.5" /> View Runsheet PDF
+            </button>
+          )}
         </div>
       )}
     </div>
