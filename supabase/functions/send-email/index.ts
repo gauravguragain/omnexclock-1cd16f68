@@ -217,25 +217,16 @@ serve(async (req) => {
               <div style="flex-shrink:0;width:32px;height:32px;background:#c9a227;color:#000;border-radius:50%;text-align:center;line-height:32px;font-weight:bold;font-size:14px;margin-right:12px;">2</div>
               <div>
                 <p style="margin:0;font-weight:600;font-size:14px;color:#1a1a1a;">Log In With Your Employee Code</p>
-                <p style="margin:4px 0 0;font-size:13px;color:#666;line-height:1.5;">Use your 4-digit employee code <strong style="font-family:monospace;color:#c9a227;">${body.employeeCode || "—"}</strong> to clock in/out and view your shifts.</p>
+                <p style="margin:4px 0 0;font-size:13px;color:#666;line-height:1.5;">Use your 4-digit employee code <strong style="font-family:monospace;color:#c9a227;">${body.employeeCode || "—"}</strong> to access your shifts, timesheets, and more.</p>
               </div>
             </div>
             
             <!-- Step 3 -->
-            <div style="display:flex;margin-bottom:16px;">
+            <div style="display:flex;margin-bottom:0;">
               <div style="flex-shrink:0;width:32px;height:32px;background:#c9a227;color:#000;border-radius:50%;text-align:center;line-height:32px;font-weight:bold;font-size:14px;margin-right:12px;">3</div>
               <div>
-                <p style="margin:0;font-weight:600;font-size:14px;color:#1a1a1a;">Check Your Roster</p>
-                <p style="margin:4px 0 0;font-size:13px;color:#666;line-height:1.5;">Once logged in, you can view your upcoming shifts, submit leave requests, and check event details for your rostered days.</p>
-              </div>
-            </div>
-            
-            <!-- Step 4 -->
-            <div style="display:flex;margin-bottom:0;">
-              <div style="flex-shrink:0;width:32px;height:32px;background:#c9a227;color:#000;border-radius:50%;text-align:center;line-height:32px;font-weight:bold;font-size:14px;margin-right:12px;">4</div>
-              <div>
-                <p style="margin:0;font-weight:600;font-size:14px;color:#1a1a1a;">Clock In & Out</p>
-                <p style="margin:4px 0 0;font-size:13px;color:#666;line-height:1.5;">Use the kiosk at your workplace or the Employee Portal to clock in, take breaks, and clock out. Your hours are tracked automatically.</p>
+                <p style="margin:0;font-weight:600;font-size:14px;color:#1a1a1a;">Explore Your Portal</p>
+                <p style="margin:4px 0 0;font-size:13px;color:#666;line-height:1.5;">Once logged in, you can view your upcoming shifts, check your timesheets, submit leave requests, and stay connected via the team forum.</p>
               </div>
             </div>
           </div>
@@ -245,19 +236,22 @@ serve(async (req) => {
             <h3 style="color:#1a1a1a;font-size:16px;margin:0 0 16px;border-bottom:2px solid #c9a227;padding-bottom:8px;">📱 What You Can Do on the Portal</h3>
             <div style="display:grid;gap:8px;">
               <div style="padding:10px 14px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:6px;font-size:13px;">
-                ✅ <strong>View Roster</strong> — See your upcoming shifts and event details
+                📅 <strong>Today's Overview</strong> — See today's shift and event setup details at a glance
               </div>
               <div style="padding:10px 14px;background:#eff6ff;border:1px solid #bfdbfe;border-radius:6px;font-size:13px;">
-                ⏰ <strong>Clock In/Out</strong> — Record your attendance and breaks
+                📋 <strong>View Roster</strong> — Check your upcoming shifts week by week
               </div>
               <div style="padding:10px 14px;background:#fef3c7;border:1px solid #fde68a;border-radius:6px;font-size:13px;">
-                📝 <strong>Submit Requests</strong> — Apply for leave or flag availability changes
-              </div>
-              <div style="padding:10px 14px;background:#fce7f3;border:1px solid #fbcfe8;border-radius:6px;font-size:13px;">
-                📊 <strong>View Timesheets</strong> — Review your worked hours and approved timesheets
+                📊 <strong>View Timesheets</strong> — Review your worked hours and approval status
               </div>
               <div style="padding:10px 14px;background:#f3e8ff;border:1px solid #e9d5ff;border-radius:6px;font-size:13px;">
                 💬 <strong>Team Forum</strong> — Stay connected with announcements and discussions
+              </div>
+              <div style="padding:10px 14px;background:#fce7f3;border:1px solid #fbcfe8;border-radius:6px;font-size:13px;">
+                📝 <strong>Submit Requests</strong> — Apply for leave or flag availability changes
+              </div>
+              <div style="padding:10px 14px;background:#f0f9ff;border:1px solid #bae6fd;border-radius:6px;font-size:13px;">
+                🔔 <strong>Notifications</strong> — Receive updates on roster changes and request approvals
               </div>
             </div>
           </div>
@@ -274,7 +268,6 @@ serve(async (req) => {
             <h4 style="margin:0 0 8px;font-size:13px;color:#991b1b;">🔒 Important Security Notes</h4>
             <ul style="margin:0;padding:0 0 0 16px;font-size:12px;color:#7f1d1d;line-height:1.7;">
               <li>Keep your employee code <strong>confidential</strong> — do not share it with others.</li>
-              <li>Always clock out at the end of your shift.</li>
               <li>Contact your manager if you have any issues accessing the portal.</li>
             </ul>
           </div>
