@@ -691,6 +691,7 @@ export default function RosterPage() {
 
     if (sentCount > 0) {
       toast({ title: "Emails sent", description: `Roster notifications sent to ${sentCount} employee(s).` });
+      await logAudit("roster_notification_emails_sent", { week_start: fmtDate(weekStart), employees_notified: sentCount });
     }
   };
 

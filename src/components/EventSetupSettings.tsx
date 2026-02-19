@@ -9,6 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { Plus, X, GripVertical, Warehouse, PartyPopper } from "lucide-react";
+import { logAudit } from "@/lib/auditLog";
 
 interface ConfigItem {
   id: string;
@@ -61,6 +62,7 @@ export default function EventSetupSettings() {
         }
       } else {
         toast({ title: "Added", description: `"${label.trim()}" added successfully.` });
+        await logAudit("event_config_add", { config_type: type, label: label.trim() });
         fetchConfig();
       }
     });
@@ -68,8 +70,10 @@ export default function EventSetupSettings() {
 
   const removeItem = async (id: string) => {
     await runAction(async () => {
+      const item = items.find(i => i.id === id);
       await supabase.from("event_setup_config").update({ active: false }).eq("id", id);
       toast({ title: "Removed" });
+      await logAudit("event_config_remove", { config_type: item?.config_type, label: item?.label });
       fetchConfig();
     });
   };

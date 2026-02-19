@@ -13,6 +13,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
 import { ChevronDown, ChevronUp, Plus, Trash2, Sparkles, Wind, Ribbon, Palette, Upload, FileText, X, Loader2, Flame, Users, Baby, UtensilsCrossed, User, Phone, Clock, Edit2, Eye } from "lucide-react";
+import { logAudit } from "@/lib/auditLog";
 
 interface DayEvent {
   id: string;
@@ -140,6 +141,7 @@ export default function RosterDayEvents({ weekDates, fmtDate }: Props) {
       if (error) {
         toast({ title: "Error", description: error.message, variant: "destructive" });
       } else {
+        await logAudit("day_event_add", { date: fmtDate(weekDates[dayIdx]) });
         fetchData();
       }
       setSaving(false);
@@ -163,6 +165,8 @@ export default function RosterDayEvents({ weekDates, fmtDate }: Props) {
       if (error) {
         toast({ title: "Error", description: error.message, variant: "destructive" });
       } else {
+        const ev = events.find(e => e.id === id);
+        await logAudit("day_event_delete", { date: ev?.date, event_space: ev?.event_space });
         fetchData();
         toast({ title: "Event removed" });
       }
@@ -194,6 +198,7 @@ export default function RosterDayEvents({ weekDates, fmtDate }: Props) {
     } else {
       setEvents(prev => prev.map(e => e.id === eventId ? { ...e, runsheet_url: urlData.publicUrl } : e));
       toast({ title: "Runsheet uploaded, extracting data..." });
+      await logAudit("runsheet_upload", { event_id: eventId, filename: file.name });
       extractRunsheetData(eventId, urlData.publicUrl);
     }
     setUploading(null);
@@ -298,6 +303,7 @@ export default function RosterDayEvents({ weekDates, fmtDate }: Props) {
 
       const dayLabel = weekDates[targetDayIdx].toLocaleDateString("en-AU", { weekday: "short", day: "numeric", month: "short" });
       toast({ title: "Event created!", description: `Runsheet data extracted and assigned to ${dayLabel}.` });
+      await logAudit("runsheet_extract_create", { date: dateStr, filename: file.name });
     } catch (e: any) {
       console.error("Section PDF extraction error:", e);
       toast({ title: "Extraction failed", description: e.message || "Could not extract data from PDF.", variant: "destructive" });
@@ -357,6 +363,7 @@ export default function RosterDayEvents({ weekDates, fmtDate }: Props) {
       } else {
         setEvents(prev => prev.map(e => e.id === eventId ? { ...e, runsheet_url: null } : e));
         toast({ title: "Runsheet removed" });
+        await logAudit("runsheet_remove", { event_id: eventId });
       }
     });
   };

@@ -11,7 +11,7 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { Building2, Upload, Palette, Check, Loader2, BookOpen } from "lucide-react";
 import MonthlyReportSection from "@/components/MonthlyReportSection";
-import { logMasterAudit } from "@/lib/auditLog";
+import { logAudit } from "@/lib/auditLog";
 
 export default function MyBusinessPage() {
   const { isSuperAdminOf, isAdminOf } = useAuth();
@@ -53,7 +53,7 @@ export default function MyBusinessPage() {
         toast({ title: "Error", description: error.message, variant: "destructive" });
       } else {
         toast({ title: "Saved", description: "Business details updated." });
-        logMasterAudit("business_details_updated", {
+        logAudit("business_details_updated", {
           business_id: business.id,
           business_name: name.trim(),
           fields_updated: ["name", "email", "phone", "address", "industry", "description"],
@@ -96,7 +96,7 @@ export default function MyBusinessPage() {
 
     await refreshBusiness();
     toast({ title: "Logo Updated", description: "Your business logo has been uploaded." });
-    logMasterAudit("business_logo_updated", { business_id: business.id, business_name: business.name });
+    logAudit("business_logo_updated", { business_id: business.id, business_name: business.name });
     setUploadingLogo(false);
   };
 
@@ -145,7 +145,7 @@ export default function MyBusinessPage() {
       toast({ title: "Error", description: error.message, variant: "destructive" });
     } else {
       toast({ title: "Theme Applied", description: `"${chosen.name}" theme is now active.` });
-      logMasterAudit("business_theme_changed", { business_id: business.id, business_name: business.name, theme_name: chosen.name });
+      logAudit("business_theme_changed", { business_id: business.id, business_name: business.name, theme_name: chosen.name });
       await refreshBusiness();
     }
   };
