@@ -393,13 +393,13 @@ export default function EmployeesPage() {
         </Dialog>
       </div>
 
-      <Card className="border-border/40">
+      <Card className="border-border/40 overflow-hidden">
         <CardContent className="p-0">
           <div className="overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow className="border-border/30 hover:bg-transparent">
-                  <TableHead className="text-[11px] uppercase tracking-wider text-muted-foreground font-medium">Name</TableHead>
+                  <TableHead className="text-[11px] uppercase tracking-wider text-muted-foreground font-medium sticky left-0 bg-card z-20 border-r border-border/60 min-w-[160px]">Name</TableHead>
                   <TableHead className="text-[11px] uppercase tracking-wider text-muted-foreground font-medium">Code</TableHead>
                   <TableHead className="text-[11px] uppercase tracking-wider text-muted-foreground font-medium">Department</TableHead>
                   <TableHead className="text-[11px] uppercase tracking-wider text-muted-foreground font-medium">Job Title</TableHead>
@@ -412,7 +412,7 @@ export default function EmployeesPage() {
               <TableBody>
                 {filtered.map((emp) => (
                   <TableRow key={emp.id} className="border-border/20 hover:bg-secondary/30 transition-colors">
-                    <TableCell className="font-medium">
+                    <TableCell className="font-medium sticky left-0 bg-card z-20 border-r border-border/60">
                       <div>
                         {emp.name}
                         {emp.email && <p className="text-[11px] text-muted-foreground mt-0.5">{emp.email}</p>}
