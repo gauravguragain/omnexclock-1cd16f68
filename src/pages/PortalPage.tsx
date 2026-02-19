@@ -108,6 +108,41 @@ function PortalNotifications({ employeeCode, businessCode }: { employeeCode: str
   );
 }
 
+/* ── Event Card (reusable) ────────────────────────────────── */
+function EventCard({ ev }: { ev: any }) {
+  return (
+    <div className="rounded-lg border border-border/60 bg-secondary/30 p-3 space-y-2">
+      {ev.event_space && (
+        <div className="flex justify-between text-xs">
+          <span className="text-muted-foreground">Event Space</span>
+          <span className="font-semibold text-foreground">{ev.event_space}</span>
+        </div>
+      )}
+      {ev.event_type && (
+        <div className="flex justify-between text-xs">
+          <span className="text-muted-foreground">Event Type</span>
+          <span className="font-semibold text-foreground">{ev.event_type}</span>
+        </div>
+      )}
+      <div className="flex justify-between text-xs">
+        <span className="text-muted-foreground">Tables</span>
+        <span className="font-semibold text-foreground">{ev.num_tables} ({ev.chairs_per_table} chairs each)</span>
+      </div>
+      <div className="flex justify-between text-xs">
+        <span className="text-muted-foreground">Tablecloth</span>
+        <span className="font-semibold text-foreground">{ev.tablecloth_color === "black" ? "⬛ Black" : "⬜ White"}</span>
+      </div>
+      <div className="flex flex-wrap gap-2 pt-1">
+        {ev.cold_sparkles && <Badge variant="secondary" className="text-[10px]">✨ Cold Sparkles</Badge>}
+        {ev.dry_ice && <Badge variant="secondary" className="text-[10px]">🌫️ Dry Ice</Badge>}
+        {ev.red_carpet && <Badge variant="secondary" className="text-[10px]">🔴 Red Carpet</Badge>}
+        {ev.decor_access && <Badge variant="secondary" className="text-[10px]">🎨 Decor Access</Badge>}
+      </div>
+      {ev.notes && <p className="text-xs text-muted-foreground italic mt-1">{ev.notes}</p>}
+    </div>
+  );
+}
+
 /* ── Today Tab ───────────────────────────────────────────── */
 function TodayTab({ employeeCode, businessCode, shifts, employeeName, businessName }: {
   employeeCode: string;
@@ -116,18 +151,31 @@ function TodayTab({ employeeCode, businessCode, shifts, employeeName, businessNa
   employeeName: string;
   businessName: string;
 }) {
-  const [dayEvents, setDayEvents] = useState<any[]>([]);
+  const [allEvents, setAllEvents] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isSupervisorOrManager, setIsSupervisorOrManager] = useState(false);
   const todayStr = ausToday();
 
   useEffect(() => {
     const fetchEvents = async () => {
       setLoading(true);
+      // Check employee job_title
+      const bizCode = businessCode?.toUpperCase() || null;
+      let jobTitleQuery = supabase.from("employees").select("job_title").eq("employee_code", employeeCode).eq("active", true);
+      if (bizCode) {
+        const { data: bizData } = await supabase.from("businesses").select("id").eq("business_code", bizCode).maybeSingle();
+        if (bizData) jobTitleQuery = jobTitleQuery.eq("business_id", bizData.id);
+      }
+      const { data: empData } = await jobTitleQuery.maybeSingle();
+      const jobTitle = (empData?.job_title || "").toLowerCase();
+      const isSupMgr = jobTitle === "supervisor" || jobTitle === "manager";
+      setIsSupervisorOrManager(isSupMgr);
+
       const { data } = await supabase.rpc("get_employee_day_events", {
         _employee_code: employeeCode,
         _business_code: businessCode,
       });
-      setDayEvents((data || []).filter((e: any) => e.date === todayStr));
+      setAllEvents(data || []);
       setLoading(false);
     };
     fetchEvents();
@@ -135,6 +183,27 @@ function TodayTab({ employeeCode, businessCode, shifts, employeeName, businessNa
 
   const todayShifts = shifts.filter(s => s.date === todayStr);
   const hasShiftToday = todayShifts.length > 0;
+
+  // For supervisors/managers: group events by date for the week view
+  const todayEvents = allEvents.filter((e: any) => e.date === todayStr);
+
+  // Get current week's Monday
+  const today = new Date();
+  const monday = getMonday(today);
+  const weekDates: string[] = [];
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(monday);
+    d.setDate(monday.getDate() + i);
+    weekDates.push(d.toISOString().split("T")[0]);
+  }
+  const weekEvents = allEvents.filter((e: any) => weekDates.includes(e.date));
+
+  // Group week events by date
+  const eventsByDate = weekEvents.reduce((acc: Record<string, any[]>, ev: any) => {
+    if (!acc[ev.date]) acc[ev.date] = [];
+    acc[ev.date].push(ev);
+    return acc;
+  }, {});
 
   return (
     <div className="space-y-4">
@@ -164,8 +233,43 @@ function TodayTab({ employeeCode, businessCode, shifts, employeeName, businessNa
         </CardContent>
       </Card>
 
-      {/* Event Details */}
-      {hasShiftToday && (
+      {/* Event Details - Week view for Supervisor/Manager, Day view for others */}
+      {isSupervisorOrManager ? (
+        <Card>
+          <CardHeader className="pb-2 px-4 pt-4">
+            <CardTitle className="text-sm font-medium flex items-center gap-2">
+              <PartyPopper className="h-4 w-4 text-primary" /> This Week's Event Setup
+              <Badge variant="outline" className="text-[10px] ml-auto">Full Week Access</Badge>
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="px-4 pb-4">
+            {loading ? (
+              <p className="text-xs text-muted-foreground text-center py-3">Loading...</p>
+            ) : weekEvents.length === 0 ? (
+              <p className="text-sm text-muted-foreground text-center py-3">No events this week.</p>
+            ) : (
+              <div className="space-y-4">
+                {weekDates.map(dateStr => {
+                  const eventsForDay = eventsByDate[dateStr];
+                  if (!eventsForDay || eventsForDay.length === 0) return null;
+                  const dayLabel = new Date(dateStr + "T00:00:00").toLocaleDateString("en-AU", { weekday: "short", day: "numeric", month: "short" });
+                  const isToday = dateStr === todayStr;
+                  return (
+                    <div key={dateStr}>
+                      <p className={cn("text-xs font-semibold mb-1.5", isToday ? "text-primary" : "text-muted-foreground")}>
+                        {dayLabel} {isToday && <span className="text-primary">(Today)</span>}
+                      </p>
+                      <div className="space-y-2">
+                        {eventsForDay.map((ev: any) => <EventCard key={ev.id} ev={ev} />)}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      ) : hasShiftToday ? (
         <Card>
           <CardHeader className="pb-2 px-4 pt-4">
             <CardTitle className="text-sm font-medium flex items-center gap-2">
@@ -175,46 +279,16 @@ function TodayTab({ employeeCode, businessCode, shifts, employeeName, businessNa
           <CardContent className="px-4 pb-4">
             {loading ? (
               <p className="text-xs text-muted-foreground text-center py-3">Loading...</p>
-            ) : dayEvents.length === 0 ? (
+            ) : todayEvents.length === 0 ? (
               <p className="text-sm text-muted-foreground text-center py-3">No event details for today.</p>
             ) : (
               <div className="space-y-3">
-                {dayEvents.map((ev: any, idx: number) => (
-                  <div key={ev.id} className="rounded-lg border border-border/60 bg-secondary/30 p-3 space-y-2">
-                    {ev.event_space && (
-                      <div className="flex justify-between text-xs">
-                        <span className="text-muted-foreground">Event Space</span>
-                        <span className="font-semibold text-foreground">{ev.event_space}</span>
-                      </div>
-                    )}
-                    {ev.event_type && (
-                      <div className="flex justify-between text-xs">
-                        <span className="text-muted-foreground">Event Type</span>
-                        <span className="font-semibold text-foreground">{ev.event_type}</span>
-                      </div>
-                    )}
-                    <div className="flex justify-between text-xs">
-                      <span className="text-muted-foreground">Tables</span>
-                      <span className="font-semibold text-foreground">{ev.num_tables} ({ev.chairs_per_table} chairs each)</span>
-                    </div>
-                    <div className="flex justify-between text-xs">
-                      <span className="text-muted-foreground">Tablecloth</span>
-                      <span className="font-semibold text-foreground">{ev.tablecloth_color === "black" ? "⬛ Black" : "⬜ White"}</span>
-                    </div>
-                    <div className="flex flex-wrap gap-2 pt-1">
-                      {ev.cold_sparkles && <Badge variant="secondary" className="text-[10px]">✨ Cold Sparkles</Badge>}
-                      {ev.dry_ice && <Badge variant="secondary" className="text-[10px]">🌫️ Dry Ice</Badge>}
-                      {ev.red_carpet && <Badge variant="secondary" className="text-[10px]">🔴 Red Carpet</Badge>}
-                      {ev.decor_access && <Badge variant="secondary" className="text-[10px]">🎨 Decor Access</Badge>}
-                    </div>
-                    {ev.notes && <p className="text-xs text-muted-foreground italic mt-1">{ev.notes}</p>}
-                  </div>
-                ))}
+                {todayEvents.map((ev: any) => <EventCard key={ev.id} ev={ev} />)}
               </div>
             )}
           </CardContent>
         </Card>
-      )}
+      ) : null}
 
       {/* Portal Access Instructions */}
       <Card>
