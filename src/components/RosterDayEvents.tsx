@@ -33,6 +33,7 @@ interface DayEvent {
   kids_guests: number;
   host_name: string | null;
   host_contact_number: string | null;
+  bev_package: string | null;
   notes: string | null;
   runsheet_url: string | null;
 }
@@ -285,6 +286,7 @@ export default function RosterDayEvents({ weekDates, fmtDate }: Props) {
       if (data.live_stall_details != null) updates.live_stall_details = data.live_stall_details;
       if (data.host_name != null) updates.host_name = data.host_name;
       if (data.host_contact_number != null) updates.host_contact_number = data.host_contact_number;
+      if (data.bev_package != null) updates.bev_package = data.bev_package;
       if (data.notes != null) updates.notes = data.notes;
 
       if (Object.keys(updates).length > 0) {
@@ -493,6 +495,18 @@ export default function RosterDayEvents({ weekDates, fmtDate }: Props) {
                           min={0}
                           value={String(ev.num_tables || 0)}
                           onSave={v => updateEvent(ev.id, { num_tables: parseInt(v) || 0 })}
+                          className="h-8 text-xs"
+                          disabled={cannotEdit}
+                        />
+                      </div>
+
+                      {/* Bev Package */}
+                      <div className="space-y-1">
+                        <Label className="text-[11px] text-muted-foreground">Bev Package</Label>
+                        <DebouncedInput
+                          value={ev.bev_package || ""}
+                          onSave={v => updateEvent(ev.id, { bev_package: v || null })}
+                          placeholder="e.g. Gold, Silver, BYO..."
                           className="h-8 text-xs"
                           disabled={cannotEdit}
                         />
