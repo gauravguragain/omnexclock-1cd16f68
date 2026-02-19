@@ -6,12 +6,15 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { Building2, Upload, Palette, Check, Loader2, BookOpen } from "lucide-react";
+import MonthlyReportSection from "@/components/MonthlyReportSection";
 import { logMasterAudit } from "@/lib/auditLog";
 
 export default function MyBusinessPage() {
+  const { isSuperAdminOf } = useAuth();
   const { runAction } = useActionLock();
   const { business, refreshBusiness, applyTheme } = useBusiness();
   const { toast } = useToast();
@@ -305,7 +308,8 @@ export default function MyBusinessPage() {
         </CardContent>
       </Card>
 
-
+      {/* Monthly Reports - Super Admin Only */}
+      {isSuperAdminOf(business.id) && <MonthlyReportSection />}
 
       {/* Instruction Manual */}
       <Card>
