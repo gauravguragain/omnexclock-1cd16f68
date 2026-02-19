@@ -1,4 +1,5 @@
 import { useEffect, useState, useMemo, useCallback } from "react";
+import { useActionLock } from "@/contexts/ActionLockContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useBusiness } from "@/contexts/BusinessContext";
 import { Button } from "@/components/ui/button";
@@ -101,6 +102,7 @@ const EMPTY_SHIFT: ShiftForm = {
 };
 
 export default function RosterPage() {
+  const { runAction } = useActionLock();
   const { isViewer } = useAuth();
   const { business } = useBusiness();
   const { toast } = useToast();
@@ -218,107 +220,109 @@ export default function RosterPage() {
       toast({ title: "Missing times", description: "Start and end time are required.", variant: "destructive" });
       return;
     }
-    setSaving(true);
-    try {
-      const payload = {
-        employee_id: form.employee_id,
-        date: form.date,
-        day_of_week: form.day_of_week,
-        start_time: form.start_time,
-        end_time: form.end_time,
-        break_minutes: parseInt(form.break_minutes) || 0,
-        notes: form.notes.trim() || null,
-        week_start_date: fmtDate(weekStart),
-        status: "draft" as const,
-      };
+    await runAction(async () => {
+      setSaving(true);
+      try {
+        const payload = {
+          employee_id: form.employee_id,
+          date: form.date,
+          day_of_week: form.day_of_week,
+          start_time: form.start_time,
+          end_time: form.end_time,
+          break_minutes: parseInt(form.break_minutes) || 0,
+          notes: form.notes.trim() || null,
+          week_start_date: fmtDate(weekStart),
+          status: "draft" as const,
+        };
 
-      // Check for overlap with approved unavailability requests
-      const dayName = form.day_of_week;
-      const dayStr = form.date;
-      const dayRequests = approvedRequests.filter(r => {
-        if (r.employee_id !== form.employee_id) return false;
-        if (r.is_recurring) {
-          if (!(r.recurring_days || []).includes(dayName)) return false;
-          if (r.recurring_start_date && dayStr < r.recurring_start_date) return false;
-          if (r.recurring_end_date && dayStr > r.recurring_end_date) return false;
-          return true;
+        const dayName = form.day_of_week;
+        const dayStr = form.date;
+        const dayRequests = approvedRequests.filter(r => {
+          if (r.employee_id !== form.employee_id) return false;
+          if (r.is_recurring) {
+            if (!(r.recurring_days || []).includes(dayName)) return false;
+            if (r.recurring_start_date && dayStr < r.recurring_start_date) return false;
+            if (r.recurring_end_date && dayStr > r.recurring_end_date) return false;
+            return true;
+          }
+          if (r.start_date && r.end_date) return dayStr >= r.start_date && dayStr <= r.end_date;
+          if (r.start_date) return dayStr === r.start_date;
+          return false;
+        });
+
+        const overlappingReq = dayRequests.find(r => {
+          if (isAllDayUnavailability(r)) return true;
+          return timesOverlap(form.start_time, form.end_time, r.start_time, r.end_time);
+        });
+
+        if (overlappingReq) {
+          const label = overlappingReq.request_type === "leave" ? "leave" : "unavailability";
+          if (isAllDayUnavailability(overlappingReq)) {
+            toast({ title: "Cannot roster", description: `This employee has an approved all-day ${label} on this date.`, variant: "destructive" });
+            setSaving(false);
+            return;
+          } else {
+            toast({
+              title: "Shift overlaps unavailability",
+              description: `This shift overlaps with approved ${label} (${formatTime12(overlappingReq.start_time)} – ${formatTime12(overlappingReq.end_time)}). Please adjust the shift times.`,
+              variant: "destructive",
+            });
+            setSaving(false);
+            return;
+          }
         }
-        if (r.start_date && r.end_date) return dayStr >= r.start_date && dayStr <= r.end_date;
-        if (r.start_date) return dayStr === r.start_date;
-        return false;
-      });
 
-      const overlappingReq = dayRequests.find(r => {
-        if (isAllDayUnavailability(r)) return true;
-        return timesOverlap(form.start_time, form.end_time, r.start_time, r.end_time);
-      });
-
-      if (overlappingReq) {
-        const label = overlappingReq.request_type === "leave" ? "leave" : "unavailability";
-        if (isAllDayUnavailability(overlappingReq)) {
-          toast({ title: "Cannot roster", description: `This employee has an approved all-day ${label} on this date.`, variant: "destructive" });
-          setSaving(false);
-          return;
+        if (editingShift) {
+          const { error } = await supabase.from("shifts").update(payload).eq("id", editingShift.id);
+          if (error) throw error;
+          await logAudit("shift_edit", { shift_id: editingShift.id, ...payload });
+          toast({ title: "Shift updated" });
         } else {
-          toast({
-            title: "Shift overlaps unavailability",
-            description: `This shift overlaps with approved ${label} (${formatTime12(overlappingReq.start_time)} – ${formatTime12(overlappingReq.end_time)}). Please adjust the shift times.`,
-            variant: "destructive",
-          });
-          setSaving(false);
-          return;
+          const { error } = await supabase.from("shifts").insert(payload);
+          if (error) throw error;
+          await logAudit("shift_add", payload);
+          toast({ title: "Shift added" });
         }
+        setDialogOpen(false);
+        fetchData();
+      } catch (err: any) {
+        toast({ title: "Error", description: err.message, variant: "destructive" });
+      } finally {
+        setSaving(false);
       }
-
-      if (editingShift) {
-        const { error } = await supabase.from("shifts").update(payload).eq("id", editingShift.id);
-        if (error) throw error;
-        await logAudit("shift_edit", { shift_id: editingShift.id, ...payload });
-        toast({ title: "Shift updated" });
-      } else {
-        const { error } = await supabase.from("shifts").insert(payload);
-        if (error) throw error;
-        await logAudit("shift_add", payload);
-        toast({ title: "Shift added" });
-      }
-      setDialogOpen(false);
-      fetchData();
-    } catch (err: any) {
-      toast({ title: "Error", description: err.message, variant: "destructive" });
-    } finally {
-      setSaving(false);
-    }
+    });
   };
 
   const handleDeleteShift = async (shiftId: string) => {
-    const shift = shifts.find(s => s.id === shiftId);
-    const wasPublished = shift?.status === "published";
+    await runAction(async () => {
+      const shift = shifts.find(s => s.id === shiftId);
+      const wasPublished = shift?.status === "published";
 
-    const { error } = await supabase.from("shifts").delete().eq("id", shiftId);
-    if (error) {
-      toast({ title: "Error", description: error.message, variant: "destructive" });
-    } else {
-      await logAudit("shift_delete", { shift_id: shiftId, was_published: wasPublished });
-      if (wasPublished) {
-        toast({
-          title: "Shift removed — please re-publish",
-          description: "This was a published shift. Publish the week again to notify the employee of the change.",
-          variant: "destructive",
-        });
-        // Mark remaining published shifts for this employee as draft so admin must re-publish
-        const empId = shift.employee_id;
-        const empPublishedIds = shifts
-          .filter(s => s.employee_id === empId && s.status === "published" && s.id !== shiftId)
-          .map(s => s.id);
-        if (empPublishedIds.length > 0) {
-          await supabase.from("shifts").update({ status: "draft" }).in("id", empPublishedIds);
-        }
+      const { error } = await supabase.from("shifts").delete().eq("id", shiftId);
+      if (error) {
+        toast({ title: "Error", description: error.message, variant: "destructive" });
       } else {
-        toast({ title: "Shift deleted" });
+        await logAudit("shift_delete", { shift_id: shiftId, was_published: wasPublished });
+        if (wasPublished) {
+          toast({
+            title: "Shift removed — please re-publish",
+            description: "This was a published shift. Publish the week again to notify the employee of the change.",
+            variant: "destructive",
+          });
+          const empId = shift.employee_id;
+          const empPublishedIds = shifts
+            .filter(s => s.employee_id === empId && s.status === "published" && s.id !== shiftId)
+            .map(s => s.id);
+          if (empPublishedIds.length > 0) {
+            await supabase.from("shifts").update({ status: "draft" }).in("id", empPublishedIds);
+          }
+        } else {
+          toast({ title: "Shift deleted" });
+        }
+        if (editingShift?.id === shiftId) setDialogOpen(false);
+        fetchData();
       }
-      if (editingShift?.id === shiftId) setDialogOpen(false);
-      fetchData();
-    }
+    });
   };
 
   const handlePublishWeek = async () => {
@@ -327,37 +331,36 @@ export default function RosterPage() {
       toast({ title: "Nothing to publish", description: "All shifts are already published." });
       return;
     }
-    setPublishing(true);
-    try {
-      // Capture the draft shifts before publishing (these are the changed ones)
-      const draftShifts = shifts.filter(s => s.status === "draft");
+    await runAction(async () => {
+      setPublishing(true);
+      try {
+        const draftShifts = shifts.filter(s => s.status === "draft");
 
-      const { error } = await supabase.from("shifts").update({ status: "published" }).in("id", draftIds);
-      if (error) throw error;
-      await logAudit("roster_publish", { week_start: fmtDate(weekStart), count: draftIds.length });
-      toast({ title: "Roster published", description: `${draftIds.length} shift(s) are now visible to employees.` });
-      fetchData();
+        const { error } = await supabase.from("shifts").update({ status: "published" }).in("id", draftIds);
+        if (error) throw error;
+        await logAudit("roster_publish", { week_start: fmtDate(weekStart), count: draftIds.length });
+        toast({ title: "Roster published", description: `${draftIds.length} shift(s) are now visible to employees.` });
+        fetchData();
 
-      // Notify affected employees (non-blocking)
-      const affectedEmployeeIds = [...new Set(draftShifts.map(s => s.employee_id))];
-      if (business) {
-        notifyEmployees({
-          businessId: business.id,
-          employeeIds: affectedEmployeeIds,
-          type: "shift_change",
-          title: "Roster Updated",
-          message: `Your roster for the week of ${fmtDate(weekStart)} has been published.`,
-          metadata: { week_start: fmtDate(weekStart) },
-        });
+        const affectedEmployeeIds = [...new Set(draftShifts.map(s => s.employee_id))];
+        if (business) {
+          notifyEmployees({
+            businessId: business.id,
+            employeeIds: affectedEmployeeIds,
+            type: "shift_change",
+            title: "Roster Updated",
+            message: `Your roster for the week of ${fmtDate(weekStart)} has been published.`,
+            metadata: { week_start: fmtDate(weekStart) },
+          });
+        }
+
+        sendRosterEmails(draftShifts);
+      } catch (err: any) {
+        toast({ title: "Error", description: err.message, variant: "destructive" });
+      } finally {
+        setPublishing(false);
       }
-
-      // Email affected employees (non-blocking)
-      sendRosterEmails(draftShifts);
-    } catch (err: any) {
-      toast({ title: "Error", description: err.message, variant: "destructive" });
-    } finally {
-      setPublishing(false);
-    }
+    });
   };
 
   const sendRosterEmails = async (changedShifts: Shift[]) => {

@@ -1,4 +1,5 @@
 import { useState, useRef, useCallback, useEffect } from "react";
+import { useActionLock } from "@/contexts/ActionLockContext";
 import { useParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,6 +14,7 @@ type KioskStep = "loading" | "code_entry" | "action_select" | "photo_capture" | 
 type EmployeeStatus = "clocked_out" | "clocked_in" | "on_break";
 
 export default function KioskPage() {
+  const { runAction } = useActionLock();
   const { toast } = useToast();
   const { businessCode: urlBusinessCode } = useParams();
   const navigate = useNavigate();
@@ -137,32 +139,34 @@ export default function KioskPage() {
   }, []);
 
   const submitClock = useCallback(async (photo: string) => {
-    setLoading(true);
-    try {
-      const { data, error } = await supabase.functions.invoke("kiosk-clock", {
-        body: {
-          employee_code: codeRef.current,
-          event_type: actionRef.current,
-          photo_base64: photo,
-          business_code: urlBusinessCode?.toUpperCase() || null,
-          device_info: { userAgent: navigator.userAgent, screen: `${screen.width}x${screen.height}` },
-        },
-      });
+    await runAction(async () => {
+      setLoading(true);
+      try {
+        const { data, error } = await supabase.functions.invoke("kiosk-clock", {
+          body: {
+            employee_code: codeRef.current,
+            event_type: actionRef.current,
+            photo_base64: photo,
+            business_code: urlBusinessCode?.toUpperCase() || null,
+            device_info: { userAgent: navigator.userAgent, screen: `${screen.width}x${screen.height}` },
+          },
+        });
 
-      if (error || data?.error) {
-        toast({ title: "Error", description: data?.error || error?.message || "Failed to clock", variant: "destructive" });
+        if (error || data?.error) {
+          toast({ title: "Error", description: data?.error || error?.message || "Failed to clock", variant: "destructive" });
+          resetKiosk();
+        } else {
+          setEmployeeName(data.employee_name);
+          setStep("confirmation");
+          setTimeout(resetKiosk, 4000);
+        }
+      } catch {
+        toast({ title: "Error", description: "Network error", variant: "destructive" });
         resetKiosk();
-      } else {
-        setEmployeeName(data.employee_name);
-        setStep("confirmation");
-        setTimeout(resetKiosk, 4000);
       }
-    } catch {
-      toast({ title: "Error", description: "Network error", variant: "destructive" });
-      resetKiosk();
-    }
-    setLoading(false);
-  }, [toast]);
+      setLoading(false);
+    });
+  }, [toast, runAction]);
 
   const captureAndSubmit = useCallback(() => {
     if (!videoRef.current || !canvasRef.current) return;
@@ -183,32 +187,33 @@ export default function KioskPage() {
 
   const handleSubmitCode = async () => {
     if (!code) return;
-    // Validate code format
     if (!/^\d{4}$/.test(code)) {
       toast({ title: "Invalid Code", description: "Please enter a valid employee code.", variant: "destructive" });
       setCode("");
       return;
     }
-    setLoading(true);
-    try {
-      const result = await getEmployeeStatusByCode(code);
+    await runAction(async () => {
+      setLoading(true);
+      try {
+        const result = await getEmployeeStatusByCode(code);
 
-      if (!result) {
-        toast({ title: "Invalid Code", description: "Employee not found. Please try again.", variant: "destructive" });
-        setCode("");
-        setLoading(false);
-        return;
+        if (!result) {
+          toast({ title: "Invalid Code", description: "Employee not found. Please try again.", variant: "destructive" });
+          setCode("");
+          setLoading(false);
+          return;
+        }
+
+        setEmployeeName(result.name);
+        setEmployeeId(result.id);
+        setEmployeeStatus(result.status);
+        codeRef.current = code;
+        setStep("action_select");
+      } catch {
+        toast({ title: "Error", description: "Unable to verify employee code.", variant: "destructive" });
       }
-
-      setEmployeeName(result.name);
-      setEmployeeId(result.id);
-      setEmployeeStatus(result.status);
-      codeRef.current = code;
-      setStep("action_select");
-    } catch {
-      toast({ title: "Error", description: "Unable to verify employee code.", variant: "destructive" });
-    }
-    setLoading(false);
+      setLoading(false);
+    });
   };
 
   const handleActionSelect = async (action: string) => {

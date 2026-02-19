@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useActionLock } from "@/contexts/ActionLockContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useBusiness } from "@/contexts/BusinessContext";
@@ -42,6 +43,7 @@ function generateEmployeeCode(existing: string[]): string {
 }
 
 export default function EmployeesPage() {
+  const { runAction } = useActionLock();
   const { isViewer } = useAuth();
   const { business } = useBusiness();
   const { toast } = useToast();
@@ -113,52 +115,56 @@ export default function EmployeesPage() {
 
   const handleSave = async () => {
     if (saving || !validateStep(2)) return;
-    setSaving(true);
-    try {
-      const payload = {
-        name: form.name.trim(),
-        email: form.email.trim() || null,
-        phone: form.phone.trim() || null,
-        job_title: form.job_title.trim() || null,
-        department: form.department.trim() || null,
-        pay_rate: parseFloat(form.pay_rate) || 0,
-        admin_hourly_rate: parseFloat(form.admin_hourly_rate) || 0,
-        employee_code: form.employee_code.trim(),
-        business_id: business?.id || null,
-      };
+    await runAction(async () => {
+      setSaving(true);
+      try {
+        const payload = {
+          name: form.name.trim(),
+          email: form.email.trim() || null,
+          phone: form.phone.trim() || null,
+          job_title: form.job_title.trim() || null,
+          department: form.department.trim() || null,
+          pay_rate: parseFloat(form.pay_rate) || 0,
+          admin_hourly_rate: parseFloat(form.admin_hourly_rate) || 0,
+          employee_code: form.employee_code.trim(),
+          business_id: business?.id || null,
+        };
 
-      if (editing) {
-        const { error } = await supabase.from("employees").update(payload).eq("id", editing.id);
-        if (error) { toast({ title: "Error", description: error.message, variant: "destructive" }); return; }
-        await logAudit("employee_edit", { employee_id: editing.id, ...payload });
-        toast({ title: "Employee updated" });
-      } else {
-        const { data, error } = await supabase.from("employees").insert(payload).select("id").single();
-        if (error) { toast({ title: "Error", description: error.message, variant: "destructive" }); return; }
-        await logAudit("employee_add", { employee_id: data?.id, ...payload });
-        toast({ title: "Employee added", description: `Code: ${payload.employee_code}` });
+        if (editing) {
+          const { error } = await supabase.from("employees").update(payload).eq("id", editing.id);
+          if (error) { toast({ title: "Error", description: error.message, variant: "destructive" }); return; }
+          await logAudit("employee_edit", { employee_id: editing.id, ...payload });
+          toast({ title: "Employee updated" });
+        } else {
+          const { data, error } = await supabase.from("employees").insert(payload).select("id").single();
+          if (error) { toast({ title: "Error", description: error.message, variant: "destructive" }); return; }
+          await logAudit("employee_add", { employee_id: data?.id, ...payload });
+          toast({ title: "Employee added", description: `Code: ${payload.employee_code}` });
+        }
+        setDialogOpen(false);
+        setEditing(null);
+        setForm(EMPTY_FORM);
+        setStep(0);
+        fetchEmployees();
+      } finally {
+        setSaving(false);
       }
-      setDialogOpen(false);
-      setEditing(null);
-      setForm(EMPTY_FORM);
-      setStep(0);
-      fetchEmployees();
-    } finally {
-      setSaving(false);
-    }
+    });
   };
 
   const toggleActive = async (emp: Employee) => {
     if (togglingIds.has(emp.id)) return;
-    setTogglingIds(prev => new Set(prev).add(emp.id));
-    try {
-      const newActive = !emp.active;
-      await supabase.from("employees").update({ active: newActive }).eq("id", emp.id);
-      await logAudit(newActive ? "employee_activate" : "employee_deactivate", { employee_id: emp.id, name: emp.name });
-      fetchEmployees();
-    } finally {
-      setTogglingIds(prev => { const s = new Set(prev); s.delete(emp.id); return s; });
-    }
+    await runAction(async () => {
+      setTogglingIds(prev => new Set(prev).add(emp.id));
+      try {
+        const newActive = !emp.active;
+        await supabase.from("employees").update({ active: newActive }).eq("id", emp.id);
+        await logAudit(newActive ? "employee_activate" : "employee_deactivate", { employee_id: emp.id, name: emp.name });
+        fetchEmployees();
+      } finally {
+        setTogglingIds(prev => { const s = new Set(prev); s.delete(emp.id); return s; });
+      }
+    });
   };
 
   const openEdit = (emp: Employee) => {
