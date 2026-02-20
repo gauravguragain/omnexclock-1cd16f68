@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useBusiness } from "@/contexts/BusinessContext";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -14,7 +15,7 @@ import { logAudit } from "@/lib/auditLog";
 import { notifyEmployees } from "@/lib/notifications";
 import { useAuth } from "@/contexts/AuthContext";
 import {
-  ChevronLeft, ChevronRight, Plus, Trash2, Copy, Send, Clock, AlertCircle, CalendarOff, Clipboard, ClipboardPaste, X, Mail, Download, FileDown, CalendarIcon,
+  ChevronLeft, ChevronRight, Plus, Trash2, Copy, Send, Clock, AlertCircle, CalendarOff, Clipboard, ClipboardPaste, X, Mail, Download, FileDown, CalendarIcon, ChevronDown,
 } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -919,11 +920,16 @@ export default function RosterPage() {
       {/* Day Events Panel - PRP only */}
       {business?.business_code === "PRP" && (
         <Card className="overflow-hidden border-border/60 shadow-sm">
-          <CardContent className="p-3">
-            <div className="flex items-center gap-2 mb-2">
-              <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Daily Event Setup</span>
-            </div>
-            <RosterDayEvents weekDates={weekDates} fmtDate={fmtDate} />
+          <CardContent className="p-0">
+            <Collapsible defaultOpen={false}>
+              <CollapsibleTrigger className="flex items-center justify-between w-full px-3 py-2.5 hover:bg-muted/50 transition-colors cursor-pointer">
+                <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Daily Event Setup</span>
+                <ChevronDown className="h-4 w-4 text-muted-foreground transition-transform duration-200 [[data-state=open]>&]:rotate-180" />
+              </CollapsibleTrigger>
+              <CollapsibleContent className="px-3 pb-3">
+                <RosterDayEvents weekDates={weekDates} fmtDate={fmtDate} />
+              </CollapsibleContent>
+            </Collapsible>
           </CardContent>
         </Card>
       )}
