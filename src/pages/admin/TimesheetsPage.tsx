@@ -74,36 +74,38 @@ function DateRangeSelector({ dateFrom, dateTo, onChangeFrom, onChangeTo }: {
   };
 
   return (
-    <div className="flex items-center gap-2">
-      <Button variant="outline" size="icon" onClick={goToPrevWeek} className="h-9 w-9">
-        <ChevronLeft className="h-4 w-4" />
-      </Button>
-      <Popover>
-        <PopoverTrigger asChild>
-          <Button variant="outline" className="min-w-[220px] justify-center text-left font-normal gap-2">
-            <CalendarIcon className="h-4 w-4 text-primary" />
-            <span>{format(dateFrom, "dd MMM")} — {format(dateTo, "dd MMM yyyy")}</span>
-          </Button>
-        </PopoverTrigger>
-        <PopoverContent className="w-auto p-0" align="center">
-          <Calendar
-            mode="range"
-            selected={{ from: dateFrom, to: dateTo }}
-            onSelect={(range) => {
-              if (range?.from) onChangeFrom(range.from);
-              if (range?.to) onChangeTo(range.to);
-            }}
-            weekStartsOn={1}
-            numberOfMonths={2}
-            initialFocus
-            className={cn("p-3 pointer-events-auto")}
-          />
-        </PopoverContent>
-      </Popover>
-      <Button variant="outline" size="icon" onClick={goToNextWeek} className="h-9 w-9">
-        <ChevronRight className="h-4 w-4" />
-      </Button>
-      <Button variant="ghost" size="sm" onClick={goToThisWeek} className="text-primary text-xs">
+    <div className="flex items-center gap-1.5 flex-wrap min-w-0">
+      <div className="flex items-center gap-1.5">
+        <Button variant="outline" size="icon" onClick={goToPrevWeek} className="h-9 w-9 shrink-0">
+          <ChevronLeft className="h-4 w-4" />
+        </Button>
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button variant="outline" className="min-w-0 justify-center text-left font-normal gap-2 text-xs sm:text-sm">
+              <CalendarIcon className="h-4 w-4 text-primary shrink-0" />
+              <span className="truncate">{format(dateFrom, "dd MMM")} — {format(dateTo, "dd MMM yyyy")}</span>
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-auto p-0" align="center">
+            <Calendar
+              mode="range"
+              selected={{ from: dateFrom, to: dateTo }}
+              onSelect={(range) => {
+                if (range?.from) onChangeFrom(range.from);
+                if (range?.to) onChangeTo(range.to);
+              }}
+              weekStartsOn={1}
+              numberOfMonths={2}
+              initialFocus
+              className={cn("p-3 pointer-events-auto")}
+            />
+          </PopoverContent>
+        </Popover>
+        <Button variant="outline" size="icon" onClick={goToNextWeek} className="h-9 w-9 shrink-0">
+          <ChevronRight className="h-4 w-4" />
+        </Button>
+      </div>
+      <Button variant="ghost" size="sm" onClick={goToThisWeek} className="text-primary text-xs shrink-0">
         Today
       </Button>
     </div>
