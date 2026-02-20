@@ -80,7 +80,7 @@ export default function AdminLayout() {
     { path: `${basePath}/inventory`, label: "Inventory", icon: Package, tourId: "inventory", access: "inventory" },
     { path: `${basePath}/service`, label: "Service", icon: Wrench, tourId: "service", access: "admin" },
     { path: `${basePath}/users`, label: "User Management", icon: UserCog, tourId: "users", access: "super_admin_only" },
-    { path: `${basePath}/ai-assistant`, label: "AI Assistant", icon: Sparkles, tourId: "ai-assistant", access: "admin" },
+    { path: `${basePath}/ai-assistant`, label: "AI Assistant", icon: Sparkles, tourId: "ai-assistant", access: "super_admin_only" },
     { path: `${basePath}/my-business`, label: "My Business", icon: Building2, tourId: "my-business", access: "admin" },
     { path: `${basePath}/audit-log`, label: "Audit Log", icon: FileText, tourId: "audit-log", access: "admin_only" },
   ];
