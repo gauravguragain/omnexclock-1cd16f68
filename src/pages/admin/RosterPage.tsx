@@ -852,7 +852,7 @@ export default function RosterPage() {
                 </button>
               </div>
             )}
-            <RosterVoiceCommand
+            {isSuperAdminOf(currentBusinessId) && <RosterVoiceCommand
               employees={filteredEmployees}
               weekDates={FULL_DAYS.map((dayName, i) => ({ dayName, date: fmtDate(weekDates[i]) }))}
               weekStartDate={fmtDate(weekStart)}
@@ -879,7 +879,7 @@ export default function RosterPage() {
                 await logAudit("shift_add_voice", payload);
                 fetchData();
               }}
-            />
+            />}
             <Button variant="outline" size="sm" className="rounded-lg" onClick={handleCopyPrevWeek} disabled={loading}>
               <Copy className="mr-1.5 h-3.5 w-3.5" /> Copy Last Week
             </Button>
