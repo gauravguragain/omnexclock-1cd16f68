@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -127,6 +128,7 @@ export default function RosterPage() {
   const [form, setForm] = useState<ShiftForm>(EMPTY_SHIFT);
   const [saving, setSaving] = useState(false);
   const [publishing, setPublishing] = useState(false);
+  const [showPublishConfirm, setShowPublishConfirm] = useState(false);
   const [copiedShift, setCopiedShift] = useState<Shift | null>(null);
   const [forecasting, setForecasting] = useState(false);
 
@@ -1046,7 +1048,7 @@ export default function RosterPage() {
             </DropdownMenu>
 
             {/* Publish — placed last to prevent accidental touch on mobile */}
-            <Button size="sm" className="h-8 rounded-lg text-xs font-semibold" onClick={handlePublishWeek} disabled={publishing || weekStatus === "published" || weekStatus === "empty"}>
+            <Button size="sm" className="h-8 rounded-lg text-xs font-semibold" onClick={() => setShowPublishConfirm(true)} disabled={publishing || weekStatus === "published" || weekStatus === "empty"}>
               <Send className="mr-1.5 h-3.5 w-3.5" /> {publishing ? "Publishing..." : "Publish Week"}
             </Button>
           </div>
@@ -1430,6 +1432,23 @@ export default function RosterPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      {/* Publish Confirmation */}
+      <AlertDialog open={showPublishConfirm} onOpenChange={setShowPublishConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Publish this week's roster?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will notify all employees of their published shifts. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={() => { setShowPublishConfirm(false); handlePublishWeek(); }}>
+              Publish
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
