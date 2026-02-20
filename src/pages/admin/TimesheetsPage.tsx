@@ -557,6 +557,17 @@ export default function TimesheetsPage() {
     return true;
   });
 
+  // Group filtered entries by date, sorted chronologically
+  const groupedByDay = filtered.reduce<{ date: string; label: string; entries: TimesheetEntry[] }[]>((acc, e) => {
+    const existing = acc.find(g => g.date === e.raw_date);
+    if (existing) {
+      existing.entries.push(e);
+    } else {
+      acc.push({ date: e.raw_date, label: e.date, entries: [e] });
+    }
+    return acc;
+  }, []).sort((a, b) => a.date.localeCompare(b.date));
+
   const approvedCount = filtered.filter(e => e.approved).length;
   const pendingCount = filtered.length - approvedCount;
 
@@ -756,72 +767,85 @@ export default function TimesheetsPage() {
           </div>
         </CardHeader>
         <CardContent className="p-0">
-          {/* Mobile card view */}
-          <div className="block md:hidden divide-y divide-border">
-            {filtered.map((e, i) => (
-              <div key={i} className={cn("p-3 space-y-2", e.approved && "bg-green-500/5")}>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    {!isViewer && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => toggleApproval(e)}
-                        disabled={approvingIds.has(`${e.employee_id}-${e.raw_date}`)}
-                        className={cn("h-7 w-7 p-0", e.approved ? "text-green-500 hover:text-green-400" : "text-muted-foreground hover:text-yellow-500")}
-                      >
-                        {e.approved ? <CheckCircle2 className="h-4 w-4" /> : <XCircle className="h-4 w-4" />}
-                      </Button>
-                    )}
-                    <span className="font-medium text-foreground">{e.employee_name}</span>
-                  </div>
-                  <div className="flex gap-1">
-                    <Button variant="ghost" size="sm" onClick={() => openHistory(e)} className="h-7 w-7 p-0 text-muted-foreground hover:text-primary">
-                      <History className="h-3.5 w-3.5" />
-                    </Button>
-                    {!isViewer && (
-                      <>
-                        <Button variant="ghost" size="sm" onClick={() => openEdit(e)} disabled={saving || e.approved} className="h-7 w-7 p-0">
-                          <Pencil className="h-3.5 w-3.5" />
-                        </Button>
-                        <Button variant="ghost" size="sm" onClick={() => deleteEntry(e)} disabled={saving || e.approved} className="h-7 w-7 p-0 text-destructive hover:text-destructive">
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </Button>
-                      </>
-                    )}
-                  </div>
-                </div>
-                <div className="grid grid-cols-3 gap-x-4 gap-y-1 text-xs text-muted-foreground">
-                  <span>Date</span><span>Clock In</span><span>Clock Out</span>
-                  <span className="text-foreground">{e.date}</span>
-                  <span className="text-foreground">{e.clock_in || "-"}</span>
-                  <span className="text-foreground">{e.clock_out || "-"}</span>
-                </div>
-                <div className="grid grid-cols-3 gap-x-4 gap-y-1 text-xs text-muted-foreground">
-                  <span>Break</span><span>Total</span><span className="font-medium">Net</span>
-                  <span className="text-foreground">{e.break_minutes}m</span>
-                  <span className="text-foreground">{e.total_hours.toFixed(2)}h</span>
-                  <span className="text-foreground font-semibold">{e.net_hours.toFixed(2)}h</span>
-                </div>
-              </div>
-            ))}
-            {filtered.length === 0 && (
-              <div className="text-center text-muted-foreground py-8">
-                No timesheet data for this period.
-              </div>
+          {/* Mobile card view — grouped by day */}
+          <div className="block md:hidden">
+            {groupedByDay.length === 0 && (
+              <div className="text-center text-muted-foreground py-8">No timesheet data for this period.</div>
             )}
+            {groupedByDay.map((group) => {
+              const dayNet = group.entries.reduce((s, e) => s + e.net_hours, 0);
+              const dayApproved = group.entries.filter(e => e.approved).length;
+              return (
+                <div key={group.date}>
+                  {/* Day header */}
+                  <div className="flex items-center justify-between px-3 py-2 bg-muted/40 border-y border-border/60 sticky top-0 z-10">
+                    <span className="text-xs font-semibold text-foreground">{group.label}</span>
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                      <span>{dayApproved}/{group.entries.length} approved</span>
+                      <span className="font-medium text-foreground">{dayNet.toFixed(2)}h net</span>
+                    </div>
+                  </div>
+                  <div className="divide-y divide-border">
+                    {group.entries.map((e, i) => (
+                      <div key={i} className={cn("p-3 space-y-2", e.approved && "bg-green-500/5")}>
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            {!isViewer && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => toggleApproval(e)}
+                                disabled={approvingIds.has(`${e.employee_id}-${e.raw_date}`)}
+                                className={cn("h-7 w-7 p-0", e.approved ? "text-green-500 hover:text-green-400" : "text-muted-foreground hover:text-yellow-500")}
+                              >
+                                {e.approved ? <CheckCircle2 className="h-4 w-4" /> : <XCircle className="h-4 w-4" />}
+                              </Button>
+                            )}
+                            <span className="font-medium text-foreground">{e.employee_name}</span>
+                          </div>
+                          <div className="flex gap-1">
+                            <Button variant="ghost" size="sm" onClick={() => openHistory(e)} className="h-7 w-7 p-0 text-muted-foreground hover:text-primary">
+                              <History className="h-3.5 w-3.5" />
+                            </Button>
+                            {!isViewer && (
+                              <>
+                                <Button variant="ghost" size="sm" onClick={() => openEdit(e)} disabled={saving || e.approved} className="h-7 w-7 p-0">
+                                  <Pencil className="h-3.5 w-3.5" />
+                                </Button>
+                                <Button variant="ghost" size="sm" onClick={() => deleteEntry(e)} disabled={saving || e.approved} className="h-7 w-7 p-0 text-destructive hover:text-destructive">
+                                  <Trash2 className="h-3.5 w-3.5" />
+                                </Button>
+                              </>
+                            )}
+                          </div>
+                        </div>
+                        <div className="grid grid-cols-3 gap-x-4 gap-y-1 text-xs text-muted-foreground">
+                          <span>Clock In</span><span>Clock Out</span><span>Break</span>
+                          <span className="text-foreground">{e.clock_in || "-"}</span>
+                          <span className="text-foreground">{e.clock_out || "-"}</span>
+                          <span className="text-foreground">{e.break_minutes}m</span>
+                        </div>
+                        <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs text-muted-foreground">
+                          <span>Total</span><span className="font-medium">Net</span>
+                          <span className="text-foreground">{e.total_hours.toFixed(2)}h</span>
+                          <span className="text-foreground font-semibold">{e.net_hours.toFixed(2)}h</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
           </div>
 
-          {/* Desktop table view */}
-          <div className="hidden md:block overflow-x-auto scroll-native" style={{ WebkitOverflowScrolling: 'touch' }}>
+          {/* Desktop table view — grouped by day */}
+          <div className="hidden md:block overflow-x-auto scroll-native scrollbar-thin" style={{ WebkitOverflowScrolling: 'touch' }}>
             <Table>
               <TableHeader>
                 <TableRow>
                   <TableHead className="w-12">Status</TableHead>
                   <TableHead>Employee</TableHead>
-                  <TableHead>Date</TableHead>
                   <TableHead>Clock In</TableHead>
-                  
                   <TableHead>Clock Out</TableHead>
                   <TableHead className="hidden lg:table-cell">Break Start</TableHead>
                   <TableHead className="hidden lg:table-cell">Break End</TableHead>
@@ -832,59 +856,77 @@ export default function TimesheetsPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filtered.map((e, i) => (
-                  <TableRow key={i} className={e.approved ? "bg-green-500/5" : ""}>
-                    <TableCell>
-                      {!isViewer ? (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => toggleApproval(e)}
-                          disabled={approvingIds.has(`${e.employee_id}-${e.raw_date}`)}
-                          className={cn("h-7 px-2", e.approved ? "text-green-500 hover:text-green-400" : "text-muted-foreground hover:text-yellow-500")}
-                        >
-                          {e.approved ? <CheckCircle2 className="h-4 w-4" /> : <XCircle className="h-4 w-4" />}
-                        </Button>
-                      ) : (
-                        e.approved ? <CheckCircle2 className="h-4 w-4 text-green-500" /> : <XCircle className="h-4 w-4 text-muted-foreground" />
-                      )}
-                    </TableCell>
-                    <TableCell className="font-medium">{e.employee_name}</TableCell>
-                    <TableCell className="whitespace-nowrap">{e.date}</TableCell>
-                    <TableCell>{e.clock_in || "-"}</TableCell>
-                    
-                    <TableCell>{e.clock_out || "-"}</TableCell>
-                    <TableCell className="hidden lg:table-cell">{e.break_start || "-"}</TableCell>
-                    <TableCell className="hidden lg:table-cell">{e.break_end || "-"}</TableCell>
-                    <TableCell>{e.break_minutes}m</TableCell>
-                    <TableCell>{e.total_hours.toFixed(2)}h</TableCell>
-                    <TableCell className="font-semibold">{e.net_hours.toFixed(2)}h</TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex gap-1 justify-end">
-                        <Button variant="ghost" size="sm" onClick={() => openHistory(e)} className="h-7 w-7 p-0 text-muted-foreground hover:text-primary">
-                          <History className="h-3.5 w-3.5" />
-                        </Button>
-                        {!isViewer && (
-                          <>
-                            <Button variant="ghost" size="sm" onClick={() => openEdit(e)} disabled={saving || e.approved} className="h-7 w-7 p-0">
-                              <Pencil className="h-3.5 w-3.5" />
-                            </Button>
-                            <Button variant="ghost" size="sm" onClick={() => deleteEntry(e)} disabled={saving || e.approved} className="h-7 w-7 p-0 text-destructive hover:text-destructive">
-                              <Trash2 className="h-3.5 w-3.5" />
-                            </Button>
-                          </>
-                        )}
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-                {filtered.length === 0 && (
+                {groupedByDay.length === 0 && (
                   <TableRow>
                     <TableCell colSpan={12} className="text-center text-muted-foreground py-8">
                       No timesheet data for this period.
                     </TableCell>
                   </TableRow>
                 )}
+                {groupedByDay.map((group) => {
+                  const dayNet = group.entries.reduce((s, e) => s + e.net_hours, 0);
+                  const dayApproved = group.entries.filter(e => e.approved).length;
+                  return (
+                    <>
+                      {/* Day group header row */}
+                      <TableRow key={`hdr-${group.date}`} className="bg-muted/40 hover:bg-muted/40">
+                        <TableCell colSpan={10} className="py-1.5 px-4">
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs font-semibold text-foreground">{group.label}</span>
+                            <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                              <span>{dayApproved}/{group.entries.length} approved</span>
+                              <span className="font-semibold text-foreground">{dayNet.toFixed(2)}h net</span>
+                            </div>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                      {group.entries.map((e, i) => (
+                        <TableRow key={`${group.date}-${i}`} className={e.approved ? "bg-green-500/5" : ""}>
+                          <TableCell>
+                            {!isViewer ? (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => toggleApproval(e)}
+                                disabled={approvingIds.has(`${e.employee_id}-${e.raw_date}`)}
+                                className={cn("h-7 px-2", e.approved ? "text-green-500 hover:text-green-400" : "text-muted-foreground hover:text-yellow-500")}
+                              >
+                                {e.approved ? <CheckCircle2 className="h-4 w-4" /> : <XCircle className="h-4 w-4" />}
+                              </Button>
+                            ) : (
+                              e.approved ? <CheckCircle2 className="h-4 w-4 text-green-500" /> : <XCircle className="h-4 w-4 text-muted-foreground" />
+                            )}
+                          </TableCell>
+                          <TableCell className="font-medium">{e.employee_name}</TableCell>
+                          <TableCell>{e.clock_in || "-"}</TableCell>
+                          <TableCell>{e.clock_out || "-"}</TableCell>
+                          <TableCell className="hidden lg:table-cell">{e.break_start || "-"}</TableCell>
+                          <TableCell className="hidden lg:table-cell">{e.break_end || "-"}</TableCell>
+                          <TableCell>{e.break_minutes}m</TableCell>
+                          <TableCell>{e.total_hours.toFixed(2)}h</TableCell>
+                          <TableCell className="font-semibold">{e.net_hours.toFixed(2)}h</TableCell>
+                          <TableCell className="text-right">
+                            <div className="flex gap-1 justify-end">
+                              <Button variant="ghost" size="sm" onClick={() => openHistory(e)} className="h-7 w-7 p-0 text-muted-foreground hover:text-primary">
+                                <History className="h-3.5 w-3.5" />
+                              </Button>
+                              {!isViewer && (
+                                <>
+                                  <Button variant="ghost" size="sm" onClick={() => openEdit(e)} disabled={saving || e.approved} className="h-7 w-7 p-0">
+                                    <Pencil className="h-3.5 w-3.5" />
+                                  </Button>
+                                  <Button variant="ghost" size="sm" onClick={() => deleteEntry(e)} disabled={saving || e.approved} className="h-7 w-7 p-0 text-destructive hover:text-destructive">
+                                    <Trash2 className="h-3.5 w-3.5" />
+                                  </Button>
+                                </>
+                              )}
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </>
+                  );
+                })}
               </TableBody>
             </Table>
           </div>
