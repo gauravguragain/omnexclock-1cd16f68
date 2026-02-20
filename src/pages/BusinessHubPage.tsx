@@ -3,7 +3,7 @@ import { useBusiness } from "@/contexts/BusinessContext";
 import { Navigate, Link } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ShieldCheck, Clock, LogOut, Building2 } from "lucide-react";
+import { ShieldCheck, LogOut, Building2 } from "lucide-react";
 import { useEffect } from "react";
 
 export default function BusinessHubPage() {
@@ -15,10 +15,16 @@ export default function BusinessHubPage() {
 
   if (loading || bizLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <div className="flex flex-col items-center gap-3">
-          <Clock className="h-8 w-8 animate-spin text-primary" />
-          <p className="text-xs text-muted-foreground animate-pulse">Loading...</p>
+      <div className="min-h-screen flex flex-col items-center justify-center bg-background p-4">
+        <div className="space-y-5 w-full max-w-sm">
+          <div className="flex flex-col items-center gap-3">
+            <div className="h-16 w-16 rounded-2xl skeleton-shimmer" />
+            <div className="h-4 w-32 rounded skeleton-shimmer" />
+            <div className="h-3 w-24 rounded skeleton-shimmer" />
+          </div>
+          <div className="space-y-3">
+            <div className="h-28 rounded-xl skeleton-shimmer" />
+          </div>
         </div>
       </div>
     );
