@@ -100,6 +100,12 @@ export default function RosterVoiceCommand({
   const [showAllEmployees, setShowAllEmployees] = useState<Record<number, boolean>>({});
   const recognitionRef = useRef<any>(null);
 
+  // Keep refs to always have latest values in async callbacks
+  const weekDatesRef = useRef(weekDates);
+  weekDatesRef.current = weekDates;
+  const employeesRef = useRef(employees);
+  employeesRef.current = employees;
+
   const startListening = useCallback(() => {
     const SpeechRecognition =
       (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
@@ -162,12 +168,15 @@ export default function RosterVoiceCommand({
 
   const parseCommand = async (text: string) => {
     setProcessing(true);
+    // Use refs to get the latest values (avoids stale closure from useCallback)
+    const currentWeekDates = weekDatesRef.current;
+    const currentEmployees = employeesRef.current;
     try {
       const { data, error } = await supabase.functions.invoke("parse-roster-voice", {
         body: {
           transcript: text,
-          employees: employees.map((e) => ({ id: e.id, name: e.name })),
-          weekDates,
+          employees: currentEmployees.map((e) => ({ id: e.id, name: e.name })),
+          weekDates: currentWeekDates,
         },
       });
 
@@ -194,7 +203,7 @@ export default function RosterVoiceCommand({
       // Client-side: validate all employee_ids exist in our list, FORCE dates to selected week
       const resolvedActions = (data.actions as ParsedAction[]).map((action) => {
         // ALWAYS force the date to the selected week based on day_of_week
-        const dayMatch = weekDates.find(
+        const dayMatch = currentWeekDates.find(
           (wd) => wd.dayName.toLowerCase() === action.day_of_week?.toLowerCase()
         );
         if (dayMatch) {
@@ -203,7 +212,7 @@ export default function RosterVoiceCommand({
 
         // CRITICAL: Validate that the AI-returned employee_id actually exists in our list
         if (action.employee_id) {
-          const validEmployee = employees.find((e) => e.id === action.employee_id);
+          const validEmployee = currentEmployees.find((e) => e.id === action.employee_id);
           if (!validEmployee) {
             // AI hallucinated an employee_id — reset it so we can try matching below
             action = { ...action, employee_id: null, match_error: `"${action.employee_name}" not found in employee list` };
@@ -215,7 +224,7 @@ export default function RosterVoiceCommand({
         
         // Try first-name match
         const spoken = action.employee_name.toLowerCase().trim();
-        const firstNameMatch = employees.find((e) => {
+        const firstNameMatch = currentEmployees.find((e) => {
           const firstName = e.name.split(/\s+/)[0].toLowerCase();
           return firstName === spoken || e.name.toLowerCase() === spoken;
         });
@@ -230,7 +239,7 @@ export default function RosterVoiceCommand({
         }
 
         // Try partial/contains match
-        const partialMatch = employees.find((e) =>
+        const partialMatch = currentEmployees.find((e) =>
           e.name.toLowerCase().includes(spoken) || spoken.includes(e.name.split(/\s+/)[0].toLowerCase())
         );
 
