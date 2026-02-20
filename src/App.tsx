@@ -58,9 +58,10 @@ const MasterSettingsPage = React.lazy(() => import("./pages/master/MasterSetting
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      staleTime: 30_000,        // Data fresh for 30s — reduces re-fetches on navigation
-      gcTime: 5 * 60_000,       // Cache kept for 5 min
+      staleTime: 2 * 60_000,    // Data fresh for 2 min — fewer round trips on navigation
+      gcTime: 10 * 60_000,      // Cache kept for 10 min
       refetchOnWindowFocus: false, // Don't refetch just because user switched tabs
+      refetchOnReconnect: false, // Skip background refetch on reconnect
       retry: 1,                 // Faster failure on network issues
     },
   },

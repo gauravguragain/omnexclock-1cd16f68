@@ -155,17 +155,32 @@ function EventCard({ ev }: { ev: any }) {
     <div className="rounded-lg border border-border/60 bg-secondary/30 overflow-hidden">
       {/* Summary - always visible */}
       <button
-        className="w-full px-3 py-2.5 text-left flex items-center justify-between hover:bg-secondary/50 transition-colors"
+        className="w-full px-3 py-2.5 text-left flex items-center gap-2 hover:bg-secondary/50 transition-colors"
         onClick={() => setExpanded(!expanded)}
       >
-        <div className="flex items-center gap-2 flex-1 min-w-0">
-          {ev.event_type && <Badge variant="outline" className="text-[10px] shrink-0">{ev.event_type}</Badge>}
-          {ev.host_name && <span className="text-xs font-medium text-foreground truncate">{ev.host_name}</span>}
-          {!ev.event_type && !ev.host_name && <span className="text-xs text-muted-foreground italic">Event</span>}
+        {/* Left: type badge + host name */}
+        <div className="flex items-center gap-1.5 flex-1 min-w-0 overflow-hidden">
+          {ev.event_type && (
+            <Badge variant="outline" className="text-[10px] shrink-0 max-w-[80px] truncate">{ev.event_type}</Badge>
+          )}
+          {ev.host_name ? (
+            <span className="text-xs font-medium text-foreground truncate">{ev.host_name}</span>
+          ) : !ev.event_type ? (
+            <span className="text-xs text-muted-foreground italic">Event</span>
+          ) : null}
         </div>
-        <div className="flex items-center gap-2 shrink-0 ml-2">
-          {ev.event_time && <span className="text-[10px] text-muted-foreground flex items-center gap-0.5"><Clock className="h-3 w-3" /> {ev.event_time}</span>}
-          {totalGuests > 0 && <span className="text-[10px] text-muted-foreground"><Users className="h-3 w-3 inline" /> {totalGuests}</span>}
+        {/* Right: time + guests + chevron — never shrinks into left content */}
+        <div className="flex items-center gap-1.5 shrink-0">
+          {ev.event_time && (
+            <span className="text-[10px] text-muted-foreground flex items-center gap-0.5 whitespace-nowrap">
+              <Clock className="h-3 w-3" /> {ev.event_time}
+            </span>
+          )}
+          {totalGuests > 0 && (
+            <span className="text-[10px] text-muted-foreground whitespace-nowrap">
+              <Users className="h-3 w-3 inline" /> {totalGuests}
+            </span>
+          )}
           {expanded ? <ChevronUp className="h-3.5 w-3.5 text-muted-foreground" /> : <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />}
         </div>
       </button>
@@ -256,23 +271,23 @@ function TodayTab({ employeeCode, businessCode, shifts, employeeName, businessNa
   useEffect(() => {
     const fetchEvents = async () => {
       setLoading(true);
-      // Check employee job_title
       const bizCode = businessCode?.toUpperCase() || null;
-      let jobTitleQuery = supabase.from("employees_public" as any).select("job_title").eq("employee_code", employeeCode).eq("active", true) as any;
+
+      // Resolve business_id once if we have a bizCode, then run both queries in parallel
+      let empQuery = supabase.from("employees_public" as any).select("job_title").eq("employee_code", employeeCode).eq("active", true) as any;
       if (bizCode) {
         const { data: bizData } = await supabase.from("businesses_public" as any).select("id").eq("business_code", bizCode).maybeSingle() as { data: { id: string } | null };
-        if (bizData) jobTitleQuery = jobTitleQuery.eq("business_id", bizData.id);
+        if (bizData) empQuery = empQuery.eq("business_id", bizData.id);
       }
-      const { data: empData } = await jobTitleQuery.maybeSingle();
-      const jobTitle = (empData?.job_title || "").toLowerCase();
-      const isSupMgr = jobTitle === "supervisor" || jobTitle === "manager";
-      setIsSupervisorOrManager(isSupMgr);
 
-      const { data } = await supabase.rpc("get_employee_day_events", {
-        _employee_code: employeeCode,
-        _business_code: businessCode,
-      });
-      setAllEvents(data || []);
+      const [{ data: empData }, { data: eventsData }] = await Promise.all([
+        empQuery.maybeSingle(),
+        supabase.rpc("get_employee_day_events", { _employee_code: employeeCode, _business_code: businessCode }),
+      ]);
+
+      const jobTitle = (empData?.job_title || "").toLowerCase();
+      setIsSupervisorOrManager(jobTitle === "supervisor" || jobTitle === "manager");
+      setAllEvents(eventsData || []);
       setLoading(false);
     };
     fetchEvents();
