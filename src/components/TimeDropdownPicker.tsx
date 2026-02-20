@@ -53,10 +53,17 @@ function ScrollColumn({
     }
   }, [selected]);
 
-  // Native touch scroll handling
+  // Wheel + touch scroll handling for all devices
   useEffect(() => {
     const el = containerRef.current;
     if (!el) return;
+
+    // Mouse wheel / trackpad support
+    const onWheel = (e: WheelEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      el.scrollTop += e.deltaY;
+    };
 
     const onTouchStart = (e: TouchEvent) => {
       touchStartY.current = e.touches[0].clientY;
@@ -75,11 +82,13 @@ function ScrollColumn({
       touchStartY.current = null;
     };
 
+    el.addEventListener("wheel", onWheel, { passive: false });
     el.addEventListener("touchstart", onTouchStart, { passive: true });
     el.addEventListener("touchmove", onTouchMove, { passive: false });
     el.addEventListener("touchend", onTouchEnd, { passive: true });
 
     return () => {
+      el.removeEventListener("wheel", onWheel);
       el.removeEventListener("touchstart", onTouchStart);
       el.removeEventListener("touchmove", onTouchMove);
       el.removeEventListener("touchend", onTouchEnd);
