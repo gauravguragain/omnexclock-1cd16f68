@@ -789,7 +789,10 @@ export default function TimesheetsPage() {
                 <div key={group.date}>
                   {/* Day header */}
                   <div className="flex items-center justify-between px-3 py-2 bg-muted/40 border-y border-border/60 sticky top-0 z-10">
-                    <span className="text-xs font-semibold text-foreground">{group.label}</span>
+                    <span className="text-xs font-semibold text-foreground">
+                      {format(new Date(group.date + "T00:00:00"), "EEEE")}
+                      <span className="font-normal text-muted-foreground ml-1.5">· {group.label}</span>
+                    </span>
                     <div className="flex items-center gap-2 text-xs text-muted-foreground">
                       <span>{dayApproved}/{group.entries.length} approved</span>
                       <span className="font-medium text-foreground">{dayNet.toFixed(2)}h net</span>
@@ -882,7 +885,10 @@ export default function TimesheetsPage() {
                       <TableRow key={`hdr-${group.date}`} className="bg-muted/40 hover:bg-muted/40">
                         <TableCell colSpan={10} className="py-1.5 px-4">
                           <div className="flex items-center justify-between">
-                            <span className="text-xs font-semibold text-foreground">{group.label}</span>
+                            <span className="text-xs font-semibold text-foreground">
+                              {format(new Date(group.date + "T00:00:00"), "EEEE")}
+                              <span className="font-normal text-muted-foreground ml-1.5">· {group.label}</span>
+                            </span>
                             <div className="flex items-center gap-3 text-xs text-muted-foreground">
                               <span>{dayApproved}/{group.entries.length} approved</span>
                               <span className="font-semibold text-foreground">{dayNet.toFixed(2)}h net</span>
