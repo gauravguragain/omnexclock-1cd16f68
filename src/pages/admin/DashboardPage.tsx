@@ -386,27 +386,27 @@ export default function DashboardPage() {
   };
 
   return (
-    <div className="space-y-4 md:space-y-6">
+    <div className="space-y-3 md:space-y-5">
       {/* Stats Cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-4 stagger-children">
+      <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3 stagger-children">
         {cards.map(({ title, value, icon: Icon, color }, index) => (
-          <Card key={title} className="border-border/40 stat-card group">
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-[10px] sm:text-[11px] font-medium text-muted-foreground uppercase tracking-wider leading-tight">{title}</CardTitle>
-              <div className="h-9 w-9 rounded-lg bg-secondary/80 flex items-center justify-center group-hover:scale-110 group-hover:bg-primary/10 transition-all duration-300">
-                <Icon className={`h-4 w-4 ${color} transition-colors duration-300`} />
+          <Card key={title} className="border-border/30 stat-card group">
+            <CardHeader className="flex flex-row items-center justify-between pb-1 px-3 pt-3 sm:px-4 sm:pt-4">
+              <CardTitle className="text-[10px] sm:text-[11px] font-medium text-muted-foreground/80 uppercase tracking-wider leading-tight">{title}</CardTitle>
+              <div className="h-8 w-8 rounded-lg bg-secondary/60 flex items-center justify-center group-hover:scale-110 group-hover:bg-primary/10 transition-all duration-300">
+                <Icon className={`h-3.5 w-3.5 ${color} transition-colors duration-300`} />
               </div>
             </CardHeader>
-            <CardContent>
-              <p className="text-2xl sm:text-3xl font-bold tracking-tight tabular-smooth animate-count-up">{value}</p>
+            <CardContent className="px-3 pb-3 sm:px-4 sm:pb-4">
+              <p className="text-xl sm:text-2xl lg:text-3xl font-bold tracking-tight tabular-smooth">{value}</p>
             </CardContent>
           </Card>
         ))}
       </div>
 
       {/* Weekly Hours + Employee Breakdown */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 md:gap-5">
-        <Card className="border-border/40">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-2.5 md:gap-4">
+        <Card className="border-border/30">
           <CardHeader className="pb-2 md:pb-4">
             <CardTitle className="text-xs md:text-sm font-medium text-muted-foreground">Weekly Hours</CardTitle>
           </CardHeader>
@@ -435,7 +435,7 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
 
-        <Card className="border-border/40">
+        <Card className="border-border/30">
           <CardHeader className="pb-2 md:pb-4">
             <CardTitle className="text-xs md:text-sm font-medium text-muted-foreground">Employee Hours (This Week)</CardTitle>
           </CardHeader>
@@ -494,8 +494,8 @@ export default function DashboardPage() {
       </div>
 
       {/* Hourly Activity + Recent Events */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 md:gap-5">
-        <Card className="border-border/40">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-2.5 md:gap-4">
+        <Card className="border-border/30">
           <CardHeader className="pb-2 md:pb-4">
             <CardTitle className="text-xs md:text-sm font-medium text-muted-foreground">Today's Cumulative Hours</CardTitle>
           </CardHeader>
@@ -526,25 +526,25 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
 
-        <Card className="border-border/40">
+        <Card className="border-border/30">
           <CardHeader className="pb-2 md:pb-4">
             <CardTitle className="text-xs md:text-sm font-medium text-muted-foreground">Recent Activity</CardTitle>
           </CardHeader>
           <CardContent>
             {recentEvents.length > 0 ? (
-              <div className="space-y-2.5 max-h-[250px] overflow-y-auto scrollbar-hide">
+              <div className="space-y-1 max-h-[250px] overflow-y-auto scrollbar-hide">
                 {recentEvents.map((ev, i) => (
-                  <div key={i} className="flex items-center justify-between text-sm py-2 px-2 rounded-lg hover:bg-secondary/40 transition-all duration-200 border-b border-border/30 last:border-0 table-row-interactive"
+                  <div key={i} className="flex items-center justify-between text-sm py-2.5 px-3 rounded-lg hover:bg-secondary/30 transition-all duration-200 table-row-interactive"
                     style={{ animationDelay: `${i * 30}ms` }}
                   >
-                    <div className="flex items-center gap-2">
-                      <span className="font-medium text-foreground">{ev.name}</span>
-                      <span className={`text-xs font-semibold ${eventTypeColors[ev.type] || ""}`}>
+                    <div className="flex items-center gap-2 min-w-0">
+                      <span className="font-medium text-foreground truncate">{ev.name}</span>
+                      <span className={`text-[11px] font-semibold shrink-0 ${eventTypeColors[ev.type] || ""}`}>
                         {eventTypeLabels[ev.type] || ev.type}
                       </span>
                     </div>
-                    <div className="text-[11px] text-muted-foreground">
-                      {ev.time} · {ev.date}
+                    <div className="text-[11px] text-muted-foreground/70 shrink-0 ml-2">
+                      {ev.time}
                     </div>
                   </div>
                 ))}
