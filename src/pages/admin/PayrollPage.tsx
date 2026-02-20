@@ -65,36 +65,38 @@ function DateRangeSelector({ dateFrom, dateTo, onChangeFrom, onChangeTo }: {
   };
 
   return (
-    <div className="flex items-center gap-2">
-      <Button variant="outline" size="icon" onClick={goToPrevWeek} className="h-9 w-9">
-        <ChevronLeft className="h-4 w-4" />
-      </Button>
-      <Popover>
-        <PopoverTrigger asChild>
-          <Button variant="outline" className="min-w-[220px] justify-center text-left font-normal gap-2">
-            <CalendarIcon className="h-4 w-4 text-primary" />
-            <span>{format(dateFrom, "dd MMM")} — {format(dateTo, "dd MMM yyyy")}</span>
-          </Button>
-        </PopoverTrigger>
-        <PopoverContent className="w-auto p-0" align="center">
-          <Calendar
-            mode="range"
-            selected={{ from: dateFrom, to: dateTo }}
-            onSelect={(range) => {
-              if (range?.from) onChangeFrom(range.from);
-              if (range?.to) onChangeTo(range.to);
-            }}
-            weekStartsOn={1}
-            numberOfMonths={2}
-            initialFocus
-            className={cn("p-3 pointer-events-auto")}
-          />
-        </PopoverContent>
-      </Popover>
-      <Button variant="outline" size="icon" onClick={goToNextWeek} className="h-9 w-9">
-        <ChevronRight className="h-4 w-4" />
-      </Button>
-      <Button variant="ghost" size="sm" onClick={goToThisWeek} className="text-primary text-xs">
+    <div className="flex items-center gap-1.5 flex-wrap min-w-0">
+      <div className="flex items-center gap-1">
+        <Button variant="outline" size="icon" onClick={goToPrevWeek} className="h-8 w-8 shrink-0">
+          <ChevronLeft className="h-4 w-4" />
+        </Button>
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button variant="outline" className="min-w-0 justify-center text-left font-normal gap-1.5 h-8 px-2.5 text-xs sm:text-sm sm:px-3">
+              <CalendarIcon className="h-3.5 w-3.5 text-primary shrink-0" />
+              <span className="truncate">{format(dateFrom, "dd MMM")} — {format(dateTo, "dd MMM yyyy")}</span>
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-auto p-0" align="center">
+            <Calendar
+              mode="range"
+              selected={{ from: dateFrom, to: dateTo }}
+              onSelect={(range) => {
+                if (range?.from) onChangeFrom(range.from);
+                if (range?.to) onChangeTo(range.to);
+              }}
+              weekStartsOn={1}
+              numberOfMonths={2}
+              initialFocus
+              className={cn("p-3 pointer-events-auto")}
+            />
+          </PopoverContent>
+        </Popover>
+        <Button variant="outline" size="icon" onClick={goToNextWeek} className="h-8 w-8 shrink-0">
+          <ChevronRight className="h-4 w-4" />
+        </Button>
+      </div>
+      <Button variant="ghost" size="sm" onClick={goToThisWeek} className="text-primary text-xs h-8 shrink-0">
         Today
       </Button>
     </div>
@@ -794,10 +796,10 @@ export default function PayrollPage() {
 
   return (
     <div className="space-y-4 overflow-x-hidden">
-      <div className="flex flex-col gap-3">
-        <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center flex-wrap overflow-x-hidden">
+      <div className="flex flex-col gap-2.5">
+        <div className="grid grid-cols-2 sm:flex sm:flex-row gap-2 sm:items-center sm:flex-wrap">
           <Select value={selectedEmployee} onValueChange={setSelectedEmployee}>
-            <SelectTrigger className="w-full sm:w-48">
+            <SelectTrigger className="w-full sm:w-44 h-8 text-xs sm:text-sm">
               <SelectValue placeholder="All employees" />
             </SelectTrigger>
             <SelectContent className="bg-card border-border z-50">
@@ -808,7 +810,7 @@ export default function PayrollPage() {
             </SelectContent>
           </Select>
           <Select value={selectedDepartment} onValueChange={setSelectedDepartment}>
-            <SelectTrigger className="w-full sm:w-48">
+            <SelectTrigger className="w-full sm:w-44 h-8 text-xs sm:text-sm">
               <SelectValue placeholder="All departments" />
             </SelectTrigger>
             <SelectContent className="bg-card border-border z-50">
@@ -818,15 +820,17 @@ export default function PayrollPage() {
               ))}
             </SelectContent>
           </Select>
-          <DateRangeSelector dateFrom={dateFrom} dateTo={dateTo} onChangeFrom={setDateFrom} onChangeTo={setDateTo} />
         </div>
-        <div className="flex gap-2">
-          <Button variant="outline" onClick={exportCSV}>
-            <Download className="mr-2 h-4 w-4" /> Export CSV
-          </Button>
-          <Button variant="outline" onClick={() => setEmailDialogOpen(true)}>
-            <Mail className="mr-2 h-4 w-4" /> Email CSV
-          </Button>
+        <div className="flex items-center justify-between gap-2 flex-wrap">
+          <DateRangeSelector dateFrom={dateFrom} dateTo={dateTo} onChangeFrom={setDateFrom} onChangeTo={setDateTo} />
+          <div className="flex gap-1.5 shrink-0">
+            <Button variant="outline" size="sm" onClick={exportCSV} className="h-8 text-xs gap-1.5">
+              <Download className="h-3.5 w-3.5" /> Export
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => setEmailDialogOpen(true)} className="h-8 text-xs gap-1.5">
+              <Mail className="h-3.5 w-3.5" /> Email
+            </Button>
+          </div>
         </div>
       </div>
 
