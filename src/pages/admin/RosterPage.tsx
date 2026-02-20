@@ -463,6 +463,26 @@ export default function RosterPage() {
     }
   };
 
+  /* ── Clear AI forecast shifts ── */
+  const handleClearAiForecast = async () => {
+    if (!business) return;
+    const aiShifts = shifts.filter(s => (s as any).source === "ai_forecast");
+    if (aiShifts.length === 0) {
+      toast({ title: "No AI forecasts", description: "There are no AI forecast shifts to clear this week." });
+      return;
+    }
+    try {
+      const ids = aiShifts.map(s => s.id);
+      const { error } = await supabase.from("shifts").delete().in("id", ids);
+      if (error) throw error;
+      await logAudit("ai_forecast_cleared", { week: fmtDate(weekStart), shifts_removed: ids.length });
+      fetchData();
+      toast({ title: "AI Forecast Cleared", description: `Removed ${ids.length} AI forecast shift(s).` });
+    } catch (err: any) {
+      toast({ title: "Error", description: err.message, variant: "destructive" });
+    }
+  };
+
   /* ── realtime ── */
   useEffect(() => {
     const channel = supabase
@@ -950,6 +970,16 @@ export default function RosterPage() {
               >
                 <BrainCircuit className="mr-1.5 h-3.5 w-3.5" />
                 {forecasting ? "Forecasting..." : "AI Forecast"}
+              </Button>
+            )}
+            {isSuperAdminOf(currentBusinessId) && shifts.some(s => (s as any).source === "ai_forecast") && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="rounded-lg border-red-500/40 text-red-400 hover:bg-red-500/10 hover:border-red-500/60"
+                onClick={handleClearAiForecast}
+              >
+                <Trash2 className="mr-1.5 h-3.5 w-3.5" /> Clear AI Forecast
               </Button>
             )}
             <Button variant="outline" size="sm" className="rounded-lg" onClick={handleCopyPrevWeek} disabled={loading}>
