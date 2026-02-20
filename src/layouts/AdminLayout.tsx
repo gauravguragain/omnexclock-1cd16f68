@@ -219,7 +219,7 @@ export default function AdminLayout() {
                 to={path}
                 data-tour={tourId}
                 onClick={() => setSidebarOpen(false)}
-                className={`nav-stagger flex items-center gap-3 px-3 py-2 rounded-lg text-[13px] group relative btn-press ${
+                className={`nav-stagger flex items-center gap-3 px-3 py-3 rounded-lg text-[13px] group relative btn-press ${
                   isActive
                     ? "bg-primary/10 text-primary font-semibold shadow-[inset_0_1px_0_hsl(var(--primary)/0.1)]"
                     : "text-muted-foreground hover:text-foreground hover:bg-sidebar-accent"
@@ -356,7 +356,7 @@ export default function AdminLayout() {
                         key={path}
                         to={path}
                         onClick={() => setMoreSheetOpen(false)}
-                        className={`flex flex-col items-center gap-1.5 p-3 rounded-xl touch-active ${
+                        className={`flex flex-col items-center gap-1.5 p-4 rounded-xl touch-active min-h-[72px] ${
                           isActive
                             ? "bg-primary/10 text-primary"
                             : "text-muted-foreground"
