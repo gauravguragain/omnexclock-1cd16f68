@@ -268,21 +268,21 @@ export default function KioskPage() {
   const availableActions = getAvailableActions();
 
   return (
-    <div className="min-h-[100dvh] bg-background text-foreground flex flex-col items-center justify-center p-4">
+    <div className="min-h-[100dvh] bg-background text-foreground flex flex-col items-center justify-center p-4 md:p-8">
       {/* Header */}
-      <div className="text-center mb-6">
+      <div className="text-center mb-4 md:mb-8">
         {businessLogo ? (
-          <img src={businessLogo} alt={businessName} className="h-16 w-16 mx-auto rounded-lg object-cover mb-2" />
+          <img src={businessLogo} alt={businessName} className="h-14 w-14 md:h-20 md:w-20 mx-auto rounded-lg object-cover mb-2" />
         ) : (
-          <div className="h-16 w-16 mx-auto rounded-lg bg-primary/15 flex items-center justify-center mb-2">
-            <Clock className="h-8 w-8 text-primary" />
+          <div className="h-14 w-14 md:h-20 md:w-20 mx-auto rounded-lg bg-primary/15 flex items-center justify-center mb-2">
+            <Clock className="h-7 w-7 md:h-10 md:w-10 text-primary" />
           </div>
         )}
-        <h1 className="text-xl font-bold text-foreground">{businessName}</h1>
-        <p className="text-3xl font-mono text-foreground mt-2">
+        <h1 className="text-xl md:text-2xl font-bold text-foreground">{businessName}</h1>
+        <p className="text-3xl md:text-4xl font-mono text-foreground mt-2">
           {toAusTime12WithSeconds(currentTime)}
         </p>
-        <p className="text-sm text-muted-foreground">
+        <p className="text-sm md:text-base text-muted-foreground">
           {toAusFormatted(currentTime, { weekday: "long", year: "numeric", month: "long", day: "numeric" })}
         </p>
       </div>
@@ -298,33 +298,33 @@ export default function KioskPage() {
 
       {/* Code Entry */}
       {step === "code_entry" && (
-        <Card className="w-full max-w-sm gold-border border gold-glow">
-          <CardContent className="p-6 space-y-4">
-            <p className="text-center text-sm text-muted-foreground">Enter your employee code</p>
+        <Card className="w-full max-w-sm md:max-w-md gold-border border gold-glow">
+          <CardContent className="p-5 md:p-8 space-y-4 md:space-y-5">
+            <p className="text-center text-sm md:text-base text-muted-foreground">Enter your employee code</p>
             <Input
               value={code}
               readOnly
-              className="text-center text-3xl tracking-[0.5em] font-mono h-16 bg-surface"
+              className="text-center text-3xl md:text-4xl tracking-[0.5em] font-mono h-14 md:h-18 bg-surface"
               placeholder="••••"
             />
             {/* Numpad */}
-            <div className="grid grid-cols-3 gap-2">
+            <div className="grid grid-cols-3 gap-2 md:gap-3">
               {["1", "2", "3", "4", "5", "6", "7", "8", "9"].map((n) => (
-                <Button key={n} variant="secondary" className="h-16 text-2xl font-bold" onClick={() => handleNumpadClick(n)}>
+                <Button key={n} variant="secondary" className="h-14 md:h-18 text-2xl md:text-3xl font-bold" onClick={() => handleNumpadClick(n)}>
                   {n}
                 </Button>
               ))}
-              <Button variant="secondary" className="h-16" onClick={resetKiosk}>
-                <ArrowLeft className="h-6 w-6" />
+              <Button variant="secondary" className="h-14 md:h-18" onClick={resetKiosk}>
+                <ArrowLeft className="h-6 w-6 md:h-7 md:w-7" />
               </Button>
-              <Button variant="secondary" className="h-16 text-2xl font-bold" onClick={() => handleNumpadClick("0")}>
+              <Button variant="secondary" className="h-14 md:h-18 text-2xl md:text-3xl font-bold" onClick={() => handleNumpadClick("0")}>
                 0
               </Button>
-              <Button variant="secondary" className="h-16" onClick={() => setCode((p) => p.slice(0, -1))}>
-                <Delete className="h-6 w-6" />
+              <Button variant="secondary" className="h-14 md:h-18" onClick={() => setCode((p) => p.slice(0, -1))}>
+                <Delete className="h-6 w-6 md:h-7 md:w-7" />
               </Button>
             </div>
-            <Button className="w-full h-14 text-lg" onClick={handleSubmitCode} disabled={code.length !== 4 || loading}>
+            <Button className="w-full h-12 md:h-14 text-lg md:text-xl" onClick={handleSubmitCode} disabled={code.length !== 4 || loading}>
               {loading ? "Verifying..." : "Continue"}
             </Button>
           </CardContent>
@@ -333,8 +333,8 @@ export default function KioskPage() {
 
       {/* Action Select */}
       {step === "action_select" && (
-        <Card className="w-full max-w-sm gold-border border">
-          <CardContent className="p-6 space-y-4">
+        <Card className="w-full max-w-sm md:max-w-md gold-border border">
+          <CardContent className="p-5 md:p-8 space-y-4 md:space-y-5">
             {/* Employee info & status */}
             <div className="text-center space-y-2">
               <div className="flex items-center justify-center gap-2">
@@ -354,7 +354,7 @@ export default function KioskPage() {
               {availableActions.map((key) => {
                 const { label, icon, color } = actionLabels[key];
                 return (
-                  <Button key={key} className={`h-24 flex flex-col gap-2 ${color}`} onClick={() => handleActionSelect(key)}>
+                  <Button key={key} className={`h-24 md:h-28 flex flex-col gap-2 ${color}`} onClick={() => handleActionSelect(key)}>
                     {icon}
                     <span className="text-sm font-semibold">{label}</span>
                   </Button>
@@ -370,9 +370,9 @@ export default function KioskPage() {
 
       {/* Photo Capture */}
       {step === "photo_capture" && (
-        <Card className="w-full max-w-sm gold-border border">
-          <CardContent className="p-6 space-y-4">
-            <p className="text-center text-sm text-muted-foreground">
+        <Card className="w-full max-w-sm md:max-w-md gold-border border">
+          <CardContent className="p-5 md:p-8 space-y-4">
+            <p className="text-center text-sm md:text-base text-muted-foreground">
               {loading ? "Submitting..." : photoData ? "Photo captured!" : "Hold still — capturing photo..."}
             </p>
             <div className="relative rounded-lg overflow-hidden bg-surface aspect-[4/3]">
@@ -393,8 +393,8 @@ export default function KioskPage() {
 
       {/* Confirmation */}
       {step === "confirmation" && (
-        <Card className="w-full max-w-sm gold-border border gold-glow">
-          <CardContent className="p-8 text-center space-y-4">
+        <Card className="w-full max-w-sm md:max-w-md gold-border border gold-glow">
+          <CardContent className="p-6 md:p-10 text-center space-y-4">
             <div className="h-20 w-20 mx-auto rounded-full bg-primary/15 flex items-center justify-center text-primary">
               {actionLabels[selectedAction]?.icon}
             </div>

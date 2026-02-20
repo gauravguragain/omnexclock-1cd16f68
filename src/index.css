@@ -553,6 +553,22 @@
   }
 }
 
+/* Tablet: balanced between mobile and desktop */
+@media (min-width: 768px) and (max-width: 1023px) {
+  html {
+    font-size: 16px;
+  }
+
+  .stat-card {
+    border-radius: 0.875rem;
+  }
+
+  /* Charts get slightly more room on tablets */
+  .recharts-wrapper {
+    font-size: 12px;
+  }
+}
+
 /* Desktop: richer hover effects and larger text */
 @media (min-width: 1024px) {
   .stat-card {

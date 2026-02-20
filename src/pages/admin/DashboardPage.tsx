@@ -386,36 +386,36 @@ export default function DashboardPage() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 md:space-y-6">
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 stagger-children">
+      <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-4 stagger-children">
         {cards.map(({ title, value, icon: Icon, color }, index) => (
           <Card key={title} className="border-border/40 stat-card group">
             <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">{title}</CardTitle>
+              <CardTitle className="text-[10px] sm:text-[11px] font-medium text-muted-foreground uppercase tracking-wider leading-tight">{title}</CardTitle>
               <div className="h-9 w-9 rounded-lg bg-secondary/80 flex items-center justify-center group-hover:scale-110 group-hover:bg-primary/10 transition-all duration-300">
                 <Icon className={`h-4 w-4 ${color} transition-colors duration-300`} />
               </div>
             </CardHeader>
             <CardContent>
-              <p className="text-3xl font-bold tracking-tight tabular-smooth animate-count-up">{value}</p>
+              <p className="text-2xl sm:text-3xl font-bold tracking-tight tabular-smooth animate-count-up">{value}</p>
             </CardContent>
           </Card>
         ))}
       </div>
 
       {/* Weekly Hours + Employee Breakdown */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 md:gap-5">
         <Card className="border-border/40">
-          <CardHeader>
-            <CardTitle className="text-sm font-medium text-muted-foreground">Weekly Hours</CardTitle>
+          <CardHeader className="pb-2 md:pb-4">
+            <CardTitle className="text-xs md:text-sm font-medium text-muted-foreground">Weekly Hours</CardTitle>
           </CardHeader>
-          <CardContent>
-            <ResponsiveContainer width="100%" height={250}>
-              <BarChart data={weeklyData}>
+          <CardContent className="px-2 sm:px-6">
+            <ResponsiveContainer width="100%" height={200} className="sm:!h-[250px]">
+              <BarChart data={weeklyData} margin={{ left: -10, right: 4, top: 4, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" strokeOpacity={0.5} />
-                <XAxis dataKey="date" tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} />
-                <YAxis tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} />
+                <XAxis dataKey="date" tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} interval={0} angle={-30} textAnchor="end" height={45} />
+                <YAxis tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} width={35} />
                 <Tooltip
                   content={({ active, payload, label }) => {
                     if (!active || !payload?.length) return null;
@@ -436,19 +436,19 @@ export default function DashboardPage() {
         </Card>
 
         <Card className="border-border/40">
-          <CardHeader>
-            <CardTitle className="text-sm font-medium text-muted-foreground">Employee Hours (This Week)</CardTitle>
+          <CardHeader className="pb-2 md:pb-4">
+            <CardTitle className="text-xs md:text-sm font-medium text-muted-foreground">Employee Hours (This Week)</CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="px-2 sm:px-6">
             {employeeBreakdown.length > 0 ? (
-              <ResponsiveContainer width="100%" height={280}>
+              <ResponsiveContainer width="100%" height={260} className="sm:!h-[280px]">
                 <PieChart>
                   <Pie
                     data={employeeBreakdown}
                     dataKey="hours"
                     nameKey="name"
-                    cx="40%"
-                    cy="50%"
+                    cx="50%"
+                    cy="45%"
                     innerRadius={45}
                     outerRadius={85}
                     paddingAngle={3}
@@ -474,9 +474,9 @@ export default function DashboardPage() {
                     }}
                   />
                   <Legend
-                    layout="vertical"
-                    align="right"
-                    verticalAlign="middle"
+                    layout="horizontal"
+                    align="center"
+                    verticalAlign="bottom"
                     iconType="circle"
                     iconSize={8}
                     formatter={(value: string) => {
@@ -494,17 +494,17 @@ export default function DashboardPage() {
       </div>
 
       {/* Hourly Activity + Recent Events */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 md:gap-5">
         <Card className="border-border/40">
-          <CardHeader>
-            <CardTitle className="text-sm font-medium text-muted-foreground">Today's Cumulative Hours</CardTitle>
+          <CardHeader className="pb-2 md:pb-4">
+            <CardTitle className="text-xs md:text-sm font-medium text-muted-foreground">Today's Cumulative Hours</CardTitle>
           </CardHeader>
-          <CardContent>
-            <ResponsiveContainer width="100%" height={250}>
-              <AreaChart data={hourlyActivity}>
+          <CardContent className="px-2 sm:px-6">
+            <ResponsiveContainer width="100%" height={200} className="sm:!h-[250px]">
+              <AreaChart data={hourlyActivity} margin={{ left: -10, right: 4, top: 4, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" strokeOpacity={0.5} />
-                <XAxis dataKey="hour" tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} />
-                <YAxis tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} />
+                <XAxis dataKey="hour" tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} interval={2} />
+                <YAxis tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} width={35} />
                 <Tooltip
                   content={({ active, payload }) => {
                     if (!active || !payload?.length) return null;
@@ -527,8 +527,8 @@ export default function DashboardPage() {
         </Card>
 
         <Card className="border-border/40">
-          <CardHeader>
-            <CardTitle className="text-sm font-medium text-muted-foreground">Recent Activity</CardTitle>
+          <CardHeader className="pb-2 md:pb-4">
+            <CardTitle className="text-xs md:text-sm font-medium text-muted-foreground">Recent Activity</CardTitle>
           </CardHeader>
           <CardContent>
             {recentEvents.length > 0 ? (
