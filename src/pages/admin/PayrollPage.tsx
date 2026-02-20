@@ -193,13 +193,28 @@ export default function PayrollPage() {
     const empMap = new Map(employees.map((e) => [e.id, e]));
     const eventsByEmp = new Map<string, typeof events>();
 
+    // Group events by employee first, sorted chronologically
+    const empAllEvents = new Map<string, any[]>();
     for (const ev of events) {
-      const dayStr = toAusDate(new Date(ev.timestamp));
-      const key = `${ev.employee_id}-${dayStr}`;
-      if (!approvedSet.has(key)) continue;
+      if (!empAllEvents.has(ev.employee_id)) empAllEvents.set(ev.employee_id, []);
+      empAllEvents.get(ev.employee_id)!.push(ev);
+    }
 
-      if (!eventsByEmp.has(ev.employee_id)) eventsByEmp.set(ev.employee_id, []);
-      eventsByEmp.get(ev.employee_id)!.push(ev);
+    // Assign each event to the clock_in date (handles overnight shifts)
+    for (const [empId, evs] of empAllEvents) {
+      evs.sort((a: any, b: any) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+      let currentShiftDate: string | null = null;
+      for (const ev of evs) {
+        if (ev.event_type === "clock_in") {
+          currentShiftDate = toAusDate(new Date(ev.timestamp));
+        }
+        const shiftDate = currentShiftDate || toAusDate(new Date(ev.timestamp));
+        const key = `${empId}-${shiftDate}`;
+        if (!approvedSet.has(key)) continue;
+
+        if (!eventsByEmp.has(empId)) eventsByEmp.set(empId, []);
+        eventsByEmp.get(empId)!.push({ ...ev, _shiftDate: shiftDate });
+      }
     }
 
     const result: PayrollEntry[] = [];
@@ -210,7 +225,7 @@ export default function PayrollPage() {
 
       const days = new Map<string, any[]>();
       for (const ev of empEvents) {
-        const day = toAusDate(new Date(ev.timestamp));
+        const day = ev._shiftDate;
         if (!days.has(day)) days.set(day, []);
         days.get(day)!.push(ev);
       }
