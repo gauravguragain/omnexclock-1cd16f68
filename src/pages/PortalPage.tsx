@@ -351,13 +351,20 @@ function TodayTab({ employeeCode, businessCode, shifts, employeeName, businessNa
                   if (!eventsForDay || eventsForDay.length === 0) return null;
                   const dayLabel = new Date(dateStr + "T00:00:00").toLocaleDateString("en-AU", { weekday: "short", day: "numeric", month: "short" });
                   const isToday = dateStr === todayStr;
+                  // Sort events by event_time ascending
+                  const sortedEvents = [...eventsForDay].sort((a: any, b: any) => {
+                    if (!a.event_time && !b.event_time) return 0;
+                    if (!a.event_time) return 1;
+                    if (!b.event_time) return -1;
+                    return a.event_time.localeCompare(b.event_time);
+                  });
                   return (
                     <div key={dateStr}>
                       <p className={cn("text-xs font-semibold mb-1.5", isToday ? "text-primary" : "text-muted-foreground")}>
                         {dayLabel} {isToday && <span className="text-primary">(Today)</span>}
                       </p>
                       <div className="space-y-2">
-                        {eventsForDay.map((ev: any) => <EventCard key={ev.id} ev={ev} />)}
+                        {sortedEvents.map((ev: any) => <EventCard key={ev.id} ev={ev} />)}
                       </div>
                     </div>
                   );
@@ -380,7 +387,12 @@ function TodayTab({ employeeCode, businessCode, shifts, employeeName, businessNa
               <p className="text-sm text-muted-foreground text-center py-3">No event details for today.</p>
             ) : (
               <div className="space-y-3">
-                {todayEvents.map((ev: any) => <EventCard key={ev.id} ev={ev} />)}
+                {[...todayEvents].sort((a: any, b: any) => {
+                  if (!a.event_time && !b.event_time) return 0;
+                  if (!a.event_time) return 1;
+                  if (!b.event_time) return -1;
+                  return a.event_time.localeCompare(b.event_time);
+                }).map((ev: any) => <EventCard key={ev.id} ev={ev} />)}
               </div>
             )}
           </CardContent>
