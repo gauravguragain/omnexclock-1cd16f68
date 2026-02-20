@@ -511,22 +511,72 @@ export default function PayrollPage() {
   );
 
   const renderMarginCharts = () => {
-    const marginData = [...filtered]
-      .map(e => ({ name: e.name, margin: Math.round((e.admin_pay - e.employee_pay) * 100) / 100 }))
-      .sort((a, b) => b.margin - a.margin)
-      .slice(0, chartLimit);
+    // Chart 1: Employee Pay vs Admin Cost comparison per employee
+    const comparisonData = [...filtered]
+      .sort((a, b) => (b.admin_pay - b.employee_pay) - (a.admin_pay - a.employee_pay))
+      .slice(0, chartLimit)
+      .map(e => ({
+        name: e.name,
+        employee_pay: Math.round(e.employee_pay * 100) / 100,
+        admin_cost: Math.round(e.admin_pay * 100) / 100,
+      }));
 
-    const deptMargin: Record<string, { empPay: number; adminPay: number }> = {};
+    // Chart 2: Department stacked cost breakdown
+    const deptAgg: Record<string, { empPay: number; adminPay: number; hours: number; headcount: number }> = {};
     filtered.forEach(e => {
       const dept = e.department || "Unassigned";
-      if (!deptMargin[dept]) deptMargin[dept] = { empPay: 0, adminPay: 0 };
-      deptMargin[dept].empPay += e.employee_pay;
-      deptMargin[dept].adminPay += e.admin_pay;
+      if (!deptAgg[dept]) deptAgg[dept] = { empPay: 0, adminPay: 0, hours: 0, headcount: 0 };
+      deptAgg[dept].empPay += e.employee_pay;
+      deptAgg[dept].adminPay += e.admin_pay;
+      deptAgg[dept].hours += e.net_hours;
+      deptAgg[dept].headcount += 1;
     });
-    const deptData = Object.entries(deptMargin).map(([dept, d]) => ({
-      name: dept,
-      margin: Math.round((d.adminPay - d.empPay) * 100) / 100,
-    })).sort((a, b) => b.margin - a.margin);
+    const deptStackData = Object.entries(deptAgg)
+      .map(([dept, d]) => ({
+        name: dept,
+        employee_pay: Math.round(d.empPay * 100) / 100,
+        margin: Math.round((d.adminPay - d.empPay) * 100) / 100,
+        hours: Math.round(d.hours * 100) / 100,
+        headcount: d.headcount,
+        margin_pct: d.adminPay > 0 ? Math.round((d.adminPay - d.empPay) / d.adminPay * 1000) / 10 : 0,
+      }))
+      .sort((a, b) => (b.employee_pay + b.margin) - (a.employee_pay + a.margin));
+
+    const customTooltip = ({ active, payload, label }: any) => {
+      if (!active || !payload?.length) return null;
+      return (
+        <div style={{ backgroundColor: "hsl(var(--popover))", border: "1px solid hsl(var(--border))", borderRadius: 10, padding: "10px 14px", boxShadow: "0 8px 24px rgba(0,0,0,0.3)" }}>
+          <p style={{ color: "hsl(var(--popover-foreground))", fontSize: 13, fontWeight: 600, marginBottom: 4 }}>{label}</p>
+          {payload.map((p: any, i: number) => (
+            <p key={i} style={{ color: "hsl(var(--popover-foreground))", fontSize: 12, margin: "2px 0" }}>
+              <span style={{ display: "inline-block", width: 10, height: 10, borderRadius: 2, backgroundColor: p.color, marginRight: 6 }} />
+              {p.name}: ${p.value.toFixed(2)}
+            </p>
+          ))}
+        </div>
+      );
+    };
+
+    const deptTooltip = ({ active, payload, label }: any) => {
+      if (!active || !payload?.length) return null;
+      const data = deptStackData.find(d => d.name === label);
+      return (
+        <div style={{ backgroundColor: "hsl(var(--popover))", border: "1px solid hsl(var(--border))", borderRadius: 10, padding: "10px 14px", boxShadow: "0 8px 24px rgba(0,0,0,0.3)" }}>
+          <p style={{ color: "hsl(var(--popover-foreground))", fontSize: 13, fontWeight: 600, marginBottom: 4 }}>{label}</p>
+          {payload.map((p: any, i: number) => (
+            <p key={i} style={{ color: "hsl(var(--popover-foreground))", fontSize: 12, margin: "2px 0" }}>
+              <span style={{ display: "inline-block", width: 10, height: 10, borderRadius: 2, backgroundColor: p.color, marginRight: 6 }} />
+              {p.name}: ${p.value.toFixed(2)}
+            </p>
+          ))}
+          {data && (
+            <p style={{ color: "hsl(var(--popover-foreground))", fontSize: 11, marginTop: 6, opacity: 0.7 }}>
+              {data.headcount} employee{data.headcount !== 1 ? "s" : ""} · {data.hours}h · {data.margin_pct}% margin
+            </p>
+          )}
+        </div>
+      );
+    };
 
     return (
       <>
@@ -548,18 +598,23 @@ export default function PayrollPage() {
           <Card>
             <CardHeader>
               <CardTitle className="text-sm font-medium text-muted-foreground">
-                Margin by Employee{filtered.length > chartLimit ? ` (Top ${chartLimit} of ${filtered.length})` : ""}
+                Pay vs Cost per Employee{filtered.length > chartLimit ? ` (Top ${chartLimit})` : ""}
               </CardTitle>
             </CardHeader>
             <CardContent>
-              {marginData.length > 0 ? (
-                <ResponsiveContainer width="100%" height={250}>
-                  <BarChart data={marginData}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+              {comparisonData.length > 0 ? (
+                <ResponsiveContainer width="100%" height={280}>
+                  <BarChart data={comparisonData} barGap={2}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" strokeOpacity={0.5} />
                     <XAxis dataKey="name" tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} interval={0} angle={-30} textAnchor="end" height={60} />
                     <YAxis tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} />
-                    <Tooltip contentStyle={{ backgroundColor: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 8, color: "hsl(var(--foreground))" }} />
-                    <Bar dataKey="margin" name="Margin ($)" fill="hsl(142, 71%, 45%)" radius={[4, 4, 0, 0]} />
+                    <Tooltip content={customTooltip} />
+                    <Legend
+                      wrapperStyle={{ fontSize: 12 }}
+                      formatter={(value: string) => <span style={{ color: "hsl(var(--foreground))" }}>{value}</span>}
+                    />
+                    <Bar dataKey="employee_pay" name="Employee Pay" fill="hsl(45, 60%, 53%)" radius={[4, 4, 0, 0]} />
+                    <Bar dataKey="admin_cost" name="Admin Cost (ex GST)" fill="hsl(217, 91%, 60%)" radius={[4, 4, 0, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
               ) : (
@@ -571,21 +626,24 @@ export default function PayrollPage() {
           <Card>
             <CardHeader>
               <CardTitle className="text-sm font-medium text-muted-foreground">
-                Margin by Department
+                Department Cost Breakdown
               </CardTitle>
             </CardHeader>
             <CardContent>
-              {deptData.length > 0 ? (
-                <ResponsiveContainer width="100%" height={250}>
-                  <PieChart>
-                    <Pie data={deptData} dataKey="margin" nameKey="name" cx="50%" cy="50%" outerRadius={90} labelLine={false}>
-                      {deptData.map((_, i) => (
-                        <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />
-                      ))}
-                    </Pie>
-                    <Tooltip contentStyle={{ backgroundColor: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 8, color: "hsl(var(--foreground))" }} />
-                    <Legend />
-                  </PieChart>
+              {deptStackData.length > 0 ? (
+                <ResponsiveContainer width="100%" height={280}>
+                  <BarChart data={deptStackData}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" strokeOpacity={0.5} />
+                    <XAxis dataKey="name" tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} />
+                    <YAxis tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} />
+                    <Tooltip content={deptTooltip} />
+                    <Legend
+                      wrapperStyle={{ fontSize: 12 }}
+                      formatter={(value: string) => <span style={{ color: "hsl(var(--foreground))" }}>{value}</span>}
+                    />
+                    <Bar dataKey="employee_pay" name="Employee Pay" stackId="cost" fill="hsl(45, 60%, 53%)" />
+                    <Bar dataKey="margin" name="Margin (ex GST)" stackId="cost" fill="hsl(142, 71%, 45%)" radius={[4, 4, 0, 0]} />
+                  </BarChart>
                 </ResponsiveContainer>
               ) : (
                 <p className="text-center text-muted-foreground py-16">No data</p>
