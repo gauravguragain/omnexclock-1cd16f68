@@ -876,48 +876,50 @@ export default function RosterPage() {
         {/* Row 1: Week Navigation + Status + Department */}
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 px-4 py-3">
           {/* Week Nav */}
-          <div className="flex items-center gap-2">
-            <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full hover:bg-muted" onClick={() => setWeekStart(addDays(weekStart, -7))}>
-              <ChevronLeft className="h-4 w-4" />
-            </Button>
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button variant="ghost" className="min-w-[190px] justify-center gap-2 rounded-lg hover:bg-muted h-8 px-3 font-semibold text-sm">
-                  <CalendarIcon className="h-3.5 w-3.5 text-primary" />
-                  {weekLabel}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0" align="center">
-                <Calendar
-                  mode="single"
-                  selected={undefined}
-                  onSelect={(date) => {
-                    if (date) setWeekStart(getMonday(date));
-                  }}
-                  modifiers={{
-                    weekStart: weekStart,
-                    weekEnd: addDays(weekStart, 6),
-                    weekMid: { from: addDays(weekStart, 1), to: addDays(weekStart, 5) },
-                  }}
-                  modifiersClassNames={{
-                    weekStart: "bg-primary/15 text-primary rounded-l-md rounded-r-none",
-                    weekEnd: "bg-primary/15 text-primary rounded-r-md rounded-l-none",
-                    weekMid: "bg-primary/10 text-primary rounded-none",
-                  }}
-                  className="p-3 pointer-events-auto"
-                  weekStartsOn={1}
-                />
-              </PopoverContent>
-            </Popover>
-            <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full hover:bg-muted" onClick={() => setWeekStart(addDays(weekStart, 7))}>
-              <ChevronRight className="h-4 w-4" />
-            </Button>
+          <div className="flex items-center gap-2 flex-wrap">
+            <div className="flex items-center gap-0.5">
+              <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full hover:bg-muted" onClick={() => setWeekStart(addDays(weekStart, -7))}>
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="ghost" className="min-w-[170px] sm:min-w-[190px] justify-center gap-2 rounded-lg hover:bg-muted h-8 px-2 sm:px-3 font-semibold text-xs sm:text-sm">
+                    <CalendarIcon className="h-3.5 w-3.5 text-primary" />
+                    {weekLabel}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="center">
+                  <Calendar
+                    mode="single"
+                    selected={undefined}
+                    onSelect={(date) => {
+                      if (date) setWeekStart(getMonday(date));
+                    }}
+                    modifiers={{
+                      weekStart: weekStart,
+                      weekEnd: addDays(weekStart, 6),
+                      weekMid: { from: addDays(weekStart, 1), to: addDays(weekStart, 5) },
+                    }}
+                    modifiersClassNames={{
+                      weekStart: "bg-primary/15 text-primary rounded-l-md rounded-r-none",
+                      weekEnd: "bg-primary/15 text-primary rounded-r-md rounded-l-none",
+                      weekMid: "bg-primary/10 text-primary rounded-none",
+                    }}
+                    className="p-3 pointer-events-auto"
+                    weekStartsOn={1}
+                  />
+                </PopoverContent>
+              </Popover>
+              <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full hover:bg-muted" onClick={() => setWeekStart(addDays(weekStart, 7))}>
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+            </div>
             <Button variant="ghost" size="sm" onClick={() => setWeekStart(getMonday(new Date()))} className="text-xs text-muted-foreground hover:text-primary h-7 px-2">
               Today
             </Button>
             {/* Status Badge */}
             <Badge variant="outline" className={cn(
-              "text-[10px] uppercase font-semibold tracking-wider px-2.5 py-0.5 rounded-full border",
+              "text-[10px] uppercase font-semibold tracking-wider px-2 py-0.5 rounded-full border whitespace-nowrap shrink-0",
               weekStatus === "published" ? "border-green-500/40 text-green-500 bg-green-500/10" :
               weekStatus === "draft" ? "border-yellow-500/40 text-yellow-500 bg-yellow-500/10" :
               weekStatus === "mixed" ? "border-primary/40 text-primary bg-primary/10" :
