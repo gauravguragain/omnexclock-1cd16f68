@@ -14,12 +14,15 @@ import { logAudit } from "@/lib/auditLog";
 import { notifyEmployees } from "@/lib/notifications";
 import { useAuth } from "@/contexts/AuthContext";
 import {
-  ChevronLeft, ChevronRight, Plus, Trash2, Copy, Send, Clock, AlertCircle, CalendarOff, Clipboard, ClipboardPaste, X, Mail, Download, FileDown,
+  ChevronLeft, ChevronRight, Plus, Trash2, Copy, Send, Clock, AlertCircle, CalendarOff, Clipboard, ClipboardPaste, X, Mail, Download, FileDown, CalendarIcon,
 } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import { cn } from "@/lib/utils";
 import type { Tables } from "@/integrations/supabase/types";
 import { toAusDate, toAusFormatted } from "@/lib/dateUtils";
 import RosterDayEvents from "@/components/RosterDayEvents";
@@ -789,21 +792,45 @@ export default function RosterPage() {
             <Button variant="outline" size="icon" className="h-9 w-9 rounded-lg border-border/60 hover:border-primary/40" onClick={() => setWeekStart(addDays(weekStart, -7))}>
               <ChevronLeft className="h-4 w-4" />
             </Button>
-            <div className="text-center min-w-[180px] sm:min-w-[210px] px-2">
-              <p className="text-sm font-semibold text-foreground tracking-tight">{weekLabel}</p>
-              <div className="flex items-center justify-center gap-1.5 mt-1">
-                <span className={`inline-block h-2 w-2 rounded-full ring-2 ring-background ${
-                  weekStatus === "published" ? "bg-success" :
-                  weekStatus === "draft" ? "bg-warning" :
-                  weekStatus === "mixed" ? "bg-primary" : "bg-muted-foreground"
-                }`} />
-                <span className="text-[11px] text-muted-foreground capitalize font-medium">{weekStatus === "empty" ? "No shifts" : weekStatus}</span>
-              </div>
-            </div>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="outline" className="min-w-[180px] sm:min-w-[210px] justify-center gap-2 rounded-lg border-border/60 hover:border-primary/40 h-9 px-3">
+                  <CalendarIcon className="h-3.5 w-3.5 text-muted-foreground" />
+                  <div className="text-center">
+                    <p className="text-sm font-semibold text-foreground tracking-tight leading-tight">{weekLabel}</p>
+                  </div>
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="center">
+                <Calendar
+                  mode="single"
+                  selected={weekStart}
+                  onSelect={(date) => {
+                    if (date) setWeekStart(getMonday(date));
+                  }}
+                  modifiers={{
+                    selectedWeek: { from: weekStart, to: addDays(weekStart, 6) },
+                  }}
+                  modifiersClassNames={{
+                    selectedWeek: "bg-primary/15 text-primary rounded-none",
+                  }}
+                  className={cn("p-3 pointer-events-auto")}
+                  weekStartsOn={1}
+                />
+              </PopoverContent>
+            </Popover>
             <Button variant="outline" size="icon" className="h-9 w-9 rounded-lg border-border/60 hover:border-primary/40" onClick={() => setWeekStart(addDays(weekStart, 7))}>
               <ChevronRight className="h-4 w-4" />
             </Button>
-            <Button variant="ghost" size="sm" onClick={() => setWeekStart(getMonday(new Date()))} className="text-xs text-muted-foreground hover:text-primary ml-1">
+            <div className="flex items-center gap-1.5">
+              <span className={`inline-block h-2 w-2 rounded-full ring-2 ring-background ${
+                weekStatus === "published" ? "bg-success" :
+                weekStatus === "draft" ? "bg-warning" :
+                weekStatus === "mixed" ? "bg-primary" : "bg-muted-foreground"
+              }`} />
+              <span className="text-[11px] text-muted-foreground capitalize font-medium">{weekStatus === "empty" ? "No shifts" : weekStatus}</span>
+            </div>
+            <Button variant="ghost" size="sm" onClick={() => setWeekStart(getMonday(new Date()))} className="text-xs text-muted-foreground hover:text-primary">
               Today
             </Button>
           </div>
