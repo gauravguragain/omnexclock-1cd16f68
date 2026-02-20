@@ -3,6 +3,7 @@ import { Mic, MicOff, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
@@ -258,17 +259,48 @@ export default function RosterVoiceCommand({
                 <div
                   key={idx}
                   className={`rounded-lg border p-3 space-y-1 ${
-                    action.match_error ? "border-destructive/50 bg-destructive/5" : "border-border"
+                    action.match_error && !action.employee_id ? "border-destructive/50 bg-destructive/5" : "border-border"
                   }`}
                 >
                   <div className="flex items-center gap-2">
-                    <span className="font-semibold">
-                      {emp?.name || action.employee_name}
-                    </span>
-                    {action.match_error && (
-                      <Badge variant="destructive" className="text-xs">
-                        Not found
-                      </Badge>
+                    {action.match_error && !action.employee_id ? (
+                      <div className="w-full space-y-1">
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm text-muted-foreground">
+                            Heard: "<span className="font-medium text-foreground">{action.employee_name}</span>"
+                          </span>
+                          <Badge variant="destructive" className="text-xs">Not found</Badge>
+                        </div>
+                        <Select
+                          onValueChange={(val) => {
+                            const selectedEmp = employees.find((e) => e.id === val);
+                            if (selectedEmp) {
+                              setParsedActions((prev) =>
+                                prev.map((a, i) =>
+                                  i === idx
+                                    ? { ...a, employee_id: selectedEmp.id, employee_name: selectedEmp.name, match_error: undefined }
+                                    : a
+                                )
+                              );
+                            }
+                          }}
+                        >
+                          <SelectTrigger className="h-8 text-sm">
+                            <SelectValue placeholder="Select employee..." />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {employees.map((e) => (
+                              <SelectItem key={e.id} value={e.id}>
+                                {e.name}{e.department ? ` (${e.department})` : ""}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    ) : (
+                      <span className="font-semibold">
+                        {emp?.name || action.employee_name}
+                      </span>
                     )}
                   </div>
                   <div className="text-sm text-muted-foreground">
