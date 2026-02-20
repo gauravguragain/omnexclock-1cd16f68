@@ -4,7 +4,6 @@ import "./index.css";
 
 // Force clear all caches and hard reload
 async function forceRefresh() {
-  // Clear all Cache Storage entries
   if ("caches" in window) {
     const cacheNames = await caches.keys();
     await Promise.all(cacheNames.map((name) => caches.delete(name)));
@@ -12,13 +11,25 @@ async function forceRefresh() {
   window.location.reload();
 }
 
-// Aggressive PWA update: poll for new SW + force reload with cache bust
+// On load: unregister any existing SW, clear caches, then re-register fresh
 if ("serviceWorker" in navigator) {
+  // Immediately check for updates and skip waiting
+  navigator.serviceWorker.getRegistrations().then(async (registrations) => {
+    for (const reg of registrations) {
+      // Force update check
+      await reg.update().catch(() => {});
+      // If there's a waiting worker, skip waiting immediately
+      if (reg.waiting) {
+        reg.waiting.postMessage({ type: "SKIP_WAITING" });
+      }
+    }
+  });
+
   navigator.serviceWorker.ready.then((registration) => {
-    // Poll for updates every 15 seconds
+    // Poll for updates every 10 seconds
     setInterval(() => {
       registration.update().catch(() => {});
-    }, 15 * 1000);
+    }, 10 * 1000);
 
     // Check immediately on load
     registration.update().catch(() => {});
@@ -27,6 +38,10 @@ if ("serviceWorker" in navigator) {
       const newWorker = registration.installing;
       if (newWorker) {
         newWorker.addEventListener("statechange", () => {
+          if (newWorker.state === "installed" && navigator.serviceWorker.controller) {
+            // New content available — skip waiting and force refresh
+            newWorker.postMessage({ type: "SKIP_WAITING" });
+          }
           if (newWorker.state === "activated") {
             forceRefresh();
           }
@@ -35,7 +50,7 @@ if ("serviceWorker" in navigator) {
     });
   });
 
-  // Also listen for controller change (covers skipWaiting path)
+  // Listen for controller change (covers skipWaiting path)
   let refreshing = false;
   navigator.serviceWorker.addEventListener("controllerchange", () => {
     if (!refreshing) {
@@ -46,15 +61,15 @@ if ("serviceWorker" in navigator) {
 
   // Check on every visibility change (user returns to tab/app)
   document.addEventListener("visibilitychange", () => {
-    if (document.visibilityState === "visible" && navigator.serviceWorker.controller) {
-      navigator.serviceWorker.ready.then((reg) => reg.update().catch(() => {}));
-    }
-  });
-
-  // On first load, check immediately for waiting worker and skip
-  navigator.serviceWorker.ready.then((registration) => {
-    if (registration.waiting) {
-      registration.waiting.postMessage({ type: "SKIP_WAITING" });
+    if (document.visibilityState === "visible") {
+      navigator.serviceWorker.getRegistrations().then((registrations) => {
+        for (const reg of registrations) {
+          reg.update().catch(() => {});
+          if (reg.waiting) {
+            reg.waiting.postMessage({ type: "SKIP_WAITING" });
+          }
+        }
+      });
     }
   });
 }
