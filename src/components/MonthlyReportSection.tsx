@@ -11,6 +11,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useBusiness } from "@/contexts/BusinessContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toAusDate, ausStartOfDay, ausEndOfDay } from "@/lib/dateUtils";
+import { computeTimesheetEntries, filterApprovedEntries } from "@/lib/timesheetUtils";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { format, startOfMonth, endOfMonth, endOfWeek, parseISO, eachWeekOfInterval } from "date-fns";
@@ -185,54 +186,28 @@ export default function MonthlyReportSection() {
         const allEmps = results.employees || [];
         const empMap = new Map((allEmps as any[]).map((e: any) => [e.id, e]));
         
-        const eventsByEmp = new Map<string, any[]>();
-        for (const ev of clockEvents) {
-          const dayStr = toAusDate(new Date(ev.timestamp));
-          if (!approvedSet.has(`${ev.employee_id}-${dayStr}`)) continue;
-          if (!eventsByEmp.has(ev.employee_id)) eventsByEmp.set(ev.employee_id, []);
-          eventsByEmp.get(ev.employee_id)!.push(ev);
+        // Use shared timesheet computation
+        const allTimesheetEntries = computeTimesheetEntries(clockEvents);
+        const approvedEntries = filterApprovedEntries(allTimesheetEntries, approvedSet);
+        
+        // Aggregate per employee
+        const empAgg = new Map<string, { totalHours: number; breakHours: number; netHours: number }>();
+        for (const entry of approvedEntries) {
+          if (!empMap.has(entry.employee_id)) continue;
+          if (!empAgg.has(entry.employee_id)) {
+            empAgg.set(entry.employee_id, { totalHours: 0, breakHours: 0, netHours: 0 });
+          }
+          const agg = empAgg.get(entry.employee_id)!;
+          agg.totalHours += entry.total_hours;
+          agg.breakHours += entry.break_minutes / 60;
+          agg.netHours += entry.net_hours;
         }
         
         const computedPayroll: any[] = [];
-        for (const [empId, empEvents] of eventsByEmp) {
+        for (const [empId, agg] of empAgg) {
           const emp = empMap.get(empId);
           if (!emp) continue;
-          
-          const days = new Map<string, any[]>();
-          for (const ev of empEvents) {
-            const day = toAusDate(new Date(ev.timestamp));
-            if (!days.has(day)) days.set(day, []);
-            days.get(day)!.push(ev);
-          }
-          
-          let totalHours = 0;
-          let breakHours = 0;
-          
-          for (const dayEvents of days.values()) {
-            let clockIn: Date | null = null;
-            let clockOut: Date | null = null;
-            let breakStart: Date | null = null;
-            let dayBreak = 0;
-            
-            for (const ev of dayEvents) {
-              const t = new Date(ev.timestamp);
-              switch (ev.event_type) {
-                case "clock_in": if (!clockIn || t < clockIn) clockIn = t; break;
-                case "clock_out": if (!clockOut || t > clockOut) clockOut = t; break;
-                case "break_start": breakStart = t; break;
-                case "break_end":
-                  if (breakStart) { dayBreak += (t.getTime() - breakStart.getTime()) / 3600000; breakStart = null; }
-                  break;
-              }
-            }
-            
-            if (clockIn && clockOut) {
-              totalHours += (clockOut.getTime() - clockIn.getTime()) / 3600000;
-            }
-            breakHours += dayBreak;
-          }
-          
-          const netHours = Math.max(0, totalHours - breakHours);
+          const netHours = Math.round(agg.netHours * 100) / 100;
           const employeePay = Math.round(netHours * emp.pay_rate * 100) / 100;
           const adminPayInclGst = Math.round(netHours * emp.admin_hourly_rate * 100) / 100;
           const adminPay = Math.round(adminPayInclGst / 1.10 * 100) / 100;
@@ -243,9 +218,9 @@ export default function MonthlyReportSection() {
             department: emp.department || "Unassigned",
             pay_rate: emp.pay_rate,
             admin_hourly_rate: emp.admin_hourly_rate,
-            net_hours: Math.round(netHours * 100) / 100,
-            total_hours: Math.round(totalHours * 100) / 100,
-            break_hours: Math.round(breakHours * 100) / 100,
+            net_hours: netHours,
+            total_hours: Math.round(agg.totalHours * 100) / 100,
+            break_hours: Math.round(agg.breakHours * 100) / 100,
             employee_pay: employeePay,
             admin_pay: adminPay,
             admin_pay_incl_gst: adminPayInclGst,

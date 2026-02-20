@@ -1,7 +1,8 @@
 import { useEffect, useState, useMemo } from "react";
 import { useBusiness } from "@/contexts/BusinessContext";
 import { useAuth } from "@/contexts/AuthContext";
-import { ausNow, toAusDate, ausStartOfDay, ausEndOfDay, ausPreviousDay } from "@/lib/dateUtils";
+import { ausNow, ausStartOfDay, ausEndOfDay } from "@/lib/dateUtils";
+import { computeTimesheetEntries, filterApprovedEntries } from "@/lib/timesheetUtils";
 import { format, startOfWeek, endOfWeek, addWeeks, subWeeks } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -138,51 +139,43 @@ export default function PayrollPage() {
 
   useEffect(() => { setPage(0); }, [search]);
 
-  const fetchAllEvents = async (fromDate: Date, toDate: Date) => {
-    const fromISO = ausStartOfDay(format(fromDate, "yyyy-MM-dd"));
-    const toISO = ausEndOfDay(format(toDate, "yyyy-MM-dd"));
-    const allEvents: any[] = [];
-    let lastTimestamp: string | null = null;
-    let hasMore = true;
-
-    while (hasMore) {
-      let query = supabase
-        .from("clock_events")
-        .select("*")
-        .gte("timestamp", fromISO)
-        .lte("timestamp", toISO)
-        .order("timestamp")
-        .limit(1000);
-
-      if (lastTimestamp) {
-        query = query.gt("timestamp", lastTimestamp);
-      }
-
-      const { data } = await query;
-      if (!data || data.length === 0) {
-        hasMore = false;
-      } else {
-        allEvents.push(...data);
-        lastTimestamp = data[data.length - 1].timestamp;
-        hasMore = data.length === 1000;
-      }
-    }
-    return allEvents;
-  };
-
   const fetchPayroll = async () => {
     setLoading(true);
     const from = format(dateFrom, "yyyy-MM-dd");
     const to = format(dateTo, "yyyy-MM-dd");
+    const fromISO = ausStartOfDay(from);
+    const toISO = ausEndOfDay(to);
+
+    // Fetch all clock events (paginated), employees, and approved timesheets
+    const fetchAllEvents = async () => {
+      const allEvents: any[] = [];
+      let lastTimestamp: string | null = null;
+      let hasMore = true;
+      while (hasMore) {
+        let query = supabase
+          .from("clock_events")
+          .select("*")
+          .gte("timestamp", fromISO)
+          .lte("timestamp", toISO)
+          .order("timestamp")
+          .limit(1000);
+        if (lastTimestamp) query = query.gt("timestamp", lastTimestamp);
+        const { data } = await query;
+        if (!data || data.length === 0) { hasMore = false; }
+        else { allEvents.push(...data); lastTimestamp = data[data.length - 1].timestamp; hasMore = data.length === 1000; }
+      }
+      return allEvents;
+    };
 
     const [{ data: employees }, events, { data: approvalData }] = await Promise.all([
       supabase.from("employees").select("*").eq("active", true).eq("business_id", business!.id),
-      fetchAllEvents(dateFrom, dateTo),
+      fetchAllEvents(),
       supabase.from("timesheet_approvals").select("employee_id, date, approved").gte("date", from).lte("date", to).eq("approved", true),
     ]);
 
     if (!employees) { setLoading(false); return; }
 
+    // Build approved set
     const approvedSet = new Set<string>();
     if (approvalData) {
       for (const a of approvalData) {
@@ -190,75 +183,31 @@ export default function PayrollPage() {
       }
     }
 
+    // Use shared timesheet computation (same as Timesheets page)
+    const allTimesheetEntries = computeTimesheetEntries(events);
+    const approvedEntries = filterApprovedEntries(allTimesheetEntries, approvedSet);
+
+    // Aggregate per employee
     const empMap = new Map(employees.map((e) => [e.id, e]));
-    const eventsByEmp = new Map<string, typeof events>();
+    const empAgg = new Map<string, { totalHours: number; breakHours: number; netHours: number }>();
 
-    // Group events by employee first, sorted chronologically
-    const empAllEvents = new Map<string, any[]>();
-    for (const ev of events) {
-      if (!empAllEvents.has(ev.employee_id)) empAllEvents.set(ev.employee_id, []);
-      empAllEvents.get(ev.employee_id)!.push(ev);
-    }
-
-    // Assign each event to the clock_in date (handles overnight shifts)
-    for (const [empId, evs] of empAllEvents) {
-      evs.sort((a: any, b: any) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
-      let currentShiftDate: string | null = null;
-      for (const ev of evs) {
-        if (ev.event_type === "clock_in") {
-          currentShiftDate = toAusDate(new Date(ev.timestamp));
-        }
-        // If no preceding clock_in, this is an orphan event from a previous day's overnight shift
-        const shiftDate = currentShiftDate || ausPreviousDay(new Date(ev.timestamp));
-        const key = `${empId}-${shiftDate}`;
-        if (!approvedSet.has(key)) continue;
-
-        if (!eventsByEmp.has(empId)) eventsByEmp.set(empId, []);
-        eventsByEmp.get(empId)!.push({ ...ev, _shiftDate: shiftDate });
+    for (const entry of approvedEntries) {
+      if (!empMap.has(entry.employee_id)) continue;
+      if (!empAgg.has(entry.employee_id)) {
+        empAgg.set(entry.employee_id, { totalHours: 0, breakHours: 0, netHours: 0 });
       }
+      const agg = empAgg.get(entry.employee_id)!;
+      agg.totalHours += entry.total_hours;
+      agg.breakHours += entry.break_minutes / 60;
+      agg.netHours += entry.net_hours;
     }
 
     const result: PayrollEntry[] = [];
-
-    for (const [empId, empEvents] of eventsByEmp) {
-      const emp = empMap.get(empId);
-      if (!emp) continue;
-
-      const days = new Map<string, any[]>();
-      for (const ev of empEvents) {
-        const day = ev._shiftDate;
-        if (!days.has(day)) days.set(day, []);
-        days.get(day)!.push(ev);
-      }
-
-      let totalHours = 0;
-      let breakHours = 0;
-
-      for (const dayEvents of days.values()) {
-        let clockIn: Date | null = null;
-        let clockOut: Date | null = null;
-        let breakStart: Date | null = null;
-        let dayBreak = 0;
-
-        for (const ev of dayEvents) {
-          const t = new Date(ev.timestamp);
-          switch (ev.event_type) {
-            case "clock_in": if (!clockIn || t < clockIn) clockIn = t; break;
-            case "clock_out": if (!clockOut || t > clockOut) clockOut = t; break;
-            case "break_start": breakStart = t; break;
-            case "break_end":
-              if (breakStart) { dayBreak += (t.getTime() - breakStart.getTime()) / 3600000; breakStart = null; }
-              break;
-          }
-        }
-
-        if (clockIn && clockOut) {
-          totalHours += (clockOut.getTime() - clockIn.getTime()) / 3600000;
-        }
-        breakHours += dayBreak;
-      }
-
-      const netHours = Math.max(0, totalHours - breakHours);
+    for (const [empId, agg] of empAgg) {
+      const emp = empMap.get(empId)!;
+      const netHours = Math.round(agg.netHours * 100) / 100;
+      const totalHours = Math.round(agg.totalHours * 100) / 100;
+      const breakHours = Math.round(agg.breakHours * 100) / 100;
       const employeePay = Math.round(netHours * emp.pay_rate * 100) / 100;
       const adminPayInclGst = Math.round(netHours * emp.admin_hourly_rate * 100) / 100;
       const adminPay = Math.round(adminPayInclGst / 1.10 * 100) / 100;
@@ -269,9 +218,9 @@ export default function PayrollPage() {
         department: emp.department,
         pay_rate: emp.pay_rate,
         admin_hourly_rate: emp.admin_hourly_rate,
-        total_hours: Math.round(totalHours * 100) / 100,
-        break_hours: Math.round(breakHours * 100) / 100,
-        net_hours: Math.round(netHours * 100) / 100,
+        total_hours: totalHours,
+        break_hours: breakHours,
+        net_hours: netHours,
         employee_pay: employeePay,
         admin_pay: adminPay,
         admin_pay_incl_gst: adminPayInclGst,
