@@ -107,11 +107,13 @@
     /* Prevent overscroll bounce on iOS */
     overscroll-behavior: none;
     background: hsl(var(--background));
+    /* Smoother text rendering */
+    text-rendering: optimizeLegibility;
   }
 
   body {
     @apply bg-background text-foreground antialiased;
-    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', 'Inter', system-ui, sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     /* Prevent pull-to-refresh and overscroll */
@@ -120,6 +122,8 @@
     min-height: 100dvh;
     /* Prevent text selection on interactive elements */
     -webkit-tap-highlight-color: transparent;
+    /* Smoother scrolling */
+    scroll-behavior: smooth;
   }
 
   /* Touch-optimized: disable 300ms tap delay */
@@ -271,17 +275,18 @@
 
   /* Smooth page fade-in */
   .page-enter {
-    animation: pageEnter 0.4s ease-out;
+    animation: pageEnter 0.35s cubic-bezier(0.25, 0.46, 0.45, 0.94);
   }
   @keyframes pageEnter {
-    from { opacity: 0; transform: translateY(8px); }
+    from { opacity: 0; transform: translateY(6px); }
     to { opacity: 1; transform: translateY(0); }
   }
 
-  /* Glass morphism */
+  /* Glass morphism — enhanced native feel */
   .glass {
-    backdrop-filter: blur(16px) saturate(180%);
-    background: hsl(var(--card) / 0.7);
+    backdrop-filter: blur(24px) saturate(200%);
+    -webkit-backdrop-filter: blur(24px) saturate(200%);
+    background: hsl(var(--card) / 0.75);
   }
 
   /* Gradient text accent */
@@ -315,22 +320,24 @@
     transform: scaleY(1);
   }
 
-  /* Stat card with number counter feel */
+  /* Stat card with native press feel */
   .stat-card {
-    transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.25s ease, border-color 0.3s ease;
+    transition: transform 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94), box-shadow 0.25s ease, border-color 0.3s ease;
+    will-change: transform;
   }
   .stat-card:hover {
-    transform: translateY(-3px) scale(1.01);
-    box-shadow: 0 8px 30px hsl(0 0% 0% / 0.3), 0 0 0 1px hsl(var(--primary) / 0.08);
+    transform: translateY(-2px) scale(1.005);
+    box-shadow: 0 6px 20px hsl(0 0% 0% / 0.25), 0 0 0 1px hsl(var(--primary) / 0.08);
     border-color: hsl(var(--primary) / 0.2);
   }
 
-  /* Button press effect */
+  /* Button press effect — iOS native spring */
   .btn-press {
-    transition: transform 0.1s ease, box-shadow 0.15s ease;
+    transition: transform 0.15s cubic-bezier(0.25, 0.46, 0.45, 0.94), box-shadow 0.15s ease;
+    will-change: transform;
   }
   .btn-press:active {
-    transform: scale(0.97);
+    transform: scale(0.96);
   }
 
   /* Smooth badge pulse */
@@ -440,11 +447,12 @@
 /* Touch-active feedback (replaces hover on touch devices) */
 @media (hover: none) {
   .touch-active {
-    transition: transform 0.1s ease, opacity 0.1s ease;
+    transition: transform 0.12s cubic-bezier(0.25, 0.46, 0.45, 0.94), opacity 0.12s ease;
+    will-change: transform;
   }
   .touch-active:active {
-    transform: scale(0.96);
-    opacity: 0.85;
+    transform: scale(0.95);
+    opacity: 0.8;
   }
 
   /* Disable hover effects on touch */
@@ -455,12 +463,14 @@
     box-shadow: none;
   }
 
-  /* Active states instead */
+  /* Active states instead — native spring feel */
   .stat-card:active {
-    transform: scale(0.98);
+    transform: scale(0.97);
+    transition: transform 0.1s cubic-bezier(0.25, 0.46, 0.45, 0.94);
   }
   .card-lift:active {
-    transform: scale(0.98);
+    transform: scale(0.97);
+    transition: transform 0.1s cubic-bezier(0.25, 0.46, 0.45, 0.94);
   }
 
   /* Table row: use active instead of hover */
@@ -472,17 +482,17 @@
   }
 }
 
-/* Bottom nav bar styling */
+/* Bottom nav bar styling — native iOS/Android tab bar */
 .bottom-nav {
   position: fixed;
   bottom: 0;
   left: 0;
   right: 0;
   z-index: 50;
-  background: hsl(var(--card) / 0.95);
-  backdrop-filter: blur(20px) saturate(180%);
-  -webkit-backdrop-filter: blur(20px) saturate(180%);
-  border-top: 1px solid hsl(var(--border) / 0.5);
+  background: hsl(var(--card) / 0.92);
+  backdrop-filter: blur(28px) saturate(200%);
+  -webkit-backdrop-filter: blur(28px) saturate(200%);
+  border-top: 0.5px solid hsl(var(--border) / 0.4);
   padding-bottom: env(safe-area-inset-bottom, 0px);
 }
 
@@ -504,7 +514,8 @@
   position: relative;
 }
 .bottom-nav-item:active {
-  transform: scale(0.9);
+  transform: scale(0.85);
+  transition: transform 0.1s cubic-bezier(0.25, 0.46, 0.45, 0.94);
 }
 .bottom-nav-item.active {
   color: hsl(var(--primary));

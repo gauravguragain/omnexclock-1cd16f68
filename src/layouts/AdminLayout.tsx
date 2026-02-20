@@ -284,7 +284,7 @@ export default function AdminLayout() {
       {/* Main */}
       <main className="flex-1 lg:ml-64 min-w-0 flex flex-col h-dvh lg:h-auto">
         {/* Header — fixed at top on mobile, sticky on desktop */}
-        <header className="sticky top-0 z-30 glass border-b border-border/40 px-3 py-2.5 flex items-center gap-2 lg:px-6 lg:py-3 flex-shrink-0">
+        <header className="sticky top-0 z-30 glass border-b border-border/30 px-3 py-2.5 flex items-center gap-2 lg:px-6 lg:py-3 flex-shrink-0">
           <div className="flex items-center gap-2 min-w-0 flex-1">
             {/* Mobile: show logo + page title compact */}
             {business?.logo_url && (
@@ -308,7 +308,7 @@ export default function AdminLayout() {
           </div>
         </header>
         {/* Content — scrollable below fixed header */}
-        <div className="flex-1 overflow-y-auto p-3 lg:p-6 page-enter has-bottom-nav lg:pb-6">
+        <div className="flex-1 overflow-y-auto overscroll-y-contain p-3 lg:p-6 page-enter has-bottom-nav lg:pb-6 scroll-native">
           <Outlet />
         </div>
       </main>
