@@ -2,7 +2,17 @@ import { createRoot } from "react-dom/client";
 import App from "./App.tsx";
 import "./index.css";
 
-// Aggressive PWA update: poll for new SW every 30 seconds + reload instantly
+// Force clear all caches and hard reload
+async function forceRefresh() {
+  // Clear all Cache Storage entries
+  if ("caches" in window) {
+    const cacheNames = await caches.keys();
+    await Promise.all(cacheNames.map((name) => caches.delete(name)));
+  }
+  window.location.reload();
+}
+
+// Aggressive PWA update: poll for new SW + force reload with cache bust
 if ("serviceWorker" in navigator) {
   navigator.serviceWorker.ready.then((registration) => {
     // Poll for updates every 30 seconds
@@ -15,7 +25,7 @@ if ("serviceWorker" in navigator) {
       if (newWorker) {
         newWorker.addEventListener("statechange", () => {
           if (newWorker.state === "activated") {
-            window.location.reload();
+            forceRefresh();
           }
         });
       }
@@ -27,7 +37,7 @@ if ("serviceWorker" in navigator) {
   navigator.serviceWorker.addEventListener("controllerchange", () => {
     if (!refreshing) {
       refreshing = true;
-      window.location.reload();
+      forceRefresh();
     }
   });
 
@@ -35,6 +45,13 @@ if ("serviceWorker" in navigator) {
   document.addEventListener("visibilitychange", () => {
     if (document.visibilityState === "visible" && navigator.serviceWorker.controller) {
       navigator.serviceWorker.ready.then((reg) => reg.update().catch(() => {}));
+    }
+  });
+
+  // On first load, check immediately for waiting worker and skip
+  navigator.serviceWorker.ready.then((registration) => {
+    if (registration.waiting) {
+      registration.waiting.postMessage({ type: "SKIP_WAITING" });
     }
   });
 }
