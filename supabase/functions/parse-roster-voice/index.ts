@@ -28,7 +28,8 @@ Current week dates:
 ${dateList}
 
 Parse the command into one or more shift actions. Each action should have:
-- employee_id: the UUID of the employee (match by name, case-insensitive, partial match OK)
+- employee_id: the UUID of the employee (match by name — FIRST NAME ONLY is enough for a match. Case-insensitive. If someone says "Gaurav", match the employee whose first name is "Gaurav" regardless of last name.)
+- employee_name: the full name of the matched employee from the list above (NOT the spoken name)
 - date: YYYY-MM-DD format
 - day_of_week: full day name (e.g. "Friday")
 - start_time: HH:MM in 24h format
@@ -36,10 +37,16 @@ Parse the command into one or more shift actions. Each action should have:
 - break_minutes: default 30 unless specified
 - notes: any extra notes mentioned
 
+IMPORTANT matching rules:
+- Match on FIRST NAME alone. "roster gaurav" should match an employee named "Gaurav Sharma" or "Gaurav Singh" etc.
+- If multiple employees share the same first name, pick the best match but still return it (don't error).
+- Partial/phonetic matches are OK — "steve" matches "Steven", "mike" matches "Michael", "rob" matches "Robert".
+- Only set match_error if absolutely no employee could plausibly match the spoken name.
+
 Time parsing rules:
 - "5:30pm" = "17:30", "12am" = "00:00", "12pm" = "12:00", "midnight" = "00:00"
 - If someone says "5:30 to 12" and context suggests PM to midnight, use "17:30" to "00:00"
-- "morning" = 09:00-17:00, "evening" = 17:00-00:00, "night" = 18:00-02:00
+- "9 to 5" = "09:00" to "17:00", "morning" = 09:00-17:00, "evening" = 17:00-00:00, "night" = 18:00-02:00
 
 If you cannot match an employee name, set employee_id to null and include the spoken name in a "match_error" field.
 If the command is not a roster action, return an empty actions array with an "error" field explaining why.`;
