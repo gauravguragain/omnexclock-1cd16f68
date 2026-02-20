@@ -45,10 +45,10 @@ export default function KioskPage() {
     if (!urlBusinessCode) return;
     const loadBusiness = async () => {
       const { data } = await supabase
-        .from("businesses")
+        .from("businesses_public" as any)
         .select("name, logo_url, theme, status")
         .eq("business_code", urlBusinessCode.toUpperCase())
-        .maybeSingle();
+        .maybeSingle() as { data: { name: string; logo_url: string | null; theme: any; status: string } | null };
       if (data) {
         // Block suspended/deactivated businesses from kiosk
         if (data.status === "suspended" || data.status === "deactivated") {

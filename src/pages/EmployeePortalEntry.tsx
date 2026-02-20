@@ -23,11 +23,11 @@ export default function EmployeePortalEntry() {
     const saved = localStorage.getItem(STORAGE_KEY);
     if (saved) {
       setHasSaved(true);
-      supabase
-        .from("businesses")
+      (supabase
+        .from("businesses_public" as any)
         .select("business_code")
         .eq("business_code", saved)
-        .maybeSingle()
+        .maybeSingle() as unknown as Promise<{ data: { business_code: string } | null }>)
         .then(({ data }) => {
           if (data) {
             navigate(`/b/${data.business_code}/portal`, { replace: true });
@@ -58,10 +58,10 @@ export default function EmployeePortalEntry() {
 
     setLoading(true);
     const { data } = await supabase
-      .from("businesses")
+      .from("businesses_public" as any)
       .select("business_code")
       .eq("business_code", code)
-      .maybeSingle();
+      .maybeSingle() as { data: { business_code: string } | null };
 
     if (!data) {
       toast({ title: "Business Not Found", description: "No business found with that code.", variant: "destructive" });
