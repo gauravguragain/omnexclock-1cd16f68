@@ -129,9 +129,16 @@ function EventCard({ ev }: { ev: any }) {
     // If it's a file path (not a full URL), construct the public URL
     if (!urlOrPath.startsWith("http")) {
       const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-      url = `${supabaseUrl}/storage/v1/object/public/event-runsheets/${urlOrPath}`;
+      url = `${supabaseUrl}/storage/v1/object/public/event-runsheets/${encodeURIComponent(urlOrPath).replace(/%2F/g, "/")}`;
     }
-    window.open(url, "_blank", "noopener,noreferrer");
+    // Use link click instead of window.open to avoid popup blockers on laptops/desktops
+    const a = document.createElement("a");
+    a.href = url;
+    a.target = "_blank";
+    a.rel = "noopener noreferrer";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
   };
 
   const detailRow = (label: string, value: string | null | undefined) => {
