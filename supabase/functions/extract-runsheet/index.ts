@@ -59,7 +59,7 @@ Rules:
 - live_stall_details: Details if live_stall is true, otherwise null.
 - host_name: The name of the host/client.
 - host_contact_number: The contact phone number of the host/client.
-- bev_package: The beverage package (e.g. "Gold Package", "Silver", "BYO", etc.).
+- bev_package: The beverage package or all beverage-related information. Look for headings like "Beverage Package", "Drinks", "Bar", "Beverages" etc. If no explicit heading exists, scan the entire document for ANY mentions of drinks, alcohol, wine, beer, spirits, cocktails, soft drinks, juice, water, coffee, tea, BYO, corkage, bar tab, drink packages, or similar beverage-related items. Combine all found beverage details into a single descriptive string (e.g. "Gold Package", "BYO with corkage", "House wines, tap beer, soft drinks", "5hr drinks package - Premium"). If absolutely nothing beverage-related is found, set to null.
 - banquet_tier: The banquet tier or menu tier name (e.g. "Premium", "Gold", "Silver", "Platinum", "Standard"). Just the tier name, not the full menu details.
 - notes: Any other important details or special requests.
 
