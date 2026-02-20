@@ -423,11 +423,20 @@ export default function TimesheetsPage() {
         for (const id of editingEntry.event_ids) {
           await supabase.from("clock_events").delete().eq("id", id);
         }
+        // Handle overnight shifts: if a time is earlier than clock_in, it's the next day
+        const nextDate = (() => {
+          const [y, m, d] = editForm.date.split("-").map(Number);
+          const nd = new Date(y, m - 1, d + 1);
+          return nd.toISOString().slice(0, 10);
+        })();
+        const isOvernight = (time: string) => editForm.clock_in && time < editForm.clock_in;
+        const dateFor = (time: string) => isOvernight(time) ? nextDate : editForm.date;
+
         const events: { employee_id: string; event_type: "clock_in" | "clock_out" | "break_start" | "break_end"; timestamp: string; created_at: string }[] = [];
         if (editForm.clock_in) events.push({ employee_id: editForm.employee_id, event_type: "clock_in", timestamp: buildAusTimestamp(editForm.date, editForm.clock_in), created_at: buildAusTimestamp(editForm.date, editForm.clock_in) });
-        if (editForm.break_start) events.push({ employee_id: editForm.employee_id, event_type: "break_start", timestamp: buildAusTimestamp(editForm.date, editForm.break_start), created_at: buildAusTimestamp(editForm.date, editForm.break_start) });
-        if (editForm.break_end) events.push({ employee_id: editForm.employee_id, event_type: "break_end", timestamp: buildAusTimestamp(editForm.date, editForm.break_end), created_at: buildAusTimestamp(editForm.date, editForm.break_end) });
-        if (editForm.clock_out) events.push({ employee_id: editForm.employee_id, event_type: "clock_out", timestamp: buildAusTimestamp(editForm.date, editForm.clock_out), created_at: buildAusTimestamp(editForm.date, editForm.clock_out) });
+        if (editForm.break_start) events.push({ employee_id: editForm.employee_id, event_type: "break_start", timestamp: buildAusTimestamp(dateFor(editForm.break_start), editForm.break_start), created_at: buildAusTimestamp(dateFor(editForm.break_start), editForm.break_start) });
+        if (editForm.break_end) events.push({ employee_id: editForm.employee_id, event_type: "break_end", timestamp: buildAusTimestamp(dateFor(editForm.break_end), editForm.break_end), created_at: buildAusTimestamp(dateFor(editForm.break_end), editForm.break_end) });
+        if (editForm.clock_out) events.push({ employee_id: editForm.employee_id, event_type: "clock_out", timestamp: buildAusTimestamp(dateFor(editForm.clock_out), editForm.clock_out), created_at: buildAusTimestamp(dateFor(editForm.clock_out), editForm.clock_out) });
         if (events.length > 0) {
           const { error } = await supabase.from("clock_events").insert(events);
           if (error) { toast.error("Failed to save: " + error.message); return; }
@@ -465,11 +474,20 @@ export default function TimesheetsPage() {
     await runAction(async () => {
       setSaving(true);
       try {
+        // Handle overnight shifts: if a time is earlier than clock_in, it's the next day
+        const nextDate = (() => {
+          const [y, m, d] = editForm.date.split("-").map(Number);
+          const nd = new Date(y, m - 1, d + 1);
+          return nd.toISOString().slice(0, 10);
+        })();
+        const isOvernight = (time: string) => editForm.clock_in && time < editForm.clock_in;
+        const dateFor = (time: string) => isOvernight(time) ? nextDate : editForm.date;
+
         const events: { employee_id: string; event_type: "clock_in" | "clock_out" | "break_start" | "break_end"; timestamp: string; created_at: string }[] = [];
         if (editForm.clock_in) events.push({ employee_id: editForm.employee_id, event_type: "clock_in", timestamp: buildAusTimestamp(editForm.date, editForm.clock_in), created_at: buildAusTimestamp(editForm.date, editForm.clock_in) });
-        if (editForm.break_start) events.push({ employee_id: editForm.employee_id, event_type: "break_start", timestamp: buildAusTimestamp(editForm.date, editForm.break_start), created_at: buildAusTimestamp(editForm.date, editForm.break_start) });
-        if (editForm.break_end) events.push({ employee_id: editForm.employee_id, event_type: "break_end", timestamp: buildAusTimestamp(editForm.date, editForm.break_end), created_at: buildAusTimestamp(editForm.date, editForm.break_end) });
-        if (editForm.clock_out) events.push({ employee_id: editForm.employee_id, event_type: "clock_out", timestamp: buildAusTimestamp(editForm.date, editForm.clock_out), created_at: buildAusTimestamp(editForm.date, editForm.clock_out) });
+        if (editForm.break_start) events.push({ employee_id: editForm.employee_id, event_type: "break_start", timestamp: buildAusTimestamp(dateFor(editForm.break_start), editForm.break_start), created_at: buildAusTimestamp(dateFor(editForm.break_start), editForm.break_start) });
+        if (editForm.break_end) events.push({ employee_id: editForm.employee_id, event_type: "break_end", timestamp: buildAusTimestamp(dateFor(editForm.break_end), editForm.break_end), created_at: buildAusTimestamp(dateFor(editForm.break_end), editForm.break_end) });
+        if (editForm.clock_out) events.push({ employee_id: editForm.employee_id, event_type: "clock_out", timestamp: buildAusTimestamp(dateFor(editForm.clock_out), editForm.clock_out), created_at: buildAusTimestamp(dateFor(editForm.clock_out), editForm.clock_out) });
         if (events.length === 0) { toast.error("Enter at least one time"); return; }
         const { error } = await supabase.from("clock_events").insert(events);
         if (error) { toast.error("Failed to add: " + error.message); return; }
