@@ -495,48 +495,54 @@ export default function EmployeesPage() {
         </DialogContent>
       </Dialog>
 
-      <Card className="border-border/40 overflow-hidden">
-        <CardContent className="p-0">
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow className="border-border/30 hover:bg-transparent">
-                  <TableHead className="text-[11px] uppercase tracking-wider text-muted-foreground font-medium sticky left-0 bg-card z-20 border-r border-border/60 min-w-[160px]">Name</TableHead>
-                  <TableHead className="text-[11px] uppercase tracking-wider text-muted-foreground font-medium">Code</TableHead>
-                  <TableHead className="text-[11px] uppercase tracking-wider text-muted-foreground font-medium">Department</TableHead>
-                  <TableHead className="text-[11px] uppercase tracking-wider text-muted-foreground font-medium">Job Title</TableHead>
-                  <TableHead className="text-[11px] uppercase tracking-wider text-muted-foreground font-medium">Emp Rate</TableHead>
-                  <TableHead className="text-[11px] uppercase tracking-wider text-muted-foreground font-medium">Admin Rate</TableHead>
-                  <TableHead className="text-[11px] uppercase tracking-wider text-muted-foreground font-medium">Status</TableHead>
-                  <TableHead className="text-right text-[11px] uppercase tracking-wider text-muted-foreground font-medium">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {groupedEmployees ? (
-                  groupedEmployees.map(([groupName, groupEmps]) => (
-                    <>
-                      <TableRow key={`group-${groupName}`} className="bg-muted/40 hover:bg-muted/60">
-                        <TableCell colSpan={8} className="py-2 px-4 sticky left-0 bg-muted/40 z-20">
-                          <span className="text-xs font-semibold uppercase tracking-wider text-primary">{groupName}</span>
-                          <span className="text-xs text-muted-foreground ml-2">({groupEmps.length})</span>
-                        </TableCell>
-                      </TableRow>
-                      {groupEmps.map((emp) => renderEmployeeRow(emp))}
-                    </>
-                  ))
-                ) : (
-                  filtered.map((emp) => renderEmployeeRow(emp))
-                )}
-                {filtered.length === 0 && (
-                  <TableRow>
-                    <TableCell colSpan={8} className="text-center text-muted-foreground py-12">No employees found</TableCell>
+      {groupedEmployees ? (
+        <div className="border border-border/40 rounded-lg overflow-hidden">
+          {groupedEmployees.map(([groupName, groupEmps]) => (
+            <div key={`group-${groupName}`}>
+              <div className="px-4 py-2 bg-muted/40 border-b border-border/30">
+                <span className="text-xs font-semibold uppercase tracking-wider text-primary">{groupName}</span>
+                <span className="text-xs text-muted-foreground ml-2">({groupEmps.length})</span>
+              </div>
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableBody>
+                    {groupEmps.map((emp) => renderEmployeeRow(emp))}
+                  </TableBody>
+                </Table>
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <Card className="border-border/40 overflow-hidden">
+          <CardContent className="p-0">
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow className="border-border/30 hover:bg-transparent">
+                    <TableHead className="text-[11px] uppercase tracking-wider text-muted-foreground font-medium sticky left-0 bg-card z-20 border-r border-border/60 min-w-[160px]">Name</TableHead>
+                    <TableHead className="text-[11px] uppercase tracking-wider text-muted-foreground font-medium">Code</TableHead>
+                    <TableHead className="text-[11px] uppercase tracking-wider text-muted-foreground font-medium">Department</TableHead>
+                    <TableHead className="text-[11px] uppercase tracking-wider text-muted-foreground font-medium">Job Title</TableHead>
+                    <TableHead className="text-[11px] uppercase tracking-wider text-muted-foreground font-medium">Emp Rate</TableHead>
+                    <TableHead className="text-[11px] uppercase tracking-wider text-muted-foreground font-medium">Admin Rate</TableHead>
+                    <TableHead className="text-[11px] uppercase tracking-wider text-muted-foreground font-medium">Status</TableHead>
+                    <TableHead className="text-right text-[11px] uppercase tracking-wider text-muted-foreground font-medium">Actions</TableHead>
                   </TableRow>
-                )}
-              </TableBody>
-            </Table>
-          </div>
-        </CardContent>
-      </Card>
+                </TableHeader>
+                <TableBody>
+                  {filtered.map((emp) => renderEmployeeRow(emp))}
+                  {filtered.length === 0 && (
+                    <TableRow>
+                      <TableCell colSpan={8} className="text-center text-muted-foreground py-12">No employees found</TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Delete Confirmation Dialog - Super Admin Only */}
       <AlertDialog open={!!deleteTarget} onOpenChange={(open) => { if (!open) setDeleteTarget(null); }}>
