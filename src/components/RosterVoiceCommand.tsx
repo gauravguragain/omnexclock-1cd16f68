@@ -191,7 +191,7 @@ export default function RosterVoiceCommand({
         return;
       }
 
-      // Client-side: remap dates to the selected week & first-name fallback
+      // Client-side: validate all employee_ids exist in our list, remap dates to selected week
       const resolvedActions = (data.actions as ParsedAction[]).map((action) => {
         // Ensure the date maps to the selected week, not the current week
         const dayMatch = weekDates.find(
@@ -200,7 +200,18 @@ export default function RosterVoiceCommand({
         if (dayMatch && action.date !== dayMatch.date) {
           action = { ...action, date: dayMatch.date };
         }
-        if (action.employee_id && !action.match_error) return action;
+
+        // CRITICAL: Validate that the AI-returned employee_id actually exists in our list
+        if (action.employee_id) {
+          const validEmployee = employees.find((e) => e.id === action.employee_id);
+          if (!validEmployee) {
+            // AI hallucinated an employee_id — reset it so we can try matching below
+            action = { ...action, employee_id: null, match_error: `"${action.employee_name}" not found in employee list` };
+          } else {
+            // Valid match — ensure we use the canonical name
+            return { ...action, employee_name: validEmployee.name, match_error: undefined };
+          }
+        }
         
         // Try first-name match
         const spoken = action.employee_name.toLowerCase().trim();

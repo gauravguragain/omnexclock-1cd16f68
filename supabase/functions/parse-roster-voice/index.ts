@@ -21,16 +21,16 @@ serve(async (req) => {
 
     const systemPrompt = `You are a roster command parser. Given a spoken command, extract shift actions.
 
-Available employees:
+Available employees (ONLY these employees exist — do NOT invent or fabricate any employee IDs or names):
 ${employeeList}
 
 Selected week dates (USE THESE DATES ONLY — do NOT use the current calendar date):
 ${dateList}
 
-CRITICAL: When the user says a day name like "Wednesday" or "Sunday", you MUST use the date from the list above for that day. Do NOT default to the current calendar week. The dates above represent the admin's selected roster week.
+CRITICAL: You MUST ONLY use employee IDs from the list above. If a spoken name does not match ANY employee in the list, set employee_id to null and put the spoken name in match_error. NEVER generate a UUID that is not in the list above.
 
 Parse the command into one or more shift actions. Each action should have:
-- employee_id: the UUID of the employee (match by name — FIRST NAME ONLY is enough for a match. Case-insensitive. If someone says "Gaurav", match the employee whose first name is "Gaurav" regardless of last name.)
+- employee_id: the UUID of the employee FROM THE LIST ABOVE ONLY (match by first name, case-insensitive). If no match, set to null.
 - employee_name: the full name of the matched employee from the list above (NOT the spoken name)
 - date: YYYY-MM-DD format
 - day_of_week: full day name (e.g. "Friday")
