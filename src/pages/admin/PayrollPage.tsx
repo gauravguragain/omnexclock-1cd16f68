@@ -795,7 +795,7 @@ export default function PayrollPage() {
   );
 
   return (
-    <div className="space-y-4 overflow-x-hidden">
+    <div className="space-y-4 overflow-x-hidden pb-20 lg:pb-0">
       <div className="flex flex-col gap-2.5">
         <div className="grid grid-cols-2 sm:flex sm:flex-row gap-2 sm:items-center sm:flex-wrap">
           <Select value={selectedEmployee} onValueChange={setSelectedEmployee}>
