@@ -840,28 +840,28 @@ export default function PayrollPage() {
       </Badge>
 
       <Tabs value={activeTab} onValueChange={(v) => { setActiveTab(v as "employee" | "admin" | "margin"); setPage(0); }}>
-        <TabsList className="w-full sm:w-auto flex overflow-x-auto">
-          <TabsTrigger value="employee">Employee Payroll</TabsTrigger>
-          <TabsTrigger value="admin">Admin Payroll</TabsTrigger>
+        <TabsList className="w-full flex overflow-x-auto scrollbar-hide">
+          <TabsTrigger value="employee" className="flex-1 text-xs sm:text-sm whitespace-nowrap">Employee</TabsTrigger>
+          <TabsTrigger value="admin" className="flex-1 text-xs sm:text-sm whitespace-nowrap">Admin</TabsTrigger>
           {isSuperAdmin && (
-            <TabsTrigger value="margin" className="gap-1.5">
-              <TrendingUp className="h-3.5 w-3.5" /> Margin Analysis
+            <TabsTrigger value="margin" className="flex-1 text-xs sm:text-sm whitespace-nowrap gap-1">
+              <TrendingUp className="h-3 w-3" /> Margin
             </TabsTrigger>
           )}
         </TabsList>
 
-        <TabsContent value="employee" className="space-y-4 mt-4">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 stagger-children">
+        <TabsContent value="employee" className="space-y-3 mt-3">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3 stagger-children">
             {empSummaryCards.map(({ title, value, icon: Icon, color }) => (
               <Card key={title} className="stat-card group">
-                <CardHeader className="flex flex-row items-center justify-between pb-2">
-                  <CardTitle className="text-sm font-medium text-muted-foreground">{title}</CardTitle>
-                  <div className="h-8 w-8 rounded-lg bg-secondary/80 flex items-center justify-center group-hover:scale-110 group-hover:bg-primary/10 transition-all duration-300">
-                    <Icon className={`h-4 w-4 ${color}`} />
+                <CardHeader className="flex flex-row items-center justify-between pb-1 pt-3 px-3">
+                  <CardTitle className="text-xs font-medium text-muted-foreground leading-tight">{title}</CardTitle>
+                  <div className="h-7 w-7 rounded-lg bg-secondary/80 flex items-center justify-center shrink-0">
+                    <Icon className={`h-3.5 w-3.5 ${color}`} />
                   </div>
                 </CardHeader>
-                <CardContent>
-                  <p className="text-2xl font-bold tabular-smooth">{value}</p>
+                <CardContent className="px-3 pb-3 pt-0">
+                  <p className="text-lg sm:text-xl lg:text-2xl font-bold tabular-smooth truncate">{value}</p>
                 </CardContent>
               </Card>
             ))}
@@ -870,18 +870,18 @@ export default function PayrollPage() {
           {renderTable()}
         </TabsContent>
 
-        <TabsContent value="admin" className="space-y-4 mt-4">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 stagger-children">
+        <TabsContent value="admin" className="space-y-3 mt-3">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3 stagger-children">
             {adminSummaryCards.map(({ title, value, icon: Icon, color }) => (
               <Card key={title} className="stat-card group">
-                <CardHeader className="flex flex-row items-center justify-between pb-2">
-                  <CardTitle className="text-sm font-medium text-muted-foreground">{title}</CardTitle>
-                  <div className="h-8 w-8 rounded-lg bg-secondary/80 flex items-center justify-center group-hover:scale-110 group-hover:bg-primary/10 transition-all duration-300">
-                    <Icon className={`h-4 w-4 ${color}`} />
+                <CardHeader className="flex flex-row items-center justify-between pb-1 pt-3 px-3">
+                  <CardTitle className="text-xs font-medium text-muted-foreground leading-tight">{title}</CardTitle>
+                  <div className="h-7 w-7 rounded-lg bg-secondary/80 flex items-center justify-center shrink-0">
+                    <Icon className={`h-3.5 w-3.5 ${color}`} />
                   </div>
                 </CardHeader>
-                <CardContent>
-                  <p className="text-2xl font-bold tabular-smooth">{value}</p>
+                <CardContent className="px-3 pb-3 pt-0">
+                  <p className="text-lg sm:text-xl lg:text-2xl font-bold tabular-smooth truncate">{value}</p>
                 </CardContent>
               </Card>
             ))}
@@ -891,18 +891,18 @@ export default function PayrollPage() {
         </TabsContent>
 
         {isSuperAdmin && (
-          <TabsContent value="margin" className="space-y-4 mt-4">
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 stagger-children">
+          <TabsContent value="margin" className="space-y-3 mt-3">
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3 stagger-children">
               {marginSummaryCards.map(({ title, value, icon: Icon, color }) => (
                 <Card key={title} className="stat-card group">
-                  <CardHeader className="flex flex-row items-center justify-between pb-2">
-                    <CardTitle className="text-sm font-medium text-muted-foreground">{title}</CardTitle>
-                    <div className="h-8 w-8 rounded-lg bg-secondary/80 flex items-center justify-center group-hover:scale-110 group-hover:bg-primary/10 transition-all duration-300">
-                      <Icon className={`h-4 w-4 ${color}`} />
+                  <CardHeader className="flex flex-row items-center justify-between pb-1 pt-3 px-3">
+                    <CardTitle className="text-xs font-medium text-muted-foreground leading-tight">{title}</CardTitle>
+                    <div className="h-7 w-7 rounded-lg bg-secondary/80 flex items-center justify-center shrink-0">
+                      <Icon className={`h-3.5 w-3.5 ${color}`} />
                     </div>
                   </CardHeader>
-                  <CardContent>
-                    <p className="text-2xl font-bold tabular-smooth">{value}</p>
+                  <CardContent className="px-3 pb-3 pt-0">
+                    <p className="text-lg sm:text-xl lg:text-2xl font-bold tabular-smooth truncate">{value}</p>
                   </CardContent>
                 </Card>
               ))}
