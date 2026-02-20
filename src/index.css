@@ -411,6 +411,22 @@
   }
 }
 
+/* Force Recharts tooltip wrapper to be transparent so custom content styles apply */
+.recharts-tooltip-wrapper {
+  outline: none !important;
+}
+.recharts-default-tooltip {
+  background-color: hsl(var(--popover)) !important;
+  border-color: hsl(var(--border)) !important;
+  color: hsl(var(--popover-foreground)) !important;
+}
+.recharts-default-tooltip .recharts-tooltip-label {
+  color: hsl(var(--popover-foreground)) !important;
+}
+.recharts-default-tooltip .recharts-tooltip-item {
+  color: hsl(var(--popover-foreground)) !important;
+}
+
 .scrollbar-hide {
   -ms-overflow-style: none;
   scrollbar-width: none;
