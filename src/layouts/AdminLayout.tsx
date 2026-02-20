@@ -111,10 +111,38 @@ export default function AdminLayout() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <div className="flex flex-col items-center gap-3">
-          <Clock className="h-8 w-8 animate-spin text-primary" />
-          <p className="text-xs text-muted-foreground animate-pulse">Loading...</p>
+      <div className="min-h-dvh bg-background flex">
+        {/* Skeleton sidebar */}
+        <aside className="hidden lg:flex w-64 border-r border-border/40 flex-col p-4 gap-4">
+          <div className="flex items-center gap-3">
+            <div className="h-9 w-9 rounded-lg skeleton-shimmer" />
+            <div className="flex-1 space-y-1.5">
+              <div className="h-3.5 w-24 rounded skeleton-shimmer" />
+              <div className="h-2.5 w-16 rounded skeleton-shimmer" />
+            </div>
+          </div>
+          <div className="space-y-1 mt-2">
+            {Array.from({ length: 8 }).map((_, i) => (
+              <div key={i} className="flex items-center gap-3 px-3 py-2.5">
+                <div className="h-4 w-4 rounded skeleton-shimmer" />
+                <div className="h-3 rounded skeleton-shimmer" style={{ width: `${60 + (i % 3) * 20}px` }} />
+              </div>
+            ))}
+          </div>
+        </aside>
+        {/* Skeleton main content */}
+        <div className="flex-1 flex flex-col">
+          <div className="h-14 border-b border-border/40 flex items-center px-4 gap-3">
+            <div className="h-4 w-28 rounded skeleton-shimmer" />
+          </div>
+          <div className="p-4 lg:p-6 space-y-4">
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+              {Array.from({ length: 4 }).map((_, i) => (
+                <div key={i} className="h-24 rounded-xl skeleton-shimmer" />
+              ))}
+            </div>
+            <div className="h-64 rounded-xl skeleton-shimmer" />
+          </div>
         </div>
       </div>
     );
