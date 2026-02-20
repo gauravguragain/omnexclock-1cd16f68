@@ -253,20 +253,37 @@ export default function DashboardPage() {
     }
     setWeeklyData(weekly);
 
-    // Employee breakdown (this week)
-    const empWeekHours = new Map<string, number>();
+    // Employee breakdown (this week) - only approved timesheets
+    const { data: approvedTimesheets } = await supabase
+      .from("timesheet_approvals")
+      .select("employee_id, date")
+      .eq("approved", true);
+
+    const approvedSet = new Set(
+      (approvedTimesheets || []).map((a) => `${a.employee_id}-${a.date}`)
+    );
+
+    // Group week events by employee+date, only include approved dates
+    const weekByEmpDate = new Map<string, Map<string, any[]>>();
     for (const ev of weekEvents) {
-      if (!empWeekHours.has(ev.employee_id)) empWeekHours.set(ev.employee_id, 0);
+      const dateKey = toLocalDateKey(new Date(ev.timestamp));
+      const approvalKey = `${ev.employee_id}-${dateKey}`;
+      if (!approvedSet.has(approvalKey)) continue; // skip unapproved
+      if (!weekByEmpDate.has(ev.employee_id)) weekByEmpDate.set(ev.employee_id, new Map());
+      const empDates = weekByEmpDate.get(ev.employee_id)!;
+      if (!empDates.has(dateKey)) empDates.set(dateKey, []);
+      empDates.get(dateKey)!.push(ev);
     }
-    const weekByEmp = new Map<string, any[]>();
-    for (const ev of weekEvents) {
-      if (!weekByEmp.has(ev.employee_id)) weekByEmp.set(ev.employee_id, []);
-      weekByEmp.get(ev.employee_id)!.push(ev);
-    }
+
     const breakdown: EmployeeBreakdown[] = [];
-    for (const [empId, evs] of weekByEmp) {
-      const h = calcHoursFromEvents(evs, true);
-      breakdown.push({ name: empNameMap.get(empId) || (evs[0] as any).employees?.name || "Unknown", hours: roundHours(h) });
+    for (const [empId, dateMap] of weekByEmpDate) {
+      let totalH = 0;
+      for (const evs of dateMap.values()) {
+        totalH += calcHoursFromEvents(evs, false);
+      }
+      if (totalH > 0) {
+        breakdown.push({ name: empNameMap.get(empId) || "Unknown", hours: roundHours(totalH) });
+      }
     }
     breakdown.sort((a, b) => b.hours - a.hours);
     setEmployeeBreakdown(breakdown);
