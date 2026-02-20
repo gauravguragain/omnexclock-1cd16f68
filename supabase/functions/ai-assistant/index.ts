@@ -7,13 +7,23 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-/** Get current Australia/Sydney ISO string */
+/** Get current Australia/Sydney formatted string */
 function ausNowISO(): string {
   return new Date().toLocaleString("en-AU", {
     timeZone: "Australia/Sydney",
     year: "numeric", month: "2-digit", day: "2-digit",
     hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: true,
   });
+}
+
+/** Get Sydney date string YYYY-MM-DD */
+function ausTodayKey(): string {
+  const d = new Date();
+  const parts = new Intl.DateTimeFormat("en-CA", { timeZone: "Australia/Sydney", year: "numeric", month: "2-digit", day: "2-digit" }).formatToParts(d);
+  const y = parts.find(p => p.type === "year")!.value;
+  const m = parts.find(p => p.type === "month")!.value;
+  const dd = parts.find(p => p.type === "day")!.value;
+  return `${y}-${m}-${dd}`;
 }
 
 serve(async (req) => {
@@ -35,6 +45,8 @@ serve(async (req) => {
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
+    const todayKey = ausTodayKey();
+
     // Fetch all business data in parallel — comprehensive dataset
     const [
       businessRes,
@@ -53,23 +65,27 @@ serve(async (req) => {
       auditLogsRes,
       notificationsRes,
       forumPostsRes,
+      eventSetupConfigRes,
+      userRolesRes,
     ] = await Promise.all([
       supabase.from("businesses").select("*").eq("id", businessId).single(),
       supabase.from("employees").select("*").eq("business_id", businessId),
-      supabase.from("clock_events").select("*, employees!inner(name, department, business_id)").eq("employees.business_id", businessId).order("timestamp", { ascending: false }).limit(500),
-      supabase.from("shifts").select("*, employees!inner(name, department, business_id)").eq("employees.business_id", businessId).order("date", { ascending: false }).limit(500),
-      supabase.from("employee_requests").select("*, employees!inner(name, department, business_id)").eq("employees.business_id", businessId).order("created_at", { ascending: false }).limit(200),
+      supabase.from("clock_events").select("*, employees!inner(name, department, job_title, business_id)").eq("employees.business_id", businessId).order("timestamp", { ascending: false }).limit(1000),
+      supabase.from("shifts").select("*, employees!inner(name, department, job_title, business_id)").eq("employees.business_id", businessId).order("date", { ascending: false }).limit(1000),
+      supabase.from("employee_requests").select("*, employees!inner(name, department, business_id)").eq("employees.business_id", businessId).order("created_at", { ascending: false }).limit(300),
       supabase.from("timesheet_approvals").select("*, employees!inner(name, department, business_id)").eq("employees.business_id", businessId).order("date", { ascending: false }).limit(500),
       supabase.from("inventory_items").select("*").eq("business_id", businessId),
       supabase.from("bar_inventory_items").select("*").eq("business_id", businessId),
-      supabase.from("inventory_orders").select("*, inventory_items!inner(name, category)").eq("business_id", businessId).order("created_at", { ascending: false }).limit(200),
-      supabase.from("bar_inventory_orders").select("*, bar_inventory_items!inner(name, category)").eq("business_id", businessId).order("created_at", { ascending: false }).limit(200),
-      supabase.from("roster_day_events").select("*").eq("business_id", businessId).order("date", { ascending: false }).limit(100),
+      supabase.from("inventory_orders").select("*, inventory_items!inner(name, category)").eq("business_id", businessId).order("created_at", { ascending: false }).limit(300),
+      supabase.from("bar_inventory_orders").select("*, bar_inventory_items!inner(name, category)").eq("business_id", businessId).order("created_at", { ascending: false }).limit(300),
+      supabase.from("roster_day_events").select("*").eq("business_id", businessId).order("date", { ascending: false }).limit(200),
       supabase.from("service_maintenance_tasks").select("*").eq("business_id", businessId),
-      supabase.from("payroll_entries").select("*, employees!inner(name, department, business_id)").eq("employees.business_id", businessId).order("created_at", { ascending: false }).limit(500),
-      supabase.from("audit_logs").select("*").eq("business_id", businessId).order("timestamp", { ascending: false }).limit(100),
-      supabase.from("notifications").select("*").eq("business_id", businessId).order("created_at", { ascending: false }).limit(50),
+      supabase.from("payroll_entries").select("*, employees!inner(name, department, pay_rate, admin_hourly_rate, business_id)").eq("employees.business_id", businessId).order("created_at", { ascending: false }).limit(1000),
+      supabase.from("audit_logs").select("*").eq("business_id", businessId).order("timestamp", { ascending: false }).limit(200),
+      supabase.from("notifications").select("*").eq("business_id", businessId).order("created_at", { ascending: false }).limit(100),
       supabase.from("forum_posts").select("*").eq("business_id", businessId).order("created_at", { ascending: false }).limit(50),
+      supabase.from("event_setup_config").select("*").eq("business_id", businessId),
+      supabase.from("user_roles").select("*").eq("business_id", businessId),
     ]);
 
     const business = businessRes.data;
@@ -88,42 +104,90 @@ serve(async (req) => {
     const auditLogs = auditLogsRes.data || [];
     const notifications = notificationsRes.data || [];
     const forumPosts = forumPostsRes.data || [];
+    const eventSetupConfig = eventSetupConfigRes.data || [];
+    const userRoles = userRolesRes.data || [];
+
+    // Compute derived analytics
+    const activeEmployees = employees.filter(e => e.active);
+    const inactiveEmployees = employees.filter(e => !e.active);
+    const departments = [...new Set(activeEmployees.map(e => e.department).filter(Boolean))];
+    
+    // Today's clock activity
+    const todayClockEvents = clockEvents.filter(e => e.timestamp?.startsWith(todayKey));
+    const clockedInToday = new Set(todayClockEvents.filter(e => e.event_type === "clock_in").map(e => (e.employees as any)?.name));
+    const clockedOutToday = new Set(todayClockEvents.filter(e => e.event_type === "clock_out").map(e => (e.employees as any)?.name));
+    const currentlyClockedIn = [...clockedInToday].filter(n => !clockedOutToday.has(n));
+    
+    // Pending requests
+    const pendingRequests = requests.filter(r => r.status === "pending");
+    const approvedRequests = requests.filter(r => r.status === "approved");
+    const rejectedRequests = requests.filter(r => r.status === "rejected");
+
+    // Low stock items
+    const lowStockFOH = inventory.filter(i => i.current_count <= i.min_count);
+    const lowStockBar = barInventory.filter(i => i.current_count <= i.min_count);
+
+    // Overdue service tasks
+    const overdueTasks = serviceTasks.filter(t => t.active && t.next_service_date && t.next_service_date < todayKey);
 
     const ausNow = ausNowISO();
 
-    const systemPrompt = `You are an intelligent AI business assistant built into the admin panel of "${business?.name || "this business"}". You are the business's personal AI — you have FULL access to ALL business data and can analyze trends, patterns, generate reports, graphs, and provide deep actionable insights.
+    const systemPrompt = `You are an elite AI business intelligence assistant exclusively built for "${business?.name || "this business"}". You have FULL, UNRESTRICTED access to every piece of business data. You are the most powerful tool available to the Super Admin — think of yourself as their Chief Intelligence Officer.
 
-TIMEZONE: All dates and times are in Australia/Sydney (AEST/AEDT). Current date/time in Sydney: ${ausNow}. ALWAYS present times in 12-hour AM/PM format consistent with Australian conventions.
+TIMEZONE: Australia/Sydney (AEST/AEDT). Current: ${ausNow}. Today: ${todayKey}.
+ALWAYS use 12-hour AM/PM format. Present dates as DD/MM/YYYY (Australian standard).
+
+═══════════════════════════════════════════════
+📊 LIVE BUSINESS SNAPSHOT
+═══════════════════════════════════════════════
+• Active Employees: ${activeEmployees.length} | Inactive: ${inactiveEmployees.length}
+• Departments: ${departments.join(", ") || "None set"}
+• Currently Clocked In RIGHT NOW: ${currentlyClockedIn.length > 0 ? currentlyClockedIn.join(", ") : "Nobody"}
+• People who clocked in today: ${clockedInToday.size}
+• Pending Requests: ${pendingRequests.length}
+• Low Stock (FOH): ${lowStockFOH.length} items | Low Stock (Bar): ${lowStockBar.length} items
+• Overdue Service Tasks: ${overdueTasks.length}
+• Upcoming Events: ${rosterEvents.filter(e => e.date >= todayKey).length}
+
+═══════════════════════════════════════════════
+📋 FULL DATA ACCESS
+═══════════════════════════════════════════════
 
 BUSINESS PROFILE:
 ${JSON.stringify(business, null, 2)}
 
-EMPLOYEES (${employees.length} total, including inactive):
+EMPLOYEES (${employees.length} total):
 ${JSON.stringify(employees.map(e => ({
-  id: e.id, name: e.name, code: e.employee_code, department: e.department, 
+  id: e.id, name: e.name, code: e.employee_code, department: e.department,
   job_title: e.job_title, active: e.active, email: e.email, phone: e.phone,
   pay_rate: e.pay_rate, admin_hourly_rate: e.admin_hourly_rate,
+  created_at: e.created_at,
 })), null, 2)}
 
-CLOCK EVENTS (last 500, newest first):
+ADMIN USERS & ROLES (${userRoles.length}):
+${JSON.stringify(userRoles.map(r => ({ user_id: r.user_id, role: r.role, departments: r.departments })), null, 2)}
+
+CLOCK EVENTS (last 1000, newest first):
 ${JSON.stringify(clockEvents.map(e => ({
   employee: (e.employees as any)?.name,
   department: (e.employees as any)?.department,
+  job_title: (e.employees as any)?.job_title,
   type: e.event_type,
   timestamp: e.timestamp,
   notes: e.notes,
+  has_photo: !!e.photo_url,
 })), null, 2)}
 
-ROSTERED SHIFTS (last 500):
+ROSTERED SHIFTS (last 1000):
 ${JSON.stringify(shifts.map(s => ({
   employee: (s.employees as any)?.name,
   department: (s.employees as any)?.department,
-  date: s.date, start: s.start_time, end: s.end_time,
+  date: s.date, day: s.day_of_week, start: s.start_time, end: s.end_time,
   break_minutes: s.break_minutes, hours_worked: s.hours_worked,
   status: s.status, source: s.source, notes: s.notes,
 })), null, 2)}
 
-EMPLOYEE REQUESTS (last 200):
+EMPLOYEE REQUESTS (last 300):
 ${JSON.stringify(requests.map(r => ({
   employee: (r.employees as any)?.name,
   type: r.request_type, status: r.status,
@@ -137,8 +201,7 @@ ${JSON.stringify(requests.map(r => ({
 TIMESHEET APPROVALS (last 500):
 ${JSON.stringify(timesheetApprovals.map(t => ({
   employee: (t.employees as any)?.name,
-  date: t.date, approved: t.approved,
-  approved_at: t.approved_at,
+  date: t.date, approved: t.approved, approved_at: t.approved_at,
 })), null, 2)}
 
 FOH INVENTORY (${inventory.length} items):
@@ -147,43 +210,46 @@ ${JSON.stringify(inventory, null, 2)}
 BAR INVENTORY (${barInventory.length} items):
 ${JSON.stringify(barInventory, null, 2)}
 
-FOH INVENTORY ORDERS (last 200):
+FOH INVENTORY ORDERS (last 300):
 ${JSON.stringify(inventoryOrders.map(o => ({
   item: (o.inventory_items as any)?.name,
   category: (o.inventory_items as any)?.category,
-  quantity: o.quantity, status: o.status, notes: o.notes,
-  created_at: o.created_at,
+  quantity: o.quantity, status: o.status, notes: o.notes, created_at: o.created_at,
 })), null, 2)}
 
-BAR INVENTORY ORDERS (last 200):
+BAR INVENTORY ORDERS (last 300):
 ${JSON.stringify(barInventoryOrders.map(o => ({
   item: (o.bar_inventory_items as any)?.name,
   category: (o.bar_inventory_items as any)?.category,
-  quantity: o.quantity, status: o.status, notes: o.notes,
-  created_at: o.created_at,
+  quantity: o.quantity, status: o.status, notes: o.notes, created_at: o.created_at,
 })), null, 2)}
 
-EVENTS (last 100):
+EVENTS (last 200):
 ${JSON.stringify(rosterEvents, null, 2)}
+
+EVENT SETUP CONFIG:
+${JSON.stringify(eventSetupConfig, null, 2)}
 
 SERVICE & MAINTENANCE (${serviceTasks.length} tasks):
 ${JSON.stringify(serviceTasks, null, 2)}
 
-PAYROLL (last 500):
+PAYROLL (last 1000):
 ${JSON.stringify(payroll.map(p => ({
   employee: (p.employees as any)?.name,
   department: (p.employees as any)?.department,
+  pay_rate: (p.employees as any)?.pay_rate,
+  admin_rate: (p.employees as any)?.admin_hourly_rate,
   period: p.period, hours: p.employee_hours,
   employee_pay: p.employee_pay, admin_pay: p.admin_pay,
   status: p.status, paid_at: p.paid_at,
 })), null, 2)}
 
-RECENT AUDIT LOGS (last 100):
+AUDIT LOGS (last 200):
 ${JSON.stringify(auditLogs.map(a => ({
   action: a.action, timestamp: a.timestamp, details: a.details,
 })), null, 2)}
 
-RECENT NOTIFICATIONS (last 50):
+NOTIFICATIONS (last 100):
 ${JSON.stringify(notifications.map(n => ({
   title: n.title, message: n.message, type: n.type,
   read: n.read, created_at: n.created_at,
@@ -194,31 +260,72 @@ ${JSON.stringify(forumPosts.map(f => ({
   title: f.title, content: f.content, created_at: f.created_at,
 })), null, 2)}
 
-CAPABILITIES & INSTRUCTIONS:
-1. TRENDS & PATTERNS: Identify workforce patterns (attendance reliability, overtime frequency, peak staffing days), inventory consumption trends, payroll cost trends, seasonal event patterns. Proactively surface insights.
+═══════════════════════════════════════════════
+🧠 YOUR CAPABILITIES & INSTRUCTIONS
+═══════════════════════════════════════════════
 
-2. CHARTS & GRAPHS: When the user asks for a graph, chart, or visual report, include a special JSON block formatted as:
+1. **TREND & PATTERN ANALYSIS**: Proactively identify:
+   - Attendance reliability scores per employee (% days on-time)
+   - Overtime frequency & cost impact
+   - Peak staffing days/hours vs understaffed periods
+   - Inventory consumption velocity & reorder predictions
+   - Payroll cost trends week-over-week, month-over-month
+   - Seasonal event patterns & staffing correlations
+   - Employee request patterns (who requests most leave, when)
+   - Department efficiency comparisons
+
+2. **CHARTS & GRAPHS**: Generate interactive charts using this exact format:
 \`\`\`chart
 {
   "type": "bar" | "line" | "pie" | "area",
-  "title": "Chart title",
+  "title": "Descriptive chart title",
   "data": [{"label": "Category", "value": 123}, ...],
   "xKey": "label",
   "yKey": "value",
   "color": "#D4A843"
 }
 \`\`\`
-Use this for any visual data representation. You can include multiple charts in one response. Keep data arrays reasonable (max 20 entries — aggregate if needed).
+   - You can include MULTIPLE charts in one response
+   - Keep data arrays max 20 entries — aggregate if needed
+   - Always pick the best chart type for the data (pie for proportions, line for trends, bar for comparisons, area for cumulative)
 
-3. REPORTS: Generate detailed text reports with tables, summaries, and key metrics. Use markdown tables for structured data.
+3. **COMPREHENSIVE REPORTS**: Generate detailed reports with:
+   - Executive summary with key metrics
+   - Detailed markdown tables
+   - Trend indicators (↑ ↓ →)
+   - Actionable recommendations
+   - Risk flags and alerts
 
-4. CALCULATIONS: Use 2 decimal places for all hour/pay calculations. For overnight shifts, add 24h if clock-out < clock-in. Break deductions apply.
+4. **SMART ALERTS & PROACTIVE INSIGHTS**: When asked for a summary or "what should I know", proactively flag:
+   - ⚠️ Employees with excessive overtime
+   - ⚠️ Unapproved timesheets older than 3 days
+   - ⚠️ Low/out-of-stock inventory items
+   - ⚠️ Overdue service/maintenance tasks
+   - ⚠️ Pending requests needing attention
+   - ⚠️ Scheduling gaps or overstaffing
+   - ⚠️ Unusual clock patterns (very short shifts, missed breaks)
 
-5. FORMAT: Use markdown extensively — headers, bold, tables, lists. Be concise but thorough. Present currency in AUD ($).
+5. **CALCULATIONS**: 
+   - 2 decimal places for hours and pay
+   - For overnight shifts: add 24h if clock-out < clock-in
+   - Break deductions apply to net hours
+   - Currency in AUD ($)
+   - Labor cost = hours × rate (use admin_hourly_rate for business cost, pay_rate for employee pay)
 
-6. PERSONALITY: You are a professional, knowledgeable business intelligence assistant. Provide actionable recommendations. If data is insufficient, say so honestly.
+6. **COMPARISONS & BENCHMARKS**:
+   - Compare departments, employees, weeks, months
+   - Provide rankings when useful (top performers, highest cost centers)
+   - Show percentage changes and growth rates
 
-7. ALL TIMES must be presented in 12-hour AM/PM format (Australian standard).`;
+7. **FORMATTING**:
+   - Use markdown extensively: headers (##, ###), **bold**, tables, lists
+   - Use emoji sparingly for visual clarity (📊 📈 ⚠️ ✅ ❌ 💰)
+   - Be concise but thorough
+   - Present dates as DD/MM/YYYY, times as 12h AM/PM
+
+8. **PERSONALITY**: You are a sharp, professional business intelligence assistant. You don't just answer questions — you provide context, comparisons, and actionable recommendations. If you spot something concerning in the data, mention it proactively. Always ground answers in actual data.
+
+9. **WHEN DATA IS INSUFFICIENT**: Say so honestly and suggest what data would help. Never fabricate numbers.`;
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
