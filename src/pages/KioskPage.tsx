@@ -7,10 +7,11 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Camera, Clock, Coffee, LogIn, LogOut, ArrowLeft, Delete, User, ShieldCheck } from "lucide-react";
+import { Camera, Clock, Coffee, LogIn, LogOut, ArrowLeft, Delete, User, ShieldCheck, FileText } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
 import { toAusTime12, toAusTime12WithSeconds, toAusFormatted } from "@/lib/dateUtils";
 
-type KioskStep = "loading" | "code_entry" | "action_select" | "photo_capture" | "confirmation";
+type KioskStep = "loading" | "code_entry" | "action_select" | "shift_description" | "photo_capture" | "confirmation";
 type EmployeeStatus = "clocked_out" | "clocked_in" | "on_break";
 
 export default function KioskPage() {
@@ -30,6 +31,7 @@ export default function KioskPage() {
   const [employeeStatus, setEmployeeStatus] = useState<EmployeeStatus>("clocked_out");
   const [loading, setLoading] = useState(false);
   const [photoData, setPhotoData] = useState<string | null>(null);
+  const [shiftDescription, setShiftDescription] = useState("");
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -134,7 +136,7 @@ export default function KioskPage() {
     streamRef.current = null;
   }, []);
 
-  const submitClock = useCallback(async (photo: string) => {
+  const submitClock = useCallback(async (photo: string, description?: string) => {
     await runAction(async () => {
       setLoading(true);
       try {
@@ -145,6 +147,7 @@ export default function KioskPage() {
             photo_base64: photo,
             business_code: urlBusinessCode?.toUpperCase() || null,
             device_info: { userAgent: navigator.userAgent, screen: `${screen.width}x${screen.height}` },
+            ...(description ? { notes: description } : {}),
           },
         });
 
@@ -164,7 +167,7 @@ export default function KioskPage() {
     });
   }, [toast, runAction]);
 
-  const captureAndSubmit = useCallback(() => {
+  const captureAndSubmit = useCallback((description?: string) => {
     if (!videoRef.current || !canvasRef.current) return;
     const canvas = canvasRef.current;
     canvas.width = 640;
@@ -174,7 +177,7 @@ export default function KioskPage() {
     const data = canvas.toDataURL("image/jpeg", 0.7);
     setPhotoData(data);
     stopCamera();
-    submitClock(data);
+    submitClock(data, description);
   }, [stopCamera, submitClock]);
 
   const handleNumpadClick = (num: string) => {
@@ -215,15 +218,31 @@ export default function KioskPage() {
   const handleActionSelect = async (action: string) => {
     setSelectedAction(action);
     actionRef.current = action;
-    setStep("photo_capture");
 
+    // For clock_out, show description step first
+    if (action === "clock_out") {
+      setShiftDescription("");
+      setStep("shift_description");
+      return;
+    }
+
+    setStep("photo_capture");
     await new Promise<void>((resolve) => {
       setTimeout(() => {
         startCamera().then(() => resolve());
       }, 100);
     });
-    // Small delay for camera to render, then capture
     setTimeout(() => captureAndSubmit(), 1500);
+  };
+
+  const handleDescriptionContinue = async () => {
+    setStep("photo_capture");
+    await new Promise<void>((resolve) => {
+      setTimeout(() => {
+        startCamera().then(() => resolve());
+      }, 100);
+    });
+    setTimeout(() => captureAndSubmit(shiftDescription.trim() || undefined), 1500);
   };
 
   const resetKiosk = () => {
@@ -236,6 +255,7 @@ export default function KioskPage() {
     setEmployeeId(null);
     setEmployeeStatus("clocked_out");
     setPhotoData(null);
+    setShiftDescription("");
     stopCamera();
   };
 
@@ -364,6 +384,40 @@ export default function KioskPage() {
             <Button variant="outline" className="w-full mt-2 text-foreground" onClick={resetKiosk}>
               Cancel
             </Button>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Shift Description (clock-out only) */}
+      {step === "shift_description" && (
+        <Card className="w-full max-w-sm md:max-w-md gold-border border">
+          <CardContent className="p-5 md:p-8 space-y-4 md:space-y-5">
+            <div className="text-center space-y-1">
+              <div className="flex items-center justify-center gap-2 text-primary mb-1">
+                <FileText className="h-5 w-5" />
+                <span className="text-lg font-semibold text-foreground">End of Shift</span>
+              </div>
+              <p className="text-sm text-muted-foreground">
+                Optionally add a note about your shift before clocking out.
+              </p>
+            </div>
+            <Textarea
+              placeholder="e.g. Completed all tables, stockroom checked..."
+              className="min-h-[120px] resize-none text-sm"
+              maxLength={500}
+              value={shiftDescription}
+              onChange={(e) => setShiftDescription(e.target.value)}
+              autoFocus
+            />
+            <p className="text-xs text-muted-foreground text-right">{shiftDescription.length}/500</p>
+            <div className="flex gap-2">
+              <Button variant="outline" className="flex-1 text-foreground" onClick={resetKiosk}>
+                Cancel
+              </Button>
+              <Button className="flex-1" onClick={handleDescriptionContinue}>
+                Clock Out
+              </Button>
+            </div>
           </CardContent>
         </Card>
       )}
