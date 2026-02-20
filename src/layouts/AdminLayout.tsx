@@ -105,9 +105,10 @@ export default function AdminLayout() {
     return true;
   });
 
-  // Bottom nav: show first 4 items + "More" on mobile
-  const bottomNavPrimary = navItems.slice(0, 4);
-  const bottomNavOverflow = navItems.slice(4);
+  // Bottom nav: Dashboard, Timesheets, Roster, Live Monitor as primary; rest in More
+  const primaryLabels = ["Dashboard", "Timesheets", "Roster", "Live Monitor"];
+  const bottomNavPrimary = navItems.filter(item => primaryLabels.includes(item.label));
+  const bottomNavOverflow = navItems.filter(item => !primaryLabels.includes(item.label));
 
   if (loading) {
     return (
@@ -308,7 +309,7 @@ export default function AdminLayout() {
           </div>
         </header>
         {/* Content — scrollable below fixed header */}
-        <div className="flex-1 overflow-y-auto overscroll-y-contain p-3 lg:p-6 page-enter has-bottom-nav lg:pb-6 scroll-native">
+        <div className="flex-1 overflow-y-auto overflow-x-hidden overscroll-y-contain p-3 lg:p-6 page-enter has-bottom-nav lg:pb-6 scroll-native">
           <Outlet />
         </div>
       </main>
