@@ -857,6 +857,12 @@ export default function RosterPage() {
               weekDates={FULL_DAYS.map((dayName, i) => ({ dayName, date: fmtDate(weekDates[i]) }))}
               weekStartDate={fmtDate(weekStart)}
               onInsertShift={async (action) => {
+                // Derive week_start_date (Monday) from the action's actual date
+                const actionDate = new Date(action.date + "T00:00:00");
+                const dayIdx = (actionDate.getDay() + 6) % 7; // 0=Mon
+                const actionWeekStart = new Date(actionDate);
+                actionWeekStart.setDate(actionDate.getDate() - dayIdx);
+
                 const payload = {
                   employee_id: action.employee_id!,
                   date: action.date,
@@ -865,7 +871,7 @@ export default function RosterPage() {
                   end_time: action.end_time,
                   break_minutes: action.break_minutes ?? 30,
                   notes: action.notes || null,
-                  week_start_date: fmtDate(weekStart),
+                  week_start_date: fmtDate(actionWeekStart),
                   status: "draft" as const,
                 };
                 const { error } = await supabase.from("shifts").insert(payload);
