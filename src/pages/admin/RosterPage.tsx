@@ -804,7 +804,7 @@ export default function RosterPage() {
               <PopoverContent className="w-auto p-0" align="center">
                 <Calendar
                   mode="single"
-                  selected={weekStart}
+                  selected={undefined}
                   onSelect={(date) => {
                     if (date) setWeekStart(getMonday(date));
                   }}
