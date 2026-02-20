@@ -179,12 +179,14 @@ export default function AdminLayout() {
   }
 
   // Determine role badge
-  const roleBadge = isRosterAdmin && !isAdmin && !isViewer
+  const roleBadge = isSuperAdmin
+    ? { label: "Super Admin", variant: "outline" as const, className: "text-primary border-primary/30 text-[10px] font-medium" }
+    : isRosterAdmin && !isAdmin && !isViewer
     ? { label: `Roster Admin (${rosterDepts.join(", ")})`, variant: "outline" as const, className: "text-primary border-primary/30 text-[10px] font-medium" }
     : isViewer && !isAdmin
     ? { label: "View Only", variant: "outline" as const, className: "text-primary border-primary/30 text-[10px] font-medium" }
-    : isSuperAdmin
-    ? { label: "Super Admin", variant: "outline" as const, className: "text-primary border-primary/30 text-[10px] font-medium" }
+    : isAdmin
+    ? { label: "Admin", variant: "outline" as const, className: "text-primary border-primary/30 text-[10px] font-medium" }
     : null;
 
   const isMoreActive = bottomNavOverflow.some(item => location.pathname === item.path);
@@ -295,7 +297,7 @@ export default function AdminLayout() {
               {allNavItems.find((n) => n.path === location.pathname)?.label || "Admin"}
             </h2>
             {roleBadge && (
-              <Badge variant={roleBadge.variant} className={`${roleBadge.className} hidden sm:inline-flex`}>{roleBadge.label}</Badge>
+              <Badge variant={roleBadge.variant} className={`${roleBadge.className} inline-flex`}>{roleBadge.label}</Badge>
             )}
           </div>
           <div className="ml-auto flex items-center gap-1.5 lg:gap-2 flex-shrink-0">
