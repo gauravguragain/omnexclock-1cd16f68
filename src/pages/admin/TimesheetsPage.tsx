@@ -12,7 +12,8 @@ import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import { CalendarIcon, Search, Pencil, Trash2, Plus, ChevronLeft, ChevronRight, CheckCircle2, XCircle, Download, Mail, History } from "lucide-react";
+import { CalendarIcon, Search, Pencil, Trash2, Plus, ChevronLeft, ChevronRight, CheckCircle2, XCircle, Download, Mail, History, FileDown } from "lucide-react";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
@@ -724,12 +725,21 @@ export default function TimesheetsPage() {
 
         {/* Action buttons - wrap on mobile */}
         <div className="flex flex-wrap gap-2">
-          <Button variant="outline" size="sm" onClick={downloadCSV} disabled={filtered.length === 0}>
-            <Download className="mr-1.5 h-4 w-4" /> <span className="hidden xs:inline">Download</span> CSV
-          </Button>
-          <Button variant="outline" size="sm" onClick={() => setEmailDialogOpen(true)} disabled={filtered.length === 0}>
-            <Mail className="mr-1.5 h-4 w-4" /> Email CSV
-          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm" disabled={filtered.length === 0}>
+                <FileDown className="mr-1.5 h-4 w-4" /> Export
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={downloadCSV}>
+                <Download className="mr-2 h-4 w-4" /> Download CSV
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setEmailDialogOpen(true)}>
+                <Mail className="mr-2 h-4 w-4" /> Email CSV
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
           {!isViewer && (
             <>
               <Button variant="outline" size="sm" onClick={approveAll} disabled={saving} className="text-green-500 border-green-500/30 hover:bg-green-500/10">
