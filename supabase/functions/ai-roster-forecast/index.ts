@@ -11,7 +11,7 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const { business_id, week_start_date, employees } = await req.json();
+    const { business_id, week_start_date, employees, department_filter } = await req.json();
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -38,18 +38,20 @@ serve(async (req) => {
       );
     }
 
-    // 2. Get historical data - past 8 weeks of shifts + events
+    // 2. Get historical data - past 12 weeks of shifts + events for deeper learning
     const historyStart = new Date(weekStart);
-    historyStart.setDate(historyStart.getDate() - 56);
+    historyStart.setDate(historyStart.getDate() - 84); // 12 weeks
+
+    const employeeIds = employees.map((e: any) => e.id);
 
     const [histShiftsRes, histEventsRes, requestsRes] = await Promise.all([
       supabase
         .from("shifts")
-        .select("employee_id, date, day_of_week, start_time, end_time, break_minutes, status, employees!inner(name, department, job_title, business_id)")
+        .select("employee_id, date, day_of_week, start_time, end_time, break_minutes, hours_worked, status, source, employees!inner(name, department, job_title, pay_rate, admin_hourly_rate, business_id)")
         .eq("employees.business_id", business_id)
         .gte("date", fmtDate(historyStart))
         .lt("date", fmtDate(weekStart))
-        .eq("status", "published")
+        .in("status", ["published", "draft"])
         .order("date"),
       supabase
         .from("roster_day_events")
@@ -63,14 +65,21 @@ serve(async (req) => {
         .from("employee_requests")
         .select("employee_id, request_type, start_date, end_date, is_recurring, recurring_days, recurring_start_date, recurring_end_date, start_time, end_time")
         .eq("status", "approved")
-        .in("employee_id", employees.map((e: any) => e.id)),
+        .in("employee_id", employeeIds),
     ]);
 
-    const histShifts = histShiftsRes.data || [];
+    let histShifts = histShiftsRes.data || [];
     const histEvents = histEventsRes.data || [];
 
+    // Filter historical shifts by department if department filter is active
+    if (department_filter && department_filter !== "all") {
+      histShifts = histShifts.filter((s: any) =>
+        (s.employees as any)?.department?.toUpperCase() === department_filter.toUpperCase()
+      );
+    }
+
     // Build unavailability map for the target week
-    const unavailable: Record<string, string[]> = {}; // emp_id -> [date1, date2...]
+    const unavailable: Record<string, string[]> = {};
     const FULL_DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
     for (const req of (requestsRes.data || [])) {
       for (let i = 0; i < 7; i++) {
@@ -83,7 +92,6 @@ serve(async (req) => {
           if ((req.recurring_days || []).includes(dayName)) {
             if (!req.recurring_start_date || ds >= req.recurring_start_date) {
               if (!req.recurring_end_date || ds <= req.recurring_end_date) {
-                // Only block if all-day (no specific times)
                 if (!req.start_time || !req.end_time) blocked = true;
               }
             }
@@ -102,7 +110,138 @@ serve(async (req) => {
       }
     }
 
-    // 3. Build context for AI
+    // 3. Build deep historical analysis
+
+    // --- Aggregate staffing patterns by event type ---
+    const eventTypePatterns: Record<string, {
+      total_events: number;
+      avg_staff: number;
+      avg_guests: number;
+      avg_hours_per_staff: number;
+      avg_labour_cost: number;
+      role_breakdown: Record<string, number>;
+      typical_start: string;
+      typical_end: string;
+    }> = {};
+
+    for (const evt of histEvents) {
+      const dayShifts = histShifts.filter((s: any) => s.date === evt.date && s.status === "published");
+      if (dayShifts.length === 0) continue;
+
+      const eventType = evt.event_type || "Unknown";
+      if (!eventTypePatterns[eventType]) {
+        eventTypePatterns[eventType] = {
+          total_events: 0, avg_staff: 0, avg_guests: 0,
+          avg_hours_per_staff: 0, avg_labour_cost: 0,
+          role_breakdown: {}, typical_start: "23:59", typical_end: "00:00",
+        };
+      }
+      const p = eventTypePatterns[eventType];
+      p.total_events++;
+
+      const totalGuests = (evt.adult_guests || 0) + (evt.kids_guests || 0);
+      p.avg_guests = ((p.avg_guests * (p.total_events - 1)) + totalGuests) / p.total_events;
+      p.avg_staff = ((p.avg_staff * (p.total_events - 1)) + dayShifts.length) / p.total_events;
+
+      let totalHours = 0;
+      let totalCost = 0;
+      for (const s of dayShifts) {
+        const emp = s.employees as any;
+        const [sh, sm] = (s.start_time || "0:0").split(":").map(Number);
+        const [eh, em] = (s.end_time || "0:0").split(":").map(Number);
+        let mins = (eh * 60 + em) - (sh * 60 + sm);
+        if (mins < 0) mins += 1440;
+        const netHrs = Math.max(0, (mins - (s.break_minutes || 0)) / 60);
+        totalHours += netHrs;
+        totalCost += netHrs * (emp?.admin_hourly_rate || emp?.pay_rate || 0);
+
+        const role = emp?.job_title || "Staff";
+        p.role_breakdown[role] = (p.role_breakdown[role] || 0) + 1;
+
+        if (s.start_time < p.typical_start) p.typical_start = s.start_time;
+        if (s.end_time > p.typical_end) p.typical_end = s.end_time;
+      }
+      p.avg_hours_per_staff = ((p.avg_hours_per_staff * (p.total_events - 1)) + (totalHours / dayShifts.length)) / p.total_events;
+      p.avg_labour_cost = ((p.avg_labour_cost * (p.total_events - 1)) + totalCost) / p.total_events;
+    }
+
+    // Round averages for clarity
+    for (const key of Object.keys(eventTypePatterns)) {
+      const p = eventTypePatterns[key];
+      p.avg_staff = Math.round(p.avg_staff * 10) / 10;
+      p.avg_guests = Math.round(p.avg_guests);
+      p.avg_hours_per_staff = Math.round(p.avg_hours_per_staff * 100) / 100;
+      p.avg_labour_cost = Math.round(p.avg_labour_cost);
+      // Average out role breakdown
+      for (const r of Object.keys(p.role_breakdown)) {
+        p.role_breakdown[r] = Math.round((p.role_breakdown[r] / p.total_events) * 10) / 10;
+      }
+    }
+
+    // --- Calculate recent employee hours for fair distribution ---
+    const recentWeeksCount = 4;
+    const recentStart = new Date(weekStart);
+    recentStart.setDate(recentStart.getDate() - recentWeeksCount * 7);
+    const recentShifts = histShifts.filter((s: any) => s.date >= fmtDate(recentStart) && s.status === "published");
+
+    const recentHoursMap: Record<string, number> = {};
+    for (const s of recentShifts) {
+      const [sh, sm] = (s.start_time || "0:0").split(":").map(Number);
+      const [eh, em] = (s.end_time || "0:0").split(":").map(Number);
+      let mins = (eh * 60 + em) - (sh * 60 + sm);
+      if (mins < 0) mins += 1440;
+      const netHrs = Math.max(0, (mins - (s.break_minutes || 0)) / 60);
+      recentHoursMap[s.employee_id] = (recentHoursMap[s.employee_id] || 0) + netHrs;
+    }
+
+    // --- Build week-by-week history (last 6 most recent event-weeks) ---
+    const weeklySnapshots: any[] = [];
+    for (let w = 1; w <= 12; w++) {
+      const wStart = new Date(weekStart);
+      wStart.setDate(wStart.getDate() - w * 7);
+      const wEnd = new Date(wStart);
+      wEnd.setDate(wEnd.getDate() + 6);
+      const wEvents = histEvents.filter((e: any) => e.date >= fmtDate(wStart) && e.date <= fmtDate(wEnd));
+      if (wEvents.length === 0) continue;
+      const wShifts = histShifts.filter((s: any) => s.date >= fmtDate(wStart) && s.date <= fmtDate(wEnd) && s.status === "published");
+
+      weeklySnapshots.push({
+        week_start: fmtDate(wStart),
+        events: wEvents.map((e: any) => ({
+          date: e.date,
+          event_type: e.event_type,
+          adult_guests: e.adult_guests,
+          kids_guests: e.kids_guests,
+          event_time: e.event_time,
+          event_space: e.event_space,
+          bev_package: e.bev_package,
+          banquet_tier: e.banquet_tier,
+        })),
+        staffing: wShifts.map((s: any) => ({
+          employee: (s.employees as any)?.name,
+          department: (s.employees as any)?.department,
+          job_title: (s.employees as any)?.job_title,
+          date: s.date,
+          start_time: s.start_time,
+          end_time: s.end_time,
+          break_minutes: s.break_minutes,
+        })),
+      });
+      if (weeklySnapshots.length >= 6) break;
+    }
+
+    // 4. Prepare employee list with enriched data
+    const employeeList = employees.map((e: any) => ({
+      id: e.id,
+      name: e.name,
+      department: e.department,
+      job_title: e.job_title,
+      pay_rate: e.pay_rate,
+      unavailable_dates: unavailable[e.id] || [],
+      recent_hours_last_4_weeks: Math.round((recentHoursMap[e.id] || 0) * 100) / 100,
+    }));
+
+    // Event days for the target week
     const eventDays = weekEvents.map((e: any) => ({
       date: e.date,
       day: FULL_DAYS[new Date(e.date + "T00:00:00").getDay() === 0 ? 6 : new Date(e.date + "T00:00:00").getDay() - 1],
@@ -116,57 +255,54 @@ serve(async (req) => {
       notes: e.notes,
     }));
 
-    // Group historical shifts by event context
-    const historicalContext = histEvents.map((evt: any) => {
-      const dayShifts = histShifts.filter((s: any) => s.date === evt.date);
-      return {
-        date: evt.date,
-        event_type: evt.event_type,
-        adult_guests: evt.adult_guests,
-        kids_guests: evt.kids_guests,
-        event_time: evt.event_time,
-        staff_count: dayShifts.length,
-        shifts: dayShifts.map((s: any) => ({
-          employee: (s.employees as any)?.name,
-          department: (s.employees as any)?.department,
-          job_title: (s.employees as any)?.job_title,
-          start_time: s.start_time,
-          end_time: s.end_time,
-        })),
-      };
-    });
+    const departmentNote = department_filter && department_filter !== "all"
+      ? `\n\nDEPARTMENT FILTER ACTIVE: "${department_filter}". You MUST ONLY roster employees from the "${department_filter}" department. All provided employees belong to this department. Do NOT suggest staffing from other departments.`
+      : "";
 
-    const employeeList = employees.map((e: any) => ({
-      id: e.id,
-      name: e.name,
-      department: e.department,
-      job_title: e.job_title,
-      unavailable_dates: unavailable[e.id] || [],
-    }));
+    const systemPrompt = `You are an expert hospitality roster optimization AI for a venue/events business. Your job is to create optimal shift rosters by deeply analyzing historical patterns and upcoming event requirements.
 
-    const systemPrompt = `You are a hospitality roster optimization AI for a venue/events business. Your job is to analyze upcoming events and historical staffing patterns to suggest optimal shift rosters.
-
-RULES:
+CORE RULES:
 - ONLY generate shifts for dates that have events scheduled
-- Consider event type, guest count, and time when deciding staffing levels
-- Learn from historical patterns: similar events should have similar staffing
 - Never roster employees on dates they are unavailable
-- Spread hours fairly across employees when possible
-- Supervisors/managers should typically be rostered for larger events
-- Match shift times to event times (staff should arrive before events start)
-- Include appropriate break times (typically 30 min for shifts > 5 hours)
-- Return ONLY valid employee IDs from the provided list`;
+- Return ONLY valid employee IDs from the provided list
+- Include appropriate break times (30 min for shifts > 5 hours, 0 for shorter)${departmentNote}
+
+STAFFING INTELLIGENCE:
+1. EVENT-DRIVEN STAFFING: Match staffing levels to event type, guest count, and complexity. Use historical patterns as your baseline.
+2. ROLE-BASED ALLOCATION: Ensure the right mix of roles (supervisors/managers for large events, bartenders for cocktail events, etc.). Match the role breakdown seen in historical data for similar event types.
+3. GUEST-TO-STAFF RATIO: Maintain ratios consistent with historical patterns. If 100 guests typically needed 8 staff, scale proportionally.
+4. FAIR HOUR DISTRIBUTION: Prioritize employees with FEWER recent hours (last 4 weeks) to ensure equitable distribution. Avoid consistently overloading the same staff.
+5. LABOUR COST AWARENESS: Keep labour costs in line with historical averages for similar events. Don't over-staff beyond what history shows was effective.
+6. SHIFT TIMING: Staff should arrive 1-2 hours before event start time for setup. End times should allow for pack-down after events.
+7. PROGRESSIVE LEARNING: As more weeks of data accumulate, your patterns should become more refined. Weight recent weeks more heavily than older ones.
+
+SHIFT ALLOCATION PRINCIPLES:
+- Spread shifts across all available employees rather than concentrating on a few
+- Consider each employee's total weekly hours for work-life balance
+- Senior roles (supervisor/manager) should be rostered for complex or large events
+- Newer or junior staff can handle smaller, simpler events with less supervision`;
 
     const userPrompt = `UPCOMING EVENTS THIS WEEK:
 ${JSON.stringify(eventDays, null, 2)}
 
-AVAILABLE EMPLOYEES:
+AVAILABLE EMPLOYEES (with recent workload):
 ${JSON.stringify(employeeList, null, 2)}
 
-HISTORICAL STAFFING PATTERNS (past 8 weeks):
-${JSON.stringify(historicalContext.slice(-20), null, 2)}
+HISTORICAL PATTERNS BY EVENT TYPE:
+${JSON.stringify(eventTypePatterns, null, 2)}
 
-Based on the upcoming events and historical patterns, generate an optimal roster. For each event day, suggest which employees should work and their shift times.`;
+RECENT WEEK-BY-WEEK ROSTER HISTORY (most recent first):
+${JSON.stringify(weeklySnapshots, null, 2)}
+
+INSTRUCTIONS:
+Analyze the historical patterns carefully:
+- For each upcoming event, find the closest matching event type in history
+- Match staffing levels, role mix, and shift timings to what worked before
+- Prioritize employees with lower recent hours for fair distribution
+- Ensure role coverage matches historical patterns (e.g., if weddings always had 1 supervisor, include one)
+- Keep labour costs aligned with historical averages
+
+Generate an optimal roster for this week.`;
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) {
@@ -193,7 +329,7 @@ Based on the upcoming events and historical patterns, generate an optimal roster
             type: "function",
             function: {
               name: "suggest_roster",
-              description: "Return suggested shifts for each event day",
+              description: "Return suggested shifts for each event day with reasoning based on historical analysis",
               parameters: {
                 type: "object",
                 properties: {
@@ -204,7 +340,8 @@ Based on the upcoming events and historical patterns, generate an optimal roster
                       properties: {
                         date: { type: "string", description: "YYYY-MM-DD" },
                         day_of_week: { type: "string" },
-                        reasoning: { type: "string", description: "Brief explanation of why this staffing level was chosen" },
+                        reasoning: { type: "string", description: "Detailed explanation referencing historical patterns, guest count comparisons, and role decisions" },
+                        estimated_labour_cost: { type: "number", description: "Estimated total labour cost for this day based on employee pay rates" },
                         shifts: {
                           type: "array",
                           items: {
