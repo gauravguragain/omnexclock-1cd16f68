@@ -1029,10 +1029,6 @@ export default function RosterPage() {
 
             <div className="h-5 w-px bg-border/60 mx-1 hidden sm:block" />
 
-            {/* Primary actions */}
-            <Button size="sm" className="h-8 rounded-lg text-xs font-semibold" onClick={handlePublishWeek} disabled={publishing || weekStatus === "published" || weekStatus === "empty"}>
-              <Send className="mr-1.5 h-3.5 w-3.5" /> {publishing ? "Publishing..." : "Publish Week"}
-            </Button>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="outline" size="sm" className="h-8 rounded-lg text-xs" disabled={shifts.length === 0}>
@@ -1048,6 +1044,11 @@ export default function RosterPage() {
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
+
+            {/* Publish — placed last to prevent accidental touch on mobile */}
+            <Button size="sm" className="h-8 rounded-lg text-xs font-semibold" onClick={handlePublishWeek} disabled={publishing || weekStatus === "published" || weekStatus === "empty"}>
+              <Send className="mr-1.5 h-3.5 w-3.5" /> {publishing ? "Publishing..." : "Publish Week"}
+            </Button>
           </div>
         )}
 

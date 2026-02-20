@@ -811,7 +811,7 @@ export default function TimesheetsPage() {
           </div>
 
           {/* Desktop table view */}
-          <div className="hidden md:block overflow-x-auto">
+          <div className="hidden md:block overflow-x-auto scroll-native" style={{ WebkitOverflowScrolling: 'touch' }}>
             <Table>
               <TableHeader>
                 <TableRow>

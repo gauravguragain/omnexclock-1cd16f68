@@ -545,7 +545,7 @@
 /* Ensure main content doesn't hide behind bottom nav on mobile */
 @media (max-width: 1023px) {
   .has-bottom-nav {
-    padding-bottom: calc(60px + env(safe-area-inset-bottom, 0px));
+    padding-bottom: calc(72px + env(safe-area-inset-bottom, 0px));
   }
 
   /* Mobile: tighter card spacing, larger touch targets */
