@@ -257,20 +257,22 @@ export default function RosterDayEvents({ weekDates, fmtDate }: Props) {
       if (error) throw error;
       if (!data) throw new Error("No data returned");
 
-      // Try to match extracted date to a week date
+      // Use extracted date directly (supports future weeks), fall back to current week
+      let dateStr: string;
       let targetDayIdx = -1;
+
       if (data.event_date) {
-        const extractedDate = data.event_date;
-        targetDayIdx = weekDates.findIndex(wd => fmtDate(wd) === extractedDate);
-      }
-      // Fallback: use today if within this week, otherwise first day
-      if (targetDayIdx < 0) {
+        // Use the extracted date as-is, even if it's outside the current week view
+        dateStr = data.event_date;
+        // Check if this date is within the currently viewed week (for UI expansion)
+        targetDayIdx = weekDates.findIndex(wd => fmtDate(wd) === dateStr);
+      } else {
+        // Fallback: use today if within this week, otherwise first day of week
         const todayStr = fmtDate(new Date());
         targetDayIdx = weekDates.findIndex(wd => fmtDate(wd) === todayStr);
         if (targetDayIdx < 0) targetDayIdx = 0;
+        dateStr = fmtDate(weekDates[targetDayIdx]);
       }
-
-      const dateStr = fmtDate(weekDates[targetDayIdx]);
       // Create a new event for this date
       const { data: inserted, error: insertErr } = await supabase.from("roster_day_events").insert({
         business_id: business.id,
@@ -317,11 +319,19 @@ export default function RosterDayEvents({ weekDates, fmtDate }: Props) {
       }
 
       await fetchData();
-      setOpenDays(prev => new Set(prev).add(targetDayIdx));
-      setExpandedEvents(prev => new Set(prev).add(inserted.id));
+      if (targetDayIdx >= 0) {
+        setOpenDays(prev => new Set(prev).add(targetDayIdx));
+        setExpandedEvents(prev => new Set(prev).add(inserted.id));
+      }
 
-      const dayLabel = weekDates[targetDayIdx].toLocaleDateString("en-AU", { weekday: "short", day: "numeric", month: "short" });
-      toast({ title: "Event created!", description: `Runsheet data extracted and assigned to ${dayLabel}.` });
+      // Build a friendly label for the assigned date
+      const assignedDate = new Date(dateStr + "T00:00:00");
+      const dayLabel = assignedDate.toLocaleDateString("en-AU", { weekday: "short", day: "numeric", month: "short" });
+      const isInCurrentWeek = targetDayIdx >= 0;
+      const description = isInCurrentWeek
+        ? `Runsheet data extracted and assigned to ${dayLabel}.`
+        : `Runsheet data extracted and assigned to ${dayLabel} (navigate to that week to view it).`;
+      toast({ title: "Event created!", description });
       await logAudit("runsheet_extract_create", { date: dateStr, filename: file.name });
     } catch (e: any) {
       console.error("Section PDF extraction error:", e);
