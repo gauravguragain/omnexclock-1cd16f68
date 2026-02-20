@@ -1,8 +1,10 @@
 import { useEffect, useState } from "react";
+import { useNavigate, useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useBusiness } from "@/contexts/BusinessContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Users, Clock, DollarSign, TrendingUp, Activity } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Users, Clock, DollarSign, TrendingUp, Activity, Sparkles } from "lucide-react";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell, Legend, AreaChart, Area,
@@ -43,6 +45,8 @@ const CHART_COLORS = [
 
 export default function DashboardPage() {
   const { business } = useBusiness();
+  const navigate = useNavigate();
+  const { businessCode } = useParams();
   const [stats, setStats] = useState({ totalEmployees: 0, activeToday: 0, totalHoursToday: "0.00", avgShift: "0.00" });
   const [weeklyData, setWeeklyData] = useState<DailyHours[]>([]);
   const [employeeBreakdown, setEmployeeBreakdown] = useState<EmployeeBreakdown[]>([]);
@@ -387,6 +391,22 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-3 md:space-y-5">
+      {/* AI Assistant CTA */}
+      <Card className="border-primary/20 bg-gradient-to-r from-primary/5 to-transparent cursor-pointer hover:border-primary/40 transition-colors" onClick={() => navigate(`/b/${businessCode}/admin/ai-assistant`)}>
+        <CardContent className="flex items-center gap-3 py-3 px-4">
+          <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
+            <Sparkles className="h-5 w-5 text-primary" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-semibold text-foreground">AI Assistant</p>
+            <p className="text-xs text-muted-foreground truncate">Ask anything about your business data</p>
+          </div>
+          <Button size="sm" variant="outline" className="flex-shrink-0 text-xs border-primary/30 text-primary hover:bg-primary/10">
+            Open
+          </Button>
+        </CardContent>
+      </Card>
+
       {/* Stats Cards */}
       <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3 stagger-children">
         {cards.map(({ title, value, icon: Icon, color }, index) => (
