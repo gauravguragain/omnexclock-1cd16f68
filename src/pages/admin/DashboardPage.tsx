@@ -57,6 +57,9 @@ export default function DashboardPage() {
       .on("postgres_changes", { event: "*", schema: "public", table: "clock_events" }, () => {
         fetchAll();
       })
+      .on("postgres_changes", { event: "*", schema: "public", table: "timesheet_approvals" }, () => {
+        fetchAll();
+      })
       .subscribe();
 
     const interval = setInterval(fetchAll, 10000);
