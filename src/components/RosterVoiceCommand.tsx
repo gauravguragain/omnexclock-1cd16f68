@@ -69,8 +69,16 @@ function similarity(a: string, b: string): number {
 }
 
 function getSuggestions(spokenName: string, employees: Employee[], topN = 3): Employee[] {
+  const spoken = spokenName.toLowerCase().trim();
   const scored = employees
-    .map((e) => ({ employee: e, score: similarity(spokenName, e.name) }))
+    .map((e) => {
+      const firstName = e.name.split(/\s+/)[0].toLowerCase();
+      // Boost score significantly for first-name matches
+      const firstNameScore = similarity(spoken, firstName);
+      const fullNameScore = similarity(spoken, e.name);
+      const score = Math.max(firstNameScore * 1.3, fullNameScore);
+      return { employee: e, score };
+    })
     .filter((s) => s.score > 0.15)
     .sort((a, b) => b.score - a.score);
   return scored.slice(0, topN).map((s) => s.employee);
@@ -183,7 +191,44 @@ export default function RosterVoiceCommand({
         return;
       }
 
-      setParsedActions(data.actions);
+      // Client-side first-name fallback for any unmatched actions
+      const resolvedActions = (data.actions as ParsedAction[]).map((action) => {
+        if (action.employee_id && !action.match_error) return action;
+        
+        // Try first-name match
+        const spoken = action.employee_name.toLowerCase().trim();
+        const firstNameMatch = employees.find((e) => {
+          const firstName = e.name.split(/\s+/)[0].toLowerCase();
+          return firstName === spoken || e.name.toLowerCase() === spoken;
+        });
+        
+        if (firstNameMatch) {
+          return {
+            ...action,
+            employee_id: firstNameMatch.id,
+            employee_name: firstNameMatch.name,
+            match_error: undefined,
+          };
+        }
+
+        // Try partial/contains match
+        const partialMatch = employees.find((e) =>
+          e.name.toLowerCase().includes(spoken) || spoken.includes(e.name.split(/\s+/)[0].toLowerCase())
+        );
+
+        if (partialMatch) {
+          return {
+            ...action,
+            employee_id: partialMatch.id,
+            employee_name: partialMatch.name,
+            match_error: undefined,
+          };
+        }
+
+        return action;
+      });
+
+      setParsedActions(resolvedActions);
       setConfirmOpen(true);
     } catch (err: any) {
       toast({
