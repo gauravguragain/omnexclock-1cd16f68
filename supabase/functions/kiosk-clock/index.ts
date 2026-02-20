@@ -61,7 +61,7 @@ serve(async (req) => {
       });
     }
 
-    const { employee_code, event_type, photo_base64, device_info, business_code } = body;
+    const { employee_code, event_type, photo_base64, device_info, business_code, notes } = body;
 
     // Input validation
     if (!employee_code || typeof employee_code !== "string" || !CODE_REGEX.test(employee_code)) {
@@ -183,6 +183,8 @@ serve(async (req) => {
       }
     }
 
+    const clockOutNotes = event_type === "clock_out" && notes && typeof notes === "string" ? notes.slice(0, 200) : null;
+
     const { data: clockEvent, error: clockError } = await supabase
       .from("clock_events")
       .insert({
@@ -190,7 +192,7 @@ serve(async (req) => {
         event_type,
         photo_url,
         device_info: device_info || null,
-        
+        notes: clockOutNotes,
       })
       .select()
       .single();
