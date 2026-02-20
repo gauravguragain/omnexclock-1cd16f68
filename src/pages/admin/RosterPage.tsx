@@ -413,11 +413,13 @@ export default function RosterPage() {
         body: {
           business_id: business.id,
           week_start_date: fmtDate(weekStart),
+          department_filter: departmentFilter,
           employees: filteredEmployees.map(e => ({
             id: e.id,
             name: e.name,
             department: e.department,
             job_title: e.job_title,
+            pay_rate: e.pay_rate,
           })),
         },
       });
