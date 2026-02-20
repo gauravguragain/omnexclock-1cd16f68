@@ -24,8 +24,10 @@ serve(async (req) => {
 Available employees:
 ${employeeList}
 
-Current week dates:
+Selected week dates (USE THESE DATES ONLY — do NOT use the current calendar date):
 ${dateList}
+
+CRITICAL: When the user says a day name like "Wednesday" or "Sunday", you MUST use the date from the list above for that day. Do NOT default to the current calendar week. The dates above represent the admin's selected roster week.
 
 Parse the command into one or more shift actions. Each action should have:
 - employee_id: the UUID of the employee (match by name — FIRST NAME ONLY is enough for a match. Case-insensitive. If someone says "Gaurav", match the employee whose first name is "Gaurav" regardless of last name.)

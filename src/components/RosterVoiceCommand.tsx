@@ -191,8 +191,15 @@ export default function RosterVoiceCommand({
         return;
       }
 
-      // Client-side first-name fallback for any unmatched actions
+      // Client-side: remap dates to the selected week & first-name fallback
       const resolvedActions = (data.actions as ParsedAction[]).map((action) => {
+        // Ensure the date maps to the selected week, not the current week
+        const dayMatch = weekDates.find(
+          (wd) => wd.dayName.toLowerCase() === action.day_of_week?.toLowerCase()
+        );
+        if (dayMatch && action.date !== dayMatch.date) {
+          action = { ...action, date: dayMatch.date };
+        }
         if (action.employee_id && !action.match_error) return action;
         
         // Try first-name match
