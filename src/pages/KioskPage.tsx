@@ -8,9 +8,10 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { Camera, Clock, Coffee, LogIn, LogOut, ArrowLeft, Delete, User, ShieldCheck } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
 import { toAusTime12, toAusTime12WithSeconds, toAusFormatted } from "@/lib/dateUtils";
 
-type KioskStep = "loading" | "code_entry" | "action_select" | "photo_capture" | "confirmation";
+type KioskStep = "loading" | "code_entry" | "action_select" | "description_entry" | "photo_capture" | "confirmation";
 type EmployeeStatus = "clocked_out" | "clocked_in" | "on_break";
 
 export default function KioskPage() {
@@ -30,6 +31,7 @@ export default function KioskPage() {
   const [employeeStatus, setEmployeeStatus] = useState<EmployeeStatus>("clocked_out");
   const [loading, setLoading] = useState(false);
   const [photoData, setPhotoData] = useState<string | null>(null);
+  const [description, setDescription] = useState("");
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -134,7 +136,7 @@ export default function KioskPage() {
     streamRef.current = null;
   }, []);
 
-  const submitClock = useCallback(async (photo: string) => {
+  const submitClock = useCallback(async (photo: string, note?: string) => {
     await runAction(async () => {
       setLoading(true);
       try {
@@ -145,6 +147,7 @@ export default function KioskPage() {
             photo_base64: photo,
             business_code: urlBusinessCode?.toUpperCase() || null,
             device_info: { userAgent: navigator.userAgent, screen: `${screen.width}x${screen.height}` },
+            ...(note ? { notes: note } : {}),
           },
         });
 
@@ -164,7 +167,7 @@ export default function KioskPage() {
     });
   }, [toast, runAction]);
 
-  const captureAndSubmit = useCallback(() => {
+  const captureAndSubmit = useCallback((note?: string) => {
     if (!videoRef.current || !canvasRef.current) return;
     const canvas = canvasRef.current;
     canvas.width = 640;
@@ -174,7 +177,7 @@ export default function KioskPage() {
     const data = canvas.toDataURL("image/jpeg", 0.7);
     setPhotoData(data);
     stopCamera();
-    submitClock(data);
+    submitClock(data, note);
   }, [stopCamera, submitClock]);
 
   const handleNumpadClick = (num: string) => {
@@ -215,6 +218,11 @@ export default function KioskPage() {
   const handleActionSelect = async (action: string) => {
     setSelectedAction(action);
     actionRef.current = action;
+    setDescription("");
+    setStep("description_entry");
+  };
+
+  const handleDescriptionContinue = async (note: string) => {
     setStep("photo_capture");
 
     await new Promise<void>((resolve) => {
@@ -223,7 +231,7 @@ export default function KioskPage() {
       }, 100);
     });
     // Small delay for camera to render, then capture
-    setTimeout(() => captureAndSubmit(), 1500);
+    setTimeout(() => captureAndSubmit(note), 1500);
   };
 
   const resetKiosk = () => {
@@ -236,6 +244,7 @@ export default function KioskPage() {
     setEmployeeId(null);
     setEmployeeStatus("clocked_out");
     setPhotoData(null);
+    setDescription("");
     stopCamera();
   };
 
@@ -368,7 +377,40 @@ export default function KioskPage() {
         </Card>
       )}
 
+      {/* Description Entry */}
+      {step === "description_entry" && (
+        <Card className="w-full max-w-sm md:max-w-md gold-border border">
+          <CardContent className="p-5 md:p-8 space-y-4 md:space-y-5">
+            <div className="text-center space-y-1">
+              <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold ${actionLabels[selectedAction]?.color}`}>
+                {actionLabels[selectedAction]?.icon && <span className="[&>svg]:h-4 [&>svg]:w-4">{actionLabels[selectedAction].icon}</span>}
+                {actionLabels[selectedAction]?.label}
+              </div>
+              <p className="text-sm text-muted-foreground pt-1">Add a note (optional)</p>
+            </div>
+            <Textarea
+              placeholder="e.g. Early shift, covering for colleague..."
+              className="resize-none h-28 text-base"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              maxLength={200}
+            />
+            <p className="text-right text-xs text-muted-foreground">{description.length}/200</p>
+            <Button
+              className="w-full h-12 md:h-14 text-lg"
+              onClick={() => handleDescriptionContinue(description)}
+            >
+              Continue
+            </Button>
+            <Button variant="outline" className="w-full text-foreground" onClick={resetKiosk}>
+              Cancel
+            </Button>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Photo Capture */}
+
       {step === "photo_capture" && (
         <Card className="w-full max-w-sm md:max-w-md gold-border border">
           <CardContent className="p-5 md:p-8 space-y-4">
