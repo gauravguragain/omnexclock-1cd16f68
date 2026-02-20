@@ -273,7 +273,13 @@ STAFFING INTELLIGENCE:
 3. GUEST-TO-STAFF RATIO: Maintain ratios consistent with historical patterns. If 100 guests typically needed 8 staff, scale proportionally.
 4. FAIR HOUR DISTRIBUTION: Prioritize employees with FEWER recent hours (last 4 weeks) to ensure equitable distribution. Avoid consistently overloading the same staff.
 5. LABOUR COST AWARENESS: Keep labour costs in line with historical averages for similar events. Don't over-staff beyond what history shows was effective.
-6. SHIFT TIMING: Staff should arrive 1-2 hours before event start time for setup. End times should allow for pack-down after events.
+6. SHIFT TIMING & EVENT LIFECYCLE: Each event has a start time (and sometimes an end time) in the "event_time" field. You MUST plan shifts around this:
+   - PRE-EVENT (Opening Tasks): Staff must arrive 1.5–2 hours BEFORE the event start time for venue setup, table arrangement, AV checks, bar prep, and décor.
+   - DURING EVENT: Full staffing throughout the event duration.
+   - POST-EVENT (Closing Tasks): Staff should remain 1–1.5 hours AFTER the event ends for pack-down, cleaning, restocking, and venue close.
+   - If the event_time contains a range (e.g. "6:00 PM - 11:00 PM"), use both times. If only a start time is given, estimate the event duration based on event type (weddings ~5-6hrs, corporate ~3-4hrs, birthday ~4-5hrs).
+   - Not all staff need to cover the full window — stagger arrivals (setup crew early, service crew closer to start) and departures (some leave after service, others stay for packdown).
+   - Supervisors/managers should typically cover the full window (setup to close).
 7. PROGRESSIVE LEARNING: As more weeks of data accumulate, your patterns should become more refined. Weight recent weeks more heavily than older ones.
 
 SHIFT ALLOCATION PRINCIPLES:
