@@ -12,7 +12,7 @@ import {
   BarChart, Bar, LineChart, Line, PieChart, Pie, AreaChart, Area,
   XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, Cell, Legend,
 } from "recharts";
-import jsPDF from "jspdf";
+// jsPDF is dynamically imported in exportPDF to avoid chunk load failures
 
 interface Message {
   role: "user" | "assistant";
@@ -315,8 +315,9 @@ export default function AIAssistantPage() {
   }, []);
 
   // Export conversation as PDF
-  const exportPDF = useCallback(() => {
+  const exportPDF = useCallback(async () => {
     if (messages.length === 0) return;
+    const { default: jsPDF } = await import("jspdf");
     const doc = new jsPDF();
     const margin = 15;
     let y = margin;
