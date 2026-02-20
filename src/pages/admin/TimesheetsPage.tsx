@@ -284,9 +284,11 @@ export default function TimesheetsPage() {
     }
 
     const result: TimesheetEntry[] = Array.from(dailyMap.values()).map((e) => {
-      const totalHours = e.clock_in && e.clock_out
+      let totalHours = e.clock_in && e.clock_out
         ? (new Date(e.clock_out).getTime() - new Date(e.clock_in).getTime()) / 3600000
         : 0;
+      // Handle overnight shifts: if result is negative, the shift crossed midnight
+      if (totalHours < 0) totalHours += 24;
       const netHours = Math.max(0, totalHours - e.break_minutes / 60);
       const approvalKey = `${e.employee_id}-${e.raw_date}`;
 
