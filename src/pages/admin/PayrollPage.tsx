@@ -686,7 +686,7 @@ export default function PayrollPage() {
                 <TableRow className="bg-muted/50 font-semibold">
                   <TableCell className="sticky left-0 bg-muted/50 z-20 border-r border-border/60">Totals</TableCell>
                   <TableCell />
-                  <TableCell>{(entries.reduce((s, e) => s + e.total_hours, 0)).toFixed(2)}</TableCell>
+                  <TableCell>{filtered.reduce((s, e) => s + e.total_hours, 0).toFixed(2)}</TableCell>
                   <TableCell>{totalBreakHours.toFixed(2)}</TableCell>
                   <TableCell>{totalNetHours.toFixed(2)}</TableCell>
                   <TableCell className="text-right">${totalPay.toFixed(2)}</TableCell>
