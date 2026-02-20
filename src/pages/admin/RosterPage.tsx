@@ -26,6 +26,7 @@ import { cn } from "@/lib/utils";
 import type { Tables } from "@/integrations/supabase/types";
 import { toAusDate, toAusFormatted } from "@/lib/dateUtils";
 import RosterDayEvents from "@/components/RosterDayEvents";
+import RosterVoiceCommand from "@/components/RosterVoiceCommand";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 
@@ -850,6 +851,28 @@ export default function RosterPage() {
                 </button>
               </div>
             )}
+            <RosterVoiceCommand
+              employees={filteredEmployees}
+              weekDates={FULL_DAYS.map((dayName, i) => ({ dayName, date: fmtDate(weekDates[i]) }))}
+              weekStartDate={fmtDate(weekStart)}
+              onInsertShift={async (action) => {
+                const payload = {
+                  employee_id: action.employee_id!,
+                  date: action.date,
+                  day_of_week: action.day_of_week,
+                  start_time: action.start_time,
+                  end_time: action.end_time,
+                  break_minutes: action.break_minutes ?? 30,
+                  notes: action.notes || null,
+                  week_start_date: fmtDate(weekStart),
+                  status: "draft" as const,
+                };
+                const { error } = await supabase.from("shifts").insert(payload);
+                if (error) throw error;
+                await logAudit("shift_add_voice", payload);
+                fetchData();
+              }}
+            />
             <Button variant="outline" size="sm" className="rounded-lg" onClick={handleCopyPrevWeek} disabled={loading}>
               <Copy className="mr-1.5 h-3.5 w-3.5" /> Copy Last Week
             </Button>
