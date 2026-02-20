@@ -24,22 +24,33 @@ export default defineConfig(({ mode }) => ({
         globPatterns: ["**/*.{js,css,html,ico,png,jpg,jpeg,svg,woff2}"],
         skipWaiting: true,
         clientsClaim: true,
+        cleanupOutdatedCaches: true,
+        navigateFallback: null,
         runtimeCaching: [
+          {
+            urlPattern: ({ request }) => request.mode === "navigate",
+            handler: "NetworkFirst",
+            options: {
+              cacheName: "pages",
+              networkTimeoutSeconds: 3,
+            },
+          },
           {
             urlPattern: /^https:\/\/.*\.supabase\.co\/.*/i,
             handler: "NetworkFirst",
             options: {
               cacheName: "supabase-api",
               expiration: { maxEntries: 50, maxAgeSeconds: 300 },
-              networkTimeoutSeconds: 5,
+              networkTimeoutSeconds: 3,
             },
           },
           {
             urlPattern: /\.(?:js|css)$/i,
-            handler: "StaleWhileRevalidate",
+            handler: "NetworkFirst",
             options: {
               cacheName: "static-assets",
               expiration: { maxEntries: 100, maxAgeSeconds: 86400 },
+              networkTimeoutSeconds: 3,
             },
           },
           {
