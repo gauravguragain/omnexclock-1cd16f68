@@ -258,9 +258,9 @@ function TodayTab({ employeeCode, businessCode, shifts, employeeName, businessNa
       setLoading(true);
       // Check employee job_title
       const bizCode = businessCode?.toUpperCase() || null;
-      let jobTitleQuery = supabase.from("employees").select("job_title").eq("employee_code", employeeCode).eq("active", true);
+      let jobTitleQuery = supabase.from("employees_public" as any).select("job_title").eq("employee_code", employeeCode).eq("active", true) as any;
       if (bizCode) {
-        const { data: bizData } = await supabase.from("businesses").select("id").eq("business_code", bizCode).maybeSingle();
+        const { data: bizData } = await supabase.from("businesses_public" as any).select("id").eq("business_code", bizCode).maybeSingle() as { data: { id: string } | null };
         if (bizData) jobTitleQuery = jobTitleQuery.eq("business_id", bizData.id);
       }
       const { data: empData } = await jobTitleQuery.maybeSingle();
@@ -452,10 +452,10 @@ export default function PortalPage() {
     if (!urlBusinessCode) return;
     const loadBusiness = async () => {
       const { data } = await supabase
-        .from("businesses")
+        .from("businesses_public" as any)
         .select("name, logo_url, theme")
         .eq("business_code", urlBusinessCode.toUpperCase())
-        .maybeSingle();
+        .maybeSingle() as { data: { name: string; logo_url: string | null; theme: any } | null };
       if (data) {
         setBusinessName(data.name);
         setBusinessLogo(data.logo_url);
