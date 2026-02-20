@@ -7,7 +7,8 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell, Legend, AreaChart, Area,
 } from "recharts";
-import { toAusDateKey, toAusTime12, toAusFormatted, toAusDisplayDate, ausStartOfToday, ausStartOfTomorrow, ausCurrentHour, ausStartOfDay, toAusDate, ausPreviousDay } from "@/lib/dateUtils";
+import { toAusDateKey, toAusTime12, toAusFormatted, toAusDisplayDate, ausStartOfToday, ausStartOfTomorrow, ausCurrentHour, ausStartOfDay, toAusDate } from "@/lib/dateUtils";
+import { computeTimesheetEntries, filterApprovedEntries } from "@/lib/timesheetUtils";
 
 interface DailyHours {
   date: string;
@@ -196,23 +197,31 @@ export default function DashboardPage() {
       todayByEmp.get(ev.employee_id)!.push(ev);
     }
 
-    // This week stats: group by employee+date, calc hours per shift (matching timesheet)
+    // This week stats: use shared timesheet computation on this-week events, filtered by approved
     const todayKey = toLocalDateKey(new Date());
-    const weekShiftMap = new Map<string, any[]>();
-    for (const ev of thisWeekEvents) {
-      const dateKey = toLocalDateKey(new Date(ev.timestamp));
-      const key = `${ev.employee_id}-${dateKey}`;
-      if (!weekShiftMap.has(key)) weekShiftMap.set(key, []);
-      weekShiftMap.get(key)!.push(ev);
-    }
+
+    // Fetch approved timesheets for this week
+    const mondayStr = toAusDate(mondayDate);
+    const sundayStr = toAusDate(sundayDate);
+    const { data: approvedTimesheets } = await supabase
+      .from("timesheet_approvals")
+      .select("employee_id, date")
+      .eq("approved", true)
+      .gte("date", mondayStr)
+      .lt("date", sundayStr);
+
+    const approvedSet = new Set(
+      (approvedTimesheets || []).map((a) => `${a.employee_id}-${a.date}`)
+    );
+
+    // Compute timesheet entries from this week's events using shared utility
+    const thisWeekTimesheets = computeTimesheetEntries(thisWeekEvents);
+    const approvedThisWeek = filterApprovedEntries(thisWeekTimesheets, approvedSet);
 
     let totalHoursWeek = 0;
     let shiftCount = 0;
-    for (const [key, evs] of weekShiftMap) {
-      const dateKey = key.split("-").slice(-3).join("-"); // extract YYYY-MM-DD
-      const isToday = dateKey === todayKey;
-      const hours = calcHoursFromEvents(evs, isToday);
-      totalHoursWeek += hours;
+    for (const entry of approvedThisWeek) {
+      totalHoursWeek += entry.net_hours;
       shiftCount++;
     }
 
@@ -256,50 +265,16 @@ export default function DashboardPage() {
     }
     setWeeklyData(weekly);
 
-    // Employee breakdown (this week) - only approved timesheets
-    const { data: approvedTimesheets } = await supabase
-      .from("timesheet_approvals")
-      .select("employee_id, date")
-      .eq("approved", true);
-
-    const approvedSet = new Set(
-      (approvedTimesheets || []).map((a) => `${a.employee_id}-${a.date}`)
-    );
-
-    // Group week events by employee, then assign to clock_in date (handles overnight shifts)
-    const weekByEmpAll = new Map<string, any[]>();
-    for (const ev of weekEvents) {
-      if (!weekByEmpAll.has(ev.employee_id)) weekByEmpAll.set(ev.employee_id, []);
-      weekByEmpAll.get(ev.employee_id)!.push(ev);
-    }
-
-    const weekByEmpDate = new Map<string, Map<string, any[]>>();
-    for (const [empId, evs] of weekByEmpAll) {
-      evs.sort((a: any, b: any) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
-      let currentShiftDate: string | null = null;
-      for (const ev of evs) {
-        if (ev.event_type === "clock_in") {
-          currentShiftDate = toLocalDateKey(new Date(ev.timestamp));
-        }
-        // If no preceding clock_in, this is an orphan event from a previous day's overnight shift
-        const shiftDate = currentShiftDate || ausPreviousDay(new Date(ev.timestamp));
-        const approvalKey = `${empId}-${shiftDate}`;
-        if (!approvedSet.has(approvalKey)) continue;
-        if (!weekByEmpDate.has(empId)) weekByEmpDate.set(empId, new Map());
-        const empDates = weekByEmpDate.get(empId)!;
-        if (!empDates.has(shiftDate)) empDates.set(shiftDate, []);
-        empDates.get(shiftDate)!.push(ev);
-      }
-    }
-
+    // Employee breakdown (this week) - only from approved timesheets using shared utility
     const breakdown: EmployeeBreakdown[] = [];
-    for (const [empId, dateMap] of weekByEmpDate) {
-      let totalH = 0;
-      for (const evs of dateMap.values()) {
-        totalH += calcHoursFromEvents(evs, false);
-      }
-      if (totalH > 0) {
-        breakdown.push({ name: empNameMap.get(empId) || "Unknown", hours: roundHours(totalH) });
+    const empHoursMap = new Map<string, number>();
+    for (const entry of approvedThisWeek) {
+      const current = empHoursMap.get(entry.employee_id) || 0;
+      empHoursMap.set(entry.employee_id, current + entry.net_hours);
+    }
+    for (const [empId, hours] of empHoursMap) {
+      if (hours > 0) {
+        breakdown.push({ name: empNameMap.get(empId) || "Unknown", hours: roundHours(hours) });
       }
     }
     breakdown.sort((a, b) => b.hours - a.hours);
