@@ -392,7 +392,7 @@ export default function PayrollPage() {
         </div>
       </CardHeader>
       <CardContent className="p-0">
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto scrollbar-thin">
           <Table>
             <TableHeader>
               <TableRow>
@@ -645,7 +645,7 @@ export default function PayrollPage() {
         </div>
       </CardHeader>
       <CardContent className="p-0">
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto scrollbar-thin">
           <Table>
              <TableHeader>
               <TableRow>
