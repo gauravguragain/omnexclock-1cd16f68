@@ -15,7 +15,7 @@ import { logAudit } from "@/lib/auditLog";
 import { notifyEmployees } from "@/lib/notifications";
 import { useAuth } from "@/contexts/AuthContext";
 import {
-  ChevronLeft, ChevronRight, Plus, Trash2, Copy, Send, Clock, AlertCircle, CalendarOff, Clipboard, ClipboardPaste, X, Mail, Download, FileDown, CalendarIcon, ChevronDown,
+  ChevronLeft, ChevronRight, Plus, Trash2, Copy, Send, Clock, AlertCircle, CalendarOff, Clipboard, ClipboardPaste, X, Mail, Download, FileDown, CalendarIcon, ChevronDown, Sparkles, BrainCircuit,
 } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -128,6 +128,7 @@ export default function RosterPage() {
   const [saving, setSaving] = useState(false);
   const [publishing, setPublishing] = useState(false);
   const [copiedShift, setCopiedShift] = useState<Shift | null>(null);
+  const [forecasting, setForecasting] = useState(false);
 
   const currentBusinessId = business?.id || "";
   const isAdmin = isAdminOf(currentBusinessId) || isSuperAdminOf(currentBusinessId);
@@ -400,6 +401,65 @@ export default function RosterPage() {
       toast({ title: "Error", description: err.message, variant: "destructive" });
     } finally {
       setSendingEmail(false);
+    }
+  };
+
+  /* ── AI forecast handler ── */
+  const handleAiForecast = async () => {
+    if (!business) return;
+    setForecasting(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("ai-roster-forecast", {
+        body: {
+          business_id: business.id,
+          week_start_date: fmtDate(weekStart),
+          employees: filteredEmployees.map(e => ({
+            id: e.id,
+            name: e.name,
+            department: e.department,
+            job_title: e.job_title,
+          })),
+        },
+      });
+      if (error) throw error;
+      if (data?.error) {
+        toast({ title: "AI Forecast", description: data.error, variant: "destructive" });
+        return;
+      }
+      // Insert all forecast shifts as drafts with source='ai_forecast'
+      const forecast = data?.forecast || [];
+      let insertCount = 0;
+      for (const day of forecast) {
+        for (const shift of day.shifts) {
+          const actionDate = new Date(day.date + "T00:00:00");
+          const dayIdx = (actionDate.getDay() + 6) % 7;
+          const actionWeekStart = new Date(actionDate);
+          actionWeekStart.setDate(actionDate.getDate() - dayIdx);
+          const { error: insertErr } = await supabase.from("shifts").insert({
+            employee_id: shift.employee_id,
+            date: day.date,
+            day_of_week: day.day_of_week,
+            start_time: shift.start_time,
+            end_time: shift.end_time,
+            break_minutes: shift.break_minutes ?? 30,
+            week_start_date: fmtDate(actionWeekStart),
+            status: "draft",
+            source: "ai_forecast",
+          });
+          if (!insertErr) insertCount++;
+        }
+      }
+      await logAudit("ai_roster_forecast", { week: fmtDate(weekStart), shifts_created: insertCount, reasoning: forecast.map((d: any) => ({ date: d.date, reasoning: d.reasoning })) });
+      fetchData();
+      toast({
+        title: "🤖 AI Forecast Complete",
+        description: `Generated ${insertCount} draft shifts across ${forecast.length} event day(s). Review and adjust as needed.`,
+      });
+    } catch (err: any) {
+      console.error("Forecast error:", err);
+      toast({ title: "Forecast Error", description: err.message || "Failed to generate forecast", variant: "destructive" });
+    } finally {
+      setForecasting(false);
     }
   };
 
@@ -880,6 +940,18 @@ export default function RosterPage() {
                 fetchData();
               }}
             />}
+            {isSuperAdminOf(currentBusinessId) && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="rounded-lg border-cyan-500/40 text-cyan-400 hover:bg-cyan-500/10 hover:border-cyan-500/60"
+                onClick={handleAiForecast}
+                disabled={forecasting || loading}
+              >
+                <BrainCircuit className="mr-1.5 h-3.5 w-3.5" />
+                {forecasting ? "Forecasting..." : "AI Forecast"}
+              </Button>
+            )}
             <Button variant="outline" size="sm" className="rounded-lg" onClick={handleCopyPrevWeek} disabled={loading}>
               <Copy className="mr-1.5 h-3.5 w-3.5" /> Copy Last Week
             </Button>
@@ -922,6 +994,24 @@ export default function RosterPage() {
           </Select>
         )}
       </div>
+
+      {/* Color Legend */}
+      {shifts.some(s => (s as any).source === "ai_forecast") && (
+        <div className="flex items-center gap-4 text-[11px] px-1">
+          <div className="flex items-center gap-1.5">
+            <span className="inline-block h-2.5 w-2.5 rounded border border-cyan-500/40 bg-cyan-500/20" />
+            <span className="text-cyan-400 font-medium flex items-center gap-1"><Sparkles className="h-3 w-3" /> AI Forecast Draft</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <span className="inline-block h-2.5 w-2.5 rounded border border-border/60 bg-muted/80 border-dashed" />
+            <span className="text-muted-foreground font-medium">Manual Draft</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <span className="inline-block h-2.5 w-2.5 rounded border border-primary/25 bg-primary/15" />
+            <span className="text-primary font-medium">Published</span>
+          </div>
+        </div>
+      )}
 
       {/* Day Events Panel - PRP only */}
       {business?.business_code === "PRP" && (
@@ -1023,10 +1113,15 @@ export default function RosterPage() {
                                     } ${
                                       shift.status === "published"
                                         ? "bg-primary/15 text-primary hover:bg-primary/25 border border-primary/25 shadow-sm shadow-primary/5"
+                                        : (shift as any).source === "ai_forecast"
+                                        ? "bg-cyan-500/15 text-cyan-400 hover:bg-cyan-500/25 border border-cyan-500/30 border-dashed"
                                         : "bg-muted/80 text-muted-foreground hover:bg-muted border border-border/60 border-dashed"
                                     }`}
                                   >
-                                    <div className="font-semibold text-[11px] leading-tight">{formatTime12(shift.start_time)} – {formatTime12(shift.end_time)}</div>
+                                    <div className="flex items-center gap-1">
+                                      {(shift as any).source === "ai_forecast" && <Sparkles className="h-2.5 w-2.5 text-cyan-400 flex-shrink-0" />}
+                                      <span className="font-semibold text-[11px] leading-tight">{formatTime12(shift.start_time)} – {formatTime12(shift.end_time)}</span>
+                                    </div>
                                     <div className="text-[10px] opacity-60 mt-0.5">
                                       {(shift.hours_worked ?? calcNetHours(shift.start_time, shift.end_time, shift.break_minutes)).toFixed(2)}h
                                       {shift.break_minutes > 0 && ` · ${shift.break_minutes}m brk`}

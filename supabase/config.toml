@@ -8,3 +8,9 @@ verify_jwt = false
 
 [functions.parse-roster-voice]
 verify_jwt = false
+
+[functions.ai-roster-forecast]
+verify_jwt = false
+
+[functions.timesheet-reminders]
+verify_jwt = false
