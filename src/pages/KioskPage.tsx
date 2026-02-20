@@ -361,7 +361,7 @@ export default function KioskPage() {
                 );
               })}
             </div>
-            <Button variant="outline" className="w-full mt-2" onClick={resetKiosk}>
+            <Button variant="outline" className="w-full mt-2 text-foreground" onClick={resetKiosk}>
               Cancel
             </Button>
           </CardContent>
