@@ -15,10 +15,13 @@ async function forceRefresh() {
 // Aggressive PWA update: poll for new SW + force reload with cache bust
 if ("serviceWorker" in navigator) {
   navigator.serviceWorker.ready.then((registration) => {
-    // Poll for updates every 30 seconds
+    // Poll for updates every 15 seconds
     setInterval(() => {
       registration.update().catch(() => {});
-    }, 30 * 1000);
+    }, 15 * 1000);
+
+    // Check immediately on load
+    registration.update().catch(() => {});
 
     registration.addEventListener("updatefound", () => {
       const newWorker = registration.installing;
