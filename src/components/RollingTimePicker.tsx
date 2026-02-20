@@ -38,10 +38,28 @@ function ScrollColumn({
     if (idx >= 0) scrollToIndex(idx, false);
   }, [selected, items, scrollToIndex]);
 
-  // Touch scroll handling
+  // Wheel + touch scroll handling for all devices
   useEffect(() => {
     const el = containerRef.current;
     if (!el) return;
+
+    // Mouse wheel / trackpad support
+    const onWheel = (e: WheelEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      el.scrollTop += e.deltaY;
+      // Snap after scroll settles
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+      timeoutRef.current = setTimeout(() => {
+        const scrollTop = el.scrollTop;
+        const index = Math.round(scrollTop / ITEM_HEIGHT);
+        const clampedIndex = Math.max(0, Math.min(index, items.length - 1));
+        scrollToIndex(clampedIndex);
+        if (items[clampedIndex] !== selected) {
+          onSelect(items[clampedIndex]);
+        }
+      }, 80);
+    };
 
     const onTouchStart = (e: TouchEvent) => {
       touchStartY.current = e.touches[0].clientY;
@@ -71,11 +89,13 @@ function ScrollColumn({
       }, 80);
     };
 
+    el.addEventListener("wheel", onWheel, { passive: false });
     el.addEventListener("touchstart", onTouchStart, { passive: true });
     el.addEventListener("touchmove", onTouchMove, { passive: false });
     el.addEventListener("touchend", onTouchEnd, { passive: true });
 
     return () => {
+      el.removeEventListener("wheel", onWheel);
       el.removeEventListener("touchstart", onTouchStart);
       el.removeEventListener("touchmove", onTouchMove);
       el.removeEventListener("touchend", onTouchEnd);
