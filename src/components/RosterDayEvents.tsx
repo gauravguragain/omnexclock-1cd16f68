@@ -125,9 +125,24 @@ export default function RosterDayEvents({ weekDates, fmtDate }: Props) {
     });
   };
 
+  const parseEventTime = (timeStr: string | null): number => {
+    if (!timeStr) return Infinity;
+    // Try to extract the first time from strings like "6:00 PM - 11:00 PM" or "7pm start"
+    const match = timeStr.match(/(\d{1,2}):?(\d{2})?\s*(am|pm|AM|PM)?/i);
+    if (!match) return Infinity;
+    let hours = parseInt(match[1], 10);
+    const minutes = match[2] ? parseInt(match[2], 10) : 0;
+    const meridiem = match[3]?.toLowerCase();
+    if (meridiem === "pm" && hours < 12) hours += 12;
+    if (meridiem === "am" && hours === 12) hours = 0;
+    return hours * 60 + minutes;
+  };
+
   const getDayEvents = (dayIdx: number) => {
     const dateStr = fmtDate(weekDates[dayIdx]);
-    return events.filter(e => e.date === dateStr);
+    return events
+      .filter(e => e.date === dateStr)
+      .sort((a, b) => parseEventTime(a.event_time) - parseEventTime(b.event_time));
   };
 
   const addEvent = async (dayIdx: number) => {
