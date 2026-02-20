@@ -516,7 +516,7 @@ export default function EmployeesPage() {
                   groupedEmployees.map(([groupName, groupEmps]) => (
                     <>
                       <TableRow key={`group-${groupName}`} className="bg-muted/40 hover:bg-muted/60">
-                        <TableCell colSpan={8} className="py-2 px-4 sticky left-0">
+                        <TableCell colSpan={8} className="py-2 px-4 sticky left-0 bg-muted/40 z-20">
                           <span className="text-xs font-semibold uppercase tracking-wider text-primary">{groupName}</span>
                           <span className="text-xs text-muted-foreground ml-2">({groupEmps.length})</span>
                         </TableCell>
