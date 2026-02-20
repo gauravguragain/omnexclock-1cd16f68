@@ -523,17 +523,12 @@ export default function MonthlyReportSection() {
         addSectionHeader("Timesheets & Attendance", "Operations");
         const events = results.clockEvents;
 
-        const byDateEmp: Record<string, Record<string, any[]>> = {};
-        events.forEach((ev: any) => {
-          const d = format(new Date(ev.timestamp), "yyyy-MM-dd");
-          const n = ev.employees?.name || "Unknown";
-          if (!byDateEmp[d]) byDateEmp[d] = {};
-          if (!byDateEmp[d][n]) byDateEmp[d][n] = [];
-          byDateEmp[d][n].push(ev);
-        });
+        // Use shared utility to compute timesheet entries (handles overnight shifts)
+        const timesheetEntries = computeTimesheetEntries(events);
+        const empNameMapReport = new Map<string, string>((results.employees || []).map((e: any) => [e.id, e.name]));
 
-        const uniqueDays = Object.keys(byDateEmp).length;
-        const uniqueEmployees = new Set(events.map((e: any) => e.employee_id)).size;
+        const uniqueDays = new Set(timesheetEntries.map(e => e.date)).size;
+        const uniqueEmployees = new Set(timesheetEntries.map(e => e.employee_id)).size;
         const clockInCount = events.filter((e: any) => e.event_type === "clock_in").length;
 
         addStatsRow([
@@ -543,31 +538,20 @@ export default function MonthlyReportSection() {
           { label: "Total Clock-Ins", value: String(clockInCount), color: [180, 83, 9] },
         ]);
 
-        const dailyRows: string[][] = [];
-        Object.entries(byDateEmp).sort().forEach(([date, emps]) => {
-          Object.entries(emps).forEach(([name, evts]) => {
-            const clockIn = evts.find((e: any) => e.event_type === "clock_in");
-            const clockOut = [...evts].reverse().find((e: any) => e.event_type === "clock_out");
-            const breakStart = evts.find((e: any) => e.event_type === "break_start");
-            const breakEnd = [...evts].reverse().find((e: any) => e.event_type === "break_end");
-            const inTime = clockIn ? format(new Date(clockIn.timestamp), "hh:mm a") : "-";
-            const outTime = clockOut ? format(new Date(clockOut.timestamp), "hh:mm a") : "-";
-            let breakMins = "-";
-            if (breakStart && breakEnd) {
-              breakMins = `${Math.round((new Date(breakEnd.timestamp).getTime() - new Date(breakStart.timestamp).getTime()) / 60000)}m`;
-            }
-            let hours = "-";
-            if (clockIn && clockOut) {
-              const diff = (new Date(clockOut.timestamp).getTime() - new Date(clockIn.timestamp).getTime()) / 3600000;
-              hours = diff.toFixed(2);
-            }
-            dailyRows.push([format(parseISO(date), "dd MMM"), name, inTime, outTime, breakMins, hours]);
-          });
+        // Build daily rows from computed entries
+        const sortedEntries = [...timesheetEntries].sort((a, b) => a.date.localeCompare(b.date) || a.employee_id.localeCompare(b.employee_id));
+        const dailyRows: string[][] = sortedEntries.map((entry): string[] => {
+          const name = empNameMapReport.get(entry.employee_id) || "Unknown";
+          const inTime = entry.clock_in ? format(entry.clock_in, "hh:mm a") : "-";
+          const outTime = entry.clock_out ? format(entry.clock_out, "hh:mm a") : "-";
+          const breakMins = entry.break_minutes > 0 ? `${entry.break_minutes}m` : "-";
+          const hours = entry.total_hours > 0 ? entry.net_hours.toFixed(2) : "-";
+          return [format(parseISO(entry.date), "dd MMM"), name, inTime, outTime, breakMins, hours];
         });
 
         if (dailyRows.length > 0) {
           addSubHeader("Daily Attendance Log");
-          addTable(["Date", "Employee", "Clock In", "Clock Out", "Break", "Total Hrs"], dailyRows, SECTION_COLORS.Operations);
+          addTable(["Date", "Employee", "Clock In", "Clock Out", "Break", "Net Hrs"], dailyRows, SECTION_COLORS.Operations);
         }
       }
 
