@@ -234,15 +234,33 @@ export default function DashboardPage() {
       avgShift: shiftCount > 0 ? (totalHoursWeek / shiftCount).toFixed(2) : "0.00",
     });
 
-    // Weekly daily hours - use date key for reliable grouping
-    const todayKeyWeekly = todayKey;
-    const dailyMap = new Map<string, { events: Map<string, any[]> }>();
-    for (const ev of weekEvents) {
-      const key = toLocalDateKey(new Date(ev.timestamp));
-      if (!dailyMap.has(key)) dailyMap.set(key, { events: new Map() });
-      const dayData = dailyMap.get(key)!;
-      if (!dayData.events.has(ev.employee_id)) dayData.events.set(ev.employee_id, []);
-      dayData.events.get(ev.employee_id)!.push(ev);
+    // Weekly daily hours - use approved timesheet data from shared utility
+    // Fetch approvals for the last 7 days
+    const weekAgoStr = toAusDate(weekAgo);
+    const todayStr = toAusDate(new Date());
+    const { data: weekApprovals } = await supabase
+      .from("timesheet_approvals")
+      .select("employee_id, date")
+      .eq("approved", true)
+      .gte("date", weekAgoStr)
+      .lte("date", todayStr);
+
+    const weekApprovedSet = new Set(
+      (weekApprovals || []).map((a) => `${a.employee_id}-${a.date}`)
+    );
+
+    const weekTimesheets = computeTimesheetEntries(weekEvents);
+    const approvedWeekEntries = filterApprovedEntries(weekTimesheets, weekApprovedSet);
+
+    // Group approved entries by date
+    const dailyApprovedMap = new Map<string, { hours: number; employees: Set<string> }>();
+    for (const entry of approvedWeekEntries) {
+      if (!dailyApprovedMap.has(entry.date)) {
+        dailyApprovedMap.set(entry.date, { hours: 0, employees: new Set() });
+      }
+      const day = dailyApprovedMap.get(entry.date)!;
+      day.hours += entry.net_hours;
+      day.employees.add(entry.employee_id);
     }
 
     const weekly: DailyHours[] = [];
@@ -251,17 +269,13 @@ export default function DashboardPage() {
       d.setDate(d.getDate() - i);
       const key = toLocalDateKey(d);
       const label = toAusFormatted(d, { weekday: "short", day: "numeric", month: "short" });
-      const isToday = key === todayKeyWeekly;
-      const dayData = dailyMap.get(key);
-      let dayHours = 0;
-      let dayEmps = 0;
-      if (dayData) {
-        dayEmps = dayData.events.size;
-        for (const evs of dayData.events.values()) {
-          dayHours += calcHoursFromEvents(evs, isToday);
-        }
-      }
-      weekly.push({ date: label, key, hours: roundHours(dayHours), employees: dayEmps });
+      const dayData = dailyApprovedMap.get(key);
+      weekly.push({
+        date: label,
+        key,
+        hours: roundHours(dayData?.hours || 0),
+        employees: dayData?.employees.size || 0,
+      });
     }
     setWeeklyData(weekly);
 
