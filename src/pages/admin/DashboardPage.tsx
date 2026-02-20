@@ -266,16 +266,29 @@ export default function DashboardPage() {
       (approvedTimesheets || []).map((a) => `${a.employee_id}-${a.date}`)
     );
 
-    // Group week events by employee+date, only include approved dates
-    const weekByEmpDate = new Map<string, Map<string, any[]>>();
+    // Group week events by employee, then assign to clock_in date (handles overnight shifts)
+    const weekByEmpAll = new Map<string, any[]>();
     for (const ev of weekEvents) {
-      const dateKey = toLocalDateKey(new Date(ev.timestamp));
-      const approvalKey = `${ev.employee_id}-${dateKey}`;
-      if (!approvedSet.has(approvalKey)) continue; // skip unapproved
-      if (!weekByEmpDate.has(ev.employee_id)) weekByEmpDate.set(ev.employee_id, new Map());
-      const empDates = weekByEmpDate.get(ev.employee_id)!;
-      if (!empDates.has(dateKey)) empDates.set(dateKey, []);
-      empDates.get(dateKey)!.push(ev);
+      if (!weekByEmpAll.has(ev.employee_id)) weekByEmpAll.set(ev.employee_id, []);
+      weekByEmpAll.get(ev.employee_id)!.push(ev);
+    }
+
+    const weekByEmpDate = new Map<string, Map<string, any[]>>();
+    for (const [empId, evs] of weekByEmpAll) {
+      evs.sort((a: any, b: any) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+      let currentShiftDate: string | null = null;
+      for (const ev of evs) {
+        if (ev.event_type === "clock_in") {
+          currentShiftDate = toLocalDateKey(new Date(ev.timestamp));
+        }
+        const shiftDate = currentShiftDate || toLocalDateKey(new Date(ev.timestamp));
+        const approvalKey = `${empId}-${shiftDate}`;
+        if (!approvedSet.has(approvalKey)) continue;
+        if (!weekByEmpDate.has(empId)) weekByEmpDate.set(empId, new Map());
+        const empDates = weekByEmpDate.get(empId)!;
+        if (!empDates.has(shiftDate)) empDates.set(shiftDate, []);
+        empDates.get(shiftDate)!.push(ev);
+      }
     }
 
     const breakdown: EmployeeBreakdown[] = [];
