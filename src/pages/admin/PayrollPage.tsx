@@ -125,6 +125,17 @@ export default function PayrollPage() {
     if (business) fetchPayroll();
   }, [dateFrom, dateTo, business]);
 
+  useEffect(() => {
+    if (!business) return;
+    const channel = supabase
+      .channel("payroll-approvals-realtime")
+      .on("postgres_changes", { event: "*", schema: "public", table: "timesheet_approvals" }, () => {
+        fetchPayroll();
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [business, dateFrom, dateTo]);
+
   useEffect(() => { setPage(0); }, [search]);
 
   const fetchAllEvents = async (fromDate: Date, toDate: Date) => {
