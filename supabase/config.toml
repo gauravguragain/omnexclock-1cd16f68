@@ -1,16 +1,1 @@
-project_id = "oulvbpeofotxxnkxndzv"
-
-[functions.analyze-theme]
-verify_jwt = false
-
-[functions.invite-admin]
-verify_jwt = false
-
-[functions.parse-roster-voice]
-verify_jwt = false
-
-[functions.ai-roster-forecast]
-verify_jwt = false
-
-[functions.timesheet-reminders]
-verify_jwt = false
+project_id = "fhotpjcgoyuqyhttawef"
