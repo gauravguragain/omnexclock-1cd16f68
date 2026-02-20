@@ -865,22 +865,24 @@ export default function RosterPage() {
 
   const netHours = calcNetHours(form.start_time, form.end_time, parseInt(form.break_minutes) || 0);
 
+  const hasAiShifts = shifts.some(s => (s as any).source === "ai_forecast");
+
   return (
-    <div className="space-y-5">
-      {/* Toolbar */}
-      <div className="flex flex-col gap-3">
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-          <div className="flex items-center gap-2 flex-wrap">
-            <Button variant="outline" size="icon" className="h-9 w-9 rounded-lg border-border/60 hover:border-primary/40" onClick={() => setWeekStart(addDays(weekStart, -7))}>
+    <div className="space-y-4">
+      {/* ── Header Bar ── */}
+      <div className="rounded-xl border border-border/60 bg-card/80 backdrop-blur-sm shadow-sm">
+        {/* Row 1: Week Navigation + Status + Department */}
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 px-4 py-3">
+          {/* Week Nav */}
+          <div className="flex items-center gap-2">
+            <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full hover:bg-muted" onClick={() => setWeekStart(addDays(weekStart, -7))}>
               <ChevronLeft className="h-4 w-4" />
             </Button>
             <Popover>
               <PopoverTrigger asChild>
-                <Button variant="outline" className="min-w-[180px] sm:min-w-[210px] justify-center gap-2 rounded-lg border-border/60 hover:border-primary/40 h-9 px-3">
-                  <CalendarIcon className="h-3.5 w-3.5 text-muted-foreground" />
-                  <div className="text-center">
-                    <p className="text-sm font-semibold text-foreground tracking-tight leading-tight">{weekLabel}</p>
-                  </div>
+                <Button variant="ghost" className="min-w-[190px] justify-center gap-2 rounded-lg hover:bg-muted h-8 px-3 font-semibold text-sm">
+                  <CalendarIcon className="h-3.5 w-3.5 text-primary" />
+                  {weekLabel}
                 </Button>
               </PopoverTrigger>
               <PopoverContent className="w-auto p-0" align="center">
@@ -905,92 +907,131 @@ export default function RosterPage() {
                 />
               </PopoverContent>
             </Popover>
-            <Button variant="outline" size="icon" className="h-9 w-9 rounded-lg border-border/60 hover:border-primary/40" onClick={() => setWeekStart(addDays(weekStart, 7))}>
+            <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full hover:bg-muted" onClick={() => setWeekStart(addDays(weekStart, 7))}>
               <ChevronRight className="h-4 w-4" />
             </Button>
-            <div className="flex items-center gap-1.5">
-              <span className={`inline-block h-2 w-2 rounded-full ring-2 ring-background ${
-                weekStatus === "published" ? "bg-success" :
-                weekStatus === "draft" ? "bg-warning" :
-                weekStatus === "mixed" ? "bg-primary" : "bg-muted-foreground"
-              }`} />
-              <span className="text-[11px] text-muted-foreground capitalize font-medium">{weekStatus === "empty" ? "No shifts" : weekStatus}</span>
-            </div>
-            <Button variant="ghost" size="sm" onClick={() => setWeekStart(getMonday(new Date()))} className="text-xs text-muted-foreground hover:text-primary">
+            <Button variant="ghost" size="sm" onClick={() => setWeekStart(getMonday(new Date()))} className="text-xs text-muted-foreground hover:text-primary h-7 px-2">
               Today
             </Button>
+            {/* Status Badge */}
+            <Badge variant="outline" className={cn(
+              "text-[10px] uppercase font-semibold tracking-wider px-2.5 py-0.5 rounded-full border",
+              weekStatus === "published" ? "border-green-500/40 text-green-500 bg-green-500/10" :
+              weekStatus === "draft" ? "border-yellow-500/40 text-yellow-500 bg-yellow-500/10" :
+              weekStatus === "mixed" ? "border-primary/40 text-primary bg-primary/10" :
+              "border-border text-muted-foreground bg-muted/50"
+            )}>
+              {weekStatus === "empty" ? "No shifts" : weekStatus}
+            </Badge>
           </div>
 
+          {/* Department Filter */}
+          <div className="flex items-center gap-2">
+            {departments.length > 0 && (
+              <Select
+                value={lockedDepartment || departmentFilter}
+                onValueChange={setDepartmentFilter}
+                disabled={!!lockedDepartment}
+              >
+                <SelectTrigger className="h-8 w-[170px] rounded-lg text-xs border-border/60">
+                  <SelectValue placeholder="All Departments" />
+                </SelectTrigger>
+                <SelectContent>
+                  {!lockedDepartment && <SelectItem value="all">All Departments</SelectItem>}
+                  {(lockedDepartment ? rosterDepts : departments).map(dept => (
+                    <SelectItem key={dept} value={dept}>{dept}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+          </div>
+        </div>
+
+        {/* Row 2: Actions — only for non-viewers */}
         {!isViewer && (
-          <div className="flex items-center gap-2 flex-wrap">
+          <div className="flex items-center gap-2 flex-wrap px-4 py-2.5 border-t border-border/40 bg-muted/20">
+            {/* Clipboard indicator */}
             {copiedShift && (
-              <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-primary/30 bg-primary/10 text-xs text-primary animate-in fade-in duration-200">
+              <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-primary/30 bg-primary/10 text-[11px] text-primary animate-in fade-in duration-200">
                 <Clipboard className="h-3 w-3" />
                 <span className="font-semibold">{formatTime12(copiedShift.start_time)} – {formatTime12(copiedShift.end_time)}</span>
-                <button onClick={() => setCopiedShift(null)} className="ml-1.5 hover:text-destructive transition-colors rounded-full p-0.5 hover:bg-destructive/10">
-                  <X className="h-3 w-3" />
+                <button onClick={() => setCopiedShift(null)} className="ml-1 hover:text-destructive transition-colors rounded-full p-0.5 hover:bg-destructive/10">
+                  <X className="h-2.5 w-2.5" />
                 </button>
               </div>
             )}
-            {isSuperAdminOf(currentBusinessId) && <RosterVoiceCommand
-              employees={filteredEmployees}
-              weekDates={FULL_DAYS.map((dayName, i) => ({ dayName, date: fmtDate(weekDates[i]) }))}
-              weekStartDate={fmtDate(weekStart)}
-              onInsertShift={async (action) => {
-                // Derive week_start_date (Monday) from the action's actual date
-                const actionDate = new Date(action.date + "T00:00:00");
-                const dayIdx = (actionDate.getDay() + 6) % 7; // 0=Mon
-                const actionWeekStart = new Date(actionDate);
-                actionWeekStart.setDate(actionDate.getDate() - dayIdx);
 
-                const payload = {
-                  employee_id: action.employee_id!,
-                  date: action.date,
-                  day_of_week: action.day_of_week,
-                  start_time: action.start_time,
-                  end_time: action.end_time,
-                  break_minutes: action.break_minutes ?? 30,
-                  notes: action.notes || null,
-                  week_start_date: fmtDate(actionWeekStart),
-                  status: "draft" as const,
-                };
-                const { error } = await supabase.from("shifts").insert(payload);
-                if (error) throw error;
-                await logAudit("shift_add_voice", payload);
-                fetchData();
-              }}
-            />}
+            {/* AI Tools group */}
             {isSuperAdminOf(currentBusinessId) && (
-              <Button
-                variant="outline"
-                size="sm"
-                className="rounded-lg border-cyan-500/40 text-cyan-400 hover:bg-cyan-500/10 hover:border-cyan-500/60"
-                onClick={handleAiForecast}
-                disabled={forecasting || loading}
-              >
-                <BrainCircuit className="mr-1.5 h-3.5 w-3.5" />
-                {forecasting ? "Forecasting..." : "AI Forecast"}
-              </Button>
+              <div className="flex items-center gap-1.5">
+                <RosterVoiceCommand
+                  employees={filteredEmployees}
+                  weekDates={FULL_DAYS.map((dayName, i) => ({ dayName, date: fmtDate(weekDates[i]) }))}
+                  weekStartDate={fmtDate(weekStart)}
+                  onInsertShift={async (action) => {
+                    const actionDate = new Date(action.date + "T00:00:00");
+                    const dayIdx = (actionDate.getDay() + 6) % 7;
+                    const actionWeekStart = new Date(actionDate);
+                    actionWeekStart.setDate(actionDate.getDate() - dayIdx);
+                    const payload = {
+                      employee_id: action.employee_id!,
+                      date: action.date,
+                      day_of_week: action.day_of_week,
+                      start_time: action.start_time,
+                      end_time: action.end_time,
+                      break_minutes: action.break_minutes ?? 30,
+                      notes: action.notes || null,
+                      week_start_date: fmtDate(actionWeekStart),
+                      status: "draft" as const,
+                    };
+                    const { error } = await supabase.from("shifts").insert(payload);
+                    if (error) throw error;
+                    await logAudit("shift_add_voice", payload);
+                    fetchData();
+                  }}
+                />
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-8 rounded-lg border-cyan-500/30 text-cyan-400 hover:bg-cyan-500/10 hover:border-cyan-500/50 text-xs"
+                  onClick={handleAiForecast}
+                  disabled={forecasting || loading}
+                >
+                  <BrainCircuit className="mr-1.5 h-3.5 w-3.5" />
+                  {forecasting ? "Forecasting..." : "AI Forecast"}
+                </Button>
+                {hasAiShifts && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-8 rounded-lg text-red-400 hover:bg-red-500/10 text-xs"
+                    onClick={handleClearAiForecast}
+                  >
+                    <Trash2 className="mr-1.5 h-3.5 w-3.5" /> Clear AI
+                  </Button>
+                )}
+              </div>
             )}
-            {isSuperAdminOf(currentBusinessId) && shifts.some(s => (s as any).source === "ai_forecast") && (
-              <Button
-                variant="outline"
-                size="sm"
-                className="rounded-lg border-red-500/40 text-red-400 hover:bg-red-500/10 hover:border-red-500/60"
-                onClick={handleClearAiForecast}
-              >
-                <Trash2 className="mr-1.5 h-3.5 w-3.5" /> Clear AI Forecast
-              </Button>
+
+            {/* Separator */}
+            {isSuperAdminOf(currentBusinessId) && (
+              <div className="h-5 w-px bg-border/60 mx-1 hidden sm:block" />
             )}
-            <Button variant="outline" size="sm" className="rounded-lg" onClick={handleCopyPrevWeek} disabled={loading}>
+
+            {/* Roster actions */}
+            <Button variant="outline" size="sm" className="h-8 rounded-lg text-xs" onClick={handleCopyPrevWeek} disabled={loading}>
               <Copy className="mr-1.5 h-3.5 w-3.5" /> Copy Last Week
             </Button>
-            <Button size="sm" className="rounded-lg" onClick={handlePublishWeek} disabled={publishing || weekStatus === "published" || weekStatus === "empty"}>
+
+            <div className="h-5 w-px bg-border/60 mx-1 hidden sm:block" />
+
+            {/* Primary actions */}
+            <Button size="sm" className="h-8 rounded-lg text-xs font-semibold" onClick={handlePublishWeek} disabled={publishing || weekStatus === "published" || weekStatus === "empty"}>
               <Send className="mr-1.5 h-3.5 w-3.5" /> {publishing ? "Publishing..." : "Publish Week"}
             </Button>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="sm" className="rounded-lg" disabled={shifts.length === 0}>
+                <Button variant="outline" size="sm" className="h-8 rounded-lg text-xs" disabled={shifts.length === 0}>
                   <FileDown className="mr-1.5 h-3.5 w-3.5" /> Export
                 </Button>
               </DropdownMenuTrigger>
@@ -1005,43 +1046,25 @@ export default function RosterPage() {
             </DropdownMenu>
           </div>
         )}
-        </div>
-        {departments.length > 0 && (
-          <Select
-            value={lockedDepartment || departmentFilter}
-            onValueChange={setDepartmentFilter}
-            disabled={!!lockedDepartment}
-          >
-            <SelectTrigger className="h-9 w-full sm:w-[200px] rounded-lg text-xs">
-              <SelectValue placeholder="All Departments" />
-            </SelectTrigger>
-            <SelectContent>
-              {!lockedDepartment && <SelectItem value="all">All Departments</SelectItem>}
-              {(lockedDepartment ? rosterDepts : departments).map(dept => (
-                <SelectItem key={dept} value={dept}>{dept}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+
+        {/* Color Legend — inline within the header */}
+        {hasAiShifts && (
+          <div className="flex items-center gap-5 text-[10px] px-4 py-2 border-t border-border/30 bg-muted/10">
+            <div className="flex items-center gap-1.5">
+              <span className="inline-block h-2 w-2 rounded-sm border border-cyan-500/40 bg-cyan-500/20" />
+              <span className="text-cyan-400 font-medium flex items-center gap-1"><Sparkles className="h-2.5 w-2.5" /> AI Forecast</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <span className="inline-block h-2 w-2 rounded-sm border border-border/60 bg-muted/80 border-dashed" />
+              <span className="text-muted-foreground font-medium">Manual Draft</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <span className="inline-block h-2 w-2 rounded-sm border border-primary/25 bg-primary/15" />
+              <span className="text-primary font-medium">Published</span>
+            </div>
+          </div>
         )}
       </div>
-
-      {/* Color Legend */}
-      {shifts.some(s => (s as any).source === "ai_forecast") && (
-        <div className="flex items-center gap-4 text-[11px] px-1">
-          <div className="flex items-center gap-1.5">
-            <span className="inline-block h-2.5 w-2.5 rounded border border-cyan-500/40 bg-cyan-500/20" />
-            <span className="text-cyan-400 font-medium flex items-center gap-1"><Sparkles className="h-3 w-3" /> AI Forecast Draft</span>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <span className="inline-block h-2.5 w-2.5 rounded border border-border/60 bg-muted/80 border-dashed" />
-            <span className="text-muted-foreground font-medium">Manual Draft</span>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <span className="inline-block h-2.5 w-2.5 rounded border border-primary/25 bg-primary/15" />
-            <span className="text-primary font-medium">Published</span>
-          </div>
-        </div>
-      )}
 
       {/* Day Events Panel - PRP only */}
       {business?.business_code === "PRP" && (
