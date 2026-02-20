@@ -43,6 +43,7 @@ interface TimesheetEntry {
   raw_break_end: string | null;
   event_ids: string[];
   approved: boolean;
+  clock_out_notes: string | null;
 }
 
 interface EditForm {
@@ -250,6 +251,7 @@ export default function TimesheetsPage() {
           raw_break_start: null,
           raw_break_end: null,
           event_ids: [],
+          clock_out_notes: null,
         });
       }
 
@@ -268,6 +270,9 @@ export default function TimesheetsPage() {
           if (!entry.clock_out || time > new Date(entry.clock_out)) {
             entry.clock_out = ev.timestamp;
             entry.raw_clock_out = ev.timestamp;
+          }
+          if ((ev as any).notes) {
+            entry.clock_out_notes = (ev as any).notes;
           }
           break;
         case "break_start":
@@ -314,6 +319,7 @@ export default function TimesheetsPage() {
         raw_break_end: e.raw_break_end,
         event_ids: e.event_ids,
         approved: appMap.get(approvalKey) || false,
+        clock_out_notes: e.clock_out_notes || null,
       };
     });
 
@@ -843,6 +849,11 @@ export default function TimesheetsPage() {
                           <span className="text-foreground">{e.total_hours.toFixed(2)}h</span>
                           <span className="text-foreground font-semibold">{e.net_hours.toFixed(2)}h</span>
                         </div>
+                        {e.clock_out_notes && (
+                          <div className="text-xs text-muted-foreground italic bg-muted/40 rounded px-2 py-1">
+                            <span className="font-medium text-foreground not-italic">Note:</span> {e.clock_out_notes}
+                          </div>
+                        )}
                       </div>
                     ))}
                   </div>
@@ -915,7 +926,23 @@ export default function TimesheetsPage() {
                           </TableCell>
                           <TableCell className="font-medium">{e.employee_name}</TableCell>
                           <TableCell>{e.clock_in || "-"}</TableCell>
-                          <TableCell>{e.clock_out || "-"}</TableCell>
+                          <TableCell>
+                            {e.clock_out_notes ? (
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <span className="underline decoration-dotted cursor-help">{e.clock_out || "-"}</span>
+                                  </TooltipTrigger>
+                                  <TooltipContent side="top" className="max-w-xs text-xs">
+                                    <p className="font-medium mb-0.5">Employee Note:</p>
+                                    <p>{e.clock_out_notes}</p>
+                                  </TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
+                            ) : (
+                              e.clock_out || "-"
+                            )}
+                          </TableCell>
                           <TableCell className="hidden lg:table-cell">{e.break_start || "-"}</TableCell>
                           <TableCell className="hidden lg:table-cell">{e.break_end || "-"}</TableCell>
                           <TableCell>{e.break_minutes}m</TableCell>
