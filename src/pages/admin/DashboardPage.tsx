@@ -408,15 +408,41 @@ export default function DashboardPage() {
           </CardHeader>
           <CardContent>
             {employeeBreakdown.length > 0 ? (
-              <ResponsiveContainer width="100%" height={250}>
+              <ResponsiveContainer width="100%" height={280}>
                 <PieChart>
-                  <Pie data={employeeBreakdown} dataKey="hours" nameKey="name" cx="50%" cy="50%" outerRadius={90} label={({ name, hours }) => `${name}: ${hours}h`} labelLine={false}>
+                  <Pie
+                    data={employeeBreakdown}
+                    dataKey="hours"
+                    nameKey="name"
+                    cx="40%"
+                    cy="50%"
+                    innerRadius={45}
+                    outerRadius={85}
+                    paddingAngle={3}
+                    label={false}
+                    labelLine={false}
+                    stroke="hsl(var(--background))"
+                    strokeWidth={2}
+                  >
                     {employeeBreakdown.map((_, i) => (
                       <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />
                     ))}
                   </Pie>
-                  <Tooltip contentStyle={{ backgroundColor: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 10, color: "hsl(var(--foreground))", boxShadow: "0 8px 24px rgba(0,0,0,0.3)" }} />
-                  <Legend />
+                  <Tooltip
+                    formatter={(value: number, name: string) => [`${value}h`, name]}
+                    contentStyle={{ backgroundColor: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 10, color: "hsl(var(--foreground))", boxShadow: "0 8px 24px rgba(0,0,0,0.3)" }}
+                  />
+                  <Legend
+                    layout="vertical"
+                    align="right"
+                    verticalAlign="middle"
+                    iconType="circle"
+                    iconSize={8}
+                    formatter={(value: string) => {
+                      const item = employeeBreakdown.find(e => e.name === value);
+                      return <span style={{ color: "hsl(var(--foreground))", fontSize: 11 }}>{value} <span style={{ color: "hsl(var(--muted-foreground))" }}>({item?.hours ?? 0}h)</span></span>;
+                    }}
+                  />
                 </PieChart>
               </ResponsiveContainer>
             ) : (
