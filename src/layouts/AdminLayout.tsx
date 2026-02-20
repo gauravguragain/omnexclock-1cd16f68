@@ -284,14 +284,13 @@ export default function AdminLayout() {
 
       {/* Main */}
       <main className="flex-1 lg:ml-64 min-w-0 flex flex-col h-dvh lg:h-auto">
-        {/* Header — fixed at top on mobile, sticky on desktop */}
-        <header className="sticky top-0 z-30 glass border-b border-border/30 px-3 py-2.5 flex items-center gap-2 lg:px-6 lg:py-3 flex-shrink-0">
-          <div className="flex items-center gap-2 min-w-0 flex-1">
-            {/* Mobile: show logo + page title compact */}
+        {/* Header — compact on mobile, refined spacing */}
+        <header className="sticky top-0 z-30 glass border-b border-border/20 px-4 py-2 flex items-center gap-2.5 lg:px-6 lg:py-3 flex-shrink-0">
+          <div className="flex items-center gap-2.5 min-w-0 flex-1">
             {business?.logo_url && (
-              <img src={business.logo_url} alt="" className="h-7 w-7 rounded-md object-cover lg:hidden flex-shrink-0" />
+              <img src={business.logo_url} alt="" className="h-7 w-7 rounded-lg object-cover lg:hidden flex-shrink-0 ring-1 ring-border/20" />
             )}
-            <h2 className="text-sm font-semibold text-foreground tracking-tight truncate lg:text-base">
+            <h2 className="text-[15px] font-semibold text-foreground tracking-tight truncate lg:text-base">
               {allNavItems.find((n) => n.path === location.pathname)?.label || "Admin"}
             </h2>
             {roleBadge && (
@@ -346,10 +345,11 @@ export default function AdminLayout() {
                 </button>
               </SheetTrigger>
               <SheetContent side="bottom" className="rounded-t-2xl max-h-[70dvh] pb-safe">
-                <SheetHeader className="pb-2">
-                  <SheetTitle className="text-sm">More</SheetTitle>
+                <div className="sheet-handle" />
+                <SheetHeader className="pb-1">
+                  <SheetTitle className="text-sm font-semibold">More</SheetTitle>
                 </SheetHeader>
-                <div className="grid grid-cols-4 gap-3 py-2">
+                <div className="grid grid-cols-4 gap-2 py-3">
                   {bottomNavOverflow.map(({ path, label, icon: Icon }) => {
                     const isActive = location.pathname === path;
                     return (
@@ -357,10 +357,10 @@ export default function AdminLayout() {
                         key={path}
                         to={path}
                         onClick={() => setMoreSheetOpen(false)}
-                        className={`flex flex-col items-center gap-1.5 p-4 rounded-xl touch-active min-h-[72px] ${
+                        className={`flex flex-col items-center gap-1.5 p-3 rounded-xl touch-active min-h-[68px] transition-colors ${
                           isActive
                             ? "bg-primary/10 text-primary"
-                            : "text-muted-foreground"
+                            : "text-muted-foreground hover:bg-secondary/50"
                         }`}
                       >
                         <Icon className="h-5 w-5" />
