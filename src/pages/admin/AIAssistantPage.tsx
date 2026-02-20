@@ -6,7 +6,9 @@ import { Badge } from "@/components/ui/badge";
 import {
   Bot, Send, Trash2, Sparkles, User, Mic, MicOff, Volume2, VolumeX,
   Download, Copy, Check, Zap, TrendingUp, Users, Package, CalendarDays, DollarSign, AlertTriangle, FileText,
+  History, ArrowLeft, Clock, X,
 } from "lucide-react";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { toast } from "sonner";
 import {
   BarChart, Bar, LineChart, Line, PieChart, Pie, AreaChart, Area,
@@ -18,6 +20,13 @@ interface Message {
   role: "user" | "assistant";
   content: string;
   timestamp: Date;
+}
+
+interface HistorySession {
+  id: string;
+  messages: Message[];
+  savedAt: string;
+  preview: string;
 }
 
 interface ChartData {
@@ -173,6 +182,8 @@ function ChartRenderer({ chart }: { chart: ChartData }) {
 
 const STORAGE_KEY = "ai-assistant-history";
 
+const HISTORY_KEY = "ai-assistant-sessions";
+
 function loadHistory(businessId: string): Message[] {
   try {
     const raw = localStorage.getItem(`${STORAGE_KEY}-${businessId}`);
@@ -184,10 +195,39 @@ function loadHistory(businessId: string): Message[] {
 
 function saveHistory(businessId: string, messages: Message[]) {
   try {
-    // Keep last 50 messages to avoid storage bloat
     const toSave = messages.slice(-50);
     localStorage.setItem(`${STORAGE_KEY}-${businessId}`, JSON.stringify(toSave));
   } catch { /* ignore */ }
+}
+
+function loadSessions(businessId: string): HistorySession[] {
+  try {
+    const raw = localStorage.getItem(`${HISTORY_KEY}-${businessId}`);
+    if (!raw) return [];
+    return JSON.parse(raw);
+  } catch { return []; }
+}
+
+function saveSessions(businessId: string, sessions: HistorySession[]) {
+  try {
+    // Keep last 30 sessions
+    const toSave = sessions.slice(-30);
+    localStorage.setItem(`${HISTORY_KEY}-${businessId}`, JSON.stringify(toSave));
+  } catch { /* ignore */ }
+}
+
+function saveCurrentToHistory(businessId: string, messages: Message[]) {
+  if (messages.length === 0) return;
+  const sessions = loadSessions(businessId);
+  const firstUserMsg = messages.find(m => m.role === "user");
+  const session: HistorySession = {
+    id: Date.now().toString(),
+    messages: messages.map(m => ({ ...m, timestamp: m.timestamp instanceof Date ? m.timestamp : new Date(m.timestamp) })),
+    savedAt: new Date().toISOString(),
+    preview: firstUserMsg?.content?.slice(0, 80) || "Chat session",
+  };
+  sessions.push(session);
+  saveSessions(businessId, sessions);
 }
 
 export default function AIAssistantPage() {
@@ -199,6 +239,8 @@ export default function AIAssistantPage() {
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [copiedIdx, setCopiedIdx] = useState<number | null>(null);
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
+  const [historyOpen, setHistoryOpen] = useState(false);
+  const [sessions, setSessions] = useState<HistorySession[]>([]);
   const scrollRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const recognitionRef = useRef<any>(null);
@@ -208,7 +250,27 @@ export default function AIAssistantPage() {
     if (business?.id) {
       const history = loadHistory(business.id);
       if (history.length > 0) setMessages(history);
+      setSessions(loadSessions(business.id));
     }
+  }, [business?.id]);
+
+  // Save current chat to history and clear on unmount (leaving page)
+  useEffect(() => {
+    const businessId = business?.id;
+    return () => {
+      if (businessId) {
+        const currentRaw = localStorage.getItem(`${STORAGE_KEY}-${businessId}`);
+        if (currentRaw) {
+          try {
+            const currentMsgs = JSON.parse(currentRaw).map((m: any) => ({ ...m, timestamp: new Date(m.timestamp) }));
+            if (currentMsgs.length > 0) {
+              saveCurrentToHistory(businessId, currentMsgs);
+            }
+          } catch { /* ignore */ }
+        }
+        localStorage.removeItem(`${STORAGE_KEY}-${businessId}`);
+      }
+    };
   }, [business?.id]);
 
   // Save conversation when messages change
@@ -478,9 +540,32 @@ export default function AIAssistantPage() {
 
   const clearChat = () => {
     window.speechSynthesis.cancel();
+    if (business?.id && messages.length > 0) {
+      saveCurrentToHistory(business.id, messages);
+      setSessions(loadSessions(business.id));
+    }
     setMessages([]);
     setInput("");
     if (business?.id) localStorage.removeItem(`${STORAGE_KEY}-${business.id}`);
+  };
+
+  const loadSession = (session: HistorySession) => {
+    setMessages(session.messages.map(m => ({ ...m, timestamp: new Date(m.timestamp) })));
+    setHistoryOpen(false);
+  };
+
+  const deleteSession = (sessionId: string) => {
+    if (!business?.id) return;
+    const updated = sessions.filter(s => s.id !== sessionId);
+    setSessions(updated);
+    saveSessions(business.id, updated);
+  };
+
+  const clearAllHistory = () => {
+    if (!business?.id) return;
+    setSessions([]);
+    localStorage.removeItem(`${HISTORY_KEY}-${business.id}`);
+    toast.success("History cleared");
   };
 
   // Markdown rendering
@@ -672,6 +757,74 @@ export default function AIAssistantPage() {
       <div className="border-t border-border/30 pt-3 flex-shrink-0">
         <div className="flex gap-2 items-end">
           <div className="flex flex-col gap-1">
+            <Sheet open={historyOpen} onOpenChange={setHistoryOpen}>
+              <SheetTrigger asChild>
+                <Button variant="ghost" size="icon" className="h-9 w-9 text-muted-foreground" title="Chat history">
+                  <History className="h-4 w-4" />
+                </Button>
+              </SheetTrigger>
+              <SheetContent side="left" className="w-80 sm:w-96 p-0">
+                <SheetHeader className="p-4 border-b border-border/30">
+                  <SheetTitle className="flex items-center justify-between">
+                    <span className="flex items-center gap-2 text-sm">
+                      <History className="h-4 w-4" /> Chat History
+                    </span>
+                    {sessions.length > 0 && (
+                      <Button variant="ghost" size="sm" className="h-7 px-2 text-xs text-destructive hover:text-destructive" onClick={clearAllHistory}>
+                        Clear All
+                      </Button>
+                    )}
+                  </SheetTitle>
+                </SheetHeader>
+                <div className="overflow-y-auto h-[calc(100vh-5rem)]">
+                  {sessions.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center h-40 text-center px-4">
+                      <Clock className="h-8 w-8 text-muted-foreground/30 mb-2" />
+                      <p className="text-sm text-muted-foreground">No history yet</p>
+                      <p className="text-xs text-muted-foreground/60">Chats are saved when you leave or clear</p>
+                    </div>
+                  ) : (
+                    <div className="flex flex-col">
+                      {[...sessions].reverse().map((session) => {
+                        const date = new Date(session.savedAt);
+                        const msgCount = session.messages.length;
+                        return (
+                          <div
+                            key={session.id}
+                            className="flex items-start gap-3 px-4 py-3 border-b border-border/20 hover:bg-accent/30 transition-colors cursor-pointer group"
+                            onClick={() => loadSession(session)}
+                          >
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-medium text-foreground truncate">{session.preview}</p>
+                              <div className="flex items-center gap-2 mt-1">
+                                <span className="text-[10px] text-muted-foreground">
+                                  {date.toLocaleDateString("en-AU", { day: "numeric", month: "short", year: "numeric" })}
+                                </span>
+                                <span className="text-[10px] text-muted-foreground/50">•</span>
+                                <span className="text-[10px] text-muted-foreground">
+                                  {date.toLocaleTimeString("en-AU", { hour: "numeric", minute: "2-digit", hour12: true })}
+                                </span>
+                                <span className="text-[10px] text-muted-foreground/50">•</span>
+                                <span className="text-[10px] text-muted-foreground">{msgCount} msgs</span>
+                              </div>
+                            </div>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-6 w-6 opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-destructive flex-shrink-0"
+                              onClick={(e) => { e.stopPropagation(); deleteSession(session.id); }}
+                              title="Delete"
+                            >
+                              <X className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              </SheetContent>
+            </Sheet>
             {messages.length > 0 && (
               <Button variant="ghost" size="icon" className="h-9 w-9 text-muted-foreground" onClick={clearChat} title="Clear chat">
                 <Trash2 className="h-4 w-4" />
