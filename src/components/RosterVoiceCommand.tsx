@@ -1,9 +1,8 @@
-import { useState, useRef, useCallback } from "react";
-import { Mic, MicOff, Loader2 } from "lucide-react";
+import { useState, useRef, useCallback, useMemo } from "react";
+import { Mic, MicOff, Loader2, UserRound } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
@@ -47,6 +46,36 @@ function formatTime12(t: string): string {
   return `${h12}:${m} ${ampm}`;
 }
 
+/** Simple fuzzy similarity score (0-1) using character bigrams */
+function similarity(a: string, b: string): number {
+  const sa = a.toLowerCase().trim();
+  const sb = b.toLowerCase().trim();
+  if (sa === sb) return 1;
+  if (sa.length < 2 || sb.length < 2) {
+    // fallback: check if one contains the other
+    if (sb.includes(sa) || sa.includes(sb)) return 0.7;
+    return 0;
+  }
+  const bigrams = (s: string) => {
+    const set = new Set<string>();
+    for (let i = 0; i < s.length - 1; i++) set.add(s.slice(i, i + 2));
+    return set;
+  };
+  const bg1 = bigrams(sa);
+  const bg2 = bigrams(sb);
+  let intersection = 0;
+  bg1.forEach((b) => { if (bg2.has(b)) intersection++; });
+  return (2 * intersection) / (bg1.size + bg2.size);
+}
+
+function getSuggestions(spokenName: string, employees: Employee[], topN = 3): Employee[] {
+  const scored = employees
+    .map((e) => ({ employee: e, score: similarity(spokenName, e.name) }))
+    .filter((s) => s.score > 0.15)
+    .sort((a, b) => b.score - a.score);
+  return scored.slice(0, topN).map((s) => s.employee);
+}
+
 export default function RosterVoiceCommand({
   employees,
   weekDates,
@@ -60,6 +89,7 @@ export default function RosterVoiceCommand({
   const [parsedActions, setParsedActions] = useState<ParsedAction[]>([]);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [inserting, setInserting] = useState(false);
+  const [showAllEmployees, setShowAllEmployees] = useState<Record<number, boolean>>({});
   const recognitionRef = useRef<any>(null);
 
   const startListening = useCallback(() => {
@@ -113,6 +143,7 @@ export default function RosterVoiceCommand({
     setListening(true);
     setTranscript("");
     setParsedActions([]);
+    setShowAllEmployees({});
     recognition.start();
   }, [toast]);
 
@@ -165,6 +196,22 @@ export default function RosterVoiceCommand({
     }
   };
 
+  const selectEmployee = (idx: number, emp: Employee) => {
+    setParsedActions((prev) =>
+      prev.map((a, i) =>
+        i === idx
+          ? { ...a, employee_id: emp.id, employee_name: emp.name, match_error: undefined }
+          : a
+      )
+    );
+    setShowAllEmployees((prev) => ({ ...prev, [idx]: false }));
+  };
+
+  const readyActions = useMemo(
+    () => parsedActions.filter((a) => a.employee_id && !a.match_error),
+    [parsedActions]
+  );
+
   const handleConfirm = async () => {
     setInserting(true);
     try {
@@ -190,6 +237,7 @@ export default function RosterVoiceCommand({
       setConfirmOpen(false);
       setParsedActions([]);
       setTranscript("");
+      setShowAllEmployees({});
     } catch (err: any) {
       toast({
         title: "Error adding shifts",
@@ -241,7 +289,7 @@ export default function RosterVoiceCommand({
       </Tooltip>
 
       <Dialog open={confirmOpen} onOpenChange={setConfirmOpen}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-md max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Confirm Voice Command</DialogTitle>
           </DialogHeader>
@@ -255,54 +303,83 @@ export default function RosterVoiceCommand({
           <div className="space-y-3 mt-2">
             {parsedActions.map((action, idx) => {
               const emp = matchedEmployee(action);
+              const isUnmatched = !action.employee_id || !!action.match_error;
+              const suggestions = isUnmatched ? getSuggestions(action.employee_name, employees) : [];
+              const showAll = showAllEmployees[idx] || false;
+
               return (
                 <div
                   key={idx}
-                  className={`rounded-lg border p-3 space-y-1 ${
-                    action.match_error && !action.employee_id ? "border-destructive/50 bg-destructive/5" : "border-border"
+                  className={`rounded-lg border p-3 space-y-2 ${
+                    isUnmatched ? "border-destructive/50 bg-destructive/5" : "border-border"
                   }`}
                 >
-                  <div className="flex items-center gap-2">
-                    {action.match_error && !action.employee_id ? (
-                      <div className="w-full space-y-1">
-                        <div className="flex items-center gap-2">
-                          <span className="text-sm text-muted-foreground">
-                            Heard: "<span className="font-medium text-foreground">{action.employee_name}</span>"
-                          </span>
-                          <Badge variant="destructive" className="text-xs">Not found</Badge>
-                        </div>
-                        <Select
-                          onValueChange={(val) => {
-                            const selectedEmp = employees.find((e) => e.id === val);
-                            if (selectedEmp) {
-                              setParsedActions((prev) =>
-                                prev.map((a, i) =>
-                                  i === idx
-                                    ? { ...a, employee_id: selectedEmp.id, employee_name: selectedEmp.name, match_error: undefined }
-                                    : a
-                                )
-                              );
-                            }
-                          }}
-                        >
-                          <SelectTrigger className="h-8 text-sm">
-                            <SelectValue placeholder="Select employee..." />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {employees.map((e) => (
-                              <SelectItem key={e.id} value={e.id}>
-                                {e.name}{e.department ? ` (${e.department})` : ""}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                  {isUnmatched ? (
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="text-sm text-muted-foreground">
+                          Heard: "<span className="font-medium text-foreground">{action.employee_name}</span>"
+                        </span>
+                        <Badge variant="destructive" className="text-xs">Not matched</Badge>
                       </div>
-                    ) : (
-                      <span className="font-semibold">
-                        {emp?.name || action.employee_name}
-                      </span>
-                    )}
-                  </div>
+
+                      {/* AI Suggestions */}
+                      {suggestions.length > 0 && (
+                        <div className="space-y-1">
+                          <span className="text-xs text-muted-foreground">Did you mean:</span>
+                          <div className="flex flex-wrap gap-1.5">
+                            {suggestions.map((s) => (
+                              <Button
+                                key={s.id}
+                                variant="outline"
+                                size="sm"
+                                className="h-7 text-xs px-2.5"
+                                onClick={() => selectEmployee(idx, s)}
+                              >
+                                <UserRound className="h-3 w-3 mr-1" />
+                                {s.name}
+                              </Button>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Show all employees button / list */}
+                      {!showAll ? (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 text-xs text-muted-foreground px-1"
+                          onClick={() => setShowAllEmployees((prev) => ({ ...prev, [idx]: true }))}
+                        >
+                          Browse all employees...
+                        </Button>
+                      ) : (
+                        <div className="max-h-32 overflow-y-auto rounded border border-border bg-background p-1 space-y-0.5">
+                          {employees.map((e) => (
+                            <button
+                              key={e.id}
+                              className="w-full text-left text-xs px-2 py-1.5 rounded hover:bg-muted transition-colors"
+                              onClick={() => selectEmployee(idx, e)}
+                            >
+                              {e.name}
+                              {e.department && (
+                                <span className="text-muted-foreground ml-1">({e.department})</span>
+                              )}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-2">
+                      <span className="font-semibold">{emp?.name || action.employee_name}</span>
+                      <Badge variant="outline" className="text-xs text-green-600 border-green-600/30">
+                        ✓ Matched
+                      </Badge>
+                    </div>
+                  )}
+
                   <div className="text-sm text-muted-foreground">
                     {action.day_of_week} ({action.date})
                   </div>
@@ -326,11 +403,11 @@ export default function RosterVoiceCommand({
             <Button variant="outline" onClick={() => setConfirmOpen(false)}>
               Cancel
             </Button>
-            <Button onClick={handleConfirm} disabled={inserting}>
+            <Button onClick={handleConfirm} disabled={inserting || readyActions.length === 0}>
               {inserting ? (
                 <Loader2 className="h-4 w-4 animate-spin mr-2" />
               ) : null}
-              Add {parsedActions.filter((a) => !a.match_error).length} Shift(s)
+              Add {readyActions.length} Shift(s)
             </Button>
           </DialogFooter>
         </DialogContent>
