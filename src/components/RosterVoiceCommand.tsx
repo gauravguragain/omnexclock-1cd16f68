@@ -191,13 +191,13 @@ export default function RosterVoiceCommand({
         return;
       }
 
-      // Client-side: validate all employee_ids exist in our list, remap dates to selected week
+      // Client-side: validate all employee_ids exist in our list, FORCE dates to selected week
       const resolvedActions = (data.actions as ParsedAction[]).map((action) => {
-        // Ensure the date maps to the selected week, not the current week
+        // ALWAYS force the date to the selected week based on day_of_week
         const dayMatch = weekDates.find(
           (wd) => wd.dayName.toLowerCase() === action.day_of_week?.toLowerCase()
         );
-        if (dayMatch && action.date !== dayMatch.date) {
+        if (dayMatch) {
           action = { ...action, date: dayMatch.date };
         }
 
