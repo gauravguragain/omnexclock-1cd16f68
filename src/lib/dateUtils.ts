@@ -137,6 +137,14 @@ function getAusOffset(dateStr: string): string {
   return "+10:00";
 }
 
+/** Get the previous calendar day in YYYY-MM-DD format for a given date in Australia/Sydney timezone */
+export function ausPreviousDay(d: Date): string {
+  const dateStr = toAusDate(d);
+  const [y, m, day] = dateStr.split("-").map(Number);
+  const prev = new Date(y, m - 1, day - 1);
+  return toAusDate(prev);
+}
+
 /** Format a Date to a locale string in Australia/Sydney timezone */
 export function toAusLocaleString(d: Date, options: Intl.DateTimeFormatOptions): string {
   return d.toLocaleString("en-AU", { timeZone: TIMEZONE, ...options });

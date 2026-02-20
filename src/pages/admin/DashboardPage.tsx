@@ -7,7 +7,7 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell, Legend, AreaChart, Area,
 } from "recharts";
-import { toAusDateKey, toAusTime12, toAusFormatted, toAusDisplayDate, ausStartOfToday, ausStartOfTomorrow, ausCurrentHour, ausStartOfDay, toAusDate } from "@/lib/dateUtils";
+import { toAusDateKey, toAusTime12, toAusFormatted, toAusDisplayDate, ausStartOfToday, ausStartOfTomorrow, ausCurrentHour, ausStartOfDay, toAusDate, ausPreviousDay } from "@/lib/dateUtils";
 
 interface DailyHours {
   date: string;
@@ -281,7 +281,8 @@ export default function DashboardPage() {
         if (ev.event_type === "clock_in") {
           currentShiftDate = toLocalDateKey(new Date(ev.timestamp));
         }
-        const shiftDate = currentShiftDate || toLocalDateKey(new Date(ev.timestamp));
+        // If no preceding clock_in, this is an orphan event from a previous day's overnight shift
+        const shiftDate = currentShiftDate || ausPreviousDay(new Date(ev.timestamp));
         const approvalKey = `${empId}-${shiftDate}`;
         if (!approvedSet.has(approvalKey)) continue;
         if (!weekByEmpDate.has(empId)) weekByEmpDate.set(empId, new Map());

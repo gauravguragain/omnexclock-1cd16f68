@@ -1,7 +1,7 @@
 import { useEffect, useState, useMemo } from "react";
 import { useBusiness } from "@/contexts/BusinessContext";
 import { useAuth } from "@/contexts/AuthContext";
-import { ausNow, toAusDate, ausStartOfDay, ausEndOfDay } from "@/lib/dateUtils";
+import { ausNow, toAusDate, ausStartOfDay, ausEndOfDay, ausPreviousDay } from "@/lib/dateUtils";
 import { format, startOfWeek, endOfWeek, addWeeks, subWeeks } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -208,7 +208,8 @@ export default function PayrollPage() {
         if (ev.event_type === "clock_in") {
           currentShiftDate = toAusDate(new Date(ev.timestamp));
         }
-        const shiftDate = currentShiftDate || toAusDate(new Date(ev.timestamp));
+        // If no preceding clock_in, this is an orphan event from a previous day's overnight shift
+        const shiftDate = currentShiftDate || ausPreviousDay(new Date(ev.timestamp));
         const key = `${empId}-${shiftDate}`;
         if (!approvedSet.has(key)) continue;
 
