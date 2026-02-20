@@ -809,12 +809,16 @@ export default function RosterPage() {
                     if (date) setWeekStart(getMonday(date));
                   }}
                   modifiers={{
-                    selectedWeek: { from: weekStart, to: addDays(weekStart, 6) },
+                    weekStart: weekStart,
+                    weekEnd: addDays(weekStart, 6),
+                    weekMid: { from: addDays(weekStart, 1), to: addDays(weekStart, 5) },
                   }}
                   modifiersClassNames={{
-                    selectedWeek: "bg-primary/15 text-primary rounded-none",
+                    weekStart: "bg-primary/15 text-primary rounded-l-md rounded-r-none",
+                    weekEnd: "bg-primary/15 text-primary rounded-r-md rounded-l-none",
+                    weekMid: "bg-primary/10 text-primary rounded-none",
                   }}
-                  className={cn("p-3 pointer-events-auto")}
+                  className="p-3 pointer-events-auto"
                   weekStartsOn={1}
                 />
               </PopoverContent>
