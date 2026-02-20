@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useActionLock } from "@/contexts/ActionLockContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -10,8 +10,9 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Pencil, UserX, UserCheck, Search, ChevronRight, ChevronLeft, Check, Trash2 } from "lucide-react";
+import { Plus, Pencil, UserX, UserCheck, Search, ChevronRight, ChevronLeft, Check, Trash2, ListFilter } from "lucide-react";
 import type { Tables } from "@/integrations/supabase/types";
 import { logAudit } from "@/lib/auditLog";
 
@@ -50,6 +51,9 @@ export default function EmployeesPage() {
   const { toast } = useToast();
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [search, setSearch] = useState("");
+  const [departmentFilter, setDepartmentFilter] = useState<string>("all");
+  const [jobTitleFilter, setJobTitleFilter] = useState<string>("all");
+  const [groupBy, setGroupBy] = useState<"none" | "department" | "job_title">("none");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<Employee | null>(null);
   const [form, setForm] = useState<EmployeeForm>(EMPTY_FORM);
@@ -243,155 +247,253 @@ export default function EmployeesPage() {
     setDialogOpen(true);
   };
 
-  const filtered = employees.filter((e) =>
-    e.name.toLowerCase().includes(search.toLowerCase()) ||
-    e.employee_code.toLowerCase().includes(search.toLowerCase()) ||
-    (e.department || "").toLowerCase().includes(search.toLowerCase())
+  const departments = useMemo(() => 
+    [...new Set(employees.map(e => e.department).filter(Boolean))].sort() as string[], [employees]);
+  const jobTitles = useMemo(() => 
+    [...new Set(employees.map(e => e.job_title).filter(Boolean))].sort() as string[], [employees]);
+
+  const filtered = employees.filter((e) => {
+    const matchesSearch = e.name.toLowerCase().includes(search.toLowerCase()) ||
+      e.employee_code.toLowerCase().includes(search.toLowerCase()) ||
+      (e.department || "").toLowerCase().includes(search.toLowerCase()) ||
+      (e.job_title || "").toLowerCase().includes(search.toLowerCase());
+    const matchesDept = departmentFilter === "all" || e.department === departmentFilter;
+    const matchesTitle = jobTitleFilter === "all" || e.job_title === jobTitleFilter;
+    return matchesSearch && matchesDept && matchesTitle;
+  });
+
+  const groupedEmployees = useMemo(() => {
+    if (groupBy === "none") return null;
+    const groups: Record<string, Employee[]> = {};
+    for (const emp of filtered) {
+      const key = (groupBy === "department" ? emp.department : emp.job_title) || "Unassigned";
+      if (!groups[key]) groups[key] = [];
+      groups[key].push(emp);
+    }
+    return Object.entries(groups).sort(([a], [b]) => a.localeCompare(b));
+  }, [filtered, groupBy]);
+
+  const renderEmployeeRow = (emp: Employee) => (
+    <TableRow key={emp.id} className="border-border/20 hover:bg-secondary/30 transition-colors">
+      <TableCell className="font-medium sticky left-0 bg-card z-20 border-r border-border/60">
+        <div>
+          {emp.name}
+          {emp.email && <p className="text-[11px] text-muted-foreground mt-0.5">{emp.email}</p>}
+        </div>
+      </TableCell>
+      <TableCell className="font-mono text-sm">{emp.employee_code}</TableCell>
+      <TableCell className="text-sm">{emp.department || "—"}</TableCell>
+      <TableCell className="text-sm">{emp.job_title || "—"}</TableCell>
+      <TableCell className="text-sm tabular-nums">${emp.pay_rate}/hr</TableCell>
+      <TableCell className="text-sm tabular-nums">${emp.admin_hourly_rate}/hr</TableCell>
+      <TableCell>
+        <span className={`px-2.5 py-1 rounded-full text-[11px] font-medium ${emp.active ? "bg-success/15 text-success" : "bg-destructive/15 text-destructive"}`}>
+          {emp.active ? "Active" : "Inactive"}
+        </span>
+      </TableCell>
+      <TableCell className="text-right space-x-1">
+        {!canEditEmployees ? (
+          <span className="text-xs text-muted-foreground">View only</span>
+        ) : (
+          <div className="flex items-center justify-end gap-0.5">
+            <Button variant="ghost" size="icon" onClick={() => openEdit(emp)} disabled={saving} title="Edit" className="h-8 w-8">
+              <Pencil className="h-3.5 w-3.5" />
+            </Button>
+            <Button variant="ghost" size="icon" onClick={() => toggleActive(emp)} disabled={togglingIds.has(emp.id)} title={emp.active ? "Deactivate" : "Activate"} className="h-8 w-8">
+              {emp.active ? <UserX className="h-3.5 w-3.5" /> : <UserCheck className="h-3.5 w-3.5" />}
+            </Button>
+            {isSuperAdmin && (
+              <Button variant="ghost" size="icon" onClick={() => setDeleteTarget(emp)} className="text-destructive hover:text-destructive hover:bg-destructive/10 h-8 w-8" title="Delete permanently">
+                <Trash2 className="h-3.5 w-3.5" />
+              </Button>
+            )}
+          </div>
+        )}
+      </TableCell>
+    </TableRow>
   );
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-col sm:flex-row gap-3 justify-between">
-        <div className="relative flex-1 max-w-sm input-glow rounded-lg">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input placeholder="Search by name, code, or department..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9" />
+      <div className="flex flex-col gap-3">
+        <div className="flex flex-col sm:flex-row gap-3 justify-between">
+          <div className="relative flex-1 max-w-sm input-glow rounded-lg">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input placeholder="Search by name, code, department, or title..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9" />
+          </div>
+          <Button onClick={openAdd} disabled={!canEditEmployees} className="btn-press"><Plus className="mr-2 h-4 w-4" /> Add Employee</Button>
         </div>
-        <Dialog open={dialogOpen} onOpenChange={(open) => { setDialogOpen(open); if (!open) { setStep(0); setEditing(null); } }}>
-          <DialogTrigger asChild>
-            <Button onClick={openAdd} disabled={!canEditEmployees} className="btn-press"><Plus className="mr-2 h-4 w-4" /> Add Employee</Button>
-          </DialogTrigger>
-          <DialogContent className="sm:max-w-lg">
-            <DialogHeader>
-              <DialogTitle>{editing ? "Edit Employee" : "Onboard New Employee"}</DialogTitle>
-            </DialogHeader>
-
-            {/* Step Indicators */}
-            <div className="flex items-center gap-2 mb-2">
-              {STEPS.map((label, i) => (
-                <div key={label} className="flex items-center gap-2 flex-1">
-                  <button
-                    onClick={() => { if (i < step) setStep(i); }}
-                    className={`flex items-center justify-center w-7 h-7 rounded-full text-xs font-bold border-2 transition-colors ${
-                      i < step
-                        ? "bg-primary text-primary-foreground border-primary cursor-pointer"
-                        : i === step
-                        ? "border-primary text-primary bg-transparent"
-                        : "border-muted text-muted-foreground bg-transparent"
-                    }`}
-                  >
-                    {i < step ? <Check className="h-3.5 w-3.5" /> : i + 1}
-                  </button>
-                  <span className={`text-xs hidden sm:inline ${i === step ? "text-foreground font-medium" : "text-muted-foreground"}`}>{label}</span>
-                  {i < STEPS.length - 1 && <div className="flex-1 h-px bg-border" />}
-                </div>
-              ))}
-            </div>
-
-            {/* Step 1: Personal Details */}
-            {step === 0 && (
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <Label>Full Name *</Label>
-                  <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="John Doe" maxLength={100} />
-                </div>
-                <div className="space-y-2">
-                  <Label>Email Address</Label>
-                  <Input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} placeholder="john@example.com" />
-                </div>
-                <div className="space-y-2">
-                  <Label>Phone Number</Label>
-                  <Input value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value.replace(/[^0-9+\-() ]/g, "").slice(0, 20) })} placeholder="+61 400 000 000" />
-                </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-2">
-                    <Label>Job Title</Label>
-                    <Input value={form.job_title} onChange={(e) => setForm({ ...form, job_title: e.target.value })} placeholder="Barista" maxLength={50} />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Department</Label>
-                    <Input value={form.department} onChange={(e) => setForm({ ...form, department: e.target.value })} placeholder="Kitchen" maxLength={50} />
-                  </div>
-                </div>
-                <div className="flex justify-end">
-                  <Button onClick={handleNext}>Next <ChevronRight className="ml-1 h-4 w-4" /></Button>
-                </div>
-              </div>
-            )}
-
-            {/* Step 2: Payroll Setup */}
-            {step === 1 && (
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <Label>Employee Hourly Rate ($/hr)</Label>
-                  <p className="text-xs text-muted-foreground">Flat rate paid directly to the employee — no GST.</p>
-                  <Input type="number" step="0.01" min="0" max="10000" value={form.pay_rate} onChange={(e) => setForm({ ...form, pay_rate: e.target.value })} placeholder="25.00" />
-                </div>
-                <div className="space-y-2">
-                  <Label>Admin Hourly Rate ($/hr)</Label>
-                  <p className="text-xs text-muted-foreground">Internal rate for admin payroll — GST inclusive.</p>
-                  <Input type="number" step="0.01" min="0" max="10000" value={form.admin_hourly_rate} onChange={(e) => setForm({ ...form, admin_hourly_rate: e.target.value })} placeholder="35.00" />
-                </div>
-                <div className="flex justify-between">
-                  <Button variant="outline" onClick={() => setStep(0)}><ChevronLeft className="mr-1 h-4 w-4" /> Back</Button>
-                  <Button onClick={handleNext}>Next <ChevronRight className="ml-1 h-4 w-4" /></Button>
-                </div>
-              </div>
-            )}
-
-            {/* Step 3: System Access */}
-            {step === 2 && (
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <Label>Employee Code *</Label>
-                   <p className="text-xs text-muted-foreground">4-digit code used for kiosk access and employee portal.</p>
-                  <div className="flex gap-2">
-                    <Input
-                      value={form.employee_code}
-                      onChange={(e) => setForm({ ...form, employee_code: e.target.value.replace(/[^0-9]/g, "").slice(0, 4) })}
-                      placeholder="0001"
-                      maxLength={4}
-                      className="font-mono text-lg tracking-wider"
-                    />
-                    {!editing && (
-                      <Button
-                        variant="outline"
-                        type="button"
-                        onClick={() => {
-                          const existingCodes = employees.map(e => e.employee_code);
-                          setForm({ ...form, employee_code: generateEmployeeCode(existingCodes) });
-                        }}
-                      >
-                        Regenerate
-                      </Button>
-                    )}
-                  </div>
-                </div>
-
-                {/* Summary preview */}
-                <Card className="bg-muted/50">
-                  <CardContent className="p-4 space-y-1 text-sm">
-                    <p className="font-medium text-foreground">Summary</p>
-                    <p><span className="text-muted-foreground">Name:</span> {form.name || "—"}</p>
-                    {form.email && <p><span className="text-muted-foreground">Email:</span> {form.email}</p>}
-                    {form.job_title && <p><span className="text-muted-foreground">Role:</span> {form.job_title}</p>}
-                    {form.department && <p><span className="text-muted-foreground">Dept:</span> {form.department}</p>}
-                    <p><span className="text-muted-foreground">Emp Rate:</span> ${parseFloat(form.pay_rate || "0").toFixed(2)}/hr</p>
-                    <p><span className="text-muted-foreground">Admin Rate:</span> ${parseFloat(form.admin_hourly_rate || "0").toFixed(2)}/hr</p>
-                    <p><span className="text-muted-foreground">Code:</span> <span className="font-mono font-bold">{form.employee_code}</span></p>
-                  </CardContent>
-                </Card>
-
-                <div className="flex justify-between">
-                  <Button variant="outline" onClick={() => setStep(1)}><ChevronLeft className="mr-1 h-4 w-4" /> Back</Button>
-                  <Button onClick={handleSave} disabled={saving}>
-                    {saving ? "Saving..." : editing ? "Update Employee" : "Add Employee"}
-                  </Button>
-                </div>
-              </div>
-            )}
-          </DialogContent>
-        </Dialog>
+        {/* Filters row */}
+        <div className="flex flex-wrap items-center gap-2">
+          {departments.length > 0 && (
+            <Select value={departmentFilter} onValueChange={setDepartmentFilter}>
+              <SelectTrigger className="h-8 w-[160px] rounded-lg text-xs border-border/60">
+                <SelectValue placeholder="All Departments" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Departments</SelectItem>
+                {departments.map(d => <SelectItem key={d} value={d}>{d}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          )}
+          {jobTitles.length > 0 && (
+            <Select value={jobTitleFilter} onValueChange={setJobTitleFilter}>
+              <SelectTrigger className="h-8 w-[160px] rounded-lg text-xs border-border/60">
+                <SelectValue placeholder="All Job Titles" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Job Titles</SelectItem>
+                {jobTitles.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          )}
+          <Select value={groupBy} onValueChange={(v) => setGroupBy(v as any)}>
+            <SelectTrigger className="h-8 w-[150px] rounded-lg text-xs border-border/60">
+              <ListFilter className="h-3 w-3 mr-1.5" />
+              <SelectValue placeholder="Group by..." />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="none">No Grouping</SelectItem>
+              <SelectItem value="department">Group by Department</SelectItem>
+              <SelectItem value="job_title">Group by Job Title</SelectItem>
+            </SelectContent>
+          </Select>
+          {(departmentFilter !== "all" || jobTitleFilter !== "all") && (
+            <Button variant="ghost" size="sm" className="h-8 text-xs text-muted-foreground" onClick={() => { setDepartmentFilter("all"); setJobTitleFilter("all"); }}>
+              Clear filters
+            </Button>
+          )}
+          <span className="text-xs text-muted-foreground ml-auto">{filtered.length} employee{filtered.length !== 1 ? "s" : ""}</span>
+        </div>
       </div>
+
+      {/* Add/Edit Dialog */}
+      <Dialog open={dialogOpen} onOpenChange={(open) => { setDialogOpen(open); if (!open) { setStep(0); setEditing(null); } }}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>{editing ? "Edit Employee" : "Onboard New Employee"}</DialogTitle>
+          </DialogHeader>
+
+          {/* Step Indicators */}
+          <div className="flex items-center gap-2 mb-2">
+            {STEPS.map((label, i) => (
+              <div key={label} className="flex items-center gap-2 flex-1">
+                <button
+                  onClick={() => { if (i < step) setStep(i); }}
+                  className={`flex items-center justify-center w-7 h-7 rounded-full text-xs font-bold border-2 transition-colors ${
+                    i < step
+                      ? "bg-primary text-primary-foreground border-primary cursor-pointer"
+                      : i === step
+                      ? "border-primary text-primary bg-transparent"
+                      : "border-muted text-muted-foreground bg-transparent"
+                  }`}
+                >
+                  {i < step ? <Check className="h-3.5 w-3.5" /> : i + 1}
+                </button>
+                <span className={`text-xs hidden sm:inline ${i === step ? "text-foreground font-medium" : "text-muted-foreground"}`}>{label}</span>
+                {i < STEPS.length - 1 && <div className="flex-1 h-px bg-border" />}
+              </div>
+            ))}
+          </div>
+
+          {step === 0 && (
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label>Full Name *</Label>
+                <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="John Doe" maxLength={100} />
+              </div>
+              <div className="space-y-2">
+                <Label>Email Address</Label>
+                <Input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} placeholder="john@example.com" />
+              </div>
+              <div className="space-y-2">
+                <Label>Phone Number</Label>
+                <Input value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value.replace(/[^0-9+\-() ]/g, "").slice(0, 20) })} placeholder="+61 400 000 000" />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-2">
+                  <Label>Job Title</Label>
+                  <Input value={form.job_title} onChange={(e) => setForm({ ...form, job_title: e.target.value })} placeholder="Barista" maxLength={50} />
+                </div>
+                <div className="space-y-2">
+                  <Label>Department</Label>
+                  <Input value={form.department} onChange={(e) => setForm({ ...form, department: e.target.value })} placeholder="Kitchen" maxLength={50} />
+                </div>
+              </div>
+              <div className="flex justify-end">
+                <Button onClick={handleNext}>Next <ChevronRight className="ml-1 h-4 w-4" /></Button>
+              </div>
+            </div>
+          )}
+
+          {step === 1 && (
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label>Employee Hourly Rate ($/hr)</Label>
+                <p className="text-xs text-muted-foreground">Flat rate paid directly to the employee — no GST.</p>
+                <Input type="number" step="0.01" min="0" max="10000" value={form.pay_rate} onChange={(e) => setForm({ ...form, pay_rate: e.target.value })} placeholder="25.00" />
+              </div>
+              <div className="space-y-2">
+                <Label>Admin Hourly Rate ($/hr)</Label>
+                <p className="text-xs text-muted-foreground">Internal rate for admin payroll — GST inclusive.</p>
+                <Input type="number" step="0.01" min="0" max="10000" value={form.admin_hourly_rate} onChange={(e) => setForm({ ...form, admin_hourly_rate: e.target.value })} placeholder="35.00" />
+              </div>
+              <div className="flex justify-between">
+                <Button variant="outline" onClick={() => setStep(0)}><ChevronLeft className="mr-1 h-4 w-4" /> Back</Button>
+                <Button onClick={handleNext}>Next <ChevronRight className="ml-1 h-4 w-4" /></Button>
+              </div>
+            </div>
+          )}
+
+          {step === 2 && (
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label>Employee Code *</Label>
+                <p className="text-xs text-muted-foreground">4-digit code used for kiosk access and employee portal.</p>
+                <div className="flex gap-2">
+                  <Input
+                    value={form.employee_code}
+                    onChange={(e) => setForm({ ...form, employee_code: e.target.value.replace(/[^0-9]/g, "").slice(0, 4) })}
+                    placeholder="0001"
+                    maxLength={4}
+                    className="font-mono text-lg tracking-wider"
+                  />
+                  {!editing && (
+                    <Button
+                      variant="outline"
+                      type="button"
+                      onClick={() => {
+                        const existingCodes = employees.map(e => e.employee_code);
+                        setForm({ ...form, employee_code: generateEmployeeCode(existingCodes) });
+                      }}
+                    >
+                      Regenerate
+                    </Button>
+                  )}
+                </div>
+              </div>
+              <Card className="bg-muted/50">
+                <CardContent className="p-4 space-y-1 text-sm">
+                  <p className="font-medium text-foreground">Summary</p>
+                  <p><span className="text-muted-foreground">Name:</span> {form.name || "—"}</p>
+                  {form.email && <p><span className="text-muted-foreground">Email:</span> {form.email}</p>}
+                  {form.job_title && <p><span className="text-muted-foreground">Role:</span> {form.job_title}</p>}
+                  {form.department && <p><span className="text-muted-foreground">Dept:</span> {form.department}</p>}
+                  <p><span className="text-muted-foreground">Emp Rate:</span> ${parseFloat(form.pay_rate || "0").toFixed(2)}/hr</p>
+                  <p><span className="text-muted-foreground">Admin Rate:</span> ${parseFloat(form.admin_hourly_rate || "0").toFixed(2)}/hr</p>
+                  <p><span className="text-muted-foreground">Code:</span> <span className="font-mono font-bold">{form.employee_code}</span></p>
+                </CardContent>
+              </Card>
+              <div className="flex justify-between">
+                <Button variant="outline" onClick={() => setStep(1)}><ChevronLeft className="mr-1 h-4 w-4" /> Back</Button>
+                <Button onClick={handleSave} disabled={saving}>
+                  {saving ? "Saving..." : editing ? "Update Employee" : "Add Employee"}
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
 
       <Card className="border-border/40 overflow-hidden">
         <CardContent className="p-0">
@@ -410,45 +512,21 @@ export default function EmployeesPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filtered.map((emp) => (
-                  <TableRow key={emp.id} className="border-border/20 hover:bg-secondary/30 transition-colors">
-                    <TableCell className="font-medium sticky left-0 bg-card z-20 border-r border-border/60">
-                      <div>
-                        {emp.name}
-                        {emp.email && <p className="text-[11px] text-muted-foreground mt-0.5">{emp.email}</p>}
-                      </div>
-                    </TableCell>
-                    <TableCell className="font-mono text-sm">{emp.employee_code}</TableCell>
-                    <TableCell className="text-sm">{emp.department || "—"}</TableCell>
-                    <TableCell className="text-sm">{emp.job_title || "—"}</TableCell>
-                    <TableCell className="text-sm tabular-nums">${emp.pay_rate}/hr</TableCell>
-                    <TableCell className="text-sm tabular-nums">${emp.admin_hourly_rate}/hr</TableCell>
-                    <TableCell>
-                      <span className={`px-2.5 py-1 rounded-full text-[11px] font-medium ${emp.active ? "bg-success/15 text-success" : "bg-destructive/15 text-destructive"}`}>
-                        {emp.active ? "Active" : "Inactive"}
-                      </span>
-                    </TableCell>
-                    <TableCell className="text-right space-x-1">
-                      {!canEditEmployees ? (
-                        <span className="text-xs text-muted-foreground">View only</span>
-                      ) : (
-                        <div className="flex items-center justify-end gap-0.5">
-                          <Button variant="ghost" size="icon" onClick={() => openEdit(emp)} disabled={saving} title="Edit" className="h-8 w-8">
-                            <Pencil className="h-3.5 w-3.5" />
-                          </Button>
-                          <Button variant="ghost" size="icon" onClick={() => toggleActive(emp)} disabled={togglingIds.has(emp.id)} title={emp.active ? "Deactivate" : "Activate"} className="h-8 w-8">
-                            {emp.active ? <UserX className="h-3.5 w-3.5" /> : <UserCheck className="h-3.5 w-3.5" />}
-                          </Button>
-                          {isSuperAdmin && (
-                            <Button variant="ghost" size="icon" onClick={() => setDeleteTarget(emp)} className="text-destructive hover:text-destructive hover:bg-destructive/10 h-8 w-8" title="Delete permanently">
-                              <Trash2 className="h-3.5 w-3.5" />
-                            </Button>
-                          )}
-                        </div>
-                      )}
-                    </TableCell>
-                  </TableRow>
-                ))}
+                {groupedEmployees ? (
+                  groupedEmployees.map(([groupName, groupEmps]) => (
+                    <>
+                      <TableRow key={`group-${groupName}`} className="bg-muted/40 hover:bg-muted/60">
+                        <TableCell colSpan={8} className="py-2 px-4 sticky left-0">
+                          <span className="text-xs font-semibold uppercase tracking-wider text-primary">{groupName}</span>
+                          <span className="text-xs text-muted-foreground ml-2">({groupEmps.length})</span>
+                        </TableCell>
+                      </TableRow>
+                      {groupEmps.map((emp) => renderEmployeeRow(emp))}
+                    </>
+                  ))
+                ) : (
+                  filtered.map((emp) => renderEmployeeRow(emp))
+                )}
                 {filtered.length === 0 && (
                   <TableRow>
                     <TableCell colSpan={8} className="text-center text-muted-foreground py-12">No employees found</TableCell>
