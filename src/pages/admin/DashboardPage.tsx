@@ -394,7 +394,7 @@ export default function DashboardPage() {
                 <XAxis dataKey="date" tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} />
                 <YAxis tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} />
                 <Tooltip
-                  contentStyle={{ backgroundColor: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 10, color: "hsl(var(--foreground))", boxShadow: "0 8px 24px rgba(0,0,0,0.3)" }}
+                  contentStyle={{ backgroundColor: "hsl(var(--popover))", border: "1px solid hsl(var(--border))", borderRadius: 10, color: "hsl(var(--popover-foreground))", boxShadow: "0 8px 24px rgba(0,0,0,0.3)" }}
                 />
                 <Bar dataKey="hours" name="Hours" fill="hsl(45, 60%, 53%)" radius={[6, 6, 0, 0]} />
               </BarChart>
@@ -430,7 +430,7 @@ export default function DashboardPage() {
                   </Pie>
                   <Tooltip
                     formatter={(value: number, name: string) => [`${value}h`, name]}
-                    contentStyle={{ backgroundColor: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 10, color: "hsl(var(--foreground))", boxShadow: "0 8px 24px rgba(0,0,0,0.3)" }}
+                    contentStyle={{ backgroundColor: "hsl(var(--popover))", border: "1px solid hsl(var(--border))", borderRadius: 10, color: "hsl(var(--popover-foreground))", boxShadow: "0 8px 24px rgba(0,0,0,0.3)" }}
                   />
                   <Legend
                     layout="vertical"
@@ -465,16 +465,16 @@ export default function DashboardPage() {
                 <XAxis dataKey="hour" tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} />
                 <YAxis tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} />
                 <Tooltip
-                  contentStyle={{ backgroundColor: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 10, color: "hsl(var(--foreground))", boxShadow: "0 8px 24px rgba(0,0,0,0.3)" }}
+                  contentStyle={{ backgroundColor: "hsl(var(--popover))", border: "1px solid hsl(var(--border))", borderRadius: 10, color: "hsl(var(--popover-foreground))", boxShadow: "0 8px 24px rgba(0,0,0,0.3)" }}
                   content={({ active, payload }) => {
                     if (!active || !payload?.length) return null;
                     const data = payload[0].payload as HourlyActivity;
                     return (
-                      <div style={{ backgroundColor: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 10, padding: "10px 14px", color: "hsl(var(--foreground))", boxShadow: "0 8px 24px rgba(0,0,0,0.3)" }}>
+                      <div style={{ backgroundColor: "hsl(var(--popover))", border: "1px solid hsl(var(--border))", borderRadius: 10, padding: "10px 14px", color: "hsl(var(--popover-foreground))", boxShadow: "0 8px 24px rgba(0,0,0,0.3)" }}>
                         <p className="font-medium text-sm">{data.hour}</p>
                         <p className="text-sm" style={{ color: "hsl(45, 60%, 53%)" }}>{data.cumulativeHours} hrs</p>
                         {data.employees.length > 0 && (
-                          <p className="text-xs text-muted-foreground mt-1">{data.employees.join(", ")}</p>
+                          <p className="text-xs" style={{ color: "hsl(var(--muted-foreground))" }}>{data.employees.join(", ")}</p>
                         )}
                       </div>
                     );
