@@ -21,6 +21,7 @@ interface VoiceChatModeProps {
 type VoiceState = "idle" | "listening" | "processing" | "speaking";
 
 const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ai-assistant`;
+const TTS_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/elevenlabs-tts`;
 
 function cleanForSpeech(text: string): string {
   return text
@@ -47,7 +48,7 @@ export default function VoiceChatMode({
   const [interimTranscript, setInterimTranscript] = useState("");
   const [currentAssistantText, setCurrentAssistantText] = useState("");
   const recognitionRef = useRef<any>(null);
-  const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const abortRef = useRef<AbortController | null>(null);
   const silenceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -77,7 +78,11 @@ export default function VoiceChatMode({
       try { recognitionRef.current.abort(); } catch {}
       recognitionRef.current = null;
     }
-    window.speechSynthesis.cancel();
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current.src = "";
+      audioRef.current = null;
+    }
     if (abortRef.current) abortRef.current.abort();
     if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
     setVoiceState("idle");
@@ -85,7 +90,7 @@ export default function VoiceChatMode({
     setCurrentAssistantText("");
   }, []);
 
-  const speakAndThenListen = useCallback((text: string, allMessages: Message[]) => {
+  const speakAndThenListen = useCallback(async (text: string, allMessages: Message[]) => {
     const clean = cleanForSpeech(text);
     if (!clean) {
       if (isActiveRef.current) startListening(allMessages);
@@ -94,104 +99,91 @@ export default function VoiceChatMode({
 
     setVoiceState("speaking");
 
-    // Cancel must happen, then a small delay before speaking (fixes mobile Chrome)
-    window.speechSynthesis.cancel();
+    try {
+      const response = await fetch(TTS_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+        },
+        body: JSON.stringify({ text: clean }),
+      });
 
-    const doSpeak = () => {
-      // Split long text into chunks under 200 chars to avoid mobile TTS cutoff
-      const chunks: string[] = [];
-      const sentences = clean.match(/[^.!?]+[.!?]+|[^.!?]+$/g) || [clean];
-      let current = "";
-      for (const s of sentences) {
-        if ((current + s).length > 180 && current) {
-          chunks.push(current.trim());
-          current = s;
-        } else {
-          current += s;
-        }
+      if (!response.ok) {
+        console.error("TTS request failed:", response.status);
+        // Fallback to browser TTS
+        fallbackSpeak(clean, allMessages);
+        return;
       }
-      if (current.trim()) chunks.push(current.trim());
 
-      let chunkIndex = 0;
+      const audioBlob = await response.blob();
+      const audioUrl = URL.createObjectURL(audioBlob);
+      const audio = new Audio(audioUrl);
+      audioRef.current = audio;
 
-      const speakChunk = () => {
-        if (chunkIndex >= chunks.length) {
-          setVoiceState("idle");
-          if (isActiveRef.current) {
-            setTimeout(() => {
-              if (isActiveRef.current) startListening(allMessages);
-            }, 300);
-          }
-          return;
+      audio.onended = () => {
+        URL.revokeObjectURL(audioUrl);
+        audioRef.current = null;
+        setVoiceState("idle");
+        if (isActiveRef.current) {
+          setTimeout(() => {
+            if (isActiveRef.current) startListening(allMessages);
+          }, 300);
         }
-
-        const utterance = new SpeechSynthesisUtterance(chunks[chunkIndex]);
-        utterance.lang = "en-AU";
-        utterance.rate = 1.05;
-        utterance.pitch = 1;
-        utterance.volume = 1;
-
-        const voices = window.speechSynthesis.getVoices();
-        const preferred = voices.find(v => v.lang.startsWith("en") && v.name.toLowerCase().includes("female"))
-          || voices.find(v => v.lang === "en-AU")
-          || voices.find(v => v.lang.startsWith("en-AU"))
-          || voices.find(v => v.lang.startsWith("en"));
-        if (preferred) utterance.voice = preferred;
-
-        utteranceRef.current = utterance;
-
-        utterance.onend = () => {
-          chunkIndex++;
-          speakChunk();
-        };
-
-        utterance.onerror = (e) => {
-          console.error("TTS error on chunk:", chunkIndex, e.error);
-          // On "interrupted" just move to next chunk
-          if (e.error === "interrupted") {
-            chunkIndex++;
-            speakChunk();
-            return;
-          }
-          setVoiceState("idle");
-          if (isActiveRef.current) {
-            setTimeout(() => {
-              if (isActiveRef.current) startListening(allMessages);
-            }, 300);
-          }
-        };
-
-        window.speechSynthesis.speak(utterance);
-
-        // Chrome keepAlive workaround per chunk
-        const keepAlive = setInterval(() => {
-          if (window.speechSynthesis.speaking) {
-            window.speechSynthesis.pause();
-            window.speechSynthesis.resume();
-          } else {
-            clearInterval(keepAlive);
-          }
-        }, 5000);
       };
 
-      speakChunk();
-    };
+      audio.onerror = () => {
+        URL.revokeObjectURL(audioUrl);
+        audioRef.current = null;
+        console.error("Audio playback error");
+        setVoiceState("idle");
+        if (isActiveRef.current) {
+          setTimeout(() => {
+            if (isActiveRef.current) startListening(allMessages);
+          }, 300);
+        }
+      };
 
-    // Ensure voices are loaded, then speak after a brief delay (mobile fix)
-    const trySpeak = () => {
-      const voices = window.speechSynthesis.getVoices();
-      if (voices.length > 0) {
-        setTimeout(doSpeak, 100);
-      } else {
-        window.speechSynthesis.onvoiceschanged = () => {
-          window.speechSynthesis.onvoiceschanged = null;
-          setTimeout(doSpeak, 100);
-        };
-        setTimeout(doSpeak, 800);
+      await audio.play();
+    } catch (e) {
+      console.error("ElevenLabs TTS error:", e);
+      // Fallback to browser TTS
+      fallbackSpeak(clean, allMessages);
+    }
+  }, []);
+
+  // Browser TTS fallback if ElevenLabs fails
+  const fallbackSpeak = useCallback((text: string, allMessages: Message[]) => {
+    const utterance = new SpeechSynthesisUtterance(text.substring(0, 200));
+    utterance.lang = "en-AU";
+    utterance.rate = 1.05;
+    utterance.volume = 1;
+
+    const voices = window.speechSynthesis.getVoices();
+    const preferred = voices.find(v => v.lang.startsWith("en-AU")) || voices.find(v => v.lang.startsWith("en"));
+    if (preferred) utterance.voice = preferred;
+
+    utterance.onend = () => {
+      setVoiceState("idle");
+      if (isActiveRef.current) {
+        setTimeout(() => {
+          if (isActiveRef.current) startListening(allMessages);
+        }, 300);
       }
     };
 
-    trySpeak();
+    utterance.onerror = () => {
+      setVoiceState("idle");
+      if (isActiveRef.current) {
+        setTimeout(() => {
+          if (isActiveRef.current) startListening(allMessages);
+        }, 300);
+      }
+    };
+
+    window.speechSynthesis.cancel();
+    window.speechSynthesis.speak(utterance);
   }, []);
 
   const sendVoiceMessage = useCallback(async (text: string, currentMessages: Message[]) => {
@@ -294,7 +286,7 @@ export default function VoiceChatMode({
       onMessagesChange(finalMessages);
       setCurrentAssistantText("");
 
-      // Speak the response
+      // Speak the response with natural voice
       speakAndThenListen(assistantSoFar, finalMessages);
     } catch (e: any) {
       if (e.name === "AbortError") return;
@@ -343,18 +335,16 @@ export default function VoiceChatMode({
       if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
       if (final.trim()) {
         silenceTimerRef.current = setTimeout(() => {
-          // User stopped speaking, send the message
           if (recognitionRef.current) {
             try { recognitionRef.current.stop(); } catch {}
           }
-        }, 2000); // 2 second silence = done speaking
+        }, 2000);
       }
     };
 
     recognition.onerror = (event: any) => {
       console.error("Speech error:", event.error);
       if (event.error === "no-speech") {
-        // Restart if still active
         if (isActiveRef.current) {
           setTimeout(() => {
             if (isActiveRef.current) startListening(currentMessages);
@@ -374,7 +364,6 @@ export default function VoiceChatMode({
       if (transcript && isActiveRef.current) {
         sendVoiceMessage(transcript, currentMessages);
       } else if (isActiveRef.current) {
-        // No speech detected, restart
         setTimeout(() => {
           if (isActiveRef.current) startListening(currentMessages);
         }, 500);
@@ -389,10 +378,6 @@ export default function VoiceChatMode({
 
   const startConversation = useCallback(() => {
     isActiveRef.current = true;
-    // Warm up TTS with a silent utterance so browser unlocks audio on user gesture
-    const warmup = new SpeechSynthesisUtterance("");
-    warmup.volume = 0;
-    window.speechSynthesis.speak(warmup);
     startListening(messages);
   }, [messages, startListening]);
 
@@ -513,58 +498,40 @@ export default function VoiceChatMode({
                   <div className="h-1.5 w-1.5 rounded-full bg-primary/60 animate-bounce" style={{ animationDelay: "150ms" }} />
                   <div className="h-1.5 w-1.5 rounded-full bg-primary/60 animate-bounce" style={{ animationDelay: "300ms" }} />
                 </div>
-                <span className="text-xs text-muted-foreground">Analyzing...</span>
+                <span className="text-xs text-muted-foreground">Thinking...</span>
               </div>
             </div>
           </div>
         )}
       </div>
 
-      {/* Voice control area */}
-      <div className="flex flex-col items-center gap-3 px-4 py-5 border-t border-border/30 flex-shrink-0">
-        {/* State label */}
-        <span className="text-xs font-medium text-muted-foreground">{config.label}</span>
+      {/* Bottom controls */}
+      <div className="flex-shrink-0 px-4 py-6 flex flex-col items-center gap-3 border-t border-border/20">
+        <span className="text-xs text-muted-foreground font-medium">{config.label}</span>
 
-        {/* Main mic button + controls */}
         <div className="flex items-center gap-4">
-          {voiceState !== "idle" && (
-            <Button
-              variant="outline"
-              size="icon"
-              className="h-12 w-12 rounded-full border-destructive/30 text-destructive hover:bg-destructive/10"
-              onClick={endConversation}
-              title="End conversation"
+          {voiceState === "idle" ? (
+            <button
+              onClick={startConversation}
+              className={`h-16 w-16 rounded-full ${config.color} flex items-center justify-center transition-all active:scale-95 shadow-lg`}
             >
-              <PhoneOff className="h-5 w-5" />
-            </Button>
-          )}
-
-          <button
-            onClick={voiceState === "idle" ? startConversation : voiceState === "speaking" ? () => { window.speechSynthesis.cancel(); } : undefined}
-            disabled={voiceState === "processing"}
-            className={`h-20 w-20 rounded-full flex items-center justify-center transition-all duration-300 ${config.color} ${config.pulseColor} ${
-              voiceState === "processing" ? "opacity-70 cursor-not-allowed" : "cursor-pointer hover:scale-105 active:scale-95"
-            }`}
-          >
-            {config.icon}
-          </button>
-
-          {voiceState === "speaking" && (
-            <Button
-              variant="outline"
-              size="icon"
-              className="h-12 w-12 rounded-full"
-              onClick={() => window.speechSynthesis.cancel()}
-              title="Skip speech"
-            >
-              <VolumeX className="h-5 w-5" />
-            </Button>
+              {config.icon}
+            </button>
+          ) : (
+            <>
+              <button
+                onClick={endConversation}
+                className="h-12 w-12 rounded-full bg-destructive flex items-center justify-center transition-all active:scale-95"
+              >
+                <PhoneOff className="h-5 w-5 text-destructive-foreground" />
+              </button>
+              <div className={`h-16 w-16 rounded-full ${config.color} ${config.pulseColor} flex items-center justify-center transition-all`}>
+                {config.icon}
+              </div>
+              <div className="w-12" /> {/* Spacer for symmetry */}
+            </>
           )}
         </div>
-
-        <p className="text-[10px] text-muted-foreground/40 text-center">
-          {voiceState === "idle" ? "Tap the mic to begin voice conversation" : voiceState === "listening" ? "Speak naturally — pauses will auto-send" : voiceState === "speaking" ? "Tap mic to skip, or wait for auto-listen" : "Processing your request..."}
-        </p>
       </div>
     </div>
   );
