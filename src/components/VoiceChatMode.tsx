@@ -55,6 +55,13 @@ export default function VoiceChatMode({
   const silenceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const finalTranscriptRef = useRef("");
   const isActiveRef = useRef(false);
+  const messagesRef = useRef<Message[]>(messages);
+  const startListeningRef = useRef<(msgs: Message[]) => void>(() => {});
+  const sendVoiceMessageRef = useRef<(text: string, msgs: Message[]) => void>(() => {});
+  const speakAndThenListenRef = useRef<(text: string, msgs: Message[]) => void>(() => {});
+
+  // Keep messages ref in sync
+  useEffect(() => { messagesRef.current = messages; }, [messages]);
 
   // Auto-scroll
   useEffect(() => {
@@ -94,7 +101,7 @@ export default function VoiceChatMode({
   const speakAndThenListen = useCallback(async (text: string, allMessages: Message[]) => {
     const clean = cleanForSpeech(text);
     if (!clean) {
-      if (isActiveRef.current) startListening(allMessages);
+      if (isActiveRef.current) startListeningRef.current(allMessages);
       return;
     }
 
@@ -120,12 +127,10 @@ export default function VoiceChatMode({
       const audioBlob = await response.blob();
       const audioUrl = URL.createObjectURL(audioBlob);
 
-      // Reuse the pre-warmed audio element to avoid NotAllowedError
       const audio = warmAudioRef.current || new Audio();
       audio.src = audioUrl;
       audioRef.current = audio;
 
-      // Force audio to main speaker (not earpiece) on mobile
       try {
         if ('setSinkId' in audio && typeof (audio as any).setSinkId === 'function') {
           await (audio as any).setSinkId('default');
@@ -139,7 +144,7 @@ export default function VoiceChatMode({
         audio.removeEventListener("error", onErr);
         setVoiceState("idle");
         if (isActiveRef.current) {
-          setTimeout(() => { if (isActiveRef.current) startListening(allMessages); }, 300);
+          setTimeout(() => { if (isActiveRef.current) startListeningRef.current(allMessages); }, 300);
         }
       };
 
@@ -177,7 +182,7 @@ export default function VoiceChatMode({
       setVoiceState("idle");
       if (isActiveRef.current) {
         setTimeout(() => {
-          if (isActiveRef.current) startListening(allMessages);
+          if (isActiveRef.current) startListeningRef.current(allMessages);
         }, 300);
       }
     };
@@ -186,7 +191,7 @@ export default function VoiceChatMode({
       setVoiceState("idle");
       if (isActiveRef.current) {
         setTimeout(() => {
-          if (isActiveRef.current) startListening(allMessages);
+          if (isActiveRef.current) startListeningRef.current(allMessages);
         }, 300);
       }
     };
@@ -197,7 +202,7 @@ export default function VoiceChatMode({
 
   const sendVoiceMessage = useCallback(async (text: string, currentMessages: Message[]) => {
     if (!text.trim()) {
-      if (isActiveRef.current) startListening(currentMessages);
+      if (isActiveRef.current) startListeningRef.current(currentMessages);
       return;
     }
 
@@ -232,7 +237,7 @@ export default function VoiceChatMode({
         else if (resp.status === 402) toast.error("AI credits exhausted.");
         else toast.error("AI request failed");
         setVoiceState("idle");
-        if (isActiveRef.current) startListening(updatedMessages);
+        if (isActiveRef.current) startListeningRef.current(updatedMessages);
         return;
       }
 
@@ -297,15 +302,15 @@ export default function VoiceChatMode({
       setCurrentAssistantText("");
 
       // Speak the response with natural voice
-      speakAndThenListen(assistantSoFar, finalMessages);
+      speakAndThenListenRef.current(assistantSoFar, finalMessages);
     } catch (e: any) {
       if (e.name === "AbortError") return;
       console.error("Voice AI error:", e);
       toast.error("Failed to get AI response");
       setVoiceState("idle");
-      if (isActiveRef.current) startListening(updatedMessages);
+      if (isActiveRef.current) startListeningRef.current(updatedMessages);
     }
-  }, [businessId, onMessagesChange, speakAndThenListen]);
+  }, [businessId, onMessagesChange]);
 
   const startListening = useCallback((currentMessages: Message[]) => {
     const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
@@ -357,7 +362,7 @@ export default function VoiceChatMode({
       if (event.error === "no-speech") {
         if (isActiveRef.current) {
           setTimeout(() => {
-            if (isActiveRef.current) startListening(currentMessages);
+            if (isActiveRef.current) startListeningRef.current(currentMessages);
           }, 500);
         }
         return;
@@ -372,10 +377,10 @@ export default function VoiceChatMode({
       if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
       const transcript = finalTranscriptRef.current.trim();
       if (transcript && isActiveRef.current) {
-        sendVoiceMessage(transcript, currentMessages);
+        sendVoiceMessageRef.current(transcript, currentMessages);
       } else if (isActiveRef.current) {
         setTimeout(() => {
-          if (isActiveRef.current) startListening(currentMessages);
+          if (isActiveRef.current) startListeningRef.current(currentMessages);
         }, 500);
       }
     };
@@ -384,15 +389,17 @@ export default function VoiceChatMode({
     recognition.start();
     setVoiceState("listening");
     setInterimTranscript("");
-  }, [sendVoiceMessage]);
+  }, []);
+
+  // Keep refs in sync with latest callbacks
+  useEffect(() => { startListeningRef.current = startListening; }, [startListening]);
+  useEffect(() => { sendVoiceMessageRef.current = sendVoiceMessage; }, [sendVoiceMessage]);
+  useEffect(() => { speakAndThenListenRef.current = speakAndThenListen; }, [speakAndThenListen]);
 
   const startConversation = useCallback(() => {
-    // Pre-warm an Audio element on user gesture so future .play() calls are allowed
     if (!warmAudioRef.current) {
       const a = new Audio();
-      // Play a silent data URI to "unlock" audio on this element
       a.src = "data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA=";
-      // Force audio to main speaker (not earpiece)
       try {
         if ('setSinkId' in a && typeof (a as any).setSinkId === 'function') {
           (a as any).setSinkId('default');
@@ -402,8 +409,8 @@ export default function VoiceChatMode({
       warmAudioRef.current = a;
     }
     isActiveRef.current = true;
-    startListening(messages);
-  }, [messages, startListening]);
+    startListeningRef.current(messagesRef.current);
+  }, []);
 
   const endConversation = useCallback(() => {
     isActiveRef.current = false;
