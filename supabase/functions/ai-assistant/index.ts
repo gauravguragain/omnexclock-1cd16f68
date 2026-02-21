@@ -30,7 +30,7 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const { messages, businessId } = await req.json();
+    const { messages, businessId, voiceMode } = await req.json();
     if (!messages || !businessId) {
       return new Response(JSON.stringify({ error: "messages and businessId are required" }), {
         status: 400,
@@ -327,6 +327,33 @@ ${JSON.stringify(forumPosts.map(f => ({
 
 9. **WHEN DATA IS INSUFFICIENT**: Say so honestly and suggest what data would help. Never fabricate numbers.`;
 
+    const voiceSystemAddendum = `
+
+CRITICAL VOICE MODE INSTRUCTIONS — YOU ARE IN A LIVE VOICE CONVERSATION:
+- Respond like a real human colleague talking naturally. Short, punchy, conversational.
+- MAX 1-3 sentences per response. No long explanations unless explicitly asked.
+- NO markdown, NO bullet points, NO headers, NO tables, NO emojis, NO charts.
+- NO "Here's a breakdown" or "Let me provide you with" — just say the answer.
+- Use contractions: "they're", "haven't", "it's", "nobody's".
+- Be casual but professional, like a trusted coworker giving you a quick update.
+- If they ask "who's working today" just say the names. That's it.
+- If the answer is "no one" or "nothing", just say that simply.
+- Remember context from earlier in the conversation — refer back naturally.
+- Use filler words occasionally: "So...", "Yeah,", "Looks like", "Hmm,".
+- End responses naturally, don't add unnecessary follow-up questions every time.
+
+Examples of GOOD voice responses:
+- "Nobody's clocked in yet today."
+- "Yeah, Mamata and Sarun are in right now. Bikrant started at half six."
+- "Nah, all timesheets are approved. You're all good."
+- "Looks like you're running low on napkins and straws."
+
+Examples of BAD voice responses (TOO LONG/FORMAL):
+- "Based on my analysis of the clock events data, I can confirm that no employees have registered a clock-in event for today's date..."
+- "Here's a comprehensive overview of your current staffing situation: ..."`;
+
+    const finalSystemPrompt = voiceMode ? systemPrompt + voiceSystemAddendum : systemPrompt;
+
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: {
@@ -336,7 +363,7 @@ ${JSON.stringify(forumPosts.map(f => ({
       body: JSON.stringify({
         model: "google/gemini-2.5-flash",
         messages: [
-          { role: "system", content: systemPrompt },
+          { role: "system", content: finalSystemPrompt },
           ...messages,
         ],
         stream: true,
