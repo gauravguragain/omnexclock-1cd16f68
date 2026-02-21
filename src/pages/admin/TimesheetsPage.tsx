@@ -573,7 +573,7 @@ export default function TimesheetsPage() {
       acc.push({ date: e.raw_date, label: e.date, entries: [e] });
     }
     return acc;
-  }, []).sort((a, b) => a.date.localeCompare(b.date));
+  }, []).sort((a, b) => b.date.localeCompare(a.date));
 
   const approvedCount = filtered.filter(e => e.approved).length;
   const pendingCount = filtered.length - approvedCount;
