@@ -612,9 +612,9 @@ export default function AIAssistantPage() {
   const selectedCategory = promptCategories.find(c => c.label === activeCategory);
 
   return (
-    <div className="flex flex-col -m-3 lg:-m-6 -mb-[calc(68px+env(safe-area-inset-bottom,0px)+0.75rem)] lg:-mb-6" style={{ height: "calc(100dvh - 3rem)" }}>
-      {/* Messages area */}
-      <div ref={scrollRef} className="flex-1 min-h-0 overflow-y-auto scroll-native space-y-3 p-3 lg:p-6 pb-2">
+    <div className="flex flex-col -m-3 lg:-m-6 -mb-[calc(68px+env(safe-area-inset-bottom,0px)+0.75rem)] lg:-mb-6 relative" style={{ height: "calc(100dvh - 3rem)" }}>
+      {/* Messages area - extra bottom padding on mobile for fixed input */}
+      <div ref={scrollRef} className="flex-1 min-h-0 overflow-y-auto scroll-native space-y-3 p-3 lg:p-6 pb-[11rem] lg:pb-2">
         {messages.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full text-center px-4">
             <div className="h-16 w-16 rounded-2xl bg-primary/10 flex items-center justify-center mb-4 ring-4 ring-primary/5">
@@ -756,7 +756,7 @@ export default function AIAssistantPage() {
       )}
 
       {/* Input area */}
-      <div className="bg-background border-t border-border/30 pt-3 px-3 lg:px-6 pb-[calc(env(safe-area-inset-bottom,0px)+4.5rem)] lg:pb-3 flex-shrink-0">
+      <div className="fixed bottom-[calc(68px+env(safe-area-inset-bottom,0px))] lg:bottom-0 left-0 right-0 lg:left-64 z-20 bg-background border-t border-border/30 pt-3 px-3 lg:px-6 pb-3 flex-shrink-0">
         <div className="flex gap-2 items-end">
           <div className="flex flex-col gap-1">
             <Sheet open={historyOpen} onOpenChange={setHistoryOpen}>
