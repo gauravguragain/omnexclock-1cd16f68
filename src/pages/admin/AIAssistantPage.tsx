@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect, useCallback, lazy, Suspense } from "react";
 import { useBusiness } from "@/contexts/BusinessContext";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -6,8 +6,9 @@ import { Badge } from "@/components/ui/badge";
 import {
   Bot, Send, Trash2, Sparkles, User, Mic, MicOff, Volume2, VolumeX,
   Download, Copy, Check, Zap, TrendingUp, Users, Package, CalendarDays, DollarSign, AlertTriangle, FileText,
-  History, ArrowLeft, Clock, X,
+  History, ArrowLeft, Clock, X, Phone,
 } from "lucide-react";
+import VoiceChatMode from "@/components/VoiceChatMode";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { toast } from "sonner";
 import {
@@ -241,6 +242,7 @@ export default function AIAssistantPage() {
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
   const [historyOpen, setHistoryOpen] = useState(false);
   const [sessions, setSessions] = useState<HistorySession[]>([]);
+  const [voiceModeOpen, setVoiceModeOpen] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const recognitionRef = useRef<any>(null);
@@ -837,9 +839,18 @@ export default function AIAssistantPage() {
             )}
           </div>
           <Button
+            variant="outline"
+            size="icon"
+            className="h-10 w-10 flex-shrink-0 border-primary/30 text-primary hover:bg-primary/10"
+            onClick={() => setVoiceModeOpen(true)}
+            title="Voice conversation"
+          >
+            <Phone className="h-4 w-4" />
+          </Button>
+          <Button
             variant={isListening ? "default" : "outline"}
             size="icon"
-            className={`h-10 w-10 flex-shrink-0 ${isListening ? "bg-red-600 hover:bg-red-700 text-white animate-pulse" : ""}`}
+            className={`h-10 w-10 flex-shrink-0 ${isListening ? "bg-destructive hover:bg-destructive/90 text-destructive-foreground animate-pulse" : ""}`}
             onClick={toggleVoice}
             title={isListening ? "Stop listening" : "Voice input"}
           >
@@ -868,6 +879,16 @@ export default function AIAssistantPage() {
           AI responses are based on your business data • Super Admin exclusive
         </p>
       </div>
+
+      {/* Voice Chat Mode Overlay */}
+      <VoiceChatMode
+        open={voiceModeOpen}
+        onClose={() => setVoiceModeOpen(false)}
+        messages={messages}
+        onMessagesChange={setMessages}
+        businessId={business?.id || ""}
+        businessName={business?.name}
+      />
     </div>
   );
 }
