@@ -49,6 +49,7 @@ export default function VoiceChatMode({
   const [currentAssistantText, setCurrentAssistantText] = useState("");
   const recognitionRef = useRef<any>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const warmAudioRef = useRef<HTMLAudioElement | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const abortRef = useRef<AbortController | null>(null);
   const silenceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -112,43 +113,44 @@ export default function VoiceChatMode({
 
       if (!response.ok) {
         console.error("TTS request failed:", response.status);
-        // Fallback to browser TTS
         fallbackSpeak(clean, allMessages);
         return;
       }
 
       const audioBlob = await response.blob();
       const audioUrl = URL.createObjectURL(audioBlob);
-      const audio = new Audio(audioUrl);
+
+      // Reuse the pre-warmed audio element to avoid NotAllowedError
+      const audio = warmAudioRef.current || new Audio();
+      audio.src = audioUrl;
       audioRef.current = audio;
 
-      audio.onended = () => {
+      const onDone = () => {
         URL.revokeObjectURL(audioUrl);
         audioRef.current = null;
+        audio.removeEventListener("ended", onDone);
+        audio.removeEventListener("error", onErr);
         setVoiceState("idle");
         if (isActiveRef.current) {
-          setTimeout(() => {
-            if (isActiveRef.current) startListening(allMessages);
-          }, 300);
+          setTimeout(() => { if (isActiveRef.current) startListening(allMessages); }, 300);
         }
       };
 
-      audio.onerror = () => {
+      const onErr = () => {
         URL.revokeObjectURL(audioUrl);
         audioRef.current = null;
-        console.error("Audio playback error");
-        setVoiceState("idle");
-        if (isActiveRef.current) {
-          setTimeout(() => {
-            if (isActiveRef.current) startListening(allMessages);
-          }, 300);
-        }
+        audio.removeEventListener("ended", onDone);
+        audio.removeEventListener("error", onErr);
+        console.error("Audio playback error, falling back to browser TTS");
+        fallbackSpeak(clean, allMessages);
       };
+
+      audio.addEventListener("ended", onDone);
+      audio.addEventListener("error", onErr);
 
       await audio.play();
     } catch (e) {
       console.error("ElevenLabs TTS error:", e);
-      // Fallback to browser TTS
       fallbackSpeak(clean, allMessages);
     }
   }, []);
@@ -377,6 +379,14 @@ export default function VoiceChatMode({
   }, [sendVoiceMessage]);
 
   const startConversation = useCallback(() => {
+    // Pre-warm an Audio element on user gesture so future .play() calls are allowed
+    if (!warmAudioRef.current) {
+      const a = new Audio();
+      // Play a silent data URI to "unlock" audio on this element
+      a.src = "data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA=";
+      a.play().then(() => { a.pause(); }).catch(() => {});
+      warmAudioRef.current = a;
+    }
     isActiveRef.current = true;
     startListening(messages);
   }, [messages, startListening]);
