@@ -756,7 +756,7 @@ export default function AIAssistantPage() {
       )}
 
       {/* Input area */}
-      <div className="border-t border-border/30 pt-3 pb-[calc(env(safe-area-inset-bottom,0px)+0.5rem)] lg:pb-2 flex-shrink-0">
+      <div className="sticky bottom-0 z-10 bg-background border-t border-border/30 pt-3 pb-[calc(env(safe-area-inset-bottom,0px)+4.5rem)] lg:pb-2 flex-shrink-0">
         <div className="flex gap-2 items-end">
           <div className="flex flex-col gap-1">
             <Sheet open={historyOpen} onOpenChange={setHistoryOpen}>
