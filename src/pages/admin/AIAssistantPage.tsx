@@ -612,9 +612,9 @@ export default function AIAssistantPage() {
   const selectedCategory = promptCategories.find(c => c.label === activeCategory);
 
   return (
-    <div className="flex flex-col -m-3 lg:-m-6 -mb-[calc(68px+env(safe-area-inset-bottom,0px)+0.75rem)] lg:-mb-6 relative" style={{ height: "calc(100dvh - 3rem)" }}>
-      {/* Messages area - extra bottom padding on mobile for fixed input */}
-      <div ref={scrollRef} className="flex-1 min-h-0 overflow-y-auto scroll-native space-y-3 p-3 lg:p-6 pb-[10rem] lg:pb-6">
+    <div className="flex flex-col -m-3 lg:-m-6 relative" style={{ height: "calc(100dvh - 3rem - 68px - env(safe-area-inset-bottom, 0px))", maxHeight: "calc(100dvh - 3rem - 68px - env(safe-area-inset-bottom, 0px))" }}>
+      {/* Messages area */}
+      <div ref={scrollRef} className="flex-1 min-h-0 overflow-y-auto scroll-native space-y-3 p-3 lg:p-6 lg:pb-6">
         {messages.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full text-center px-4">
             <div className="h-16 w-16 rounded-2xl bg-primary/10 flex items-center justify-center mb-4 ring-4 ring-primary/5">
@@ -756,7 +756,7 @@ export default function AIAssistantPage() {
       )}
 
       {/* Input area */}
-      <div className="fixed bottom-[calc(68px+env(safe-area-inset-bottom,0px))] lg:bottom-0 left-0 right-0 lg:left-64 z-20 bg-background border-t border-border/30 px-3 lg:px-6 pb-2 pt-2 flex-shrink-0">
+      <div className="bg-background border-t border-border/30 px-3 lg:px-6 pb-2 pt-2 flex-shrink-0">
         {/* Action buttons row */}
         {messages.length > 0 && (
           <div className="flex items-center gap-1 mb-1.5">
