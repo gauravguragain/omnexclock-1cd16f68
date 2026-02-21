@@ -257,6 +257,7 @@ export default function VoiceChatMode({
     recognitionRef.current = rec;
 
     let finalText = "";
+    let hadError = false;
 
     rec.onresult = (e: any) => {
       let interim = "";
@@ -268,29 +269,42 @@ export default function VoiceChatMode({
       setTranscript(finalText || interim);
     };
 
-    rec.onend = () => {
-      recognitionRef.current = null;
-      if (finalText.trim() && isActiveRef.current) {
-        processUserInputRef.current(finalText.trim());
-      } else if (isActiveRef.current) {
-        setTimeout(() => listenRef.current(), 250);
-      }
-    };
-
     rec.onerror = (e: any) => {
       console.log("[Voice] recognition error:", e.error);
+      hadError = true;
       if (e.error === "not-allowed") {
-        toast.error("Microphone access denied");
+        toast.error("Microphone access denied. Please allow mic access and try again.");
         isActiveRef.current = false;
         setVoiceState("idle");
         return;
       }
+      // For all other errors (no-speech, aborted, network, etc.), onend will handle restart
     };
 
-    rec.start();
-    setVoiceState("listening");
-    setTranscript("");
-    console.log("[Voice] listening started");
+    rec.onend = () => {
+      recognitionRef.current = null;
+      if (!isActiveRef.current) return;
+      if (finalText.trim()) {
+        processUserInputRef.current(finalText.trim());
+      } else {
+        // Re-listen after a short delay (covers no-speech timeout, aborted, etc.)
+        const delay = hadError ? 500 : 250;
+        console.log("[Voice] no final text, re-listening in", delay, "ms");
+        setTimeout(() => listenRef.current(), delay);
+      }
+    };
+
+    try {
+      rec.start();
+      setVoiceState("listening");
+      setTranscript("");
+      console.log("[Voice] listening started");
+    } catch (e) {
+      console.error("[Voice] rec.start() failed:", e);
+      recognitionRef.current = null;
+      // Retry after delay
+      if (isActiveRef.current) setTimeout(() => listenRef.current(), 1000);
+    }
   }, []);
 
   const processUserInput = useCallback(async (text: string) => {
