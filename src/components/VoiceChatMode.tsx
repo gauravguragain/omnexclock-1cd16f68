@@ -211,6 +211,12 @@ export default function VoiceChatMode({
   const messagesRef = useRef<Message[]>(messages);
   const onMessagesChangeRef = useRef(onMessagesChange);
   const warmAudioRef = useRef<HTMLAudioElement | null>(null);
+  
+  // Refs to break stale closures in the listen→process→speak→listen loop
+  const processUserInputRef = useRef<(text: string) => void>(() => {});
+  const listenRef = useRef<() => void>(() => {});
+  const speakRef = useRef<(text: string) => Promise<void>>(async () => {});
+  const speakBrowserTTSRef = useRef<(text: string) => Promise<void>>(async () => {});
 
   // Keep refs in sync every render
   useEffect(() => { messagesRef.current = messages; }, [messages]);
@@ -250,49 +256,49 @@ export default function VoiceChatMode({
     rec.maxAlternatives = 1;
     recognitionRef.current = rec;
 
-    let final = "";
+    let finalText = "";
 
     rec.onresult = (e: any) => {
       let interim = "";
-      final = "";
+      finalText = "";
       for (let i = 0; i < e.results.length; i++) {
-        if (e.results[i].isFinal) final += e.results[i][0].transcript;
+        if (e.results[i].isFinal) finalText += e.results[i][0].transcript;
         else interim += e.results[i][0].transcript;
       }
-      setTranscript(final || interim);
+      setTranscript(finalText || interim);
     };
 
     rec.onend = () => {
       recognitionRef.current = null;
-      if (final.trim() && isActiveRef.current) {
-        processUserInput(final.trim());
+      if (finalText.trim() && isActiveRef.current) {
+        processUserInputRef.current(finalText.trim());
       } else if (isActiveRef.current) {
-        // No speech — restart
-        setTimeout(() => listen(), 250);
+        setTimeout(() => listenRef.current(), 250);
       }
     };
 
     rec.onerror = (e: any) => {
+      console.log("[Voice] recognition error:", e.error);
       if (e.error === "not-allowed") {
         toast.error("Microphone access denied");
         isActiveRef.current = false;
         setVoiceState("idle");
         return;
       }
-      // For no-speech / aborted / other — just let onend handle restart
     };
 
     rec.start();
     setVoiceState("listening");
     setTranscript("");
+    console.log("[Voice] listening started");
   }, []);
 
   const processUserInput = useCallback(async (text: string) => {
     if (!isActiveRef.current) return;
+    console.log("[Voice] processing:", text);
     setVoiceState("processing");
     setTranscript("");
 
-    // Add user message
     const userMsg: Message = { role: "user", content: text, timestamp: new Date() };
     const updated = [...messagesRef.current, userMsg];
     messagesRef.current = updated;
@@ -318,14 +324,12 @@ export default function VoiceChatMode({
       });
 
       if (!resp.ok) {
-        if (resp.status === 429) toast.error("Rate limited — wait a moment");
-        else if (resp.status === 402) toast.error("AI credits exhausted");
-        else toast.error("AI request failed");
-        if (isActiveRef.current) setTimeout(() => { setVoiceState("listening"); listen(); }, 800);
+        console.error("[Voice] AI response not ok:", resp.status);
+        await speakBrowserTTSRef.current("Sorry, I couldn't process that right now.");
+        if (isActiveRef.current) setTimeout(() => listenRef.current(), 300);
         return;
       }
 
-      // Stream response
       const reader = resp.body!.getReader();
       const decoder = new TextDecoder();
       let buf = "";
@@ -350,23 +354,21 @@ export default function VoiceChatMode({
         }
       }
 
-      // Save assistant message
+      console.log("[Voice] AI responded:", aiText.substring(0, 80));
+
       const aMsg: Message = { role: "assistant", content: aiText, timestamp: new Date() };
-      const final = [...updated, aMsg];
-      messagesRef.current = final;
-      onMessagesChangeRef.current(final);
+      const finalMsgs = [...updated, aMsg];
+      messagesRef.current = finalMsgs;
+      onMessagesChangeRef.current(finalMsgs);
       setAssistantText("");
 
-      // Speak the response — always use browser TTS as primary for reliability
-      await speak(aiText);
+      await speakRef.current(aiText);
 
     } catch (e: any) {
       if (e.name === "AbortError") return;
       console.error("[Voice] error:", e);
-      // Even on error, try to speak something and continue the loop
-      const errorMsg = "Sorry, I had trouble processing that. Could you try again?";
-      await speakBrowserTTS(errorMsg);
-      if (isActiveRef.current) setTimeout(() => listen(), 300);
+      await speakBrowserTTSRef.current("Sorry, something went wrong. Try again.");
+      if (isActiveRef.current) setTimeout(() => listenRef.current(), 300);
     }
   }, [businessId]);
 
@@ -385,13 +387,11 @@ export default function VoiceChatMode({
 
   const speak = useCallback(async (text: string) => {
     const clean = cleanForSpeech(text);
-    if (!clean) { if (isActiveRef.current) setTimeout(() => listen(), 200); return; }
+    if (!clean) { if (isActiveRef.current) setTimeout(() => listenRef.current(), 200); return; }
 
     setVoiceState("speaking");
-
     let spoke = false;
 
-    // Try ElevenLabs TTS first
     try {
       const resp = await fetch(TTS_URL, {
         method: "POST",
@@ -429,19 +429,23 @@ export default function VoiceChatMode({
       console.warn("[Voice] ElevenLabs TTS failed, using browser fallback", e);
     }
 
-    // Fallback to browser TTS
     if (!spoke) {
-      await speakBrowserTTS(clean);
+      await speakBrowserTTSRef.current(clean);
     }
 
-    // Loop back
     if (isActiveRef.current) {
       setVoiceState("listening");
-      setTimeout(() => listen(), 300);
+      setTimeout(() => listenRef.current(), 300);
     } else {
       setVoiceState("idle");
     }
   }, []);
+
+  // Keep function refs in sync so the loop never uses stale closures
+  useEffect(() => { listenRef.current = listen; }, [listen]);
+  useEffect(() => { processUserInputRef.current = processUserInput; }, [processUserInput]);
+  useEffect(() => { speakRef.current = speak; }, [speak]);
+  useEffect(() => { speakBrowserTTSRef.current = speakBrowserTTS; }, [speakBrowserTTS]);
 
   // ─── User Actions ───
 
@@ -455,7 +459,7 @@ export default function VoiceChatMode({
       warmAudioRef.current = a;
     }
     isActiveRef.current = true;
-    listen();
+    listenRef.current();
   }
 
   function endConversation() {
@@ -476,7 +480,7 @@ export default function VoiceChatMode({
       window.speechSynthesis?.cancel();
       if (isActiveRef.current) {
         setVoiceState("listening");
-        setTimeout(() => listen(), 200);
+        setTimeout(() => listenRef.current(), 200);
       }
     }
   }
