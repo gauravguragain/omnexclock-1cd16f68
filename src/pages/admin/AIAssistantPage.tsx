@@ -614,7 +614,7 @@ export default function AIAssistantPage() {
   return (
     <div className="flex flex-col -m-3 lg:-m-6 -mb-[calc(68px+env(safe-area-inset-bottom,0px)+0.75rem)] lg:-mb-6 relative" style={{ height: "calc(100dvh - 3rem)" }}>
       {/* Messages area - extra bottom padding on mobile for fixed input */}
-      <div ref={scrollRef} className="flex-1 min-h-0 overflow-y-auto scroll-native space-y-3 p-3 lg:p-6 pb-[11rem] lg:pb-2">
+      <div ref={scrollRef} className="flex-1 min-h-0 overflow-y-auto scroll-native space-y-3 p-3 lg:p-6 pb-[14rem] lg:pb-6">
         {messages.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full text-center px-4">
             <div className="h-16 w-16 rounded-2xl bg-primary/10 flex items-center justify-center mb-4 ring-4 ring-primary/5">
