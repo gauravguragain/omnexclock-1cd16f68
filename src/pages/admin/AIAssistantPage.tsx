@@ -883,7 +883,10 @@ export default function AIAssistantPage() {
       {/* Voice Chat Mode Overlay */}
       <VoiceChatMode
         open={voiceModeOpen}
-        onClose={() => setVoiceModeOpen(false)}
+        onClose={() => {
+          setVoiceModeOpen(false);
+          setTimeout(() => textareaRef.current?.focus(), 100);
+        }}
         messages={messages}
         onMessagesChange={setMessages}
         businessId={business?.id || ""}
