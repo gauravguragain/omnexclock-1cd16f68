@@ -306,6 +306,7 @@ export default function VoiceChatMode({
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
           Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
         },
         body: JSON.stringify({
@@ -356,16 +357,31 @@ export default function VoiceChatMode({
       onMessagesChangeRef.current(final);
       setAssistantText("");
 
-      // Speak it
+      // Speak the response — always use browser TTS as primary for reliability
       await speak(aiText);
 
     } catch (e: any) {
       if (e.name === "AbortError") return;
       console.error("[Voice] error:", e);
-      toast.error("Something went wrong");
-      if (isActiveRef.current) setTimeout(() => listen(), 500);
+      // Even on error, try to speak something and continue the loop
+      const errorMsg = "Sorry, I had trouble processing that. Could you try again?";
+      await speakBrowserTTS(errorMsg);
+      if (isActiveRef.current) setTimeout(() => listen(), 300);
     }
   }, [businessId]);
+
+  const speakBrowserTTS = useCallback((text: string): Promise<void> => {
+    return new Promise<void>((resolve) => {
+      const u = new SpeechSynthesisUtterance(text.substring(0, 500));
+      u.lang = "en-AU";
+      u.rate = 1.05;
+      u.onend = () => resolve();
+      u.onerror = () => resolve();
+      window.speechSynthesis.cancel();
+      window.speechSynthesis.speak(u);
+      setTimeout(() => resolve(), 20000);
+    });
+  }, []);
 
   const speak = useCallback(async (text: string) => {
     const clean = cleanForSpeech(text);
@@ -373,6 +389,9 @@ export default function VoiceChatMode({
 
     setVoiceState("speaking");
 
+    let spoke = false;
+
+    // Try ElevenLabs TTS first
     try {
       const resp = await fetch(TTS_URL, {
         method: "POST",
@@ -384,40 +403,35 @@ export default function VoiceChatMode({
         body: JSON.stringify({ text: clean }),
       });
 
-      if (!resp.ok) throw new Error("TTS failed");
+      if (resp.ok) {
+        const blob = await resp.blob();
+        if (blob.size > 0 && blob.type.includes("audio")) {
+          const url = URL.createObjectURL(blob);
+          await new Promise<void>((resolve) => {
+            const audio = warmAudioRef.current || new Audio();
+            audio.src = url;
+            audioRef.current = audio;
+            const done = () => {
+              URL.revokeObjectURL(url);
+              audioRef.current = null;
+              audio.removeEventListener("ended", done);
+              audio.removeEventListener("error", done);
+              resolve();
+            };
+            audio.addEventListener("ended", done);
+            audio.addEventListener("error", done);
+            audio.play().catch(() => { done(); });
+          });
+          spoke = true;
+        }
+      }
+    } catch (e) {
+      console.warn("[Voice] ElevenLabs TTS failed, using browser fallback", e);
+    }
 
-      const blob = await resp.blob();
-      const url = URL.createObjectURL(blob);
-
-      await new Promise<void>((resolve) => {
-        const audio = warmAudioRef.current || new Audio();
-        audio.src = url;
-        audioRef.current = audio;
-        try { if ("setSinkId" in audio) (audio as any).setSinkId("default"); } catch {}
-
-        const done = () => {
-          URL.revokeObjectURL(url);
-          audioRef.current = null;
-          audio.removeEventListener("ended", done);
-          audio.removeEventListener("error", done);
-          resolve();
-        };
-        audio.addEventListener("ended", done);
-        audio.addEventListener("error", done);
-        audio.play().catch(() => { done(); });
-      });
-    } catch {
-      // Fallback to browser TTS
-      await new Promise<void>((resolve) => {
-        const u = new SpeechSynthesisUtterance(clean.substring(0, 300));
-        u.lang = "en-AU";
-        u.rate = 1.05;
-        u.onend = () => resolve();
-        u.onerror = () => resolve();
-        window.speechSynthesis.cancel();
-        window.speechSynthesis.speak(u);
-        setTimeout(() => resolve(), 15000);
-      });
+    // Fallback to browser TTS
+    if (!spoke) {
+      await speakBrowserTTS(clean);
     }
 
     // Loop back
