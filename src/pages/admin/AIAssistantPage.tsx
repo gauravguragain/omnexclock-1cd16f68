@@ -610,9 +610,9 @@ export default function AIAssistantPage() {
   const selectedCategory = promptCategories.find(c => c.label === activeCategory);
 
   return (
-    <div className="flex flex-col h-[calc(100dvh-8rem)] lg:h-[calc(100dvh-6rem)]">
+    <div className="flex flex-col -mb-[calc(68px+env(safe-area-inset-bottom,0px))] lg:mb-0" style={{ height: "calc(100dvh - 4.5rem - 1.5rem)" }}>
       {/* Messages area */}
-      <div ref={scrollRef} className="flex-1 overflow-y-auto scroll-native space-y-3 pb-4">
+      <div ref={scrollRef} className="flex-1 min-h-0 overflow-y-auto scroll-native space-y-3 pb-2">
         {messages.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full text-center px-4">
             <div className="h-16 w-16 rounded-2xl bg-primary/10 flex items-center justify-center mb-4 ring-4 ring-primary/5">
@@ -754,7 +754,7 @@ export default function AIAssistantPage() {
       )}
 
       {/* Input area */}
-      <div className="border-t border-border/30 pt-3 flex-shrink-0">
+      <div className="border-t border-border/30 pt-3 pb-[calc(env(safe-area-inset-bottom,0px)+0.5rem)] lg:pb-2 flex-shrink-0">
         <div className="flex gap-2 items-end">
           <div className="flex flex-col gap-1">
             <Sheet open={historyOpen} onOpenChange={setHistoryOpen}>
@@ -763,8 +763,8 @@ export default function AIAssistantPage() {
                   <History className="h-4 w-4" />
                 </Button>
               </SheetTrigger>
-              <SheetContent side="left" className="w-80 sm:w-96 p-0">
-                <SheetHeader className="p-4 border-b border-border/30">
+              <SheetContent side="left" className="w-[85vw] sm:w-96 p-0 pb-[env(safe-area-inset-bottom)]">
+                <SheetHeader className="p-4 pt-[calc(env(safe-area-inset-top,0px)+1rem)] border-b border-border/30">
                   <SheetTitle className="flex items-center justify-between">
                     <span className="flex items-center gap-2 text-sm">
                       <History className="h-4 w-4" /> Chat History
