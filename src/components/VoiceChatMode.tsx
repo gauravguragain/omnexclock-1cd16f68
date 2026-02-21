@@ -93,67 +93,105 @@ export default function VoiceChatMode({
     }
 
     setVoiceState("speaking");
+
+    // Cancel must happen, then a small delay before speaking (fixes mobile Chrome)
     window.speechSynthesis.cancel();
 
     const doSpeak = () => {
-      const utterance = new SpeechSynthesisUtterance(clean);
-      utterance.lang = "en-AU";
-      utterance.rate = 1.05;
-      utterance.pitch = 1;
-
-      // Try to pick a good voice
-      const voices = window.speechSynthesis.getVoices();
-      const preferred = voices.find(v => v.lang.startsWith("en") && v.name.toLowerCase().includes("female"))
-        || voices.find(v => v.lang.startsWith("en-AU"))
-        || voices.find(v => v.lang.startsWith("en"));
-      if (preferred) utterance.voice = preferred;
-
-      utteranceRef.current = utterance;
-
-      utterance.onend = () => {
-        setVoiceState("idle");
-        if (isActiveRef.current) {
-          setTimeout(() => {
-            if (isActiveRef.current) startListening(allMessages);
-          }, 300);
-        }
-      };
-
-      utterance.onerror = (e) => {
-        console.error("TTS error:", e);
-        setVoiceState("idle");
-        if (isActiveRef.current) {
-          setTimeout(() => {
-            if (isActiveRef.current) startListening(allMessages);
-          }, 300);
-        }
-      };
-
-      window.speechSynthesis.speak(utterance);
-
-      // Chrome bug workaround: synthesis pauses after ~15s if not poked
-      const keepAlive = setInterval(() => {
-        if (window.speechSynthesis.speaking) {
-          window.speechSynthesis.pause();
-          window.speechSynthesis.resume();
+      // Split long text into chunks under 200 chars to avoid mobile TTS cutoff
+      const chunks: string[] = [];
+      const sentences = clean.match(/[^.!?]+[.!?]+|[^.!?]+$/g) || [clean];
+      let current = "";
+      for (const s of sentences) {
+        if ((current + s).length > 180 && current) {
+          chunks.push(current.trim());
+          current = s;
         } else {
-          clearInterval(keepAlive);
+          current += s;
         }
-      }, 10000);
+      }
+      if (current.trim()) chunks.push(current.trim());
+
+      let chunkIndex = 0;
+
+      const speakChunk = () => {
+        if (chunkIndex >= chunks.length) {
+          setVoiceState("idle");
+          if (isActiveRef.current) {
+            setTimeout(() => {
+              if (isActiveRef.current) startListening(allMessages);
+            }, 300);
+          }
+          return;
+        }
+
+        const utterance = new SpeechSynthesisUtterance(chunks[chunkIndex]);
+        utterance.lang = "en-AU";
+        utterance.rate = 1.05;
+        utterance.pitch = 1;
+        utterance.volume = 1;
+
+        const voices = window.speechSynthesis.getVoices();
+        const preferred = voices.find(v => v.lang.startsWith("en") && v.name.toLowerCase().includes("female"))
+          || voices.find(v => v.lang === "en-AU")
+          || voices.find(v => v.lang.startsWith("en-AU"))
+          || voices.find(v => v.lang.startsWith("en"));
+        if (preferred) utterance.voice = preferred;
+
+        utteranceRef.current = utterance;
+
+        utterance.onend = () => {
+          chunkIndex++;
+          speakChunk();
+        };
+
+        utterance.onerror = (e) => {
+          console.error("TTS error on chunk:", chunkIndex, e.error);
+          // On "interrupted" just move to next chunk
+          if (e.error === "interrupted") {
+            chunkIndex++;
+            speakChunk();
+            return;
+          }
+          setVoiceState("idle");
+          if (isActiveRef.current) {
+            setTimeout(() => {
+              if (isActiveRef.current) startListening(allMessages);
+            }, 300);
+          }
+        };
+
+        window.speechSynthesis.speak(utterance);
+
+        // Chrome keepAlive workaround per chunk
+        const keepAlive = setInterval(() => {
+          if (window.speechSynthesis.speaking) {
+            window.speechSynthesis.pause();
+            window.speechSynthesis.resume();
+          } else {
+            clearInterval(keepAlive);
+          }
+        }, 5000);
+      };
+
+      speakChunk();
     };
 
-    // Ensure voices are loaded before speaking
-    const voices = window.speechSynthesis.getVoices();
-    if (voices.length > 0) {
-      doSpeak();
-    } else {
-      window.speechSynthesis.onvoiceschanged = () => {
-        doSpeak();
-        window.speechSynthesis.onvoiceschanged = null;
-      };
-      // Fallback if event never fires
-      setTimeout(doSpeak, 500);
-    }
+    // Ensure voices are loaded, then speak after a brief delay (mobile fix)
+    const trySpeak = () => {
+      const voices = window.speechSynthesis.getVoices();
+      if (voices.length > 0) {
+        setTimeout(doSpeak, 100);
+      } else {
+        window.speechSynthesis.onvoiceschanged = () => {
+          window.speechSynthesis.onvoiceschanged = null;
+          setTimeout(doSpeak, 100);
+        };
+        setTimeout(doSpeak, 800);
+      }
+    };
+
+    trySpeak();
   }, []);
 
   const sendVoiceMessage = useCallback(async (text: string, currentMessages: Message[]) => {
@@ -351,6 +389,10 @@ export default function VoiceChatMode({
 
   const startConversation = useCallback(() => {
     isActiveRef.current = true;
+    // Warm up TTS with a silent utterance so browser unlocks audio on user gesture
+    const warmup = new SpeechSynthesisUtterance("");
+    warmup.volume = 0;
+    window.speechSynthesis.speak(warmup);
     startListening(messages);
   }, [messages, startListening]);
 
