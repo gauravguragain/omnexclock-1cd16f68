@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
-import { Mic, MicOff, X, Volume2, VolumeX, Bot, User, Phone, PhoneOff } from "lucide-react";
+import { Mic, MicOff, X, Volume2, VolumeX, Bot, User, Phone, PhoneOff, MessageSquare } from "lucide-react";
 import { toast } from "sonner";
 
 interface Message {
@@ -88,7 +88,6 @@ export default function VoiceChatMode({
   const speakAndThenListen = useCallback((text: string, allMessages: Message[]) => {
     const clean = cleanForSpeech(text);
     if (!clean) {
-      // Nothing to speak, go back to listening
       if (isActiveRef.current) startListening(allMessages);
       return;
     }
@@ -96,33 +95,65 @@ export default function VoiceChatMode({
     setVoiceState("speaking");
     window.speechSynthesis.cancel();
 
-    const utterance = new SpeechSynthesisUtterance(clean);
-    utterance.lang = "en-AU";
-    utterance.rate = 1.05;
-    utterance.pitch = 1;
-    utteranceRef.current = utterance;
+    const doSpeak = () => {
+      const utterance = new SpeechSynthesisUtterance(clean);
+      utterance.lang = "en-AU";
+      utterance.rate = 1.05;
+      utterance.pitch = 1;
 
-    utterance.onend = () => {
-      setVoiceState("idle");
-      // Auto-start listening again for continuous conversation
-      if (isActiveRef.current) {
-        setTimeout(() => {
-          if (isActiveRef.current) startListening(allMessages);
-        }, 300);
-      }
+      // Try to pick a good voice
+      const voices = window.speechSynthesis.getVoices();
+      const preferred = voices.find(v => v.lang.startsWith("en") && v.name.toLowerCase().includes("female"))
+        || voices.find(v => v.lang.startsWith("en-AU"))
+        || voices.find(v => v.lang.startsWith("en"));
+      if (preferred) utterance.voice = preferred;
+
+      utteranceRef.current = utterance;
+
+      utterance.onend = () => {
+        setVoiceState("idle");
+        if (isActiveRef.current) {
+          setTimeout(() => {
+            if (isActiveRef.current) startListening(allMessages);
+          }, 300);
+        }
+      };
+
+      utterance.onerror = (e) => {
+        console.error("TTS error:", e);
+        setVoiceState("idle");
+        if (isActiveRef.current) {
+          setTimeout(() => {
+            if (isActiveRef.current) startListening(allMessages);
+          }, 300);
+        }
+      };
+
+      window.speechSynthesis.speak(utterance);
+
+      // Chrome bug workaround: synthesis pauses after ~15s if not poked
+      const keepAlive = setInterval(() => {
+        if (window.speechSynthesis.speaking) {
+          window.speechSynthesis.pause();
+          window.speechSynthesis.resume();
+        } else {
+          clearInterval(keepAlive);
+        }
+      }, 10000);
     };
 
-    utterance.onerror = (e) => {
-      console.error("TTS error:", e);
-      setVoiceState("idle");
-      if (isActiveRef.current) {
-        setTimeout(() => {
-          if (isActiveRef.current) startListening(allMessages);
-        }, 300);
-      }
-    };
-
-    window.speechSynthesis.speak(utterance);
+    // Ensure voices are loaded before speaking
+    const voices = window.speechSynthesis.getVoices();
+    if (voices.length > 0) {
+      doSpeak();
+    } else {
+      window.speechSynthesis.onvoiceschanged = () => {
+        doSpeak();
+        window.speechSynthesis.onvoiceschanged = null;
+      };
+      // Fallback if event never fires
+      setTimeout(doSpeak, 500);
+    }
   }, []);
 
   const sendVoiceMessage = useCallback(async (text: string, currentMessages: Message[]) => {
@@ -353,9 +384,15 @@ export default function VoiceChatMode({
           <span className="text-sm font-semibold text-foreground">Voice Chat</span>
           {businessName && <span className="text-xs text-muted-foreground">• {businessName}</span>}
         </div>
-        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={handleClose}>
-          <X className="h-4 w-4" />
-        </Button>
+        <div className="flex items-center gap-1">
+          <Button variant="ghost" size="sm" className="h-8 gap-1.5 text-xs text-muted-foreground" onClick={handleClose}>
+            <MessageSquare className="h-3.5 w-3.5" />
+            Text mode
+          </Button>
+          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={handleClose}>
+            <X className="h-4 w-4" />
+          </Button>
+        </div>
       </div>
 
       {/* Transcript area */}
