@@ -614,7 +614,7 @@ export default function AIAssistantPage() {
   return (
     <div className="flex flex-col -m-3 lg:-m-6 -mb-[calc(68px+env(safe-area-inset-bottom,0px)+0.75rem)] lg:-mb-6 relative" style={{ height: "calc(100dvh - 3rem)" }}>
       {/* Messages area - extra bottom padding on mobile for fixed input */}
-      <div ref={scrollRef} className="flex-1 min-h-0 overflow-y-auto scroll-native space-y-3 p-3 lg:p-6 pb-[14rem] lg:pb-6">
+      <div ref={scrollRef} className="flex-1 min-h-0 overflow-y-auto scroll-native space-y-3 p-3 lg:p-6 pb-[10rem] lg:pb-6">
         {messages.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full text-center px-4">
             <div className="h-16 w-16 rounded-2xl bg-primary/10 flex items-center justify-center mb-4 ring-4 ring-primary/5">
@@ -756,13 +756,14 @@ export default function AIAssistantPage() {
       )}
 
       {/* Input area */}
-      <div className="fixed bottom-[calc(68px+env(safe-area-inset-bottom,0px))] lg:bottom-0 left-0 right-0 lg:left-64 z-20 bg-background border-t border-border/30 pt-3 px-3 lg:px-6 pb-3 flex-shrink-0">
-        <div className="flex gap-2 items-end">
-          <div className="flex flex-col gap-1">
+      <div className="fixed bottom-[calc(68px+env(safe-area-inset-bottom,0px))] lg:bottom-0 left-0 right-0 lg:left-64 z-20 bg-background border-t border-border/30 px-3 lg:px-6 pb-2 pt-2 flex-shrink-0">
+        {/* Action buttons row */}
+        {messages.length > 0 && (
+          <div className="flex items-center gap-1 mb-1.5">
             <Sheet open={historyOpen} onOpenChange={setHistoryOpen}>
               <SheetTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-9 w-9 text-muted-foreground" title="Chat history">
-                  <History className="h-4 w-4" />
+                <Button variant="ghost" size="sm" className="h-7 px-2 text-xs text-muted-foreground gap-1">
+                  <History className="h-3.5 w-3.5" /> History
                 </Button>
               </SheetTrigger>
               <SheetContent side="left" className="w-[85vw] sm:w-96 p-0 pb-[env(safe-area-inset-bottom)]">
@@ -827,17 +828,89 @@ export default function AIAssistantPage() {
                 </div>
               </SheetContent>
             </Sheet>
-            {messages.length > 0 && (
-              <Button variant="ghost" size="icon" className="h-9 w-9 text-muted-foreground" onClick={clearChat} title="Clear chat">
-                <Trash2 className="h-4 w-4" />
-              </Button>
-            )}
-            {messages.length > 0 && (
-              <Button variant="ghost" size="icon" className="h-9 w-9 text-muted-foreground" onClick={exportPDF} title="Export as PDF">
-                <Download className="h-4 w-4" />
-              </Button>
-            )}
+            <Button variant="ghost" size="sm" className="h-7 px-2 text-xs text-muted-foreground gap-1" onClick={clearChat} title="Clear chat">
+              <Trash2 className="h-3.5 w-3.5" /> Clear
+            </Button>
+            <Button variant="ghost" size="sm" className="h-7 px-2 text-xs text-muted-foreground gap-1" onClick={exportPDF} title="Export as PDF">
+              <Download className="h-3.5 w-3.5" /> Export
+            </Button>
           </div>
+        )}
+        {/* No messages: just history button inline */}
+        {messages.length === 0 && (
+          <div className="flex items-center gap-1 mb-1.5">
+            <Sheet open={historyOpen} onOpenChange={setHistoryOpen}>
+              <SheetTrigger asChild>
+                <Button variant="ghost" size="sm" className="h-7 px-2 text-xs text-muted-foreground gap-1">
+                  <History className="h-3.5 w-3.5" /> History
+                </Button>
+              </SheetTrigger>
+              <SheetContent side="left" className="w-[85vw] sm:w-96 p-0 pb-[env(safe-area-inset-bottom)]">
+                <SheetHeader className="p-4 pt-[calc(env(safe-area-inset-top,0px)+1rem)] border-b border-border/30">
+                  <SheetTitle className="flex items-center justify-between">
+                    <span className="flex items-center gap-2 text-sm">
+                      <History className="h-4 w-4" /> Chat History
+                    </span>
+                    {sessions.length > 0 && (
+                      <Button variant="ghost" size="sm" className="h-7 px-2 text-xs text-destructive hover:text-destructive" onClick={clearAllHistory}>
+                        Clear All
+                      </Button>
+                    )}
+                  </SheetTitle>
+                </SheetHeader>
+                <div className="overflow-y-auto h-[calc(100vh-5rem)]">
+                  {sessions.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center h-40 text-center px-4">
+                      <Clock className="h-8 w-8 text-muted-foreground/30 mb-2" />
+                      <p className="text-sm text-muted-foreground">No history yet</p>
+                      <p className="text-xs text-muted-foreground/60">Chats are saved when you leave or clear</p>
+                    </div>
+                  ) : (
+                    <div className="flex flex-col">
+                      {[...sessions].reverse().map((session) => {
+                        const date = new Date(session.savedAt);
+                        const msgCount = session.messages.length;
+                        return (
+                          <div
+                            key={session.id}
+                            className="flex items-start gap-3 px-4 py-3 border-b border-border/20 hover:bg-accent/30 transition-colors cursor-pointer group"
+                            onClick={() => loadSession(session)}
+                          >
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-medium text-foreground truncate">{session.preview}</p>
+                              <div className="flex items-center gap-2 mt-1">
+                                <span className="text-[10px] text-muted-foreground">
+                                  {date.toLocaleDateString("en-AU", { day: "numeric", month: "short", year: "numeric" })}
+                                </span>
+                                <span className="text-[10px] text-muted-foreground/50">•</span>
+                                <span className="text-[10px] text-muted-foreground">
+                                  {date.toLocaleTimeString("en-AU", { hour: "numeric", minute: "2-digit", hour12: true })}
+                                </span>
+                                <span className="text-[10px] text-muted-foreground/50">•</span>
+                                <span className="text-[10px] text-muted-foreground">{msgCount} msgs</span>
+                              </div>
+                            </div>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-6 w-6 opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-destructive flex-shrink-0"
+                              onClick={(e) => { e.stopPropagation(); deleteSession(session.id); }}
+                              title="Delete"
+                            >
+                              <X className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              </SheetContent>
+            </Sheet>
+          </div>
+        )}
+        {/* Input row */}
+        <div className="flex gap-2 items-end">
           <Button
             variant="outline"
             size="icon"
@@ -875,7 +948,7 @@ export default function AIAssistantPage() {
             <Send className="h-4 w-4" />
           </Button>
         </div>
-        <p className="text-[10px] text-muted-foreground/40 text-center mt-1.5">
+        <p className="text-[10px] text-muted-foreground/40 text-center mt-1">
           AI responses are based on your business data • Super Admin exclusive
         </p>
       </div>
