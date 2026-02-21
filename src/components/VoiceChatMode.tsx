@@ -125,6 +125,13 @@ export default function VoiceChatMode({
       audio.src = audioUrl;
       audioRef.current = audio;
 
+      // Force audio to main speaker (not earpiece) on mobile
+      try {
+        if ('setSinkId' in audio && typeof (audio as any).setSinkId === 'function') {
+          await (audio as any).setSinkId('default');
+        }
+      } catch {}
+
       const onDone = () => {
         URL.revokeObjectURL(audioUrl);
         audioRef.current = null;
@@ -215,6 +222,7 @@ export default function VoiceChatMode({
         body: JSON.stringify({
           messages: updatedMessages.map(m => ({ role: m.role, content: m.content })),
           businessId,
+          voiceMode: true,
         }),
         signal: abortRef.current.signal,
       });
@@ -384,6 +392,12 @@ export default function VoiceChatMode({
       const a = new Audio();
       // Play a silent data URI to "unlock" audio on this element
       a.src = "data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA=";
+      // Force audio to main speaker (not earpiece)
+      try {
+        if ('setSinkId' in a && typeof (a as any).setSinkId === 'function') {
+          (a as any).setSinkId('default');
+        }
+      } catch {}
       a.play().then(() => { a.pause(); }).catch(() => {});
       warmAudioRef.current = a;
     }
