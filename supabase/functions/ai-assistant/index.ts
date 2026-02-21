@@ -18,12 +18,24 @@ function ausNowISO(): string {
 
 /** Get Sydney date string YYYY-MM-DD */
 function ausTodayKey(): string {
-  const d = new Date();
+  return toSydneyDate(new Date());
+}
+
+/** Convert any Date to Sydney YYYY-MM-DD */
+function toSydneyDate(d: Date): string {
   const parts = new Intl.DateTimeFormat("en-CA", { timeZone: "Australia/Sydney", year: "numeric", month: "2-digit", day: "2-digit" }).formatToParts(d);
   const y = parts.find(p => p.type === "year")!.value;
   const m = parts.find(p => p.type === "month")!.value;
   const dd = parts.find(p => p.type === "day")!.value;
   return `${y}-${m}-${dd}`;
+}
+
+/** Convert timestamp string to Sydney time string (HH:MM AM/PM) */
+function toSydneyTime(ts: string): string {
+  return new Date(ts).toLocaleString("en-AU", {
+    timeZone: "Australia/Sydney",
+    hour: "numeric", minute: "2-digit", hour12: true,
+  });
 }
 
 serve(async (req) => {
@@ -112,11 +124,29 @@ serve(async (req) => {
     const inactiveEmployees = employees.filter(e => !e.active);
     const departments = [...new Set(activeEmployees.map(e => e.department).filter(Boolean))];
     
-    // Today's clock activity
-    const todayClockEvents = clockEvents.filter(e => e.timestamp?.startsWith(todayKey));
+    // Today's clock activity — convert each timestamp to Sydney date before comparing
+    const todayClockEvents = clockEvents.filter(e => {
+      if (!e.timestamp) return false;
+      return toSydneyDate(new Date(e.timestamp)) === todayKey;
+    });
+
+    // Determine who is CURRENTLY clocked in by finding each employee's LAST event today
+    const lastEventByEmployee = new Map<string, { type: string; name: string; time: string }>();
+    for (const ev of todayClockEvents) {
+      const empName = (ev.employees as any)?.name;
+      if (!empName) continue;
+      const existing = lastEventByEmployee.get(empName);
+      if (!existing || new Date(ev.timestamp) > new Date(existing.time)) {
+        lastEventByEmployee.set(empName, { type: ev.event_type, name: empName, time: ev.timestamp });
+      }
+    }
+    const currentlyClockedIn: string[] = [];
+    const onBreak: string[] = [];
+    for (const [name, info] of lastEventByEmployee) {
+      if (info.type === "clock_in" || info.type === "break_end") currentlyClockedIn.push(name);
+      else if (info.type === "break_start") onBreak.push(name);
+    }
     const clockedInToday = new Set(todayClockEvents.filter(e => e.event_type === "clock_in").map(e => (e.employees as any)?.name));
-    const clockedOutToday = new Set(todayClockEvents.filter(e => e.event_type === "clock_out").map(e => (e.employees as any)?.name));
-    const currentlyClockedIn = [...clockedInToday].filter(n => !clockedOutToday.has(n));
     
     // Pending requests
     const pendingRequests = requests.filter(r => r.status === "pending");
@@ -143,6 +173,7 @@ ALWAYS use 12-hour AM/PM format. Present dates as DD/MM/YYYY (Australian standar
 • Active Employees: ${activeEmployees.length} | Inactive: ${inactiveEmployees.length}
 • Departments: ${departments.join(", ") || "None set"}
 • Currently Clocked In RIGHT NOW: ${currentlyClockedIn.length > 0 ? currentlyClockedIn.join(", ") : "Nobody"}
+• Currently On Break: ${onBreak.length > 0 ? onBreak.join(", ") : "Nobody"}
 • People who clocked in today: ${clockedInToday.size}
 • Pending Requests: ${pendingRequests.length}
 • Low Stock (FOH): ${lowStockFOH.length} items | Low Stock (Bar): ${lowStockBar.length} items
@@ -167,13 +198,15 @@ ${JSON.stringify(employees.map(e => ({
 ADMIN USERS & ROLES (${userRoles.length}):
 ${JSON.stringify(userRoles.map(r => ({ user_id: r.user_id, role: r.role, departments: r.departments })), null, 2)}
 
-CLOCK EVENTS (last 1000, newest first):
+CLOCK EVENTS (last 1000, newest first — all times shown in Sydney timezone):
 ${JSON.stringify(clockEvents.map(e => ({
   employee: (e.employees as any)?.name,
   department: (e.employees as any)?.department,
   job_title: (e.employees as any)?.job_title,
   type: e.event_type,
-  timestamp: e.timestamp,
+  timestamp_utc: e.timestamp,
+  sydney_date: toSydneyDate(new Date(e.timestamp)),
+  sydney_time: toSydneyTime(e.timestamp),
   notes: e.notes,
   has_photo: !!e.photo_url,
 })), null, 2)}
@@ -305,12 +338,17 @@ ${JSON.stringify(forumPosts.map(f => ({
    - ⚠️ Scheduling gaps or overstaffing
    - ⚠️ Unusual clock patterns (very short shifts, missed breaks)
 
-5. **CALCULATIONS**: 
+5. **CALCULATIONS & OVERNIGHT/PAST-MIDNIGHT SHIFTS**: 
    - 2 decimal places for hours and pay
-   - For overnight shifts: add 24h if clock-out < clock-in
-   - Break deductions apply to net hours
+   - CRITICAL: All clock events are attributed to the SYDNEY DATE of the clock_in. Use the "sydney_date" field provided.
+   - If an employee clocks in at 10 PM on Monday and clocks out at 3 AM Tuesday, that ENTIRE shift belongs to Monday.
+   - The clock_out, break_start, and break_end that happen after midnight still belong to the clock_in date.
+   - For overnight shifts: total_hours = clock_out - clock_in (this naturally handles crossing midnight since we use full timestamps).
+   - If the computed hours are negative, add 24 hours (this means the shift crossed midnight).
+   - Break deductions apply to net hours: net_hours = total_hours - break_minutes/60
    - Currency in AUD ($)
    - Labor cost = hours × rate (use admin_hourly_rate for business cost, pay_rate for employee pay)
+   - ALWAYS use the sydney_date and sydney_time fields for display — NEVER parse or show raw UTC timestamps to the user.
 
 6. **COMPARISONS & BENCHMARKS**:
    - Compare departments, employees, weeks, months
