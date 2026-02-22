@@ -21,7 +21,7 @@ import { TimeDropdownPicker } from "@/components/TimeDropdownPicker";
 import { logAudit, getDeviceInfo } from "@/lib/auditLog";
 import { toAusDate, toAusDisplayDate, toAusTime24, toAusTime12, buildAusTimestamp, ausToday, ausNow, ausStartOfDay, ausEndOfDay, ensureTime12 } from "@/lib/dateUtils";
 import { useAuth } from "@/contexts/AuthContext";
-import { EmailCSVDialog } from "@/components/EmailCSVDialog";
+import { EmailPDFDialog } from "@/components/EmailPDFDialog";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface TimesheetEntry {
@@ -639,9 +639,8 @@ export default function TimesheetsPage() {
     ];
   };
 
-  const downloadPDF = async () => {
-    if (filtered.length === 0) { toast.info("No data to export"); return; }
-
+  /** Generate the PDF doc object — reused for download and email */
+  const generatePdfDoc = async () => {
     const { default: jsPDF } = await import("jspdf");
     const { default: autoTable } = await import("jspdf-autotable");
 
@@ -686,7 +685,6 @@ export default function TimesheetsPage() {
       const empEntries = byEmployee.get(name)!;
       empEntries.sort((a, b) => a.raw_date.localeCompare(b.raw_date));
 
-      // Employee header row
       tableBody.push([{
         content: `${name}  (${empEntries[0]?.employee_department || "—"})`,
         colSpan: 9,
@@ -719,7 +717,6 @@ export default function TimesheetsPage() {
         empNet += e.net_hours;
       });
 
-      // Employee total row
       const totalBg: [number, number, number] = [
         Math.min(255, primaryRgb[0] + Math.round((255 - primaryRgb[0]) * 0.85)),
         Math.min(255, primaryRgb[1] + Math.round((255 - primaryRgb[1]) * 0.85)),
@@ -737,7 +734,6 @@ export default function TimesheetsPage() {
       grandNet += empNet;
     }
 
-    // Grand total row
     tableBody.push([
       { content: `GRAND TOTAL — ${sortedNames.length} employee${sortedNames.length !== 1 ? "s" : ""}, ${filtered.length} entries`, colSpan: 6, styles: { fillColor: bgDark, textColor: primaryRgb, fontStyle: "bold", fontSize: 9, halign: "right" } },
       { content: String(grandBreak), styles: { fillColor: bgDark, textColor: textLight, fontStyle: "bold", halign: "center", fontSize: 9 } },
@@ -772,7 +768,6 @@ export default function TimesheetsPage() {
       },
       margin: { left: 10, right: 10 },
       didDrawPage: (data: any) => {
-        // Footer on every page
         const pageH = doc.internal.pageSize.getHeight();
         doc.setFillColor(248, 249, 250);
         doc.rect(0, pageH - 10, pageW, 10, "F");
@@ -783,7 +778,13 @@ export default function TimesheetsPage() {
       },
     });
 
-    const filename = `timesheets_${format(dateFrom, "yyyy-MM-dd")}_to_${format(dateTo, "yyyy-MM-dd")}.pdf`;
+    return doc;
+  };
+
+  const downloadPDF = async () => {
+    if (filtered.length === 0) { toast.info("No data to export"); return; }
+    const doc = await generatePdfDoc();
+    const filename = pdfFilename;
     doc.save(filename);
     toast.success("Downloaded timesheet PDF");
     logAudit("pdf_download", {
@@ -794,27 +795,17 @@ export default function TimesheetsPage() {
     });
   };
 
-  const downloadCSV = () => {
-    if (filtered.length === 0) { toast.info("No data to download"); return; }
-    const csv = buildCSV();
-    const blob = new Blob([csv], { type: "text/csv" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = csvFilename;
-    a.click();
-    URL.revokeObjectURL(url);
-    toast.success("Downloaded timesheet CSV");
-    logAudit("csv_download", {
-      source: "timesheets",
-      filename: csvFilename,
-      row_count: filtered.length,
-      device: getDeviceInfo(),
-    });
+  const generatePdfBase64 = async (): Promise<string> => {
+    const doc = await generatePdfDoc();
+    // Get raw binary string then convert to base64
+    const binaryStr = doc.output("datauristring");
+    // datauristring format: "data:application/pdf;filename=generated.pdf;base64,XXXX"
+    const base64 = binaryStr.split(",")[1];
+    return base64;
   };
 
-  const csvFilename = `timesheets_${format(dateFrom, "yyyy-MM-dd")}_to_${format(dateTo, "yyyy-MM-dd")}.csv`;
-  const csvSubject = `Timesheet Report – ${format(dateFrom, "dd MMM")} to ${format(dateTo, "dd MMM yyyy")}`;
+  const pdfFilename = `timesheets_${format(dateFrom, "yyyy-MM-dd")}_to_${format(dateTo, "yyyy-MM-dd")}.pdf`;
+  const pdfSubject = `Timesheet Report – ${format(dateFrom, "dd MMM")} to ${format(dateTo, "dd MMM yyyy")}`;
 
   const editFormFields = (
     <div className="space-y-4">
@@ -940,11 +931,8 @@ export default function TimesheetsPage() {
               <DropdownMenuItem onClick={downloadPDF}>
                 <Download className="mr-2 h-4 w-4" /> Download PDF
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={downloadCSV}>
-                <Download className="mr-2 h-4 w-4" /> Download CSV
-              </DropdownMenuItem>
               <DropdownMenuItem onClick={() => setEmailDialogOpen(true)}>
-                <Mail className="mr-2 h-4 w-4" /> Email CSV
+                <Mail className="mr-2 h-4 w-4" /> Email PDF
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -1206,12 +1194,13 @@ export default function TimesheetsPage() {
         </DialogContent>
       </Dialog>
 
-      <EmailCSVDialog
+      <EmailPDFDialog
         open={emailDialogOpen}
         onOpenChange={setEmailDialogOpen}
-        csvData={buildCSV()}
-        csvFilename={csvFilename}
-        subject={csvSubject}
+        generatePdfBase64={generatePdfBase64}
+        pdfFilename={pdfFilename}
+        subject={pdfSubject}
+        businessName={business?.name}
       />
 
       {/* History Dialog */}
