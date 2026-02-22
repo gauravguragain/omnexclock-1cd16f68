@@ -611,13 +611,13 @@ export default function TimesheetsPage() {
         empTotalHrs += e.total_hours;
         empNetHrs += e.net_hours;
       }
-      // Employee totals row
+      // Employee totals row — visually highlighted
       allRows.push([
-        `${name} — TOTAL (${entries.length} days)`,
-        "", "", "", "", "", "",
-        empBreakMins.toString(),
-        empTotalHrs.toFixed(2),
-        empNetHrs.toFixed(2),
+        `▶ TOTAL: ${name} (${entries.length} days)`,
+        "────────", "────────", "────────", "────────", "────────", "────────",
+        `► ${empBreakMins}`,
+        `► ${empTotalHrs.toFixed(2)}`,
+        `► ${empNetHrs.toFixed(2)}`,
       ]);
       // Blank separator row
       allRows.push(Array(headers.length).fill(""));
