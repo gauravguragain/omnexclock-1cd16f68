@@ -63,39 +63,9 @@ export default defineConfig(({ mode }) => ({
           },
         ],
       },
-      manifest: {
-        id: "/omnexclock-main",
-        name: "OmnexClock",
-        short_name: "OmnexClock",
-        description: "Employee time clock and attendance management",
-        theme_color: "#000000",
-        background_color: "#000000",
-        display: "standalone",
-        orientation: "portrait",
-        start_url: "/",
-        scope: "/",
-        categories: ["business", "productivity"],
-        icons: [
-          {
-            src: "/pwa-icon-192.png",
-            sizes: "192x192",
-            type: "image/png",
-            purpose: "any",
-          },
-          {
-            src: "/pwa-icon-512.png",
-            sizes: "512x512",
-            type: "image/png",
-            purpose: "any",
-          },
-          {
-            src: "/pwa-icon-512.png",
-            sizes: "512x512",
-            type: "image/png",
-            purpose: "maskable",
-          },
-        ],
-      },
+      // Manifest is handled manually via inline script in index.html
+      // so kiosk and main app can each get their own manifest.
+      manifest: false,
     }),
   ].filter(Boolean),
   resolve: {
