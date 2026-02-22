@@ -201,6 +201,8 @@ export default function VoiceChatMode({
   const recognitionRef = useRef<any>(null);
   const abortRef = useRef<AbortController | null>(null);
   const emptyCountRef = useRef(0);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const audioResolveRef = useRef<(() => void) | null>(null);
 
   // Keep messages ref in sync
   useEffect(() => { msgsRef.current = messages; }, [messages]);
@@ -220,6 +222,16 @@ export default function VoiceChatMode({
     // Kill pending AI request
     try { abortRef.current?.abort(); } catch {}
     abortRef.current = null;
+
+    // Kill tracked Audio element
+    if (audioRef.current) {
+      try { audioRef.current.pause(); audioRef.current.currentTime = 0; } catch {}
+      audioRef.current = null;
+    }
+    if (audioResolveRef.current) {
+      audioResolveRef.current();
+      audioResolveRef.current = null;
+    }
 
     // Kill browser TTS
     try { window.speechSynthesis?.cancel(); } catch {}
@@ -257,14 +269,16 @@ export default function VoiceChatMode({
           const url = URL.createObjectURL(blob);
           await new Promise<void>((resolve) => {
             const audio = new Audio(url);
-            audio.onended = () => { URL.revokeObjectURL(url); resolve(); };
-            audio.onerror = () => { URL.revokeObjectURL(url); resolve(); };
-            audio.play().catch(() => resolve());
+            audioRef.current = audio;
+            audioResolveRef.current = resolve;
+            audio.onended = () => { audioRef.current = null; audioResolveRef.current = null; URL.revokeObjectURL(url); resolve(); };
+            audio.onerror = (e) => { console.error("[Voice] Audio playback error:", e); audioRef.current = null; audioResolveRef.current = null; URL.revokeObjectURL(url); resolve(); };
+            audio.play().catch((e) => { console.error("[Voice] Audio.play() failed:", e); audioRef.current = null; audioResolveRef.current = null; URL.revokeObjectURL(url); resolve(); });
           });
           return;
         }
       }
-      console.log("[Voice] ElevenLabs failed, falling back to browser TTS");
+      console.log("[Voice] ElevenLabs response not ok:", resp.status, await resp.text().catch(() => ""));
     } catch (e) {
       console.log("[Voice] ElevenLabs error, using browser TTS:", e);
     }
@@ -680,8 +694,16 @@ export default function VoiceChatMode({
       // Interrupt: stop all audio, jump to listen
       console.log("[Voice] ⏸ Interrupting speech");
       try { window.speechSynthesis?.cancel(); } catch {}
-      // Stop any playing Audio elements
-      document.querySelectorAll("audio").forEach(a => { try { a.pause(); a.currentTime = 0; } catch {} });
+      // Stop tracked audio element
+      if (audioRef.current) {
+        try { audioRef.current.pause(); audioRef.current.currentTime = 0; } catch {}
+        audioRef.current = null;
+      }
+      // Resolve any pending audio promise so doSpeak continues
+      if (audioResolveRef.current) {
+        audioResolveRef.current();
+        audioResolveRef.current = null;
+      }
     }
   }, [voiceState, startSession]);
 
