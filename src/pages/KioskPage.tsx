@@ -68,41 +68,52 @@ export default function KioskPage() {
     };
   }, []);
 
-  // Swap PWA manifest to kiosk-specific one so it installs as a separate app
+  // Ensure kiosk PWA manifest is active (reinforces the inline script in index.html)
   useEffect(() => {
     if (!urlBusinessCode) return;
 
-    // Aggressively remove ALL existing manifest links (including vite-plugin-pwa injected ones)
-    const removeAllManifests = () => {
-      document.querySelectorAll('link[rel="manifest"]').forEach((el) => el.remove());
-    };
-    removeAllManifests();
+    // The inline script in index.html handles the initial manifest swap.
+    // This effect ensures it stays correct and updates apple meta tags.
+    const ensureKioskManifest = () => {
+      const existingManifests = document.querySelectorAll('link[rel="manifest"]');
+      let hasKioskManifest = false;
+      existingManifests.forEach((el) => {
+        if (el instanceof HTMLLinkElement && el.href.startsWith("blob:")) {
+          hasKioskManifest = true;
+        } else {
+          el.remove();
+        }
+      });
 
-    // Create kiosk-specific manifest with correct start_url
-    const kioskManifest = {
-      name: "Kiosk Clock-In",
-      short_name: "Kiosk",
-      description: "Employee kiosk clock-in terminal",
-      theme_color: "#000000",
-      background_color: "#000000",
-      display: "standalone",
-      orientation: "portrait",
-      start_url: `/t/${urlBusinessCode}/ck`,
-      scope: "/",
-      id: `/kiosk/${urlBusinessCode}`,
-      categories: ["business", "productivity"],
-      icons: [
-        { src: "/pwa-icon-192.png", sizes: "192x192", type: "image/png", purpose: "any" },
-        { src: "/pwa-icon-512.png", sizes: "512x512", type: "image/png", purpose: "any" },
-        { src: "/pwa-icon-512.png", sizes: "512x512", type: "image/png", purpose: "maskable" },
-      ],
+      if (!hasKioskManifest) {
+        // Re-inject kiosk manifest (fallback if inline script missed it)
+        const kioskManifest = {
+          name: "Kiosk Clock-In",
+          short_name: "Kiosk",
+          description: "Employee kiosk clock-in terminal",
+          theme_color: "#000000",
+          background_color: "#000000",
+          display: "standalone",
+          orientation: "portrait",
+          start_url: `/t/${urlBusinessCode}/ck`,
+          scope: "/",
+          id: `/kiosk/${urlBusinessCode}`,
+          categories: ["business", "productivity"],
+          icons: [
+            { src: "/pwa-icon-192.png", sizes: "192x192", type: "image/png", purpose: "any" },
+            { src: "/pwa-icon-512.png", sizes: "512x512", type: "image/png", purpose: "any" },
+            { src: "/pwa-icon-512.png", sizes: "512x512", type: "image/png", purpose: "maskable" },
+          ],
+        };
+        const blob = new Blob([JSON.stringify(kioskManifest)], { type: "application/json" });
+        const link = document.createElement("link");
+        link.rel = "manifest";
+        link.href = URL.createObjectURL(blob);
+        document.head.appendChild(link);
+      }
     };
-    const blob = new Blob([JSON.stringify(kioskManifest)], { type: "application/json" });
-    const blobUrl = URL.createObjectURL(blob);
-    const link = document.createElement("link");
-    link.rel = "manifest";
-    link.href = blobUrl;
-    document.head.appendChild(link);
+
+    ensureKioskManifest();
 
     // Update page title & apple meta for PWA install
     document.title = "Kiosk Clock-In";
@@ -116,11 +127,11 @@ export default function KioskPage() {
       document.head.appendChild(meta);
     }
 
-    // Watch for vite-plugin-pwa re-injecting the manifest and remove it
+    // Watch for vite-plugin-pwa re-injecting the main manifest and remove it
     const observer = new MutationObserver((mutations) => {
       for (const m of mutations) {
         m.addedNodes.forEach((node) => {
-          if (node instanceof HTMLLinkElement && node.rel === "manifest" && node.href !== blobUrl) {
+          if (node instanceof HTMLLinkElement && node.rel === "manifest" && !node.href.startsWith("blob:")) {
             node.remove();
           }
         });
@@ -130,8 +141,6 @@ export default function KioskPage() {
 
     return () => {
       observer.disconnect();
-      URL.revokeObjectURL(blobUrl);
-      link.remove();
       document.title = "OmnexClock";
     };
   }, [urlBusinessCode]);

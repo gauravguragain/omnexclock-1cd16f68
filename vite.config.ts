@@ -20,7 +20,7 @@ export default defineConfig(({ mode }) => ({
       registerType: "autoUpdate",
       includeAssets: ["favicon.ico", "logo.jpeg", "omnex-logo.jpg", "pwa-icon-192.png", "pwa-icon-512.png"],
       workbox: {
-        navigateFallbackDenylist: [/^\/~oauth/],
+        navigateFallbackDenylist: [/^\/~oauth/, /^\/t\//, /^\/b\/[^/]+\/kiosk/],
         globPatterns: ["**/*.{js,css,html,ico,png,jpg,jpeg,svg,woff2}"],
         skipWaiting: true,
         clientsClaim: true,
