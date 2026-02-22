@@ -45,14 +45,27 @@ export default function KioskPage() {
     return () => clearInterval(timer);
   }, []);
 
-  // Prevent browser back button from leaving kiosk
+  // Prevent browser back button and navigation away from kiosk
   useEffect(() => {
+    // Replace current history entry so there's nothing to go back to
+    window.history.replaceState(null, "", window.location.href);
+
     const blockBack = () => {
       window.history.pushState(null, "", window.location.href);
     };
     window.history.pushState(null, "", window.location.href);
     window.addEventListener("popstate", blockBack);
-    return () => window.removeEventListener("popstate", blockBack);
+
+    // Warn on tab close / accidental navigation
+    const blockUnload = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+    };
+    window.addEventListener("beforeunload", blockUnload);
+
+    return () => {
+      window.removeEventListener("popstate", blockBack);
+      window.removeEventListener("beforeunload", blockUnload);
+    };
   }, []);
 
   // Load business from URL param and apply theme
