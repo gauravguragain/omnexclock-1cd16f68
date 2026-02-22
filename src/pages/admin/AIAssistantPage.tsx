@@ -756,7 +756,7 @@ export default function AIAssistantPage() {
       )}
 
       {/* Input area */}
-      <div className="bg-background border-t border-border/30 px-3 lg:px-6 pb-2 pt-2 flex-shrink-0">
+      <div className="bg-background border-t border-border/30 px-3 lg:px-6 pb-2 pt-2 flex-shrink-0 relative z-[51]">
         {/* Action buttons row */}
         {messages.length > 0 && (
           <div className="flex items-center gap-1 mb-1.5">
