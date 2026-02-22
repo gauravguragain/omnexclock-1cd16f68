@@ -344,26 +344,74 @@ export default function VoiceChatMode({
     });
   }, []);
 
-  // Browser TTS fallback
+  // Browser TTS fallback — robust version that waits for voices and retries
   const playBrowserTTS = useCallback((text: string): Promise<void> => {
-    return new Promise<void>((resolve) => {
+    return new Promise<void>(async (resolve) => {
       if (!activeRef.current) { resolve(); return; }
+
+      const synth = window.speechSynthesis;
+      if (!synth) {
+        console.log("[Voice] speechSynthesis not available");
+        resolve();
+        return;
+      }
 
       let done = false;
       const finish = () => { if (!done) { done = true; resolve(); } };
 
+      // Wait for voices to load (required on many mobile browsers)
+      const getVoices = (): Promise<SpeechSynthesisVoice[]> => {
+        return new Promise((res) => {
+          let voices = synth.getVoices();
+          if (voices.length > 0) { res(voices); return; }
+          const onVoices = () => {
+            voices = synth.getVoices();
+            res(voices);
+          };
+          synth.addEventListener("voiceschanged", onVoices, { once: true });
+          // Timeout if voices never load
+          setTimeout(() => res(synth.getVoices()), 2000);
+        });
+      };
+
       try {
-        window.speechSynthesis.cancel();
+        synth.cancel();
+        const voices = await getVoices();
+
         const utterance = new SpeechSynthesisUtterance(text);
         utterance.lang = "en-AU";
         utterance.rate = 1.05;
+
+        // Try to find an English voice
+        const englishVoice = voices.find(v => v.lang.startsWith("en-AU")) 
+          || voices.find(v => v.lang.startsWith("en"))
+          || voices[0];
+        if (englishVoice) utterance.voice = englishVoice;
+
         utterance.onend = finish;
-        utterance.onerror = finish;
-        window.speechSynthesis.speak(utterance);
+        utterance.onerror = (e) => {
+          console.log("[Voice] Browser TTS error:", (e as any)?.error || e);
+          finish();
+        };
+
+        synth.speak(utterance);
+        console.log("[Voice] Browser TTS speaking:", text.substring(0, 50) + "...");
+
+        // Chrome bug: speechSynthesis can pause mid-utterance. Periodically resume.
+        const resumeInterval = setInterval(() => {
+          if (done) { clearInterval(resumeInterval); return; }
+          if (synth.paused) synth.resume();
+          // Also check if synth stopped speaking without firing onend
+          if (!synth.speaking && !synth.pending) {
+            clearInterval(resumeInterval);
+            finish();
+          }
+        }, 300);
 
         // Safety timeout
-        setTimeout(finish, 20000);
-      } catch {
+        setTimeout(() => { clearInterval(resumeInterval); finish(); }, 25000);
+      } catch (e) {
+        console.log("[Voice] Browser TTS exception:", e);
         finish();
       }
     });
