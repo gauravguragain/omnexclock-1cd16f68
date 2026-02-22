@@ -1,5 +1,4 @@
 {
-  "id": "/kiosk-app",
   "name": "Kiosk Clock-In",
   "short_name": "Kiosk",
   "description": "Employee kiosk clock-in terminal",
@@ -7,8 +6,8 @@
   "background_color": "#000000",
   "display": "standalone",
   "orientation": "portrait",
-  "start_url": ".",
-  "scope": "/",
+  "start_url": "/t/_/ck",
+  "scope": "/t/",
   "categories": ["business", "productivity"],
   "icons": [
     {
