@@ -27,6 +27,54 @@
 
   <body>
     <div id="root"></div>
+    <!-- Swap PWA manifest for kiosk routes BEFORE framework loads -->
+    <script>
+      (function() {
+        var p = window.location.pathname;
+        // Match kiosk routes: /t/:code/ck or /b/:code/kiosk
+        var m = p.match(/^\/t\/([^/]+)\/ck/) || p.match(/^\/b\/([^/]+)\/kiosk/);
+        if (m) {
+          // Remove any existing manifest links (including vite-plugin-pwa injected)
+          document.querySelectorAll('link[rel="manifest"]').forEach(function(el) { el.remove(); });
+          // Build kiosk manifest with the correct start_url
+          var mf = {
+            name: "Kiosk Clock-In",
+            short_name: "Kiosk",
+            description: "Employee kiosk clock-in terminal",
+            theme_color: "#000000",
+            background_color: "#000000",
+            display: "standalone",
+            orientation: "portrait",
+            start_url: "/t/" + m[1] + "/ck",
+            scope: "/",
+            id: "/kiosk/" + m[1],
+            categories: ["business", "productivity"],
+            icons: [
+              { src: "/pwa-icon-192.png", sizes: "192x192", type: "image/png", purpose: "any" },
+              { src: "/pwa-icon-512.png", sizes: "512x512", type: "image/png", purpose: "any" },
+              { src: "/pwa-icon-512.png", sizes: "512x512", type: "image/png", purpose: "maskable" }
+            ]
+          };
+          var blob = new Blob([JSON.stringify(mf)], { type: "application/json" });
+          var link = document.createElement("link");
+          link.rel = "manifest";
+          link.href = URL.createObjectURL(blob);
+          document.head.appendChild(link);
+          document.title = "Kiosk Clock-In";
+          // Block vite-plugin-pwa from re-adding the main manifest
+          var obs = new MutationObserver(function(muts) {
+            muts.forEach(function(mut) {
+              mut.addedNodes.forEach(function(node) {
+                if (node.nodeName === "LINK" && node.rel === "manifest" && node.href !== link.href) {
+                  node.remove();
+                }
+              });
+            });
+          });
+          obs.observe(document.head, { childList: true });
+        }
+      })();
+    </script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
