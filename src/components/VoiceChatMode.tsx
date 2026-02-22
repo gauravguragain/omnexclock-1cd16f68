@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { X, Mic, PhoneOff } from "lucide-react";
 import { toast } from "sonner";
 
@@ -504,6 +505,8 @@ export default function VoiceChatMode({
 
   if (!open) return null;
 
+  const overlay = (
+
   const stateLabel: Record<VoiceState, string> = {
     idle: "Tap to start talking",
     greeting: "Speaking...",
@@ -521,7 +524,7 @@ export default function VoiceChatMode({
   };
 
   return (
-    <div className="fixed inset-0 z-[60] flex flex-col items-center justify-between"
+    <div className="fixed inset-0 z-[9998] flex flex-col items-center justify-between"
       style={{
         background: "radial-gradient(ellipse at center, hsl(0 0% 8%) 0%, hsl(0 0% 3%) 100%)",
         paddingTop: "env(safe-area-inset-top, 0px)",
