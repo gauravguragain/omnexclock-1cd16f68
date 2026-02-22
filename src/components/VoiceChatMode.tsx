@@ -523,13 +523,19 @@ export default function VoiceChatMode({
     speaking: "Tap the orb to interrupt",
   };
 
-  return createPortal(
+  const overlay = (
     <div
-      className="fixed inset-0 z-[9998] flex flex-col items-center justify-between"
+      className="fixed inset-0 flex flex-col items-center justify-between"
       style={{
+        zIndex: 99999,
         background: "radial-gradient(ellipse at center, hsl(0 0% 8%) 0%, hsl(0 0% 3%) 100%)",
         paddingTop: "env(safe-area-inset-top, 0px)",
         paddingBottom: "env(safe-area-inset-bottom, 0px)",
+        position: "fixed",
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
       }}
     >
       {/* Header */}
@@ -596,7 +602,8 @@ export default function VoiceChatMode({
           {voiceState === "idle" ? "or tap the orb above" : "end conversation"}
         </span>
       </div>
-    </div>,
-    document.body
+    </div>
   );
+
+  return createPortal(overlay, document.body);
 }
