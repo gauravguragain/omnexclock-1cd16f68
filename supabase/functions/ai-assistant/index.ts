@@ -422,14 +422,14 @@ BAD EXAMPLES (NEVER DO THIS):
       ...messages,
     ];
 
-    response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+    response = await fetch("https://api.x.ai/v1/chat/completions", {
       method: "POST",
       headers: {
         Authorization: `Bearer ${GROQ_API_KEY}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "llama-3.3-70b-versatile",
+        model: "grok-3-mini-fast",
         messages: aiMessages,
         stream: true,
         max_tokens: 4096,
@@ -444,7 +444,7 @@ BAD EXAMPLES (NEVER DO THIS):
         });
       }
       const t = await response.text();
-      console.error("Groq API error:", response.status, t);
+      console.error("xAI API error:", response.status, t);
       throw new Error("AI request failed");
     }
 
