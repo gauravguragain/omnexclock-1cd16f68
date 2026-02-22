@@ -13,8 +13,8 @@ serve(async (req) => {
 
   try {
     const { transcript, employees, weekDates } = await req.json();
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
+    const GROQ_API_KEY = Deno.env.get("GROQ_API_KEY");
+    if (!GROQ_API_KEY) throw new Error("GROQ_API_KEY is not configured");
 
     const employeeList = employees.map((e: any) => `- "${e.name}" (id: ${e.id})`).join("\n");
     const dateList = weekDates.map((wd: any) => `- ${wd.dayName}: ${wd.date}`).join("\n");
@@ -53,14 +53,14 @@ Time parsing rules:
 If you cannot match an employee name, set employee_id to null and include the spoken name in a "match_error" field.
 If the command is not a roster action, return an empty actions array with an "error" field explaining why.`;
 
-    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
+        Authorization: `Bearer ${GROQ_API_KEY}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-3-flash-preview",
+        model: "llama-3.3-70b-versatile",
         messages: [
           { role: "system", content: systemPrompt },
           { role: "user", content: `Parse this voice command: "${transcript}"` },
@@ -110,15 +110,10 @@ If the command is not a roster action, return an empty actions array with an "er
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
-      if (response.status === 402) {
-        return new Response(JSON.stringify({ error: "AI credits exhausted. Please top up." }), {
-          status: 402,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
       const t = await response.text();
-      console.error("AI gateway error:", response.status, t);
-      throw new Error("AI gateway error");
+      console.error("Groq API error:", response.status, t);
+      throw new Error("Groq API error");
+      
     }
 
     const data = await response.json();
