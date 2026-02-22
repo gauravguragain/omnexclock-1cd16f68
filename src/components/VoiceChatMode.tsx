@@ -233,11 +233,43 @@ export default function VoiceChatMode({
   // STEP 1: Play audio (ElevenLabs → Browser TTS fallback)
   // Returns a promise that resolves when audio finishes
   // ──────────────────────────────────────
+  const TTS_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/elevenlabs-tts`;
+
   const playAudio = useCallback(async (text: string): Promise<void> => {
     const clean = cleanForSpeech(text);
     if (!clean || !activeRef.current) return;
 
-    // Use browser Web Speech Synthesis API (free, no external service needed)
+    // Try ElevenLabs first for human-sounding voice, fall back to browser TTS
+    try {
+      const resp = await fetch(TTS_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+        },
+        body: JSON.stringify({ text: clean.substring(0, 1000), voiceId: "21m00Tcm4TlvDq8ikWAM" }),
+      });
+
+      if (resp.ok && activeRef.current) {
+        const blob = await resp.blob();
+        if (blob.size > 0 && activeRef.current) {
+          const url = URL.createObjectURL(blob);
+          await new Promise<void>((resolve) => {
+            const audio = new Audio(url);
+            audio.onended = () => { URL.revokeObjectURL(url); resolve(); };
+            audio.onerror = () => { URL.revokeObjectURL(url); resolve(); };
+            audio.play().catch(() => resolve());
+          });
+          return;
+        }
+      }
+      console.log("[Voice] ElevenLabs failed, falling back to browser TTS");
+    } catch (e) {
+      console.log("[Voice] ElevenLabs error, using browser TTS:", e);
+    }
+
+    // Fallback to browser TTS
     await playBrowserTTS(clean.substring(0, 500));
   }, []);
 
@@ -645,10 +677,11 @@ export default function VoiceChatMode({
     if (voiceState === "idle") {
       startSession();
     } else if (voiceState === "speaking" || voiceState === "greeting") {
-      // Interrupt: stop browser TTS, jump to listen
+      // Interrupt: stop all audio, jump to listen
       console.log("[Voice] ⏸ Interrupting speech");
       try { window.speechSynthesis?.cancel(); } catch {}
-      // The playBrowserTTS promise will resolve via onend/onerror, which triggers nextStep("listen")
+      // Stop any playing Audio elements
+      document.querySelectorAll("audio").forEach(a => { try { a.pause(); a.currentTime = 0; } catch {} });
     }
   }, [voiceState, startSession]);
 

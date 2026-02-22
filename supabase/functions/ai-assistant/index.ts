@@ -414,7 +414,15 @@ BAD EXAMPLES (NEVER DO THIS):
 
     const finalSystemPrompt = voiceMode ? systemPrompt + voiceSystemAddendum : systemPrompt;
 
-    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    // Try Lovable AI gateway first, fall back to direct Gemini API if credits exhausted
+    let response: Response;
+    
+    const aiMessages = [
+      { role: "system", content: finalSystemPrompt },
+      ...messages,
+    ];
+
+    response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: {
         Authorization: `Bearer ${LOVABLE_API_KEY}`,
@@ -422,24 +430,86 @@ BAD EXAMPLES (NEVER DO THIS):
       },
       body: JSON.stringify({
         model: "google/gemini-2.5-flash",
-        messages: [
-          { role: "system", content: finalSystemPrompt },
-          ...messages,
-        ],
+        messages: aiMessages,
         stream: true,
       }),
     });
+
+    // If credits exhausted (402), fall back to direct Gemini API
+    if (response.status === 402) {
+      const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
+      if (GEMINI_API_KEY) {
+        console.log("Lovable AI credits exhausted, falling back to direct Gemini API");
+        
+        // Convert messages to Gemini format
+        const geminiContents = aiMessages
+          .filter(m => m.role !== "system")
+          .map(m => ({
+            role: m.role === "assistant" ? "model" : "user",
+            parts: [{ text: m.content }],
+          }));
+
+        const geminiResponse = await fetch(
+          `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:streamGenerateContent?alt=sse&key=${GEMINI_API_KEY}`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              contents: geminiContents,
+              systemInstruction: { parts: [{ text: finalSystemPrompt }] },
+              generationConfig: { temperature: 0.7, maxOutputTokens: 2048 },
+            }),
+          }
+        );
+
+        if (!geminiResponse.ok) {
+          const errText = await geminiResponse.text();
+          console.error("Gemini API error:", geminiResponse.status, errText);
+          throw new Error("Gemini API request failed");
+        }
+
+        // Transform Gemini SSE stream to OpenAI-compatible SSE stream
+        const transformStream = new TransformStream({
+          transform(chunk, controller) {
+            const text = new TextDecoder().decode(chunk);
+            const lines = text.split("\n");
+            for (const line of lines) {
+              if (!line.startsWith("data: ")) continue;
+              const payload = line.slice(6).trim();
+              if (!payload || payload === "[DONE]") continue;
+              try {
+                const parsed = JSON.parse(payload);
+                const content = parsed?.candidates?.[0]?.content?.parts?.[0]?.text;
+                if (content) {
+                  const openAIChunk = JSON.stringify({
+                    choices: [{ delta: { content } }],
+                  });
+                  controller.enqueue(new TextEncoder().encode(`data: ${openAIChunk}\n\n`));
+                }
+              } catch {}
+            }
+          },
+          flush(controller) {
+            controller.enqueue(new TextEncoder().encode("data: [DONE]\n\n"));
+          },
+        });
+
+        const transformed = geminiResponse.body!.pipeThrough(transformStream);
+        return new Response(transformed, {
+          headers: { ...corsHeaders, "Content-Type": "text/event-stream" },
+        });
+      } else {
+        return new Response(JSON.stringify({ error: "AI credits exhausted. Add a GEMINI_API_KEY secret to use the free Gemini fallback." }), {
+          status: 402,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+    }
 
     if (!response.ok) {
       if (response.status === 429) {
         return new Response(JSON.stringify({ error: "Rate limit exceeded, please try again later." }), {
           status: 429,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-      if (response.status === 402) {
-        return new Response(JSON.stringify({ error: "AI credits exhausted. Please add credits." }), {
-          status: 402,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
