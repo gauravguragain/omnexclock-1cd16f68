@@ -32,34 +32,48 @@ serve(async (req) => {
     // Use Sarah voice (natural female) by default, or allow override
     const selectedVoice = voiceId || "EXAVITQu4vr4xnSDxMaL"; // Sarah
 
-    const response = await fetch(
-      `https://api.elevenlabs.io/v1/text-to-speech/${selectedVoice}?output_format=mp3_44100_128`,
-      {
-        method: "POST",
-        headers: {
-          "xi-api-key": ELEVENLABS_API_KEY,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          text: text.substring(0, 5000), // ElevenLabs limit
-          model_id: "eleven_turbo_v2_5", // Low latency, high quality
-          voice_settings: {
-            stability: 0.4,       // More expressive/conversational
-            similarity_boost: 0.75,
-            style: 0.35,          // Natural conversational style
-            use_speaker_boost: true,
-            speed: 1.0,
+    // Retry logic for rate limits (429)
+    let response: Response | null = null;
+    for (let attempt = 0; attempt < 3; attempt++) {
+      response = await fetch(
+        `https://api.elevenlabs.io/v1/text-to-speech/${selectedVoice}?output_format=mp3_44100_128`,
+        {
+          method: "POST",
+          headers: {
+            "xi-api-key": ELEVENLABS_API_KEY,
+            "Content-Type": "application/json",
           },
-        }),
-      }
-    );
+          body: JSON.stringify({
+            text: text.substring(0, 5000),
+            model_id: "eleven_turbo_v2_5",
+            voice_settings: {
+              stability: 0.4,
+              similarity_boost: 0.75,
+              style: 0.35,
+              use_speaker_boost: true,
+              speed: 1.0,
+            },
+          }),
+        }
+      );
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error("ElevenLabs API error:", response.status, errorText);
+      if (response.status === 429 && attempt < 2) {
+        const waitMs = (attempt + 1) * 2000; // 2s, 4s
+        console.log(`ElevenLabs 429 rate limit, retrying in ${waitMs}ms (attempt ${attempt + 1})`);
+        await new Promise(r => setTimeout(r, waitMs));
+        continue;
+      }
+      break;
+    }
+
+    if (!response || !response.ok) {
+      const errorText = response ? await response.text() : "No response";
+      const status = response?.status || 500;
+      console.error("ElevenLabs API error:", status, errorText);
+      // Return 503 for rate limits so client knows to use fallback
       return new Response(
-        JSON.stringify({ error: "Voice synthesis failed", status: response.status }),
-        { status: response.status, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        JSON.stringify({ error: "Voice synthesis failed", status }),
+        { status: status === 429 ? 503 : status, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 

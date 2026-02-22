@@ -259,40 +259,39 @@ export default function VoiceChatMode({
       });
 
       if (resp.ok) {
-        const blob = await resp.blob();
-        if (blob.size > 100 && blob.type.includes("audio")) {
-          await new Promise<void>((resolve) => {
-            if (!activeRef.current) { resolve(); return; }
-            const audio = new Audio();
-            const url = URL.createObjectURL(blob);
-            audio.src = url;
-            audioRef.current = audio;
+        const contentType = resp.headers.get("content-type") || "";
+        if (contentType.includes("audio")) {
+          const blob = await resp.blob();
+          if (blob.size > 100) {
+            await new Promise<void>((resolve) => {
+              if (!activeRef.current) { resolve(); return; }
+              const audio = new Audio();
+              const url = URL.createObjectURL(blob);
+              audio.src = url;
+              audioRef.current = audio;
 
-            let resolved = false;
-            const done = () => {
-              if (resolved) return;
-              resolved = true;
-              URL.revokeObjectURL(url);
-              audioRef.current = null;
-              resolve();
-            };
+              let resolved = false;
+              const done = () => {
+                if (resolved) return;
+                resolved = true;
+                URL.revokeObjectURL(url);
+                audioRef.current = null;
+                resolve();
+              };
 
-            audio.onended = done;
-            audio.onerror = done;
-            audio.onpause = () => {
-              // If paused externally (interruption), resolve immediately
-              if (!audio.ended) done();
-            };
-
-            // Safety timeout: max 30s for any audio clip
-            setTimeout(done, 30000);
-
-            audio.play().catch(done);
-          });
-          console.log("[Voice] ✅ ElevenLabs audio finished");
-          return;
+              audio.onended = done;
+              audio.onerror = done;
+              audio.onpause = () => { if (!audio.ended) done(); };
+              setTimeout(done, 30000);
+              audio.play().catch(done);
+            });
+            console.log("[Voice] ✅ ElevenLabs audio finished");
+            return;
+          }
         }
       }
+      // Non-ok response — fall through to browser TTS
+      console.log("[Voice] ElevenLabs returned status:", resp.status, "— using browser TTS");
     } catch (e) {
       console.log("[Voice] ElevenLabs TTS failed:", e);
     }
