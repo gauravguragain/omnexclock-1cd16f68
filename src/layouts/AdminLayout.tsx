@@ -111,7 +111,10 @@ export default function AdminLayout() {
   const bottomNavPrimary = navItems.filter(item => primaryLabels.includes(item.label));
   const bottomNavOverflow = navItems.filter(item => !primaryLabels.includes(item.label));
 
-  if (loading) {
+  // Show loading skeleton while auth is loading OR business is still resolving from URL
+  const businessResolving = !!businessCode && (!business || business.business_code !== businessCode);
+  
+  if (loading || businessResolving) {
     return (
       <div className="min-h-dvh bg-background flex">
         {/* Skeleton sidebar */}
