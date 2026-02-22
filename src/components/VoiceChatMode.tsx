@@ -203,6 +203,8 @@ export default function VoiceChatMode({
   const recognitionRef = useRef<any>(null);
   const abortRef = useRef<AbortController | null>(null);
   const emptyCountRef = useRef(0);
+  const audioCtxRef = useRef<AudioContext | null>(null);
+  const connectedElemsRef = useRef<WeakSet<HTMLAudioElement>>(new WeakSet());
 
   // Keep messages ref in sync
   useEffect(() => { msgsRef.current = messages; }, [messages]);
@@ -234,6 +236,10 @@ export default function VoiceChatMode({
 
     // Kill browser TTS
     try { window.speechSynthesis?.cancel(); } catch {}
+
+    // Close AudioContext
+    try { audioCtxRef.current?.close(); } catch {}
+    audioCtxRef.current = null;
 
     setVoiceState("idle");
     setTranscript("");
@@ -289,14 +295,28 @@ export default function VoiceChatMode({
     await playBrowserTTS(clean.substring(0, 500));
   }, []);
 
-  // Play an audio Blob and wait for it to finish
+  // Play an audio Blob and wait for it to finish — routed through AudioContext for autoplay
   const playBlob = useCallback((blob: Blob): Promise<void> => {
     return new Promise<void>((resolve) => {
       if (!activeRef.current) { resolve(); return; }
 
       const url = URL.createObjectURL(blob);
-      const audio = new Audio(url);
+      const audio = new Audio();
       audioRef.current = audio;
+
+      // Connect through AudioContext so browser treats it as user-gesture-initiated
+      try {
+        const ctx = audioCtxRef.current;
+        if (ctx && !connectedElemsRef.current.has(audio)) {
+          const source = ctx.createMediaElementSource(audio);
+          source.connect(ctx.destination);
+          connectedElemsRef.current.add(audio);
+          // Resume context if suspended
+          if (ctx.state === "suspended") ctx.resume();
+        }
+      } catch (e) {
+        console.log("[Voice] AudioContext routing failed, playing directly:", e);
+      }
 
       let done = false;
       const finish = () => {
@@ -315,6 +335,7 @@ export default function VoiceChatMode({
       const safetyTimer = setTimeout(finish, 45000);
       audio.addEventListener("ended", () => clearTimeout(safetyTimer), { once: true });
 
+      audio.src = url;
       audio.play().catch((err) => {
         console.log("[Voice] Audio play() rejected:", err.message);
         clearTimeout(safetyTimer);
@@ -658,16 +679,22 @@ export default function VoiceChatMode({
       return;
     }
 
-    // Warm audio context (iOS/Safari requirement)
+    // Create persistent AudioContext and unlock it with a user gesture
     try {
-      const ctx = new AudioContext();
+      if (!audioCtxRef.current || audioCtxRef.current.state === "closed") {
+        audioCtxRef.current = new AudioContext();
+      }
+      const ctx = audioCtxRef.current;
+      if (ctx.state === "suspended") await ctx.resume();
+      // Play a silent buffer to fully unlock audio playback on iOS/Safari
       const buf = ctx.createBuffer(1, 1, 22050);
       const src = ctx.createBufferSource();
       src.buffer = buf;
       src.connect(ctx.destination);
       src.start();
-      await ctx.close();
-    } catch {}
+    } catch (e) {
+      console.log("[Voice] AudioContext warm-up error:", e);
+    }
 
     console.log("[Voice] ▶ Session starting");
     activeRef.current = true;
