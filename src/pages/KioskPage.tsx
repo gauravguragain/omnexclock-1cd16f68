@@ -429,7 +429,7 @@ export default function KioskPage() {
             <Input
               value={code}
               readOnly
-              className="text-center text-2xl sm:text-3xl md:text-4xl tracking-[0.5em] font-mono h-12 sm:h-14 md:h-18 bg-surface"
+              className="text-center text-2xl sm:text-3xl md:text-4xl tracking-[0.5em] font-mono h-12 sm:h-14 md:h-18 bg-muted text-foreground"
               placeholder="••••"
             />
             {/* Numpad */}
