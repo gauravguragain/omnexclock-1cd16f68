@@ -164,6 +164,7 @@ RULES:
 - Overnight shifts: clock_out - clock_in (add 24h if negative). Net = total - break/60. Currency AUD.
 - Use admin_hourly_rate for business cost, pay_rate for employee pay.
 - Flag anomalies proactively (overtime, missing approvals, low stock) but explain them conversationally.
+- NAME MATCHING: When the user mentions a staff member by name, use fuzzy/first-name matching to identify them from the EMPLOYEES list. Match on FIRST NAME alone — "steve" matches "Steven", "mike" matches "Michael", "rob" matches "Robert", "bec" matches "Rebecca", etc. Partial and phonetic matches are OK. If multiple employees share the same first name, pick the best contextual match. If absolutely no match, say you couldn't find that person and suggest similar names. NEVER say you don't know who someone is if their first name clearly matches an employee.
 - Never fabricate data. Say if insufficient.`;
 
     const voiceAddendum = `
