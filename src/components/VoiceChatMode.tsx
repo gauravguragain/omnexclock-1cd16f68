@@ -224,11 +224,22 @@ export default function VoiceChatMode({
     setAssistantText("");
   }, []);
 
-  // Cleanup on unmount or close
+  // Auto-start conversation when overlay opens, cleanup on close
   useEffect(() => {
-    if (!open) cleanup();
+    if (open) {
+      // Small delay to ensure portal is mounted before starting
+      const timer = setTimeout(() => {
+        if (voiceState === "idle") {
+          console.log("[Voice] Auto-starting conversation");
+          runConversationLoop();
+        }
+      }, 300);
+      return () => clearTimeout(timer);
+    } else {
+      cleanup();
+    }
     return cleanup;
-  }, [open, cleanup]);
+  }, [open]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Speak text (ElevenLabs → browser TTS fallback) ──
   const speak = useCallback(async (text: string): Promise<void> => {
