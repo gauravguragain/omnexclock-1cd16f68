@@ -163,8 +163,19 @@ export default function KioskPage() {
         }
         setBusinessName(data.name);
         setBusinessLogo(data.logo_url);
-        // Go to camera permission step first
-        setStep("camera_permission");
+        // Check if camera permission was already granted
+        try {
+          const permStatus = await navigator.permissions.query({ name: "camera" as PermissionName });
+          if (permStatus.state === "granted") {
+            setCameraGranted(true);
+            setStep("code_entry");
+          } else {
+            setStep("camera_permission");
+          }
+        } catch {
+          // Permissions API not supported — fall back to prompt
+          setStep("camera_permission");
+        }
         if (data.theme && typeof data.theme === "object") {
           const t = data.theme as Record<string, string>;
           const root = document.documentElement;
