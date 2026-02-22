@@ -914,11 +914,16 @@ export default function AIAssistantPage() {
           <Button
             variant="outline"
             size="icon"
-            className="h-10 w-10 flex-shrink-0 border-primary/30 text-primary hover:bg-primary/10"
-            onClick={() => setVoiceModeOpen(true)}
+            className="h-12 w-12 flex-shrink-0 border-primary/30 text-primary hover:bg-primary/10 relative z-[60]"
+            onClick={(e) => {
+              e.stopPropagation();
+              console.log("[Voice] Phone button clicked");
+              setVoiceModeOpen(true);
+            }}
             title="Voice conversation"
+            type="button"
           >
-            <Phone className="h-4 w-4" />
+            <Phone className="h-5 w-5" />
           </Button>
           <Button
             variant={isListening ? "default" : "outline"}
