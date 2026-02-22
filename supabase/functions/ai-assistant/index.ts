@@ -50,8 +50,8 @@ serve(async (req) => {
       });
     }
 
-    const GROQ_API_KEY = Deno.env.get("GROQ_API_KEY");
-    if (!GROQ_API_KEY) throw new Error("GROQ_API_KEY not configured");
+    const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
+    if (!GEMINI_API_KEY) throw new Error("GEMINI_API_KEY not configured");
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -422,14 +422,14 @@ BAD EXAMPLES (NEVER DO THIS):
       ...messages,
     ];
 
-    response = await fetch("https://api.x.ai/v1/chat/completions", {
+    response = await fetch(`https://generativelanguage.googleapis.com/v1beta/openai/chat/completions`, {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${GROQ_API_KEY}`,
+        Authorization: `Bearer ${GEMINI_API_KEY}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "grok-3-mini-fast",
+        model: "gemini-2.0-flash",
         messages: aiMessages,
         stream: true,
         max_tokens: 4096,
@@ -444,7 +444,7 @@ BAD EXAMPLES (NEVER DO THIS):
         });
       }
       const t = await response.text();
-      console.error("xAI API error:", response.status, t);
+      console.error("Gemini API error:", response.status, t);
       throw new Error("AI request failed");
     }
 
