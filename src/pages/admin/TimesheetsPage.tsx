@@ -1053,9 +1053,9 @@ export default function TimesheetsPage() {
           </div>
 
           {/* Desktop table view — grouped by day */}
-          <div className="hidden md:block overflow-x-auto scroll-native scrollbar-thin" style={{ WebkitOverflowScrolling: 'touch' }}>
+          <div className="hidden md:block overflow-x-auto overflow-y-auto max-h-[70vh] scroll-native scrollbar-thin relative" style={{ WebkitOverflowScrolling: 'touch' }}>
             <Table>
-              <TableHeader>
+              <TableHeader className="sticky top-0 z-20 bg-background">
                 <TableRow>
                   <TableHead className="w-12">Status</TableHead>
                   <TableHead>Employee</TableHead>
