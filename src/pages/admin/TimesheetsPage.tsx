@@ -580,7 +580,6 @@ export default function TimesheetsPage() {
 
   const buildCSV = () => {
     const headers = ["Employee", "Date", "Status", "Clock In", "Clock Out", "Break Start", "Break End", "Break (min)", "Total (hrs)", "Net (hrs)"];
-    // Group by employee
     const byEmployee = new Map<string, typeof filtered>();
     for (const e of filtered) {
       const list = byEmployee.get(e.employee_name) || [];
@@ -591,38 +590,208 @@ export default function TimesheetsPage() {
     const sortedNames = [...byEmployee.keys()].sort((a, b) => a.localeCompare(b));
     for (const name of sortedNames) {
       const entries = byEmployee.get(name)!;
-      // Sort entries by date descending
       entries.sort((a, b) => b.raw_date.localeCompare(a.raw_date));
       let empBreakMins = 0, empTotalHrs = 0, empNetHrs = 0;
       for (const e of entries) {
         allRows.push([
-          e.employee_name,
-          e.date,
-          e.approved ? "Approved" : "Pending",
-          e.clock_in || "",
-          e.clock_out || "",
-          e.break_start || "",
-          e.break_end || "",
-          e.break_minutes.toString(),
-          e.total_hours.toFixed(2),
-          e.net_hours.toFixed(2),
+          e.employee_name, e.date, e.approved ? "Approved" : "Pending",
+          e.clock_in || "", e.clock_out || "", e.break_start || "", e.break_end || "",
+          e.break_minutes.toString(), e.total_hours.toFixed(2), e.net_hours.toFixed(2),
         ]);
         empBreakMins += e.break_minutes;
         empTotalHrs += e.total_hours;
         empNetHrs += e.net_hours;
       }
-      // Employee totals row — visually highlighted
       allRows.push([
         `▶ TOTAL: ${name} (${entries.length} days)`,
         "────────", "────────", "────────", "────────", "────────", "────────",
-        `► ${empBreakMins}`,
-        `► ${empTotalHrs.toFixed(2)}`,
-        `► ${empNetHrs.toFixed(2)}`,
+        `► ${empBreakMins}`, `► ${empTotalHrs.toFixed(2)}`, `► ${empNetHrs.toFixed(2)}`,
       ]);
-      // Blank separator row
       allRows.push(Array(headers.length).fill(""));
     }
     return [headers, ...allRows].map(r => r.map(c => `"${c}"`).join(",")).join("\n");
+  };
+
+  // Parse HSL string like "43 72% 52%" to RGB
+  const hslToRgb = (hsl: string): [number, number, number] => {
+    const parts = hsl.replace(/%/g, "").split(/\s+/).map(Number);
+    const h = (parts[0] || 0) / 360;
+    const s = (parts[1] || 0) / 100;
+    const l = (parts[2] || 0) / 100;
+    const hue2rgb = (p: number, q: number, t: number) => {
+      if (t < 0) t += 1;
+      if (t > 1) t -= 1;
+      if (t < 1/6) return p + (q - p) * 6 * t;
+      if (t < 1/2) return q;
+      if (t < 2/3) return p + (q - p) * (2/3 - t) * 6;
+      return p;
+    };
+    if (s === 0) {
+      const v = Math.round(l * 255);
+      return [v, v, v];
+    }
+    const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+    const p = 2 * l - q;
+    return [
+      Math.round(hue2rgb(p, q, h + 1/3) * 255),
+      Math.round(hue2rgb(p, q, h) * 255),
+      Math.round(hue2rgb(p, q, h - 1/3) * 255),
+    ];
+  };
+
+  const downloadPDF = async () => {
+    if (filtered.length === 0) { toast.info("No data to export"); return; }
+
+    const { default: jsPDF } = await import("jspdf");
+    const { default: autoTable } = await import("jspdf-autotable");
+
+    const theme = business?.theme as unknown as Record<string, string> | null;
+    const primaryRgb = hslToRgb(theme?.primary || "43 72% 52%");
+    const accentRgb = hslToRgb(theme?.accent || "43 72% 52%");
+    const bgDark: [number, number, number] = [26, 26, 26];
+    const textLight: [number, number, number] = [245, 245, 245];
+
+    const doc = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
+    const pageW = doc.internal.pageSize.getWidth();
+
+    // Header bar
+    doc.setFillColor(...bgDark);
+    doc.rect(0, 0, pageW, 22, "F");
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(16);
+    doc.setTextColor(...primaryRgb);
+    doc.text(business?.name || "Timesheet Report", 14, 14);
+    doc.setFontSize(9);
+    doc.setTextColor(...textLight);
+    doc.text(`${format(dateFrom, "dd MMM yyyy")} – ${format(dateTo, "dd MMM yyyy")}`, pageW - 14, 14, { align: "right" });
+
+    // Sub-header
+    doc.setFontSize(8);
+    doc.setTextColor(130, 130, 130);
+    doc.text(`Generated ${format(new Date(), "dd MMM yyyy 'at' h:mm a")}  •  ${filtered.length} entries  •  ${new Set(filtered.map(e => e.employee_name)).size} employees`, 14, 28);
+
+    // Build grouped data
+    const byEmployee = new Map<string, typeof filtered>();
+    for (const e of filtered) {
+      const list = byEmployee.get(e.employee_name) || [];
+      list.push(e);
+      byEmployee.set(e.employee_name, list);
+    }
+    const sortedNames = [...byEmployee.keys()].sort((a, b) => a.localeCompare(b));
+
+    const tableBody: any[] = [];
+    let grandBreak = 0, grandTotal = 0, grandNet = 0;
+
+    for (const name of sortedNames) {
+      const empEntries = byEmployee.get(name)!;
+      empEntries.sort((a, b) => a.raw_date.localeCompare(b.raw_date));
+
+      // Employee header row
+      tableBody.push([{
+        content: `${name}  (${empEntries[0]?.employee_department || "—"})`,
+        colSpan: 9,
+        styles: {
+          fillColor: bgDark,
+          textColor: primaryRgb,
+          fontStyle: "bold",
+          fontSize: 9,
+          cellPadding: { top: 4, bottom: 3, left: 4, right: 4 },
+        }
+      }]);
+
+      let empBreak = 0, empTotal = 0, empNet = 0;
+      empEntries.forEach((e, i) => {
+        const isApproved = e.approved;
+        const rowBg: [number, number, number] = i % 2 === 0 ? [255, 255, 255] : [248, 249, 250];
+        tableBody.push([
+          { content: e.date, styles: { fillColor: rowBg, fontSize: 8 } },
+          { content: isApproved ? "✓ Approved" : "○ Pending", styles: { fillColor: rowBg, textColor: isApproved ? [34, 139, 34] : [200, 140, 40], fontStyle: "bold", fontSize: 7.5 } },
+          { content: e.clock_in || "—", styles: { fillColor: rowBg, fontSize: 8 } },
+          { content: e.clock_out || "—", styles: { fillColor: rowBg, fontSize: 8 } },
+          { content: e.break_start || "—", styles: { fillColor: rowBg, fontSize: 8, textColor: [150, 150, 150] } },
+          { content: e.break_end || "—", styles: { fillColor: rowBg, fontSize: 8, textColor: [150, 150, 150] } },
+          { content: String(e.break_minutes), styles: { fillColor: rowBg, halign: "center", fontSize: 8 } },
+          { content: e.total_hours.toFixed(2), styles: { fillColor: rowBg, halign: "center", fontSize: 8 } },
+          { content: e.net_hours.toFixed(2), styles: { fillColor: rowBg, halign: "center", fontStyle: "bold", fontSize: 8.5 } },
+        ]);
+        empBreak += e.break_minutes;
+        empTotal += e.total_hours;
+        empNet += e.net_hours;
+      });
+
+      // Employee total row
+      const totalBg: [number, number, number] = [
+        Math.min(255, primaryRgb[0] + Math.round((255 - primaryRgb[0]) * 0.85)),
+        Math.min(255, primaryRgb[1] + Math.round((255 - primaryRgb[1]) * 0.85)),
+        Math.min(255, primaryRgb[2] + Math.round((255 - primaryRgb[2]) * 0.85)),
+      ];
+      tableBody.push([
+        { content: `TOTAL — ${empEntries.length} day${empEntries.length !== 1 ? "s" : ""}`, colSpan: 6, styles: { fillColor: totalBg, textColor: bgDark, fontStyle: "bold", fontSize: 8, halign: "right" } },
+        { content: String(empBreak), styles: { fillColor: totalBg, textColor: primaryRgb, fontStyle: "bold", halign: "center", fontSize: 9 } },
+        { content: empTotal.toFixed(2), styles: { fillColor: totalBg, textColor: primaryRgb, fontStyle: "bold", halign: "center", fontSize: 9 } },
+        { content: empNet.toFixed(2), styles: { fillColor: totalBg, textColor: primaryRgb, fontStyle: "bold", halign: "center", fontSize: 9 } },
+      ]);
+
+      grandBreak += empBreak;
+      grandTotal += empTotal;
+      grandNet += empNet;
+    }
+
+    // Grand total row
+    tableBody.push([
+      { content: `GRAND TOTAL — ${sortedNames.length} employee${sortedNames.length !== 1 ? "s" : ""}, ${filtered.length} entries`, colSpan: 6, styles: { fillColor: bgDark, textColor: primaryRgb, fontStyle: "bold", fontSize: 9, halign: "right" } },
+      { content: String(grandBreak), styles: { fillColor: bgDark, textColor: textLight, fontStyle: "bold", halign: "center", fontSize: 9 } },
+      { content: grandTotal.toFixed(2), styles: { fillColor: bgDark, textColor: textLight, fontStyle: "bold", halign: "center", fontSize: 9 } },
+      { content: grandNet.toFixed(2), styles: { fillColor: bgDark, textColor: accentRgb, fontStyle: "bold", halign: "center", fontSize: 10 } },
+    ]);
+
+    autoTable(doc, {
+      startY: 32,
+      head: [["Date", "Status", "Clock In", "Clock Out", "Break Start", "Break End", "Break (min)", "Total (hrs)", "Net (hrs)"]],
+      body: tableBody,
+      theme: "plain",
+      headStyles: {
+        fillColor: [45, 45, 45],
+        textColor: primaryRgb,
+        fontStyle: "bold",
+        fontSize: 8,
+        cellPadding: { top: 3, bottom: 3, left: 4, right: 4 },
+        halign: "left",
+      },
+      styles: {
+        cellPadding: { top: 2.5, bottom: 2.5, left: 4, right: 4 },
+        fontSize: 8,
+        textColor: [50, 50, 50],
+        lineColor: [230, 230, 230],
+        lineWidth: 0.2,
+      },
+      columnStyles: {
+        6: { halign: "center" },
+        7: { halign: "center" },
+        8: { halign: "center" },
+      },
+      margin: { left: 10, right: 10 },
+      didDrawPage: (data: any) => {
+        // Footer on every page
+        const pageH = doc.internal.pageSize.getHeight();
+        doc.setFillColor(248, 249, 250);
+        doc.rect(0, pageH - 10, pageW, 10, "F");
+        doc.setFontSize(7);
+        doc.setTextColor(160, 160, 160);
+        doc.text(`${business?.name || "OmnexClock"} — Timesheet Report`, 14, pageH - 4);
+        doc.text(`Page ${doc.getCurrentPageInfo().pageNumber}`, pageW - 14, pageH - 4, { align: "right" });
+      },
+    });
+
+    const filename = `timesheets_${format(dateFrom, "yyyy-MM-dd")}_to_${format(dateTo, "yyyy-MM-dd")}.pdf`;
+    doc.save(filename);
+    toast.success("Downloaded timesheet PDF");
+    logAudit("pdf_download", {
+      source: "timesheets",
+      filename,
+      row_count: filtered.length,
+      device: getDeviceInfo(),
+    });
   };
 
   const downloadCSV = () => {
@@ -635,7 +804,7 @@ export default function TimesheetsPage() {
     a.download = csvFilename;
     a.click();
     URL.revokeObjectURL(url);
-    toast.success("Downloaded timesheet data");
+    toast.success("Downloaded timesheet CSV");
     logAudit("csv_download", {
       source: "timesheets",
       filename: csvFilename,
@@ -768,6 +937,9 @@ export default function TimesheetsPage() {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={downloadPDF}>
+                <Download className="mr-2 h-4 w-4" /> Download PDF
+              </DropdownMenuItem>
               <DropdownMenuItem onClick={downloadCSV}>
                 <Download className="mr-2 h-4 w-4" /> Download CSV
               </DropdownMenuItem>
