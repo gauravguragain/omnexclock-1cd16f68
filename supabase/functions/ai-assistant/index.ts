@@ -34,27 +34,36 @@ function toSydneyTime(ts: string): string {
   });
 }
 
-// Classify whether a question needs web search, business data, or both
-async function classifyQuery(userMessage: string, geminiKey: string): Promise<"business" | "web" | "both"> {
+// Classify query using Groq (fast) — simple, web, or business
+async function classifyQuery(userMessage: string, groqKey: string): Promise<"simple" | "business" | "web" | "both"> {
   try {
-    const res = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${geminiKey}`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: `Classify this question into exactly one category. Reply with ONLY one word — "business", "web", or "both".
-- "business": about employees, shifts, timesheets, clock events, payroll, inventory, requests, roster events, or any internal company/staff data.
-- "web": about general knowledge, news, weather, industry trends, regulations, best practices, how-to guides, or anything NOT specific to the company's internal data.
-- "both": needs internal business data AND external web information.
-Question: ${userMessage}` }] }],
-          generationConfig: { maxOutputTokens: 5, temperature: 0 },
-        }),
-      }
-    );
-    if (!res.ok) return "business";
+    const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${groqKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "llama-3.1-8b-instant",
+        messages: [
+          {
+            role: "system",
+            content: `Classify this message into exactly one category. Reply with ONLY one word:
+- "simple": greetings, small talk, jokes, general conversation, simple questions NOT about business data (e.g. "hi", "how are you", "tell me a joke", "what can you do", "thanks")
+- "business": about employees, shifts, timesheets, clock events, payroll, inventory, requests, roster events, service tasks, or ANY internal company/staff data
+- "web": about general knowledge, news, weather, industry trends, regulations, best practices, how-to guides NOT specific to the company
+- "both": needs BOTH internal business data AND external web information`
+          },
+          { role: "user", content: userMessage }
+        ],
+        max_tokens: 5,
+        temperature: 0,
+      }),
+    });
+    if (!res.ok) return "business"; // fallback to safest option
     const data = await res.json();
-    const answer = (data.candidates?.[0]?.content?.parts?.[0]?.text || "").trim().toLowerCase();
+    const answer = (data.choices?.[0]?.message?.content || "").trim().toLowerCase();
+    if (answer.includes("simple")) return "simple";
     if (answer.includes("both")) return "both";
     if (answer.includes("web")) return "web";
     return "business";
@@ -100,6 +109,51 @@ async function webSearch(query: string, geminiKey: string): Promise<string> {
   }
 }
 
+// Handle simple queries with Groq (fast, lightweight)
+async function handleSimpleWithGroq(
+  messages: any[],
+  businessName: string,
+  voiceMode: boolean,
+  groqKey: string,
+): Promise<Response> {
+  const systemPrompt = `You are the AI assistant for "${businessName}". You're friendly, helpful, and conversational. Timezone: Sydney AEST/AEDT. Now: ${ausNowISO()}.
+
+You handle general conversation, greetings, and simple questions. For business-specific data queries (employees, timesheets, payroll, etc.), let the user know you can help with those too — just ask!
+
+Keep responses concise and warm.${voiceMode ? "\nVOICE MODE: 1-2 sentences max. No markdown/emojis/bullet points. Talk like a mate. Just answer and stop." : ""}`;
+
+  const groqMessages = [
+    { role: "system", content: systemPrompt },
+    ...messages.map((m: any) => ({ role: m.role, content: m.content })),
+  ];
+
+  const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      "Authorization": `Bearer ${groqKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      model: "llama-3.1-70b-versatile",
+      messages: groqMessages,
+      max_tokens: 1024,
+      temperature: 0.7,
+      stream: true,
+    }),
+  });
+
+  if (!res.ok) {
+    const errText = await res.text();
+    console.error("Groq API error:", res.status, errText);
+    throw new Error("Groq request failed");
+  }
+
+  // Groq already returns OpenAI-compatible SSE, pass through directly
+  return new Response(res.body, {
+    headers: { ...corsHeaders, "Content-Type": "text/event-stream" },
+  });
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
@@ -113,15 +167,32 @@ serve(async (req) => {
     }
 
     const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
+    const GROQ_API_KEY = Deno.env.get("GROQ_API_KEY");
     if (!GEMINI_API_KEY) throw new Error("GEMINI_API_KEY not configured");
+    if (!GROQ_API_KEY) throw new Error("GROQ_API_KEY not configured");
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
+    // Get business name for simple queries (lightweight lookup)
+    const businessNameRes = await supabase.from("businesses").select("name").eq("id", businessId).single();
+    const businessName = businessNameRes.data?.name || "Your Business";
+
+    // Classify the user's latest message using Groq (fast)
+    const lastUserMsg = [...messages].reverse().find((m: any) => m.role === "user")?.content || "";
+    const queryType = await classifyQuery(lastUserMsg, GROQ_API_KEY);
+    console.log(`Query classified as: ${queryType} | Model: ${queryType === "simple" ? "Groq" : "Gemini"}`);
+
+    // ─── SIMPLE QUERIES → GROQ (fast, no data fetch needed) ───
+    if (queryType === "simple") {
+      return await handleSimpleWithGroq(messages, businessName, voiceMode, GROQ_API_KEY);
+    }
+
+    // ─── BUSINESS / WEB / BOTH → GEMINI (accurate, data-grounded) ───
     const todayKey = ausTodayKey();
 
-    // Fetch ALL business data — no arbitrary limits that could cut off real data
+    // Fetch ALL business data
     const [
       businessRes, employeesRes, clockEventsRes, shiftsRes,
       requestsRes, timesheetApprovalsRes, inventoryRes, barInventoryRes,
@@ -243,19 +314,11 @@ RESPONSE RULES:
     const voiceAddendum = `
 VOICE MODE: 1-2 sentences max. No markdown/emojis/bullet points. Talk like a mate. Use relative times ("yesterday","last Tuesday"). Round numbers naturally. First names only. Just answer and stop.`;
 
-    // Classify the user's latest message
-    const lastUserMsg = [...messages].reverse().find((m: any) => m.role === "user")?.content || "";
-    let queryType: "business" | "web" | "both" = "business";
+    // Handle web search if needed
     let webResults = "";
-
-    if (GEMINI_API_KEY && lastUserMsg) {
-      queryType = await classifyQuery(lastUserMsg, GEMINI_API_KEY);
-      console.log(`Query classified as: ${queryType}`);
-
-      if (queryType === "web" || queryType === "both") {
-        webResults = await webSearch(lastUserMsg, GEMINI_API_KEY);
-        console.log(`Web search returned ${webResults.length} chars`);
-      }
+    if (queryType === "web" || queryType === "both") {
+      webResults = await webSearch(lastUserMsg, GEMINI_API_KEY);
+      console.log(`Web search returned ${webResults.length} chars`);
     }
 
     let finalSystemPrompt = systemPrompt;
@@ -281,8 +344,6 @@ RULES:
 
     // Build Gemini conversation format
     const geminiContents = [];
-    
-    // Add conversation history
     for (const msg of messages) {
       geminiContents.push({
         role: msg.role === "assistant" ? "model" : "user",
@@ -319,7 +380,6 @@ RULES:
     }
 
     // Transform Gemini SSE stream to OpenAI-compatible SSE stream
-    // so the existing frontend parser works without changes
     const reader = response.body!.getReader();
     const encoder = new TextEncoder();
     const decoder = new TextDecoder();
@@ -331,7 +391,6 @@ RULES:
           while (true) {
             const { done, value } = await reader.read();
             if (done) {
-              // Send the final [DONE] marker
               controller.enqueue(encoder.encode("data: [DONE]\n\n"));
               controller.close();
               break;
@@ -350,7 +409,6 @@ RULES:
                 const geminiChunk = JSON.parse(jsonStr);
                 const text = geminiChunk.candidates?.[0]?.content?.parts?.[0]?.text || "";
                 if (text) {
-                  // Convert to OpenAI-compatible SSE format
                   const openaiChunk = {
                     choices: [{
                       delta: { content: text },
@@ -359,12 +417,6 @@ RULES:
                     }],
                   };
                   controller.enqueue(encoder.encode(`data: ${JSON.stringify(openaiChunk)}\n\n`));
-                }
-                
-                // Check if this is the final chunk
-                const finishReason = geminiChunk.candidates?.[0]?.finishReason;
-                if (finishReason && finishReason !== "STOP" || finishReason === "STOP") {
-                  // Will be handled by the done check above
                 }
               } catch {
                 // Skip malformed chunks
