@@ -435,75 +435,12 @@ BAD EXAMPLES (NEVER DO THIS):
       }),
     });
 
-    // If credits exhausted (402), fall back to direct Gemini API
+    // If credits exhausted (402), return helpful error
     if (response.status === 402) {
-      const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
-      if (GEMINI_API_KEY) {
-        console.log("Lovable AI credits exhausted, falling back to direct Gemini API");
-        
-        // Convert messages to Gemini format
-        const geminiContents = aiMessages
-          .filter(m => m.role !== "system")
-          .map(m => ({
-            role: m.role === "assistant" ? "model" : "user",
-            parts: [{ text: m.content }],
-          }));
-
-        const geminiResponse = await fetch(
-          `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:streamGenerateContent?alt=sse&key=${GEMINI_API_KEY}`,
-          {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              contents: geminiContents,
-              systemInstruction: { parts: [{ text: finalSystemPrompt }] },
-              generationConfig: { temperature: 0.7, maxOutputTokens: 2048 },
-            }),
-          }
-        );
-
-        if (!geminiResponse.ok) {
-          const errText = await geminiResponse.text();
-          console.error("Gemini API error:", geminiResponse.status, errText);
-          throw new Error("Gemini API request failed");
-        }
-
-        // Transform Gemini SSE stream to OpenAI-compatible SSE stream
-        const transformStream = new TransformStream({
-          transform(chunk, controller) {
-            const text = new TextDecoder().decode(chunk);
-            const lines = text.split("\n");
-            for (const line of lines) {
-              if (!line.startsWith("data: ")) continue;
-              const payload = line.slice(6).trim();
-              if (!payload || payload === "[DONE]") continue;
-              try {
-                const parsed = JSON.parse(payload);
-                const content = parsed?.candidates?.[0]?.content?.parts?.[0]?.text;
-                if (content) {
-                  const openAIChunk = JSON.stringify({
-                    choices: [{ delta: { content } }],
-                  });
-                  controller.enqueue(new TextEncoder().encode(`data: ${openAIChunk}\n\n`));
-                }
-              } catch {}
-            }
-          },
-          flush(controller) {
-            controller.enqueue(new TextEncoder().encode("data: [DONE]\n\n"));
-          },
-        });
-
-        const transformed = geminiResponse.body!.pipeThrough(transformStream);
-        return new Response(transformed, {
-          headers: { ...corsHeaders, "Content-Type": "text/event-stream" },
-        });
-      } else {
-        return new Response(JSON.stringify({ error: "AI credits exhausted. Add a GEMINI_API_KEY secret to use the free Gemini fallback." }), {
-          status: 402,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
+      return new Response(JSON.stringify({ error: "AI credits exhausted. Please add credits to your Lovable workspace under Settings → Workspace → Usage." }), {
+        status: 402,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
     if (!response.ok) {
