@@ -68,6 +68,45 @@ export default function KioskPage() {
     };
   }, []);
 
+  // Swap PWA manifest to kiosk-specific one so it installs as a separate app
+  useEffect(() => {
+    if (!urlBusinessCode) return;
+    // Remove existing manifest link
+    const existing = document.querySelector('link[rel="manifest"]');
+    if (existing) existing.remove();
+    // Create a kiosk-specific manifest with the correct start_url
+    const kioskManifest = {
+      name: "Kiosk Clock-In",
+      short_name: "Kiosk",
+      description: "Employee kiosk clock-in terminal",
+      theme_color: "#000000",
+      background_color: "#000000",
+      display: "standalone",
+      orientation: "portrait",
+      start_url: `/t/${urlBusinessCode}/ck`,
+      scope: `/t/${urlBusinessCode}/`,
+      categories: ["business", "productivity"],
+      icons: [
+        { src: "/pwa-icon-192.png", sizes: "192x192", type: "image/png", purpose: "any" },
+        { src: "/pwa-icon-512.png", sizes: "512x512", type: "image/png", purpose: "any" },
+        { src: "/pwa-icon-512.png", sizes: "512x512", type: "image/png", purpose: "maskable" },
+      ],
+    };
+    const blob = new Blob([JSON.stringify(kioskManifest)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("link");
+    link.rel = "manifest";
+    link.href = url;
+    document.head.appendChild(link);
+    // Update page title for PWA install prompt
+    document.title = "Kiosk Clock-In";
+    return () => {
+      URL.revokeObjectURL(url);
+      link.remove();
+      document.title = "OmnexClock";
+    };
+  }, [urlBusinessCode]);
+
   // Load business from URL param and apply theme
   useEffect(() => {
     if (!urlBusinessCode) return;
