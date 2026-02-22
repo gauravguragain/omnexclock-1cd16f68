@@ -64,6 +64,7 @@ export default defineConfig(({ mode }) => ({
         ],
       },
       manifest: {
+        id: "/omnexclock-main",
         name: "OmnexClock",
         short_name: "OmnexClock",
         description: "Employee time clock and attendance management",

@@ -71,10 +71,14 @@ export default function KioskPage() {
   // Swap PWA manifest to kiosk-specific one so it installs as a separate app
   useEffect(() => {
     if (!urlBusinessCode) return;
-    // Remove existing manifest link
-    const existing = document.querySelector('link[rel="manifest"]');
-    if (existing) existing.remove();
-    // Create a kiosk-specific manifest with the correct start_url
+
+    // Aggressively remove ALL existing manifest links (including vite-plugin-pwa injected ones)
+    const removeAllManifests = () => {
+      document.querySelectorAll('link[rel="manifest"]').forEach((el) => el.remove());
+    };
+    removeAllManifests();
+
+    // Create kiosk-specific manifest with correct start_url
     const kioskManifest = {
       name: "Kiosk Clock-In",
       short_name: "Kiosk",
@@ -84,7 +88,8 @@ export default function KioskPage() {
       display: "standalone",
       orientation: "portrait",
       start_url: `/t/${urlBusinessCode}/ck`,
-      scope: `/t/${urlBusinessCode}/`,
+      scope: "/",
+      id: `/kiosk/${urlBusinessCode}`,
       categories: ["business", "productivity"],
       icons: [
         { src: "/pwa-icon-192.png", sizes: "192x192", type: "image/png", purpose: "any" },
@@ -93,15 +98,39 @@ export default function KioskPage() {
       ],
     };
     const blob = new Blob([JSON.stringify(kioskManifest)], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
+    const blobUrl = URL.createObjectURL(blob);
     const link = document.createElement("link");
     link.rel = "manifest";
-    link.href = url;
+    link.href = blobUrl;
     document.head.appendChild(link);
-    // Update page title for PWA install prompt
+
+    // Update page title & apple meta for PWA install
     document.title = "Kiosk Clock-In";
+    const appleMeta = document.querySelector('meta[name="apple-mobile-web-app-title"]');
+    if (appleMeta) {
+      appleMeta.setAttribute("content", "Kiosk");
+    } else {
+      const meta = document.createElement("meta");
+      meta.name = "apple-mobile-web-app-title";
+      meta.content = "Kiosk";
+      document.head.appendChild(meta);
+    }
+
+    // Watch for vite-plugin-pwa re-injecting the manifest and remove it
+    const observer = new MutationObserver((mutations) => {
+      for (const m of mutations) {
+        m.addedNodes.forEach((node) => {
+          if (node instanceof HTMLLinkElement && node.rel === "manifest" && node.href !== blobUrl) {
+            node.remove();
+          }
+        });
+      }
+    });
+    observer.observe(document.head, { childList: true });
+
     return () => {
-      URL.revokeObjectURL(url);
+      observer.disconnect();
+      URL.revokeObjectURL(blobUrl);
       link.remove();
       document.title = "OmnexClock";
     };
