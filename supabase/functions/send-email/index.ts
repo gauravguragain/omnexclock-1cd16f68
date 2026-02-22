@@ -134,15 +134,64 @@ serve(async (req) => {
 
       const csvBase64 = btoa(unescape(encodeURIComponent(body.csvData)));
 
+      // Parse CSV rows for inline HTML table with styled totals
+      const csvLines = body.csvData.split("\n").filter(l => l.trim());
+      const parseRow = (line: string): string[] => {
+        const cols: string[] = [];
+        let cur = "", inQ = false;
+        for (const ch of line) {
+          if (ch === '"') { inQ = !inQ; continue; }
+          if (ch === ',' && !inQ) { cols.push(cur); cur = ""; continue; }
+          cur += ch;
+        }
+        cols.push(cur);
+        return cols;
+      };
+
+      let tableHtml = "";
+      if (csvLines.length > 0) {
+        const headers = parseRow(csvLines[0]);
+        tableHtml += `<table style="width:100%;border-collapse:collapse;margin:16px 0;font-size:12px;">
+          <thead><tr style="background:#1a1a1a;">
+          ${headers.map(h => `<th style="padding:8px 10px;border:1px solid #333;color:#c9a227;text-align:left;font-size:11px;">${h}</th>`).join("")}
+          </tr></thead><tbody>`;
+        for (let i = 1; i < csvLines.length; i++) {
+          const cols = parseRow(csvLines[i]);
+          const isTotalRow = (cols[0] || "").includes("TOTAL");
+          const isBlank = cols.every(c => !c.trim());
+          if (isBlank) {
+            tableHtml += `<tr><td colspan="${headers.length}" style="padding:4px;border:none;"></td></tr>`;
+          } else if (isTotalRow) {
+            tableHtml += `<tr style="background:#fef9e7;">
+              ${cols.map(c => `<td style="padding:8px 10px;border:1px solid #e5e7eb;color:#c9a227;font-weight:700;font-size:12px;">${c}</td>`).join("")}
+            </tr>`;
+          } else {
+            tableHtml += `<tr style="background:${i % 2 === 0 ? '#f9fafb' : '#ffffff'};">
+              ${cols.map(c => `<td style="padding:6px 10px;border:1px solid #e5e7eb;color:#1a1a1a;">${c}</td>`).join("")}
+            </tr>`;
+          }
+        }
+        tableHtml += `</tbody></table>`;
+      }
+
       emailPayload = {
         from: "Reports <noreply@omnexventures.com>",
         to: [body.recipientEmail],
         subject: body.subject,
         html: `
-          <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;">
-            <h2 style="color:#1a1a1a;">${body.subject}</h2>
-            <p>Please find the attached CSV report.</p>
-            <p style="color:#6b7280;font-size:13px;">This is an automated report from your workforce management system.</p>
+          <div style="font-family:'Segoe UI',Arial,sans-serif;max-width:900px;margin:0 auto;color:#1a1a1a;background:#ffffff;">
+            <div style="text-align:center;padding:30px 20px 16px;background:linear-gradient(135deg,#1a1a1a 0%,#2d2d2d 100%);border-radius:12px 12px 0 0;">
+              <h1 style="color:#c9a227;font-size:24px;margin:0;letter-spacing:1px;">OmnexClock</h1>
+              <p style="color:#a0a0a0;font-size:11px;margin:6px 0 0;text-transform:uppercase;letter-spacing:2px;">Report</p>
+            </div>
+            <div style="padding:24px 20px;">
+              <h2 style="margin:0 0 8px;font-size:18px;color:#1a1a1a;">📊 ${body.subject}</h2>
+              <p style="color:#555;font-size:13px;margin:0 0 4px;">The full CSV is also attached for your records.</p>
+              ${tableHtml}
+            </div>
+            <div style="text-align:center;padding:16px 20px;background:#f8f9fa;border-radius:0 0 12px 12px;">
+              <p style="color:#999;font-size:11px;margin:0;">This is an automated report from your workforce management system.</p>
+            </div>
           </div>
         `,
         attachments: [
