@@ -7,7 +7,7 @@ const corsHeaders = {
 };
 
 interface EmailRequest {
-  type: "roster_notification" | "csv_export" | "employee_induction" | "roster_pdf";
+  type: "roster_notification" | "csv_export" | "employee_induction" | "roster_pdf" | "report_pdf";
   // roster_notification fields
   to?: string;
   employeeName?: string;
@@ -392,6 +392,48 @@ serve(async (req) => {
         attachments: [
           {
             filename: body.pdfFilename || `roster-${body.weekLabel}.pdf`,
+            content: body.pdfBase64,
+            type: "application/pdf",
+          },
+        ],
+      };
+    } else if (body.type === "report_pdf") {
+      if (!body.to || !body.pdfBase64 || !body.subject) {
+        throw new Error("Missing required fields for report PDF email");
+      }
+
+      const html = `
+        <div style="font-family:'Segoe UI',Arial,sans-serif;max-width:600px;margin:0 auto;color:#1a1a1a;background:#ffffff;">
+          <div style="text-align:center;padding:30px 20px 16px;background:linear-gradient(135deg,#1a1a1a 0%,#2d2d2d 100%);border-radius:12px 12px 0 0;">
+            <h1 style="color:#c9a227;font-size:24px;margin:0;letter-spacing:1px;">${body.businessName || "OmnexClock"}</h1>
+            <p style="color:#a0a0a0;font-size:11px;margin:6px 0 0;text-transform:uppercase;letter-spacing:2px;">Report</p>
+          </div>
+          <div style="padding:24px 30px;">
+            <h2 style="margin:0 0 12px;font-size:18px;color:#1a1a1a;">📊 ${body.subject}</h2>
+            <p style="color:#555;font-size:14px;line-height:1.6;">
+              Please find the attached report PDF.
+            </p>
+            <div style="margin:20px 0;padding:14px 16px;background:#f0f9ff;border:1px solid #bae6fd;border-radius:6px;">
+              <p style="margin:0;font-size:13px;color:#0369a1;font-weight:600;">📎 Attachment</p>
+              <p style="margin:4px 0 0;font-size:12px;color:#475569;">
+                ${body.pdfFilename || "report.pdf"} — Open to view the full report with all details.
+              </p>
+            </div>
+          </div>
+          <div style="text-align:center;padding:16px 30px;background:#f8f9fa;border-radius:0 0 12px 12px;">
+            <p style="color:#999;font-size:11px;margin:0;">This is an automated report from <strong>${body.businessName || "OmnexClock"}</strong>.</p>
+          </div>
+        </div>
+      `;
+
+      emailPayload = {
+        from: `${body.businessName || "OmnexClock"} <noreply@omnexventures.com>`,
+        to: [body.to],
+        subject: body.subject,
+        html,
+        attachments: [
+          {
+            filename: body.pdfFilename || "report.pdf",
             content: body.pdfBase64,
             type: "application/pdf",
           },
