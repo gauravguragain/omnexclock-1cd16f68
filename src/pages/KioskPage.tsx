@@ -7,7 +7,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Camera, Clock, Coffee, LogIn, LogOut, ArrowLeft, Delete, User, ShieldCheck, VideoOff } from "lucide-react";
+import { Camera, Clock, Coffee, LogIn, LogOut, ArrowLeft, Delete, User, ShieldCheck, VideoOff, Sun, Moon } from "lucide-react";
+import { useTheme } from "next-themes";
 import { Textarea } from "@/components/ui/textarea";
 import { toAusTime12, toAusTime12WithSeconds, toAusFormatted } from "@/lib/dateUtils";
 
@@ -457,9 +458,22 @@ export default function KioskPage() {
 
   const availableActions = getAvailableActions();
 
+  const { theme, setTheme } = useTheme();
+
   return (
-    <div className="min-h-[100dvh] bg-background text-foreground flex flex-col items-center justify-center px-3 py-4 sm:p-4 md:p-8"
+    <div className="min-h-[100dvh] bg-background text-foreground flex flex-col items-center justify-center px-3 py-4 sm:p-4 md:p-8 relative"
       style={{ paddingTop: "env(safe-area-inset-top)", paddingBottom: "env(safe-area-inset-bottom)" }}>
+      {/* Dark mode toggle */}
+      <div className="absolute top-3 right-3 z-20">
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-8 w-8 text-muted-foreground hover:text-foreground"
+          onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+        >
+          {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+        </Button>
+      </div>
       {/* Header */}
       <div className="text-center mb-3 sm:mb-4 md:mb-8">
         {businessLogo ? (
