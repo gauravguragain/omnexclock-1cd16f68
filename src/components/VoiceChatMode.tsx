@@ -242,52 +242,16 @@ export default function VoiceChatMode({
   }, []);
 
   // ──────────────────────────────────────
-  // STEP 1: Play audio (ElevenLabs → Browser TTS fallback)
+  // STEP 1: Play audio via Browser TTS (enhanced for natural sound)
   // Returns a promise that resolves when audio finishes
   // ──────────────────────────────────────
-  const TTS_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/elevenlabs-tts`;
-
   const playAudio = useCallback(async (text: string): Promise<void> => {
     const clean = cleanForSpeech(text);
     if (!clean || !activeRef.current) return;
-
-    // Try ElevenLabs first for human-sounding voice, fall back to browser TTS
-    try {
-      const resp = await fetch(TTS_URL, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
-          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
-        },
-        body: JSON.stringify({ text: clean.substring(0, 1000), voiceId: "21m00Tcm4TlvDq8ikWAM" }),
-      });
-
-      if (resp.ok && activeRef.current) {
-        const blob = await resp.blob();
-        if (blob.size > 0 && activeRef.current) {
-          const url = URL.createObjectURL(blob);
-          await new Promise<void>((resolve) => {
-            const audio = new Audio(url);
-            audioRef.current = audio;
-            audioResolveRef.current = resolve;
-            audio.onended = () => { audioRef.current = null; audioResolveRef.current = null; URL.revokeObjectURL(url); resolve(); };
-            audio.onerror = (e) => { console.error("[Voice] Audio playback error:", e); audioRef.current = null; audioResolveRef.current = null; URL.revokeObjectURL(url); resolve(); };
-            audio.play().catch((e) => { console.error("[Voice] Audio.play() failed:", e); audioRef.current = null; audioResolveRef.current = null; URL.revokeObjectURL(url); resolve(); });
-          });
-          return;
-        }
-      }
-      console.log("[Voice] ElevenLabs response not ok:", resp.status, await resp.text().catch(() => ""));
-    } catch (e) {
-      console.log("[Voice] ElevenLabs error, using browser TTS:", e);
-    }
-
-    // Fallback to browser TTS
-    await playBrowserTTS(clean.substring(0, 500));
+    await playBrowserTTS(clean.substring(0, 800));
   }, []);
 
-  // Browser TTS — robust version that waits for voices and retries
+  // Browser TTS — enhanced for natural, human-like speech
   const playBrowserTTS = useCallback((text: string): Promise<void> => {
     return new Promise<void>(async (resolve) => {
       if (!activeRef.current) { resolve(); return; }
@@ -312,7 +276,6 @@ export default function VoiceChatMode({
             res(voices);
           };
           synth.addEventListener("voiceschanged", onVoices, { once: true });
-          // Timeout if voices never load
           setTimeout(() => res(synth.getVoices()), 2000);
         });
       };
@@ -322,14 +285,58 @@ export default function VoiceChatMode({
         const voices = await getVoices();
 
         const utterance = new SpeechSynthesisUtterance(text);
-        utterance.lang = "en-AU";
-        utterance.rate = 1.05;
 
-        // Try to find an English voice
-        const englishVoice = voices.find(v => v.lang.startsWith("en-AU")) 
-          || voices.find(v => v.lang.startsWith("en"))
-          || voices[0];
-        if (englishVoice) utterance.voice = englishVoice;
+        // Prioritize the most natural-sounding voices available
+        // Google and Microsoft Neural voices sound significantly more human
+        const preferredVoiceNames = [
+          // Google's natural voices (Chrome)
+          "Google UK English Female",
+          "Google UK English Male",
+          "Google US English",
+          // Microsoft Neural voices (Edge)
+          "Microsoft Natasha Online (Natural) - English (Australia)",
+          "Microsoft Libby Online (Natural) - English (United Kingdom)",
+          "Microsoft Ryan Online (Natural) - English (United Kingdom)",
+          "Microsoft Jenny Online (Natural) - English (United States)",
+          "Microsoft Aria Online (Natural) - English (United States)",
+          // macOS/iOS high-quality voices
+          "Karen",      // Australian
+          "Samantha",   // US (very natural on Apple)
+          "Daniel",     // UK
+          "Moira",      // Irish
+          "Tessa",      // South African
+        ];
+
+        let selectedVoice: SpeechSynthesisVoice | undefined;
+        
+        // Try preferred voices first
+        for (const name of preferredVoiceNames) {
+          selectedVoice = voices.find(v => v.name.includes(name));
+          if (selectedVoice) break;
+        }
+        
+        // Fallback: any en-AU, then en-GB, then any English voice
+        if (!selectedVoice) {
+          selectedVoice = voices.find(v => v.lang === "en-AU")
+            || voices.find(v => v.lang.startsWith("en-AU"))
+            || voices.find(v => v.lang === "en-GB")
+            || voices.find(v => v.lang.startsWith("en-GB"))
+            || voices.find(v => v.lang.startsWith("en"))
+            || voices[0];
+        }
+
+        if (selectedVoice) {
+          utterance.voice = selectedVoice;
+          utterance.lang = selectedVoice.lang;
+          console.log("[Voice] Using voice:", selectedVoice.name, selectedVoice.lang);
+        } else {
+          utterance.lang = "en-AU";
+        }
+
+        // Natural speech parameters — slightly slower with natural pitch
+        utterance.rate = 0.95;    // Slightly slower than default for warmth
+        utterance.pitch = 1.0;    // Natural pitch
+        utterance.volume = 1.0;
 
         utterance.onend = finish;
         utterance.onerror = (e) => {
@@ -338,13 +345,12 @@ export default function VoiceChatMode({
         };
 
         synth.speak(utterance);
-        console.log("[Voice] Browser TTS speaking:", text.substring(0, 50) + "...");
+        console.log("[Voice] TTS speaking:", text.substring(0, 50) + "...");
 
         // Chrome bug: speechSynthesis can pause mid-utterance. Periodically resume.
         const resumeInterval = setInterval(() => {
           if (done) { clearInterval(resumeInterval); return; }
           if (synth.paused) synth.resume();
-          // Also check if synth stopped speaking without firing onend
           if (!synth.speaking && !synth.pending) {
             clearInterval(resumeInterval);
             finish();
@@ -352,7 +358,7 @@ export default function VoiceChatMode({
         }, 300);
 
         // Safety timeout
-        setTimeout(() => { clearInterval(resumeInterval); finish(); }, 25000);
+        setTimeout(() => { clearInterval(resumeInterval); finish(); }, 30000);
       } catch (e) {
         console.log("[Voice] Browser TTS exception:", e);
         finish();
