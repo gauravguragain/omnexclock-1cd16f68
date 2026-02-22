@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { createPortal } from "react-dom";
 import { X, Mic, PhoneOff } from "lucide-react";
 import { toast } from "sonner";
@@ -36,12 +36,11 @@ function cleanForSpeech(text: string): string {
     .trim();
 }
 
-// ─── Animated Orb Component ───
+// ─── Animated Orb ───
 function VoiceOrb({ state, onClick }: { state: VoiceState; onClick?: () => void }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const animRef = useRef<number>(0);
   const stateRef = useRef(state);
-
   useEffect(() => { stateRef.current = state; }, [state]);
 
   useEffect(() => {
@@ -54,7 +53,6 @@ function VoiceOrb({ state, onClick }: { state: VoiceState; onClick?: () => void 
     canvas.style.width = `${size}px`;
     canvas.style.height = `${size}px`;
     ctx.scale(2, 2);
-
     const center = size / 2;
     let t = 0;
 
@@ -168,7 +166,6 @@ function VoiceOrb({ state, onClick }: { state: VoiceState; onClick?: () => void 
 
       animRef.current = requestAnimationFrame(draw);
     }
-
     draw();
     return () => cancelAnimationFrame(animRef.current);
   }, []);
@@ -184,7 +181,9 @@ function VoiceOrb({ state, onClick }: { state: VoiceState; onClick?: () => void 
   );
 }
 
-// ─── Main Component ───
+// ═══════════════════════════════════════════════════
+// Main VoiceChatMode — completely redesigned flow
+// ═══════════════════════════════════════════════════
 export default function VoiceChatMode({
   open,
   onClose,
@@ -197,43 +196,46 @@ export default function VoiceChatMode({
   const [transcript, setTranscript] = useState("");
   const [assistantText, setAssistantText] = useState("");
 
-  // ALL mutable state in refs — zero stale closures
-  const recognitionRef = useRef<any>(null);
-  const audioRef = useRef<HTMLAudioElement | null>(null);
-  const abortRef = useRef<AbortController | null>(null);
+  // Mutable refs to avoid stale closures
   const activeRef = useRef(false);
-  const msgsRef = useRef<Message[]>(messages);
-  const onMsgsChangeRef = useRef(onMessagesChange);
-  const stateSettersRef = useRef({ setVoiceState, setTranscript, setAssistantText });
+  const msgsRef = useRef(messages);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const recognitionRef = useRef<any>(null);
+  const abortRef = useRef<AbortController | null>(null);
 
-  // Keep refs synced
+  // Keep messages ref in sync
   useEffect(() => { msgsRef.current = messages; }, [messages]);
-  useEffect(() => { onMsgsChangeRef.current = onMessagesChange; }, [onMessagesChange]);
-  useEffect(() => { stateSettersRef.current = { setVoiceState, setTranscript, setAssistantText }; });
 
-  // Store loop functions in refs so they ALWAYS point to the latest version
-  const startListeningRef = useRef<() => void>(() => {});
-  const processInputRef = useRef<(text: string) => Promise<void>>(async () => {});
-  const speakAndContinueRef = useRef<(text: string) => Promise<void>>(async () => {});
-
-  // ═══════════════════════════════════════════
-  // Core loop functions — assigned to refs below
-  // ═══════════════════════════════════════════
-
-  // SPEAK then LISTEN
-  speakAndContinueRef.current = async (text: string) => {
-    if (!activeRef.current) return;
-    const clean = cleanForSpeech(text);
-    if (!clean) {
-      if (activeRef.current) startListeningRef.current();
-      return;
+  // ── Cleanup helper ──
+  const cleanup = useCallback(() => {
+    activeRef.current = false;
+    try { recognitionRef.current?.abort(); } catch {}
+    recognitionRef.current = null;
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current.src = "";
+      audioRef.current = null;
     }
+    abortRef.current?.abort();
+    abortRef.current = null;
+    window.speechSynthesis?.cancel();
+    setVoiceState("idle");
+    setTranscript("");
+    setAssistantText("");
+  }, []);
 
-    stateSettersRef.current.setVoiceState("speaking");
-    console.log("[Voice] speaking:", clean.substring(0, 60));
+  // Cleanup on unmount or close
+  useEffect(() => {
+    if (!open) cleanup();
+    return cleanup;
+  }, [open, cleanup]);
 
-    // Try ElevenLabs
-    let played = false;
+  // ── Speak text (ElevenLabs → browser TTS fallback) ──
+  const speak = useCallback(async (text: string): Promise<void> => {
+    const clean = cleanForSpeech(text);
+    if (!clean || !activeRef.current) return;
+
+    // Try ElevenLabs first
     try {
       const resp = await fetch(TTS_URL, {
         method: "POST",
@@ -244,62 +246,105 @@ export default function VoiceChatMode({
         },
         body: JSON.stringify({ text: clean.substring(0, 5000) }),
       });
+
       if (resp.ok) {
         const blob = await resp.blob();
         if (blob.size > 100 && blob.type.includes("audio")) {
-          played = await new Promise<boolean>((resolve) => {
-            const audio = new Audio(); // FRESH audio element every time
+          await new Promise<void>((resolve) => {
+            if (!activeRef.current) { resolve(); return; }
+            const audio = new Audio();
             const url = URL.createObjectURL(blob);
             audio.src = url;
             audioRef.current = audio;
-            audio.onended = () => { URL.revokeObjectURL(url); audioRef.current = null; resolve(true); };
-            audio.onerror = () => { URL.revokeObjectURL(url); audioRef.current = null; resolve(false); };
-            audio.play().catch(() => { URL.revokeObjectURL(url); audioRef.current = null; resolve(false); });
+            audio.onended = () => { URL.revokeObjectURL(url); audioRef.current = null; resolve(); };
+            audio.onerror = () => { URL.revokeObjectURL(url); audioRef.current = null; resolve(); };
+            audio.play().catch(() => { URL.revokeObjectURL(url); audioRef.current = null; resolve(); });
           });
+          return; // Success
         }
       }
-    } catch { /* fall through to browser TTS */ }
+    } catch {}
 
     // Fallback: browser TTS
-    if (!played && activeRef.current) {
-      console.log("[Voice] ElevenLabs failed, browser TTS");
-      await new Promise<void>((resolve) => {
-        const u = new SpeechSynthesisUtterance(clean.substring(0, 500));
-        u.lang = "en-AU";
-        u.rate = 1.05;
-        u.onend = () => resolve();
-        u.onerror = () => resolve();
-        window.speechSynthesis.cancel();
-        window.speechSynthesis.speak(u);
-        setTimeout(resolve, 15000);
-      });
-    }
-
-    // CRITICAL: small gap so browser releases audio channel before mic starts
-    if (activeRef.current) {
-      console.log("[Voice] speech done → waiting 600ms → listen");
-      await new Promise(r => setTimeout(r, 600));
-      if (activeRef.current) {
-        startListeningRef.current();
-      }
-    } else {
-      stateSettersRef.current.setVoiceState("idle");
-    }
-  };
-
-  // PROCESS user input → get AI response → speak it
-  processInputRef.current = async (text: string) => {
     if (!activeRef.current) return;
-    console.log("[Voice] user said:", text);
-    stateSettersRef.current.setVoiceState("processing");
-    stateSettersRef.current.setTranscript("");
+    console.log("[Voice] Using browser TTS fallback");
+    await new Promise<void>((resolve) => {
+      const u = new SpeechSynthesisUtterance(clean.substring(0, 500));
+      u.lang = "en-AU";
+      u.rate = 1.05;
+      u.onend = () => resolve();
+      u.onerror = () => resolve();
+      window.speechSynthesis.cancel();
+      window.speechSynthesis.speak(u);
+      setTimeout(resolve, 15000); // Safety timeout
+    });
+  }, []);
 
-    const userMsg: Message = { role: "user", content: text, timestamp: new Date() };
-    const updated = [...msgsRef.current, userMsg];
-    msgsRef.current = updated;
-    onMsgsChangeRef.current(updated);
+  // ── Listen for speech → returns transcript text ──
+  const listen = useCallback((): Promise<string> => {
+    return new Promise((resolve) => {
+      if (!activeRef.current) { resolve(""); return; }
 
-    let aiText = "";
+      const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+      if (!SR) {
+        toast.error("Speech recognition not supported in this browser");
+        resolve("");
+        return;
+      }
+
+      try { recognitionRef.current?.abort(); } catch {}
+
+      const rec = new SR();
+      rec.lang = "en-AU";
+      rec.interimResults = true;
+      rec.continuous = false;
+      rec.maxAlternatives = 1;
+      recognitionRef.current = rec;
+
+      let finalText = "";
+
+      rec.onresult = (e: any) => {
+        finalText = "";
+        let interim = "";
+        for (let i = 0; i < e.results.length; i++) {
+          if (e.results[i].isFinal) finalText += e.results[i][0].transcript;
+          else interim += e.results[i][0].transcript;
+        }
+        setTranscript(finalText || interim);
+      };
+
+      rec.onerror = (e: any) => {
+        console.log("[Voice] recognition error:", e.error);
+        if (e.error === "not-allowed") {
+          toast.error("Microphone access denied. Please allow microphone access.");
+          activeRef.current = false;
+          setVoiceState("idle");
+        }
+      };
+
+      rec.onend = () => {
+        recognitionRef.current = null;
+        resolve(finalText.trim());
+      };
+
+      try {
+        rec.start();
+        setVoiceState("listening");
+        setTranscript("");
+        console.log("[Voice] 🎤 listening...");
+      } catch (e) {
+        console.error("[Voice] Failed to start recognition:", e);
+        resolve("");
+      }
+    });
+  }, []);
+
+  // ── Get AI response (streaming) ──
+  const getAIResponse = useCallback(async (userText: string): Promise<string> => {
+    const userMsg: Message = { role: "user", content: userText, timestamp: new Date() };
+    const updatedMsgs = [...msgsRef.current, userMsg];
+    msgsRef.current = updatedMsgs;
+    onMessagesChange(updatedMsgs);
 
     try {
       abortRef.current = new AbortController();
@@ -311,7 +356,7 @@ export default function VoiceChatMode({
           Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
         },
         body: JSON.stringify({
-          messages: updated.map(m => ({ role: m.role, content: m.content })),
+          messages: updatedMsgs.map(m => ({ role: m.role, content: m.content })),
           businessId,
           voiceMode: true,
         }),
@@ -320,13 +365,13 @@ export default function VoiceChatMode({
 
       if (!resp.ok) {
         console.error("[Voice] AI error:", resp.status);
-        await speakAndContinueRef.current("Sorry, couldn't get a response. Try again.");
-        return;
+        return "Sorry, I couldn't get a response. Try again.";
       }
 
       const reader = resp.body!.getReader();
       const decoder = new TextDecoder();
       let buf = "";
+      let aiText = "";
 
       while (true) {
         const { done, value } = await reader.read();
@@ -343,120 +388,34 @@ export default function VoiceChatMode({
           if (json === "[DONE]") break;
           try {
             const chunk = JSON.parse(json)?.choices?.[0]?.delta?.content;
-            if (chunk) { aiText += chunk; stateSettersRef.current.setAssistantText(aiText); }
+            if (chunk) {
+              aiText += chunk;
+              setAssistantText(aiText);
+            }
           } catch {}
         }
       }
 
-      console.log("[Voice] AI response:", aiText.substring(0, 80));
-
-      const aMsg: Message = { role: "assistant", content: aiText, timestamp: new Date() };
-      const finalMsgs = [...updated, aMsg];
+      // Save AI message
+      const aiMsg: Message = { role: "assistant", content: aiText, timestamp: new Date() };
+      const finalMsgs = [...updatedMsgs, aiMsg];
       msgsRef.current = finalMsgs;
-      onMsgsChangeRef.current(finalMsgs);
-      stateSettersRef.current.setAssistantText("");
+      onMessagesChange(finalMsgs);
+      setAssistantText("");
 
-      await speakAndContinueRef.current(aiText);
-
+      return aiText;
     } catch (e: any) {
-      if (e.name === "AbortError") return;
-      console.error("[Voice] error:", e);
-      await speakAndContinueRef.current("Something went wrong. Try again.");
+      if (e.name === "AbortError") return "";
+      console.error("[Voice] AI fetch error:", e);
+      return "Something went wrong. Try again.";
     }
-  };
+  }, [businessId, onMessagesChange]);
 
-  // LISTEN for user speech
-  startListeningRef.current = () => {
-    if (!activeRef.current) return;
-
-    const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-    if (!SR) { toast.error("Speech recognition not supported"); return; }
-
-    // Kill any stale recognition
-    try { recognitionRef.current?.abort(); } catch {}
-    recognitionRef.current = null;
-
-    const rec = new SR();
-    rec.lang = "en-AU";
-    rec.interimResults = true;
-    rec.continuous = false;
-    rec.maxAlternatives = 1;
-    recognitionRef.current = rec;
-
-    let finalText = "";
-    let hadError = false;
-
-    rec.onresult = (e: any) => {
-      finalText = "";
-      let interim = "";
-      for (let i = 0; i < e.results.length; i++) {
-        if (e.results[i].isFinal) finalText += e.results[i][0].transcript;
-        else interim += e.results[i][0].transcript;
-      }
-      stateSettersRef.current.setTranscript(finalText || interim);
-      console.log("[Voice] heard:", finalText || interim);
-    };
-
-    rec.onerror = (e: any) => {
-      console.log("[Voice] mic error:", e.error);
-      hadError = true;
-      if (e.error === "not-allowed") {
-        toast.error("Microphone access denied.");
-        activeRef.current = false;
-        stateSettersRef.current.setVoiceState("idle");
-      }
-    };
-
-    rec.onend = () => {
-      console.log("[Voice] recognition ended, finalText:", JSON.stringify(finalText));
-      recognitionRef.current = null;
-      if (!activeRef.current) return;
-
-      if (finalText.trim()) {
-        processInputRef.current(finalText.trim());
-      } else {
-        // No speech → re-listen
-        const delay = hadError ? 800 : 400;
-        console.log("[Voice] no input, re-listen in", delay);
-        setTimeout(() => {
-          if (activeRef.current) startListeningRef.current();
-        }, delay);
-      }
-    };
-
-    try {
-      rec.start();
-      stateSettersRef.current.setVoiceState("listening");
-      stateSettersRef.current.setTranscript("");
-      console.log("[Voice] 🎤 listening started");
-    } catch (e) {
-      console.error("[Voice] mic start failed:", e);
-      recognitionRef.current = null;
-      if (activeRef.current) setTimeout(() => startListeningRef.current(), 1000);
-    }
-  };
-
-  // ─── Lifecycle ───
-
-  function killEverything() {
-    try { recognitionRef.current?.abort(); } catch {}
-    recognitionRef.current = null;
-    if (audioRef.current) { audioRef.current.pause(); audioRef.current.src = ""; audioRef.current = null; }
-    abortRef.current?.abort();
-    window.speechSynthesis?.cancel();
-    setVoiceState("idle");
-    setTranscript("");
-    setAssistantText("");
-  }
-
-  useEffect(() => {
-    if (!open) { activeRef.current = false; killEverything(); }
-    return () => { activeRef.current = false; killEverything(); };
-  }, [open]);
-
-  // ─── Entry Point ───
-  async function beginConversation() {
-    // Warm audio context on user gesture
+  // ══════════════════════════════════════════════
+  // The main conversation loop — simple sequential
+  // ══════════════════════════════════════════════
+  const runConversationLoop = useCallback(async () => {
+    // 1. Warm audio context (required for iOS/Safari)
     try {
       const a = new Audio();
       a.src = "data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA=";
@@ -465,43 +424,86 @@ export default function VoiceChatMode({
     } catch {}
 
     activeRef.current = true;
-    setVoiceState("greeting");
 
+    // 2. Greeting
     const greeting = businessName
       ? `Hey! What can I help you with for ${businessName}?`
       : "Hey! What do you need help with?";
 
     setAssistantText(greeting);
+    setVoiceState("greeting");
 
     const greetMsg: Message = { role: "assistant", content: greeting, timestamp: new Date() };
     const updated = [...msgsRef.current, greetMsg];
     msgsRef.current = updated;
-    onMsgsChangeRef.current(updated);
+    onMessagesChange(updated);
 
-    // Speak greeting → then auto-listen
-    await speakAndContinueRef.current(greeting);
-  }
+    await speak(greeting);
 
-  function endConversation() {
-    activeRef.current = false;
-    killEverything();
-  }
+    // 3. Continuous loop: listen → process → speak → repeat
+    while (activeRef.current) {
+      // Small delay between speech ending and mic starting
+      await new Promise(r => setTimeout(r, 500));
+      if (!activeRef.current) break;
 
-  function handleClose() {
-    endConversation();
-    onClose();
-  }
+      // Listen
+      const userText = await listen();
+      if (!activeRef.current) break;
 
-  function handleOrbClick() {
-    if (voiceState === "idle") {
-      beginConversation();
-    } else if (voiceState === "speaking" || voiceState === "greeting") {
-      // Interrupt speech → listen
-      if (audioRef.current) { audioRef.current.pause(); audioRef.current.src = ""; audioRef.current = null; }
-      window.speechSynthesis?.cancel();
-      if (activeRef.current) startListeningRef.current();
+      if (!userText) {
+        // No speech detected — retry
+        console.log("[Voice] No speech detected, retrying...");
+        continue;
+      }
+
+      // Process
+      setVoiceState("processing");
+      setTranscript("");
+      console.log("[Voice] User said:", userText);
+
+      const aiResponse = await getAIResponse(userText);
+      if (!activeRef.current) break;
+      if (!aiResponse) continue;
+
+      // Speak
+      setVoiceState("speaking");
+      console.log("[Voice] AI says:", aiResponse.substring(0, 80));
+      await speak(aiResponse);
     }
-  }
+
+    // Loop ended
+    setVoiceState("idle");
+  }, [businessName, onMessagesChange, speak, listen, getAIResponse]);
+
+  // ── Button handlers ──
+  const handleStart = useCallback(() => {
+    if (voiceState !== "idle") return;
+    runConversationLoop();
+  }, [voiceState, runConversationLoop]);
+
+  const handleEnd = useCallback(() => {
+    cleanup();
+  }, [cleanup]);
+
+  const handleClose = useCallback(() => {
+    cleanup();
+    onClose();
+  }, [cleanup, onClose]);
+
+  const handleOrbClick = useCallback(() => {
+    if (voiceState === "idle") {
+      handleStart();
+    } else if (voiceState === "speaking" || voiceState === "greeting") {
+      // Interrupt speech
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current.src = "";
+        audioRef.current = null;
+      }
+      window.speechSynthesis?.cancel();
+      // The loop will naturally proceed to listen next
+    }
+  }, [voiceState, handleStart]);
 
   if (!open) return null;
 
@@ -522,13 +524,15 @@ export default function VoiceChatMode({
   };
 
   return createPortal(
-    <div className="fixed inset-0 z-[9998] flex flex-col items-center justify-between"
+    <div
+      className="fixed inset-0 z-[9998] flex flex-col items-center justify-between"
       style={{
         background: "radial-gradient(ellipse at center, hsl(0 0% 8%) 0%, hsl(0 0% 3%) 100%)",
         paddingTop: "env(safe-area-inset-top, 0px)",
         paddingBottom: "env(safe-area-inset-bottom, 0px)",
       }}
     >
+      {/* Header */}
       <div className="w-full flex items-center justify-between px-5 pt-4 pb-2 flex-shrink-0">
         <div className="flex items-center gap-2">
           <div className="h-2 w-2 rounded-full bg-primary animate-pulse" />
@@ -544,6 +548,7 @@ export default function VoiceChatMode({
         </button>
       </div>
 
+      {/* Center: Orb + status */}
       <div className="flex-1 flex flex-col items-center justify-center gap-6 px-6 min-h-0">
         <VoiceOrb state={voiceState} onClick={handleOrbClick} />
 
@@ -569,10 +574,11 @@ export default function VoiceChatMode({
         </div>
       </div>
 
+      {/* Footer buttons */}
       <div className="flex-shrink-0 pb-8 pt-4 flex flex-col items-center gap-4">
         {voiceState !== "idle" && (
           <button
-            onClick={endConversation}
+            onClick={handleEnd}
             className="h-14 w-14 rounded-full bg-destructive flex items-center justify-center active:scale-90 transition-all shadow-lg shadow-destructive/30"
           >
             <PhoneOff className="h-5 w-5 text-white" />
@@ -580,7 +586,7 @@ export default function VoiceChatMode({
         )}
         {voiceState === "idle" && (
           <button
-            onClick={beginConversation}
+            onClick={handleStart}
             className="h-14 w-14 rounded-full bg-white/10 border border-white/20 flex items-center justify-center active:scale-90 transition-all hover:bg-white/15"
           >
             <Mic className="h-5 w-5 text-white/80" />
