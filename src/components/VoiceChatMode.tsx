@@ -182,7 +182,7 @@ function VoiceOrb({ state, onClick }: { state: VoiceState; onClick?: () => void 
 }
 
 // ═══════════════════════════════════════════════════
-// Main VoiceChatMode — completely redesigned flow
+// Main VoiceChatMode — State-machine architecture
 // ═══════════════════════════════════════════════════
 export default function VoiceChatMode({
   open,
@@ -196,58 +196,63 @@ export default function VoiceChatMode({
   const [transcript, setTranscript] = useState("");
   const [assistantText, setAssistantText] = useState("");
 
-  // Mutable refs to avoid stale closures
+  // All mutable state lives in refs to avoid stale closures
   const activeRef = useRef(false);
   const msgsRef = useRef(messages);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const recognitionRef = useRef<any>(null);
   const abortRef = useRef<AbortController | null>(null);
+  const emptyCountRef = useRef(0);
 
   // Keep messages ref in sync
   useEffect(() => { msgsRef.current = messages; }, [messages]);
 
-  // ── Cleanup helper ──
-  const cleanup = useCallback(() => {
+  // ──────────────────────────────────────
+  // CLEANUP — stops everything immediately
+  // ──────────────────────────────────────
+  const killAll = useCallback(() => {
+    console.log("[Voice] killAll called");
     activeRef.current = false;
+    emptyCountRef.current = 0;
+
+    // Kill speech recognition
     try { recognitionRef.current?.abort(); } catch {}
     recognitionRef.current = null;
+
+    // Kill audio playback
     if (audioRef.current) {
-      audioRef.current.pause();
-      audioRef.current.src = "";
+      try {
+        audioRef.current.pause();
+        audioRef.current.src = "";
+      } catch {}
       audioRef.current = null;
     }
-    abortRef.current?.abort();
+
+    // Kill pending AI request
+    try { abortRef.current?.abort(); } catch {}
     abortRef.current = null;
-    window.speechSynthesis?.cancel();
+
+    // Kill browser TTS
+    try { window.speechSynthesis?.cancel(); } catch {}
+
     setVoiceState("idle");
     setTranscript("");
     setAssistantText("");
   }, []);
 
-  // Auto-start conversation when overlay opens, cleanup on close
-  useEffect(() => {
-    if (open) {
-      // Small delay to ensure portal is mounted before starting
-      const timer = setTimeout(() => {
-        if (voiceState === "idle") {
-          console.log("[Voice] Auto-starting conversation");
-          runConversationLoop();
-        }
-      }, 300);
-      return () => clearTimeout(timer);
-    } else {
-      cleanup();
-    }
-    return cleanup;
-  }, [open]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // ── Speak text (ElevenLabs → browser TTS fallback) ──
-  const speak = useCallback(async (text: string): Promise<void> => {
+  // ──────────────────────────────────────
+  // STEP 1: Play audio (ElevenLabs → Browser TTS fallback)
+  // Returns a promise that resolves when audio finishes
+  // ──────────────────────────────────────
+  const playAudio = useCallback(async (text: string): Promise<void> => {
     const clean = cleanForSpeech(text);
     if (!clean || !activeRef.current) return;
 
-    // Try ElevenLabs first
+    // --- Try ElevenLabs ---
     try {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 15000); // 15s timeout for TTS API
+
       const resp = await fetch(TTS_URL, {
         method: "POST",
         headers: {
@@ -255,67 +260,100 @@ export default function VoiceChatMode({
           apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
           Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
         },
-        body: JSON.stringify({ text: clean.substring(0, 5000) }),
+        body: JSON.stringify({ text: clean.substring(0, 3000) }),
+        signal: controller.signal,
       });
+      clearTimeout(timeout);
 
       if (resp.ok) {
-        const contentType = resp.headers.get("content-type") || "";
-        if (contentType.includes("audio")) {
+        const ct = resp.headers.get("content-type") || "";
+        if (ct.includes("audio")) {
           const blob = await resp.blob();
-          if (blob.size > 100) {
-            await new Promise<void>((resolve) => {
-              if (!activeRef.current) { resolve(); return; }
-              const audio = new Audio();
-              const url = URL.createObjectURL(blob);
-              audio.src = url;
-              audioRef.current = audio;
-
-              let resolved = false;
-              const done = () => {
-                if (resolved) return;
-                resolved = true;
-                URL.revokeObjectURL(url);
-                audioRef.current = null;
-                resolve();
-              };
-
-              audio.onended = done;
-              audio.onerror = done;
-              audio.onpause = () => { if (!audio.ended) done(); };
-              setTimeout(done, 30000);
-              audio.play().catch(done);
-            });
-            console.log("[Voice] ✅ ElevenLabs audio finished");
+          if (blob.size > 200) {
+            await playBlob(blob);
             return;
           }
         }
       }
-      // Non-ok response — fall through to browser TTS
-      console.log("[Voice] ElevenLabs returned status:", resp.status, "— using browser TTS");
-    } catch (e) {
-      console.log("[Voice] ElevenLabs TTS failed:", e);
+      console.log("[Voice] ElevenLabs status:", resp.status, "→ falling back to browser TTS");
+    } catch (e: any) {
+      if (e.name === "AbortError") {
+        console.log("[Voice] ElevenLabs TTS timed out → browser TTS");
+      } else {
+        console.log("[Voice] ElevenLabs error:", e.message, "→ browser TTS");
+      }
     }
 
-    // Fallback: browser TTS
+    // --- Fallback: Browser TTS ---
     if (!activeRef.current) return;
-    console.log("[Voice] Using browser TTS fallback");
-    await new Promise<void>((resolve) => {
-      let resolved = false;
-      const done = () => { if (!resolved) { resolved = true; resolve(); } };
-      const u = new SpeechSynthesisUtterance(clean.substring(0, 500));
-      u.lang = "en-AU";
-      u.rate = 1.05;
-      u.onend = done;
-      u.onerror = done;
-      window.speechSynthesis.cancel();
-      window.speechSynthesis.speak(u);
-      setTimeout(done, 15000);
+    await playBrowserTTS(clean.substring(0, 500));
+  }, []);
+
+  // Play an audio Blob and wait for it to finish
+  const playBlob = useCallback((blob: Blob): Promise<void> => {
+    return new Promise<void>((resolve) => {
+      if (!activeRef.current) { resolve(); return; }
+
+      const url = URL.createObjectURL(blob);
+      const audio = new Audio(url);
+      audioRef.current = audio;
+
+      let done = false;
+      const finish = () => {
+        if (done) return;
+        done = true;
+        URL.revokeObjectURL(url);
+        audioRef.current = null;
+        resolve();
+      };
+
+      audio.onended = finish;
+      audio.onerror = () => { console.log("[Voice] Audio playback error"); finish(); };
+      audio.onpause = () => { if (!audio.ended) finish(); }; // Interrupted
+
+      // Safety: max 45s for any clip
+      const safetyTimer = setTimeout(finish, 45000);
+      audio.addEventListener("ended", () => clearTimeout(safetyTimer), { once: true });
+
+      audio.play().catch((err) => {
+        console.log("[Voice] Audio play() rejected:", err.message);
+        clearTimeout(safetyTimer);
+        finish();
+      });
     });
   }, []);
 
-  // ── Listen for speech → returns transcript text ──
-  const listen = useCallback((): Promise<string> => {
-    return new Promise((resolve) => {
+  // Browser TTS fallback
+  const playBrowserTTS = useCallback((text: string): Promise<void> => {
+    return new Promise<void>((resolve) => {
+      if (!activeRef.current) { resolve(); return; }
+
+      let done = false;
+      const finish = () => { if (!done) { done = true; resolve(); } };
+
+      try {
+        window.speechSynthesis.cancel();
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.lang = "en-AU";
+        utterance.rate = 1.05;
+        utterance.onend = finish;
+        utterance.onerror = finish;
+        window.speechSynthesis.speak(utterance);
+
+        // Safety timeout
+        setTimeout(finish, 20000);
+      } catch {
+        finish();
+      }
+    });
+  }, []);
+
+  // ──────────────────────────────────────
+  // STEP 2: Listen for speech input
+  // Returns transcript text (empty string if nothing heard)
+  // ──────────────────────────────────────
+  const listenForSpeech = useCallback((): Promise<string> => {
+    return new Promise<string>((resolve) => {
       if (!activeRef.current) { resolve(""); return; }
 
       const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
@@ -325,6 +363,7 @@ export default function VoiceChatMode({
         return;
       }
 
+      // Stop any previous recognition
       try { recognitionRef.current?.abort(); } catch {}
 
       const rec = new SR();
@@ -336,6 +375,7 @@ export default function VoiceChatMode({
 
       let finalText = "";
       let resolved = false;
+
       const done = (text: string) => {
         if (resolved) return;
         resolved = true;
@@ -344,57 +384,59 @@ export default function VoiceChatMode({
       };
 
       rec.onresult = (e: any) => {
-        finalText = "";
         let interim = "";
+        finalText = "";
         for (let i = 0; i < e.results.length; i++) {
-          if (e.results[i].isFinal) finalText += e.results[i][0].transcript;
-          else interim += e.results[i][0].transcript;
+          const r = e.results[i];
+          if (r.isFinal) finalText += r[0].transcript;
+          else interim += r[0].transcript;
         }
         setTranscript(finalText || interim);
       };
 
       rec.onerror = (e: any) => {
-        console.log("[Voice] recognition error:", e.error);
-        if (e.error === "not-allowed") {
-          toast.error("Microphone access denied. Please allow microphone access.");
-          activeRef.current = false;
-          setVoiceState("idle");
+        console.log("[Voice] Recognition error:", e.error);
+        if (e.error === "not-allowed" || e.error === "service-not-allowed") {
+          toast.error("Microphone access denied. Please allow mic access and try again.");
+          activeRef.current = false; // Kill the whole session
         }
-        // Don't resolve here — let onend handle it
+        // Let onend handle resolution
       };
 
       rec.onend = () => {
-        console.log("[Voice] recognition ended, finalText:", finalText.trim() || "(empty)");
-        done(finalText.trim());
+        const result = finalText.trim();
+        console.log("[Voice] Recognition ended →", result || "(silence)");
+        done(result);
       };
 
-      // Safety timeout: if recognition hangs for 15s, abort and retry
+      // Safety: 12s timeout (recognition usually ends by itself within 5-10s)
       setTimeout(() => {
         if (!resolved) {
-          console.log("[Voice] recognition timeout, aborting");
+          console.log("[Voice] Recognition timeout, aborting");
           try { rec.abort(); } catch {}
           done(finalText.trim());
         }
-      }, 15000);
+      }, 12000);
 
       try {
         rec.start();
-        setVoiceState("listening");
-        setTranscript("");
-        console.log("[Voice] 🎤 listening...");
-      } catch (e) {
-        console.error("[Voice] Failed to start recognition:", e);
+        console.log("[Voice] 🎤 Listening...");
+      } catch (e: any) {
+        console.error("[Voice] rec.start() failed:", e.message);
         done("");
       }
     });
   }, []);
 
-  // ── Get AI response (streaming) ──
-  const getAIResponse = useCallback(async (userText: string): Promise<string> => {
+  // ──────────────────────────────────────
+  // STEP 3: Get AI response (streaming)
+  // ──────────────────────────────────────
+  const fetchAIResponse = useCallback(async (userText: string): Promise<string> => {
+    // Save user message
     const userMsg: Message = { role: "user", content: userText, timestamp: new Date() };
-    const updatedMsgs = [...msgsRef.current, userMsg];
-    msgsRef.current = updatedMsgs;
-    onMessagesChange(updatedMsgs);
+    const withUser = [...msgsRef.current, userMsg];
+    msgsRef.current = withUser;
+    onMessagesChange(withUser);
 
     try {
       abortRef.current = new AbortController();
@@ -406,7 +448,7 @@ export default function VoiceChatMode({
           Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
         },
         body: JSON.stringify({
-          messages: updatedMsgs.map(m => ({ role: m.role, content: m.content })),
+          messages: withUser.map(m => ({ role: m.role, content: m.content })),
           businessId,
           voiceMode: true,
         }),
@@ -414,8 +456,8 @@ export default function VoiceChatMode({
       });
 
       if (!resp.ok) {
-        console.error("[Voice] AI error:", resp.status);
-        return "Sorry, I couldn't get a response. Try again.";
+        console.error("[Voice] AI returned:", resp.status);
+        return "Sorry, I couldn't process that. Try again.";
       }
 
       const reader = resp.body!.getReader();
@@ -434,10 +476,10 @@ export default function VoiceChatMode({
           buf = buf.slice(idx + 1);
           if (line.endsWith("\r")) line = line.slice(0, -1);
           if (!line.startsWith("data: ")) continue;
-          const json = line.slice(6).trim();
-          if (json === "[DONE]") break;
+          const payload = line.slice(6).trim();
+          if (payload === "[DONE]") break;
           try {
-            const chunk = JSON.parse(json)?.choices?.[0]?.delta?.content;
+            const chunk = JSON.parse(payload)?.choices?.[0]?.delta?.content;
             if (chunk) {
               aiText += chunk;
               setAssistantText(aiText);
@@ -448,12 +490,12 @@ export default function VoiceChatMode({
 
       // Save AI message
       const aiMsg: Message = { role: "assistant", content: aiText, timestamp: new Date() };
-      const finalMsgs = [...updatedMsgs, aiMsg];
-      msgsRef.current = finalMsgs;
-      onMessagesChange(finalMsgs);
+      const withAI = [...withUser, aiMsg];
+      msgsRef.current = withAI;
+      onMessagesChange(withAI);
       setAssistantText("");
 
-      return aiText;
+      return aiText || "I didn't get a response. Try asking again.";
     } catch (e: any) {
       if (e.name === "AbortError") return "";
       console.error("[Voice] AI fetch error:", e);
@@ -462,118 +504,223 @@ export default function VoiceChatMode({
   }, [businessId, onMessagesChange]);
 
   // ══════════════════════════════════════════════
-  // The main conversation loop — simple sequential
+  // STATE MACHINE — Each step triggers the next
   // ══════════════════════════════════════════════
-  const runConversationLoop = useCallback(async () => {
-    // 1. Warm audio context (required for iOS/Safari)
-    try {
-      const a = new Audio();
-      a.src = "data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA=";
-      await a.play().catch(() => {});
-      a.pause();
-    } catch {}
 
-    activeRef.current = true;
-
-    // 2. Greeting
-    const greeting = businessName
-      ? `Hey! What can I help you with for ${businessName}?`
-      : "Hey! What do you need help with?";
-
-    setAssistantText(greeting);
-    setVoiceState("greeting");
-
-    const greetMsg: Message = { role: "assistant", content: greeting, timestamp: new Date() };
-    const updated = [...msgsRef.current, greetMsg];
-    msgsRef.current = updated;
-    onMessagesChange(updated);
-
-    await speak(greeting);
-
-    // 3. Continuous loop: listen → process → speak → repeat
-    let consecutiveEmpty = 0;
-    while (activeRef.current) {
-      try {
-        // Small delay between speech ending and mic starting
-        await new Promise(r => setTimeout(r, 600));
-        if (!activeRef.current) break;
-
-        // Listen
-        console.log("[Voice] 🔄 Loop iteration, starting listen...");
-        const userText = await listen();
-        if (!activeRef.current) break;
-
-        if (!userText) {
-          consecutiveEmpty++;
-          console.log(`[Voice] No speech detected (${consecutiveEmpty}/5), retrying...`);
-          // After 5 consecutive empty results, add a longer delay
-          if (consecutiveEmpty >= 5) {
-            await new Promise(r => setTimeout(r, 1000));
-            consecutiveEmpty = 0;
-          }
-          continue;
-        }
-
-        consecutiveEmpty = 0;
-
-        // Process
-        setVoiceState("processing");
-        setTranscript("");
-        console.log("[Voice] User said:", userText);
-
-        const aiResponse = await getAIResponse(userText);
-        if (!activeRef.current) break;
-        if (!aiResponse) {
-          console.log("[Voice] Empty AI response, continuing loop...");
-          continue;
-        }
-
-        // Speak
-        setVoiceState("speaking");
-        console.log("[Voice] AI says:", aiResponse.substring(0, 80));
-        await speak(aiResponse);
-        console.log("[Voice] ✅ Speech finished, looping back to listen...");
-      } catch (loopErr) {
-        console.error("[Voice] Loop error:", loopErr);
-        // Don't break the loop on errors, just retry
-        await new Promise(r => setTimeout(r, 1000));
-      }
+  // Transition to the next step. This is the CORE of the state machine.
+  // It schedules the next action asynchronously so the call stack stays clean.
+  const nextStep = useCallback((step: "greet" | "listen" | "process" | "speak", payload?: string) => {
+    if (!activeRef.current) {
+      console.log("[Voice] Session inactive, stopping at step:", step);
+      setVoiceState("idle");
+      return;
     }
 
-    // Loop ended
-    console.log("[Voice] Loop ended, activeRef:", activeRef.current);
-    setVoiceState("idle");
-  }, [businessName, onMessagesChange, speak, listen, getAIResponse]);
+    switch (step) {
+      case "greet":
+        doGreet();
+        break;
+      case "listen":
+        doListen();
+        break;
+      case "process":
+        doProcess(payload || "");
+        break;
+      case "speak":
+        doSpeak(payload || "");
+        break;
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // ── Button handlers ──
-  const handleStart = useCallback(() => {
-    if (voiceState !== "idle") return;
-    runConversationLoop();
-  }, [voiceState, runConversationLoop]);
+  const doGreet = useCallback(async () => {
+    try {
+      setVoiceState("greeting");
+      const greeting = businessName
+        ? `Hey! What can I help you with for ${businessName}?`
+        : "Hey! What do you need help with?";
 
-  const handleEnd = useCallback(() => {
-    cleanup();
-  }, [cleanup]);
+      setAssistantText(greeting);
+
+      // Save greeting as assistant message
+      const greetMsg: Message = { role: "assistant", content: greeting, timestamp: new Date() };
+      msgsRef.current = [...msgsRef.current, greetMsg];
+      onMessagesChange(msgsRef.current);
+
+      await playAudio(greeting);
+      setAssistantText("");
+
+      // → Next: listen
+      if (activeRef.current) {
+        await delay(400);
+        nextStep("listen");
+      }
+    } catch (e) {
+      console.error("[Voice] Greet error:", e);
+      if (activeRef.current) { await delay(500); nextStep("listen"); }
+    }
+  }, [businessName, onMessagesChange, playAudio]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const doListen = useCallback(async () => {
+    if (!activeRef.current) return;
+
+    try {
+      setVoiceState("listening");
+      setTranscript("");
+
+      const userText = await listenForSpeech();
+
+      if (!activeRef.current) return;
+
+      if (!userText) {
+        emptyCountRef.current++;
+        console.log(`[Voice] No speech (${emptyCountRef.current}/8)`);
+
+        if (emptyCountRef.current >= 8) {
+          // Too many empty results — auto-close
+          toast.info("Voice session ended due to inactivity");
+          killAll();
+          return;
+        }
+
+        // Retry listening with a small delay
+        await delay(300);
+        nextStep("listen");
+        return;
+      }
+
+      emptyCountRef.current = 0;
+      nextStep("process", userText);
+    } catch (e) {
+      console.error("[Voice] Listen error:", e);
+      if (activeRef.current) { await delay(800); nextStep("listen"); }
+    }
+  }, [listenForSpeech, killAll]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const doProcess = useCallback(async (userText: string) => {
+    if (!activeRef.current) return;
+
+    try {
+      setVoiceState("processing");
+      setTranscript("");
+      console.log("[Voice] User:", userText);
+
+      const aiResponse = await fetchAIResponse(userText);
+
+      if (!activeRef.current) return;
+
+      if (!aiResponse) {
+        nextStep("listen");
+        return;
+      }
+
+      nextStep("speak", aiResponse);
+    } catch (e) {
+      console.error("[Voice] Process error:", e);
+      if (activeRef.current) { await delay(500); nextStep("listen"); }
+    }
+  }, [fetchAIResponse]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const doSpeak = useCallback(async (text: string) => {
+    if (!activeRef.current) return;
+
+    try {
+      setVoiceState("speaking");
+      setAssistantText(text);
+      console.log("[Voice] AI:", text.substring(0, 80));
+
+      await playAudio(text);
+
+      setAssistantText("");
+
+      if (!activeRef.current) return;
+
+      // → Next: listen (with a small gap so browser releases audio before mic)
+      await delay(500);
+      nextStep("listen");
+    } catch (e) {
+      console.error("[Voice] Speak error:", e);
+      if (activeRef.current) { await delay(500); nextStep("listen"); }
+    }
+  }, [playAudio]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ──────────────────────────────────────
+  // START / STOP / INTERRUPT
+  // ──────────────────────────────────────
+  const startSession = useCallback(async () => {
+    if (activeRef.current) return;
+
+    // Request mic permission FIRST before doing anything
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      stream.getTracks().forEach(t => t.stop()); // Release immediately
+    } catch {
+      toast.error("Microphone access is required for voice chat.");
+      return;
+    }
+
+    // Warm audio context (iOS/Safari requirement)
+    try {
+      const ctx = new AudioContext();
+      const buf = ctx.createBuffer(1, 1, 22050);
+      const src = ctx.createBufferSource();
+      src.buffer = buf;
+      src.connect(ctx.destination);
+      src.start();
+      await ctx.close();
+    } catch {}
+
+    console.log("[Voice] ▶ Session starting");
+    activeRef.current = true;
+    emptyCountRef.current = 0;
+    nextStep("greet");
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const endSession = useCallback(() => {
+    console.log("[Voice] ■ Session ending");
+    killAll();
+  }, [killAll]);
 
   const handleClose = useCallback(() => {
-    cleanup();
+    killAll();
     onClose();
-  }, [cleanup, onClose]);
+  }, [killAll, onClose]);
 
   const handleOrbClick = useCallback(() => {
     if (voiceState === "idle") {
-      handleStart();
+      startSession();
     } else if (voiceState === "speaking" || voiceState === "greeting") {
-      // Interrupt speech
+      // Interrupt: stop audio, jump to listen
+      console.log("[Voice] ⏸ Interrupting speech");
       if (audioRef.current) {
-        audioRef.current.pause();
-        audioRef.current.src = "";
+        try {
+          audioRef.current.pause();
+          audioRef.current.src = "";
+        } catch {}
         audioRef.current = null;
       }
-      window.speechSynthesis?.cancel();
-      // The loop will naturally proceed to listen next
+      try { window.speechSynthesis?.cancel(); } catch {}
+      // The playAudio promise will resolve via onpause/onerror, which triggers nextStep("listen")
     }
-  }, [voiceState, handleStart]);
+  }, [voiceState, startSession]);
+
+  // ──────────────────────────────────────
+  // LIFECYCLE: Auto-start on open, cleanup on close
+  // ──────────────────────────────────────
+  useEffect(() => {
+    if (open) {
+      const timer = setTimeout(() => {
+        if (!activeRef.current) {
+          startSession();
+        }
+      }, 300);
+      return () => clearTimeout(timer);
+    } else {
+      killAll();
+    }
+  }, [open]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Cleanup on unmount
+  useEffect(() => killAll, [killAll]);
 
   if (!open) return null;
 
@@ -642,7 +789,7 @@ export default function VoiceChatMode({
             </div>
           )}
 
-          {assistantText && (voiceState === "processing" || voiceState === "greeting") && (
+          {assistantText && (voiceState === "speaking" || voiceState === "greeting" || voiceState === "processing") && (
             <div className="mt-3 px-4 py-2.5 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-sm max-h-24 overflow-y-auto">
               <p className="text-white/70 text-sm">{assistantText}</p>
             </div>
@@ -654,7 +801,7 @@ export default function VoiceChatMode({
       <div className="flex-shrink-0 pb-8 pt-4 flex flex-col items-center gap-4">
         {voiceState !== "idle" && (
           <button
-            onClick={handleEnd}
+            onClick={endSession}
             className="h-14 w-14 rounded-full bg-destructive flex items-center justify-center active:scale-90 transition-all shadow-lg shadow-destructive/30"
           >
             <PhoneOff className="h-5 w-5 text-white" />
@@ -662,7 +809,7 @@ export default function VoiceChatMode({
         )}
         {voiceState === "idle" && (
           <button
-            onClick={handleStart}
+            onClick={startSession}
             className="h-14 w-14 rounded-full bg-white/10 border border-white/20 flex items-center justify-center active:scale-90 transition-all hover:bg-white/15"
           >
             <Mic className="h-5 w-5 text-white/80" />
@@ -676,4 +823,9 @@ export default function VoiceChatMode({
   );
 
   return createPortal(overlay, document.body);
+}
+
+// Simple delay helper
+function delay(ms: number): Promise<void> {
+  return new Promise(r => setTimeout(r, ms));
 }
