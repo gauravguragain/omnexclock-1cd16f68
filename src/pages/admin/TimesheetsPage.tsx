@@ -579,20 +579,50 @@ export default function TimesheetsPage() {
   const pendingCount = filtered.length - approvedCount;
 
   const buildCSV = () => {
-    const headers = ["Status", "Employee", "Date", "Clock In", "Clock Out", "Break Start", "Break End", "Break (min)", "Total (hrs)", "Net (hrs)"];
-    const rows = filtered.map(e => [
-      e.approved ? "Approved" : "Pending",
-      e.employee_name,
-      e.date,
-      e.clock_in || "",
-      e.clock_out || "",
-      e.break_start || "",
-      e.break_end || "",
-      e.break_minutes.toString(),
-      e.total_hours.toFixed(2),
-      e.net_hours.toFixed(2),
-    ]);
-    return [headers, ...rows].map(r => r.map(c => `"${c}"`).join(",")).join("\n");
+    const headers = ["Employee", "Date", "Status", "Clock In", "Clock Out", "Break Start", "Break End", "Break (min)", "Total (hrs)", "Net (hrs)"];
+    // Group by employee
+    const byEmployee = new Map<string, typeof filtered>();
+    for (const e of filtered) {
+      const list = byEmployee.get(e.employee_name) || [];
+      list.push(e);
+      byEmployee.set(e.employee_name, list);
+    }
+    const allRows: string[][] = [];
+    const sortedNames = [...byEmployee.keys()].sort((a, b) => a.localeCompare(b));
+    for (const name of sortedNames) {
+      const entries = byEmployee.get(name)!;
+      // Sort entries by date descending
+      entries.sort((a, b) => b.raw_date.localeCompare(a.raw_date));
+      let empBreakMins = 0, empTotalHrs = 0, empNetHrs = 0;
+      for (const e of entries) {
+        allRows.push([
+          e.employee_name,
+          e.date,
+          e.approved ? "Approved" : "Pending",
+          e.clock_in || "",
+          e.clock_out || "",
+          e.break_start || "",
+          e.break_end || "",
+          e.break_minutes.toString(),
+          e.total_hours.toFixed(2),
+          e.net_hours.toFixed(2),
+        ]);
+        empBreakMins += e.break_minutes;
+        empTotalHrs += e.total_hours;
+        empNetHrs += e.net_hours;
+      }
+      // Employee totals row
+      allRows.push([
+        `${name} — TOTAL (${entries.length} days)`,
+        "", "", "", "", "", "",
+        empBreakMins.toString(),
+        empTotalHrs.toFixed(2),
+        empNetHrs.toFixed(2),
+      ]);
+      // Blank separator row
+      allRows.push(Array(headers.length).fill(""));
+    }
+    return [headers, ...allRows].map(r => r.map(c => `"${c}"`).join(",")).join("\n");
   };
 
   const downloadCSV = () => {
