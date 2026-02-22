@@ -35,28 +35,26 @@ function toSydneyTime(ts: string): string {
 }
 
 // Classify whether a question needs web search, business data, or both
-async function classifyQuery(userMessage: string, groqKey: string): Promise<"business" | "web" | "both"> {
+async function classifyQuery(userMessage: string, geminiKey: string): Promise<"business" | "web" | "both"> {
   try {
-    const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
-      method: "POST",
-      headers: { Authorization: `Bearer ${groqKey}`, "Content-Type": "application/json" },
-      body: JSON.stringify({
-        model: "llama-3.3-70b-versatile",
-        messages: [
-          { role: "system", content: `Classify the user's question into exactly one category. Reply with ONLY one word — "business", "web", or "both".
+    const res = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${geminiKey}`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: `Classify this question into exactly one category. Reply with ONLY one word — "business", "web", or "both".
 - "business": about employees, shifts, timesheets, clock events, payroll, inventory, requests, roster events, or any internal company/staff data.
 - "web": about general knowledge, news, weather, industry trends, regulations, best practices, how-to guides, or anything NOT specific to the company's internal data.
-- "both": needs internal business data AND external web information to answer properly (e.g. "how do our staff hours compare to industry average?").
-Reply with ONLY the single word.` },
-          { role: "user", content: userMessage },
-        ],
-        max_tokens: 5,
-        temperature: 0,
-      }),
-    });
+- "both": needs internal business data AND external web information.
+Question: ${userMessage}` }] }],
+          generationConfig: { maxOutputTokens: 5, temperature: 0 },
+        }),
+      }
+    );
     if (!res.ok) return "business";
     const data = await res.json();
-    const answer = (data.choices?.[0]?.message?.content || "").trim().toLowerCase();
+    const answer = (data.candidates?.[0]?.content?.parts?.[0]?.text || "").trim().toLowerCase();
     if (answer.includes("both")) return "both";
     if (answer.includes("web")) return "web";
     return "business";
@@ -86,7 +84,6 @@ async function webSearch(query: string, geminiKey: string): Promise<string> {
     const data = await res.json();
     const parts = data.candidates?.[0]?.content?.parts || [];
     const textParts = parts.filter((p: any) => p.text).map((p: any) => p.text);
-    // Also extract grounding sources if available
     const grounding = data.candidates?.[0]?.groundingMetadata;
     let sources = "";
     if (grounding?.groundingChunks) {
@@ -115,9 +112,8 @@ serve(async (req) => {
       });
     }
 
-    const GROQ_API_KEY = Deno.env.get("GROQ_API_KEY");
-    if (!GROQ_API_KEY) throw new Error("GROQ_API_KEY not configured");
     const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
+    if (!GEMINI_API_KEY) throw new Error("GEMINI_API_KEY not configured");
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -125,7 +121,7 @@ serve(async (req) => {
 
     const todayKey = ausTodayKey();
 
-    // Fetch data with reduced limits to fit Groq's 12K TPM
+    // Fetch ALL business data — no arbitrary limits that could cut off real data
     const [
       businessRes, employeesRes, clockEventsRes, shiftsRes,
       requestsRes, timesheetApprovalsRes, inventoryRes, barInventoryRes,
@@ -133,15 +129,15 @@ serve(async (req) => {
     ] = await Promise.all([
       supabase.from("businesses").select("name,business_code,industry,email,phone").eq("id", businessId).single(),
       supabase.from("employees").select("id,name,employee_code,department,job_title,active,pay_rate,admin_hourly_rate").eq("business_id", businessId),
-      supabase.from("clock_events").select("event_type,timestamp,notes,employees!inner(name,department,business_id)").eq("employees.business_id", businessId).order("timestamp", { ascending: false }).limit(200),
-      supabase.from("shifts").select("date,day_of_week,start_time,end_time,break_minutes,hours_worked,status,notes,employees!inner(name,department,business_id)").eq("employees.business_id", businessId).order("date", { ascending: false }).limit(200),
-      supabase.from("employee_requests").select("request_type,status,start_date,end_date,reason,admin_note,created_at,employees!inner(name,business_id)").eq("employees.business_id", businessId).order("created_at", { ascending: false }).limit(50),
-      supabase.from("timesheet_approvals").select("date,approved,employees!inner(name,business_id)").eq("employees.business_id", businessId).order("date", { ascending: false }).limit(100),
+      supabase.from("clock_events").select("event_type,timestamp,notes,employees!inner(name,department,business_id)").eq("employees.business_id", businessId).order("timestamp", { ascending: false }).limit(500),
+      supabase.from("shifts").select("date,day_of_week,start_time,end_time,break_minutes,hours_worked,status,notes,employees!inner(name,department,business_id)").eq("employees.business_id", businessId).order("date", { ascending: false }).limit(500),
+      supabase.from("employee_requests").select("request_type,status,start_date,end_date,reason,admin_note,created_at,employees!inner(name,business_id)").eq("employees.business_id", businessId).order("created_at", { ascending: false }).limit(100),
+      supabase.from("timesheet_approvals").select("date,approved,employees!inner(name,business_id)").eq("employees.business_id", businessId).order("date", { ascending: false }).limit(200),
       supabase.from("inventory_items").select("name,category,current_count,min_count,unit").eq("business_id", businessId),
       supabase.from("bar_inventory_items").select("name,category,current_count,min_count,unit").eq("business_id", businessId),
-      supabase.from("roster_day_events").select("date,event_type,event_time,host_name,adult_guests,kids_guests,notes,event_space,bev_package,banquet_tier").eq("business_id", businessId).order("date", { ascending: false }).limit(50),
+      supabase.from("roster_day_events").select("date,event_type,event_time,host_name,adult_guests,kids_guests,notes,event_space,bev_package,banquet_tier").eq("business_id", businessId).order("date", { ascending: false }).limit(100),
       supabase.from("service_maintenance_tasks").select("name,frequency_days,last_service_date,next_service_date,active").eq("business_id", businessId),
-      supabase.from("payroll_entries").select("period,employee_hours,employee_pay,admin_pay,status,employees!inner(name,business_id)").eq("employees.business_id", businessId).order("created_at", { ascending: false }).limit(100),
+      supabase.from("payroll_entries").select("period,employee_hours,employee_pay,admin_pay,status,employees!inner(name,business_id)").eq("employees.business_id", businessId).order("created_at", { ascending: false }).limit(200),
     ]);
 
     const business = businessRes.data;
@@ -183,60 +179,66 @@ serve(async (req) => {
     const overdueTasks = serviceTasks.filter(t => t.active && t.next_service_date && t.next_service_date < todayKey);
     const upcomingEvents = rosterEvents.filter(e => e.date >= todayKey);
 
-    // Build compact data — NO pretty printing (saves ~60% tokens)
-    const compactClock = clockEvents.slice(0, 100).map(e => `${(e.employees as any)?.name}|${e.event_type}|${toSydneyDate(new Date(e.timestamp))} ${toSydneyTime(e.timestamp)}`).join("\n");
-    const compactShifts = shifts.slice(0, 100).map(s => `${(s.employees as any)?.name}|${s.date}|${s.start_time}-${s.end_time}|${s.hours_worked}h|${s.status}`).join("\n");
+    // Build compact data
+    const compactClock = clockEvents.map(e => `${(e.employees as any)?.name}|${e.event_type}|${toSydneyDate(new Date(e.timestamp))} ${toSydneyTime(e.timestamp)}`).join("\n");
+    const compactShifts = shifts.map(s => `${(s.employees as any)?.name}|${s.date}|${s.start_time}-${s.end_time}|${s.hours_worked}h|${s.status}`).join("\n");
     const compactRequests = requests.map(r => `${(r.employees as any)?.name}|${r.request_type}|${r.status}|${r.start_date||""}-${r.end_date||""}|${r.reason||""}`).join("\n");
     const compactEvents = rosterEvents.map(e => `${e.date}|${e.event_type||""}|${e.event_time||""}|${e.host_name||""}|A:${e.adult_guests||0}K:${e.kids_guests||0}|${e.event_space||""}|${e.notes||""}`).join("\n");
     const compactEmployees = employees.map(e => `${e.name}|${e.employee_code}|${e.department||""}|${e.job_title||""}|${e.active?"Y":"N"}|$${e.pay_rate}/$${e.admin_hourly_rate}`).join("\n");
     const compactInventory = [...inventory, ...barInventory].map(i => `${i.name}|${i.category||""}|${i.current_count}/${i.min_count}${i.unit?" "+i.unit:""}`).join("\n");
-    const compactPayroll = payroll.slice(0, 50).map(p => `${(p.employees as any)?.name}|${p.period}|${p.employee_hours}h|$${p.employee_pay}/$${p.admin_pay}|${p.status}`).join("\n");
-    const compactTimesheets = timesheetApprovals.slice(0, 50).map(t => `${(t.employees as any)?.name}|${t.date}|${t.approved?"✓":"✗"}`).join("\n");
+    const compactPayroll = payroll.map(p => `${(p.employees as any)?.name}|${p.period}|${p.employee_hours}h|$${p.employee_pay}/$${p.admin_pay}|${p.status}`).join("\n");
+    const compactTimesheets = timesheetApprovals.map(t => `${(t.employees as any)?.name}|${t.date}|${t.approved?"✓":"✗"}`).join("\n");
     const compactService = serviceTasks.map(t => `${t.name}|every ${t.frequency_days}d|last:${t.last_service_date||"never"}|next:${t.next_service_date||"?"}|${t.active?"active":"off"}`).join("\n");
 
-    const systemPrompt = `You are the AI assistant for "${business?.name}". Full data access. Timezone: Sydney AEST/AEDT. Now: ${ausNowISO()}. Today: ${todayKey}. Use DD/MM/YYYY, 12h AM/PM.
+    const systemPrompt = `You are the AI assistant for "${business?.name}". You have REAL-TIME access to the business database. Timezone: Sydney AEST/AEDT. Now: ${ausNowISO()}. Today: ${todayKey}. Use DD/MM/YYYY, 12h AM/PM.
 
-SNAPSHOT: ${activeEmployees.length} active employees, ${departments.join("/")||"no"} departments. Clocked in now: ${currentlyClockedIn.join(", ")||"nobody"}. On break: ${onBreak.join(", ")||"nobody"}. ${pendingRequests.length} pending requests. ${lowStockFOH.length+lowStockBar.length} low stock items. ${overdueTasks.length} overdue tasks. ${upcomingEvents.length} upcoming events.
+CRITICAL DATA INTEGRITY RULES:
+- You MUST ONLY reference data that appears EXACTLY in the datasets below. This is REAL production data pulled from the database moments ago.
+- NEVER invent, estimate, assume, or fabricate ANY names, numbers, dates, hours, amounts, or statistics.
+- If data is missing, empty, or insufficient to answer a question, say "I don't have that data" or "There are no records for that". NEVER fill gaps with made-up values.
+- When quoting numbers (hours, pay, counts), they MUST match the exact values in the data below. Do NOT round, estimate, or calculate values that aren't directly in the data unless doing simple arithmetic on provided numbers.
+- If an employee name is not in the EMPLOYEES list below, say you can't find them. Do NOT make up employee details.
+- Cross-check your response against the raw data before answering. If you catch yourself about to state something not backed by the data below, STOP and correct it.
 
-EMPLOYEES (name|code|dept|title|active|payRate/adminRate):
-${compactEmployees}
+LIVE SNAPSHOT: ${activeEmployees.length} active employees, ${departments.join("/")||"no"} departments. Clocked in now: ${currentlyClockedIn.join(", ")||"nobody"}. On break: ${onBreak.join(", ")||"nobody"}. ${pendingRequests.length} pending requests. ${lowStockFOH.length+lowStockBar.length} low stock items. ${overdueTasks.length} overdue tasks. ${upcomingEvents.length} upcoming events.
 
-CLOCK EVENTS (name|type|date time):
-${compactClock}
+=== EMPLOYEES (name|code|dept|title|active|payRate/adminRate) ===
+${compactEmployees || "(no employees)"}
 
-SHIFTS (name|date|time|hours|status):
-${compactShifts}
+=== CLOCK EVENTS (name|type|date time) — most recent first ===
+${compactClock || "(no clock events)"}
 
-REQUESTS (name|type|status|dates|reason):
-${compactRequests}
+=== SHIFTS (name|date|time|hours|status) — most recent first ===
+${compactShifts || "(no shifts)"}
 
-TIMESHEETS (name|date|approved):
-${compactTimesheets}
+=== REQUESTS (name|type|status|dates|reason) ===
+${compactRequests || "(no requests)"}
 
-EVENTS (date|type|time|host|guests|space|notes):
-${compactEvents}
+=== TIMESHEETS (name|date|approved) ===
+${compactTimesheets || "(no timesheet records)"}
 
-INVENTORY (name|category|count/min):
-${compactInventory}
+=== EVENTS (date|type|time|host|guests|space|notes) ===
+${compactEvents || "(no events)"}
 
-PAYROLL (name|period|hours|empPay/adminPay|status):
-${compactPayroll}
+=== INVENTORY (name|category|count/min) ===
+${compactInventory || "(no inventory)"}
 
-SERVICE TASKS (name|freq|last|next|status):
-${compactService}
+=== PAYROLL (name|period|hours|empPay/adminPay|status) ===
+${compactPayroll || "(no payroll records)"}
 
-RULES:
-- ALWAYS respond in a natural, conversational tone. Analyse the data behind the scenes and present insights/answers as plain English sentences and paragraphs.
-- NEVER dump raw data tables, pipe-delimited values, or large lists into your response. Summarise and interpret instead.
-- Use specific names, numbers and dates where relevant, but weave them into sentences naturally (e.g. "Sarah worked 38 hours last week" not a table row).
-- Only use markdown tables if the user explicitly asks for a table or comparison grid. Otherwise keep it conversational.
-- Charts are fine when they add value: \`\`\`chart {"type":"bar|line|pie|area","title":"...","data":[{"label":"...","value":N}],"xKey":"label","yKey":"value","color":"#D4A843"}\`\`\`
-- Overnight shifts: clock_out - clock_in (add 24h if negative). Net = total - break/60. Currency AUD.
+=== SERVICE TASKS (name|freq|last|next|status) ===
+${compactService || "(no service tasks)"}
+
+RESPONSE RULES:
+- Respond conversationally. Summarise and interpret — do NOT dump raw data tables.
+- Use specific names, numbers and dates from the data above, woven into natural sentences.
+- Only use markdown tables if the user explicitly asks for a table.
+- Charts: \`\`\`chart {"type":"bar|line|pie|area","title":"...","data":[{"label":"...","value":N}],"xKey":"label","yKey":"value","color":"#D4A843"}\`\`\`
+- Overnight shifts: if clock_out < clock_in, add 24h. Net = total - break/60. Currency AUD.
 - Use admin_hourly_rate for business cost, pay_rate for employee pay.
-- Flag anomalies proactively (overtime, missing approvals, low stock) but explain them conversationally.
-- NAME MATCHING: When the user mentions a staff member by name, use fuzzy/first-name matching to identify them from the EMPLOYEES list. Match on FIRST NAME alone — "steve" matches "Steven", "mike" matches "Michael", "rob" matches "Robert", "bec" matches "Rebecca", etc. Partial and phonetic matches are OK. If multiple employees share the same first name, pick the best contextual match. If absolutely no match, say you couldn't find that person and suggest similar names. NEVER say you don't know who someone is if their first name clearly matches an employee.
-- Never fabricate data. Say if insufficient.
-- WEB SEARCH: If web research data is provided below, integrate it naturally with business data. Cite sources when sharing web info. Clearly distinguish between internal business facts and external web information.`;
+- Flag anomalies proactively (overtime, missing approvals, low stock).
+- NAME MATCHING: Match user-mentioned names to the EMPLOYEES list using fuzzy/first-name matching. "steve" → "Steven", etc. If no match, say so.
+- WEB SEARCH: If web research data is provided, integrate naturally and cite sources. Distinguish between internal facts and external info.`;
 
     const voiceAddendum = `
 VOICE MODE: 1-2 sentences max. No markdown/emojis/bullet points. Talk like a mate. Use relative times ("yesterday","last Tuesday"). Round numbers naturally. First names only. Just answer and stop.`;
@@ -247,7 +249,7 @@ VOICE MODE: 1-2 sentences max. No markdown/emojis/bullet points. Talk like a mat
     let webResults = "";
 
     if (GEMINI_API_KEY && lastUserMsg) {
-      queryType = await classifyQuery(lastUserMsg, GROQ_API_KEY);
+      queryType = await classifyQuery(lastUserMsg, GEMINI_API_KEY);
       console.log(`Query classified as: ${queryType}`);
 
       if (queryType === "web" || queryType === "both") {
@@ -258,7 +260,6 @@ VOICE MODE: 1-2 sentences max. No markdown/emojis/bullet points. Talk like a mat
 
     let finalSystemPrompt = systemPrompt;
 
-    // For pure web queries, slim down business data to save tokens
     if (queryType === "web") {
       finalSystemPrompt = `You are the AI assistant for "${business?.name}". Timezone: Sydney AEST/AEDT. Now: ${ausNowISO()}. Today: ${todayKey}. Use DD/MM/YYYY, 12h AM/PM.
 
@@ -271,45 +272,113 @@ RULES:
 - Respond conversationally. Cite sources where possible.
 - If the web research is insufficient, say so honestly.
 - Charts are fine when they add value: \`\`\`chart {"type":"bar|line|pie|area","title":"...","data":[{"label":"...","value":N}],"xKey":"label","yKey":"value","color":"#D4A843"}\`\`\`
-- Never fabricate data.`;
+- NEVER fabricate data or statistics.`;
     } else if (queryType === "both" && webResults) {
       finalSystemPrompt += `\n\nWEB RESEARCH (external data to complement business analysis):\n${webResults}`;
     }
 
     if (voiceMode) finalSystemPrompt += voiceAddendum;
 
-    const aiMessages = [
-      { role: "system", content: finalSystemPrompt },
-      ...messages,
-    ];
+    // Build Gemini conversation format
+    const geminiContents = [];
+    
+    // Add conversation history
+    for (const msg of messages) {
+      geminiContents.push({
+        role: msg.role === "assistant" ? "model" : "user",
+        parts: [{ text: msg.content }],
+      });
+    }
 
-    const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+    // Use Gemini streaming API
+    const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:streamGenerateContent?alt=sse&key=${GEMINI_API_KEY}`;
+    
+    const response = await fetch(geminiUrl, {
       method: "POST",
-      headers: {
-        Authorization: `Bearer ${GROQ_API_KEY}`,
-        "Content-Type": "application/json",
-      },
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        model: "llama-3.3-70b-versatile",
-        messages: aiMessages,
-        stream: true,
-        max_tokens: 2048,
+        system_instruction: { parts: [{ text: finalSystemPrompt }] },
+        contents: geminiContents,
+        generationConfig: {
+          maxOutputTokens: 4096,
+          temperature: 0.3,
+        },
       }),
     });
 
     if (!response.ok) {
-      if (response.status === 429 || response.status === 413) {
+      const errText = await response.text();
+      console.error("Gemini API error:", response.status, errText);
+      if (response.status === 429) {
         return new Response(JSON.stringify({ error: "Rate limit exceeded, please try again in a moment." }), {
           status: 429,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
-      const t = await response.text();
-      console.error("Groq API error:", response.status, t);
       throw new Error("AI request failed");
     }
 
-    return new Response(response.body, {
+    // Transform Gemini SSE stream to OpenAI-compatible SSE stream
+    // so the existing frontend parser works without changes
+    const reader = response.body!.getReader();
+    const encoder = new TextEncoder();
+    const decoder = new TextDecoder();
+    
+    const transformedStream = new ReadableStream({
+      async start(controller) {
+        let buffer = "";
+        try {
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) {
+              // Send the final [DONE] marker
+              controller.enqueue(encoder.encode("data: [DONE]\n\n"));
+              controller.close();
+              break;
+            }
+            
+            buffer += decoder.decode(value, { stream: true });
+            const lines = buffer.split("\n");
+            buffer = lines.pop() || "";
+            
+            for (const line of lines) {
+              if (!line.startsWith("data: ")) continue;
+              const jsonStr = line.slice(6).trim();
+              if (!jsonStr || jsonStr === "[DONE]") continue;
+              
+              try {
+                const geminiChunk = JSON.parse(jsonStr);
+                const text = geminiChunk.candidates?.[0]?.content?.parts?.[0]?.text || "";
+                if (text) {
+                  // Convert to OpenAI-compatible SSE format
+                  const openaiChunk = {
+                    choices: [{
+                      delta: { content: text },
+                      index: 0,
+                      finish_reason: null,
+                    }],
+                  };
+                  controller.enqueue(encoder.encode(`data: ${JSON.stringify(openaiChunk)}\n\n`));
+                }
+                
+                // Check if this is the final chunk
+                const finishReason = geminiChunk.candidates?.[0]?.finishReason;
+                if (finishReason && finishReason !== "STOP" || finishReason === "STOP") {
+                  // Will be handled by the done check above
+                }
+              } catch {
+                // Skip malformed chunks
+              }
+            }
+          }
+        } catch (e) {
+          console.error("Stream transform error:", e);
+          controller.error(e);
+        }
+      },
+    });
+
+    return new Response(transformedStream, {
       headers: { ...corsHeaders, "Content-Type": "text/event-stream" },
     });
   } catch (e) {
