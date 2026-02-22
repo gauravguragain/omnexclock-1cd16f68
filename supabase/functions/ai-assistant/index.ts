@@ -156,10 +156,14 @@ SERVICE TASKS (name|freq|last|next|status):
 ${compactService}
 
 RULES:
-- Charts: \`\`\`chart {"type":"bar|line|pie|area","title":"...","data":[{"label":"...","value":N}],"xKey":"label","yKey":"value","color":"#D4A843"}\`\`\`
+- ALWAYS respond in a natural, conversational tone. Analyse the data behind the scenes and present insights/answers as plain English sentences and paragraphs.
+- NEVER dump raw data tables, pipe-delimited values, or large lists into your response. Summarise and interpret instead.
+- Use specific names, numbers and dates where relevant, but weave them into sentences naturally (e.g. "Sarah worked 38 hours last week" not a table row).
+- Only use markdown tables if the user explicitly asks for a table or comparison grid. Otherwise keep it conversational.
+- Charts are fine when they add value: \`\`\`chart {"type":"bar|line|pie|area","title":"...","data":[{"label":"...","value":N}],"xKey":"label","yKey":"value","color":"#D4A843"}\`\`\`
 - Overnight shifts: clock_out - clock_in (add 24h if negative). Net = total - break/60. Currency AUD.
 - Use admin_hourly_rate for business cost, pay_rate for employee pay.
-- Be concise, use markdown tables/headers, flag anomalies proactively.
+- Flag anomalies proactively (overtime, missing approvals, low stock) but explain them conversationally.
 - Never fabricate data. Say if insufficient.`;
 
     const voiceAddendum = `
