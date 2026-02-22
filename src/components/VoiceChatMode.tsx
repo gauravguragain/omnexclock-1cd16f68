@@ -505,8 +505,6 @@ export default function VoiceChatMode({
 
   if (!open) return null;
 
-  const overlay = (
-
   const stateLabel: Record<VoiceState, string> = {
     idle: "Tap to start talking",
     greeting: "Speaking...",
@@ -523,7 +521,7 @@ export default function VoiceChatMode({
     speaking: "Tap the orb to interrupt",
   };
 
-  return (
+  return createPortal(
     <div className="fixed inset-0 z-[9998] flex flex-col items-center justify-between"
       style={{
         background: "radial-gradient(ellipse at center, hsl(0 0% 8%) 0%, hsl(0 0% 3%) 100%)",
@@ -531,7 +529,6 @@ export default function VoiceChatMode({
         paddingBottom: "env(safe-area-inset-bottom, 0px)",
       }}
     >
-      {/* Header */}
       <div className="w-full flex items-center justify-between px-5 pt-4 pb-2 flex-shrink-0">
         <div className="flex items-center gap-2">
           <div className="h-2 w-2 rounded-full bg-primary animate-pulse" />
@@ -547,7 +544,6 @@ export default function VoiceChatMode({
         </button>
       </div>
 
-      {/* Center: Orb + Status */}
       <div className="flex-1 flex flex-col items-center justify-center gap-6 px-6 min-h-0">
         <VoiceOrb state={voiceState} onClick={handleOrbClick} />
 
@@ -573,7 +569,6 @@ export default function VoiceChatMode({
         </div>
       </div>
 
-      {/* Bottom controls */}
       <div className="flex-shrink-0 pb-8 pt-4 flex flex-col items-center gap-4">
         {voiceState !== "idle" && (
           <button
@@ -595,6 +590,7 @@ export default function VoiceChatMode({
           {voiceState === "idle" ? "or tap the orb above" : "end conversation"}
         </span>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
