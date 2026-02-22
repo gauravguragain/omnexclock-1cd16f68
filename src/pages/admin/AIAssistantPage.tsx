@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import {
   Bot, Send, Trash2, Sparkles, User, Mic, MicOff, Volume2, VolumeX,
   Download, Copy, Check, Zap, TrendingUp, Users, Package, CalendarDays, DollarSign, AlertTriangle, FileText,
-  History, ArrowLeft, Clock, X, Phone,
+  History, ArrowLeft, Clock, X, AudioLines,
 } from "lucide-react";
 import VoiceChatMode from "@/components/VoiceChatMode";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
@@ -923,7 +923,7 @@ export default function AIAssistantPage() {
             title="Voice conversation"
             type="button"
           >
-            <Phone className="h-5 w-5" />
+            <AudioLines className="h-5 w-5" />
           </Button>
           <Button
             variant={isListening ? "default" : "outline"}
