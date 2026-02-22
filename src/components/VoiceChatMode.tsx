@@ -21,7 +21,6 @@ interface VoiceChatModeProps {
 type VoiceState = "idle" | "greeting" | "listening" | "processing" | "speaking";
 
 const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ai-assistant`;
-const TTS_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/elevenlabs-tts`;
 
 function cleanForSpeech(text: string): string {
   return text
@@ -199,12 +198,9 @@ export default function VoiceChatMode({
   // All mutable state lives in refs to avoid stale closures
   const activeRef = useRef(false);
   const msgsRef = useRef(messages);
-  const audioRef = useRef<HTMLAudioElement | null>(null);
   const recognitionRef = useRef<any>(null);
   const abortRef = useRef<AbortController | null>(null);
   const emptyCountRef = useRef(0);
-  const audioCtxRef = useRef<AudioContext | null>(null);
-  const connectedElemsRef = useRef<WeakSet<HTMLAudioElement>>(new WeakSet());
 
   // Keep messages ref in sync
   useEffect(() => { msgsRef.current = messages; }, [messages]);
@@ -221,25 +217,12 @@ export default function VoiceChatMode({
     try { recognitionRef.current?.abort(); } catch {}
     recognitionRef.current = null;
 
-    // Kill audio playback
-    if (audioRef.current) {
-      try {
-        audioRef.current.pause();
-        audioRef.current.src = "";
-      } catch {}
-      audioRef.current = null;
-    }
-
     // Kill pending AI request
     try { abortRef.current?.abort(); } catch {}
     abortRef.current = null;
 
     // Kill browser TTS
     try { window.speechSynthesis?.cancel(); } catch {}
-
-    // Close AudioContext
-    try { audioCtxRef.current?.close(); } catch {}
-    audioCtxRef.current = null;
 
     setVoiceState("idle");
     setTranscript("");
@@ -254,97 +237,11 @@ export default function VoiceChatMode({
     const clean = cleanForSpeech(text);
     if (!clean || !activeRef.current) return;
 
-    // --- Try ElevenLabs ---
-    try {
-      const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 15000); // 15s timeout for TTS API
-
-      const resp = await fetch(TTS_URL, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
-          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
-        },
-        body: JSON.stringify({ text: clean.substring(0, 3000) }),
-        signal: controller.signal,
-      });
-      clearTimeout(timeout);
-
-      if (resp.ok) {
-        const ct = resp.headers.get("content-type") || "";
-        if (ct.includes("audio")) {
-          const blob = await resp.blob();
-          if (blob.size > 200) {
-            await playBlob(blob);
-            return;
-          }
-        }
-      }
-      console.log("[Voice] ElevenLabs status:", resp.status, "→ falling back to browser TTS");
-    } catch (e: any) {
-      if (e.name === "AbortError") {
-        console.log("[Voice] ElevenLabs TTS timed out → browser TTS");
-      } else {
-        console.log("[Voice] ElevenLabs error:", e.message, "→ browser TTS");
-      }
-    }
-
-    // --- Fallback: Browser TTS ---
-    if (!activeRef.current) return;
+    // Use browser Web Speech Synthesis API (free, no external service needed)
     await playBrowserTTS(clean.substring(0, 500));
   }, []);
 
-  // Play an audio Blob and wait for it to finish — routed through AudioContext for autoplay
-  const playBlob = useCallback((blob: Blob): Promise<void> => {
-    return new Promise<void>((resolve) => {
-      if (!activeRef.current) { resolve(); return; }
-
-      const url = URL.createObjectURL(blob);
-      const audio = new Audio();
-      audioRef.current = audio;
-
-      // Connect through AudioContext so browser treats it as user-gesture-initiated
-      try {
-        const ctx = audioCtxRef.current;
-        if (ctx && !connectedElemsRef.current.has(audio)) {
-          const source = ctx.createMediaElementSource(audio);
-          source.connect(ctx.destination);
-          connectedElemsRef.current.add(audio);
-          // Resume context if suspended
-          if (ctx.state === "suspended") ctx.resume();
-        }
-      } catch (e) {
-        console.log("[Voice] AudioContext routing failed, playing directly:", e);
-      }
-
-      let done = false;
-      const finish = () => {
-        if (done) return;
-        done = true;
-        URL.revokeObjectURL(url);
-        audioRef.current = null;
-        resolve();
-      };
-
-      audio.onended = finish;
-      audio.onerror = () => { console.log("[Voice] Audio playback error"); finish(); };
-      audio.onpause = () => { if (!audio.ended) finish(); }; // Interrupted
-
-      // Safety: max 45s for any clip
-      const safetyTimer = setTimeout(finish, 45000);
-      audio.addEventListener("ended", () => clearTimeout(safetyTimer), { once: true });
-
-      audio.src = url;
-      audio.play().catch((err) => {
-        console.log("[Voice] Audio play() rejected:", err.message);
-        clearTimeout(safetyTimer);
-        finish();
-      });
-    });
-  }, []);
-
-  // Browser TTS fallback — robust version that waits for voices and retries
+  // Browser TTS — robust version that waits for voices and retries
   const playBrowserTTS = useCallback((text: string): Promise<void> => {
     return new Promise<void>(async (resolve) => {
       if (!activeRef.current) { resolve(); return; }
@@ -727,22 +624,6 @@ export default function VoiceChatMode({
       return;
     }
 
-    // Create persistent AudioContext and unlock it with a user gesture
-    try {
-      if (!audioCtxRef.current || audioCtxRef.current.state === "closed") {
-        audioCtxRef.current = new AudioContext();
-      }
-      const ctx = audioCtxRef.current;
-      if (ctx.state === "suspended") await ctx.resume();
-      // Play a silent buffer to fully unlock audio playback on iOS/Safari
-      const buf = ctx.createBuffer(1, 1, 22050);
-      const src = ctx.createBufferSource();
-      src.buffer = buf;
-      src.connect(ctx.destination);
-      src.start();
-    } catch (e) {
-      console.log("[Voice] AudioContext warm-up error:", e);
-    }
 
     console.log("[Voice] ▶ Session starting");
     activeRef.current = true;
@@ -764,17 +645,10 @@ export default function VoiceChatMode({
     if (voiceState === "idle") {
       startSession();
     } else if (voiceState === "speaking" || voiceState === "greeting") {
-      // Interrupt: stop audio, jump to listen
+      // Interrupt: stop browser TTS, jump to listen
       console.log("[Voice] ⏸ Interrupting speech");
-      if (audioRef.current) {
-        try {
-          audioRef.current.pause();
-          audioRef.current.src = "";
-        } catch {}
-        audioRef.current = null;
-      }
       try { window.speechSynthesis?.cancel(); } catch {}
-      // The playAudio promise will resolve via onpause/onerror, which triggers nextStep("listen")
+      // The playBrowserTTS promise will resolve via onend/onerror, which triggers nextStep("listen")
     }
   }, [voiceState, startSession]);
 
