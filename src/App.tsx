@@ -88,6 +88,8 @@ const App = () => (
 
                   {/* Business-scoped routes */}
                   <Route path="/b/:businessCode/kiosk" element={<KioskPage />} />
+                  {/* Unique obfuscated kiosk URL — harder to guess */}
+                  <Route path="/t/:businessCode/ck" element={<KioskPage />} />
                   <Route path="/b/:businessCode/portal" element={<PortalPage />} />
                   <Route path="/b/:businessCode/admin" element={<AdminLayout />}>
                     <Route index element={<DashboardPage />} />
