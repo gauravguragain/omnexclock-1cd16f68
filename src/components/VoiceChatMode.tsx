@@ -267,27 +267,50 @@ export default function VoiceChatMode({
             const url = URL.createObjectURL(blob);
             audio.src = url;
             audioRef.current = audio;
-            audio.onended = () => { URL.revokeObjectURL(url); audioRef.current = null; resolve(); };
-            audio.onerror = () => { URL.revokeObjectURL(url); audioRef.current = null; resolve(); };
-            audio.play().catch(() => { URL.revokeObjectURL(url); audioRef.current = null; resolve(); });
+
+            let resolved = false;
+            const done = () => {
+              if (resolved) return;
+              resolved = true;
+              URL.revokeObjectURL(url);
+              audioRef.current = null;
+              resolve();
+            };
+
+            audio.onended = done;
+            audio.onerror = done;
+            audio.onpause = () => {
+              // If paused externally (interruption), resolve immediately
+              if (!audio.ended) done();
+            };
+
+            // Safety timeout: max 30s for any audio clip
+            setTimeout(done, 30000);
+
+            audio.play().catch(done);
           });
-          return; // Success
+          console.log("[Voice] ✅ ElevenLabs audio finished");
+          return;
         }
       }
-    } catch {}
+    } catch (e) {
+      console.log("[Voice] ElevenLabs TTS failed:", e);
+    }
 
     // Fallback: browser TTS
     if (!activeRef.current) return;
     console.log("[Voice] Using browser TTS fallback");
     await new Promise<void>((resolve) => {
+      let resolved = false;
+      const done = () => { if (!resolved) { resolved = true; resolve(); } };
       const u = new SpeechSynthesisUtterance(clean.substring(0, 500));
       u.lang = "en-AU";
       u.rate = 1.05;
-      u.onend = () => resolve();
-      u.onerror = () => resolve();
+      u.onend = done;
+      u.onerror = done;
       window.speechSynthesis.cancel();
       window.speechSynthesis.speak(u);
-      setTimeout(resolve, 15000); // Safety timeout
+      setTimeout(done, 15000);
     });
   }, []);
 
@@ -313,6 +336,13 @@ export default function VoiceChatMode({
       recognitionRef.current = rec;
 
       let finalText = "";
+      let resolved = false;
+      const done = (text: string) => {
+        if (resolved) return;
+        resolved = true;
+        recognitionRef.current = null;
+        resolve(text);
+      };
 
       rec.onresult = (e: any) => {
         finalText = "";
@@ -331,12 +361,22 @@ export default function VoiceChatMode({
           activeRef.current = false;
           setVoiceState("idle");
         }
+        // Don't resolve here — let onend handle it
       };
 
       rec.onend = () => {
-        recognitionRef.current = null;
-        resolve(finalText.trim());
+        console.log("[Voice] recognition ended, finalText:", finalText.trim() || "(empty)");
+        done(finalText.trim());
       };
+
+      // Safety timeout: if recognition hangs for 15s, abort and retry
+      setTimeout(() => {
+        if (!resolved) {
+          console.log("[Voice] recognition timeout, aborting");
+          try { rec.abort(); } catch {}
+          done(finalText.trim());
+        }
+      }, 15000);
 
       try {
         rec.start();
@@ -345,7 +385,7 @@ export default function VoiceChatMode({
         console.log("[Voice] 🎤 listening...");
       } catch (e) {
         console.error("[Voice] Failed to start recognition:", e);
-        resolve("");
+        done("");
       }
     });
   }, []);
@@ -452,37 +492,57 @@ export default function VoiceChatMode({
     await speak(greeting);
 
     // 3. Continuous loop: listen → process → speak → repeat
+    let consecutiveEmpty = 0;
     while (activeRef.current) {
-      // Small delay between speech ending and mic starting
-      await new Promise(r => setTimeout(r, 500));
-      if (!activeRef.current) break;
+      try {
+        // Small delay between speech ending and mic starting
+        await new Promise(r => setTimeout(r, 600));
+        if (!activeRef.current) break;
 
-      // Listen
-      const userText = await listen();
-      if (!activeRef.current) break;
+        // Listen
+        console.log("[Voice] 🔄 Loop iteration, starting listen...");
+        const userText = await listen();
+        if (!activeRef.current) break;
 
-      if (!userText) {
-        // No speech detected — retry
-        console.log("[Voice] No speech detected, retrying...");
-        continue;
+        if (!userText) {
+          consecutiveEmpty++;
+          console.log(`[Voice] No speech detected (${consecutiveEmpty}/5), retrying...`);
+          // After 5 consecutive empty results, add a longer delay
+          if (consecutiveEmpty >= 5) {
+            await new Promise(r => setTimeout(r, 1000));
+            consecutiveEmpty = 0;
+          }
+          continue;
+        }
+
+        consecutiveEmpty = 0;
+
+        // Process
+        setVoiceState("processing");
+        setTranscript("");
+        console.log("[Voice] User said:", userText);
+
+        const aiResponse = await getAIResponse(userText);
+        if (!activeRef.current) break;
+        if (!aiResponse) {
+          console.log("[Voice] Empty AI response, continuing loop...");
+          continue;
+        }
+
+        // Speak
+        setVoiceState("speaking");
+        console.log("[Voice] AI says:", aiResponse.substring(0, 80));
+        await speak(aiResponse);
+        console.log("[Voice] ✅ Speech finished, looping back to listen...");
+      } catch (loopErr) {
+        console.error("[Voice] Loop error:", loopErr);
+        // Don't break the loop on errors, just retry
+        await new Promise(r => setTimeout(r, 1000));
       }
-
-      // Process
-      setVoiceState("processing");
-      setTranscript("");
-      console.log("[Voice] User said:", userText);
-
-      const aiResponse = await getAIResponse(userText);
-      if (!activeRef.current) break;
-      if (!aiResponse) continue;
-
-      // Speak
-      setVoiceState("speaking");
-      console.log("[Voice] AI says:", aiResponse.substring(0, 80));
-      await speak(aiResponse);
     }
 
     // Loop ended
+    console.log("[Voice] Loop ended, activeRef:", activeRef.current);
     setVoiceState("idle");
   }, [businessName, onMessagesChange, speak, listen, getAIResponse]);
 
