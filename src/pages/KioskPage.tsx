@@ -42,6 +42,17 @@ export default function KioskPage() {
     return () => clearInterval(timer);
   }, []);
 
+  // Prevent browser back button from leaving kiosk
+  useEffect(() => {
+    const blockBack = () => {
+      window.history.pushState(null, "", window.location.href);
+    };
+    // Push an extra entry so "back" stays on this page
+    window.history.pushState(null, "", window.location.href);
+    window.addEventListener("popstate", blockBack);
+    return () => window.removeEventListener("popstate", blockBack);
+  }, []);
+
   // Load business from URL param and apply theme
   useEffect(() => {
     if (!urlBusinessCode) return;
