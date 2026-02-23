@@ -443,8 +443,11 @@ export type Database = {
       }
       employees: {
         Row: {
+          account_name: string | null
+          account_number: string | null
           active: boolean
           admin_hourly_rate: number
+          bsb: string | null
           business_id: string | null
           created_at: string
           department: string | null
@@ -453,13 +456,17 @@ export type Database = {
           id: string
           job_title: string | null
           name: string
+          pay_id: string | null
           pay_rate: number
           phone: string | null
           updated_at: string
         }
         Insert: {
+          account_name?: string | null
+          account_number?: string | null
           active?: boolean
           admin_hourly_rate?: number
+          bsb?: string | null
           business_id?: string | null
           created_at?: string
           department?: string | null
@@ -468,13 +475,17 @@ export type Database = {
           id?: string
           job_title?: string | null
           name: string
+          pay_id?: string | null
           pay_rate?: number
           phone?: string | null
           updated_at?: string
         }
         Update: {
+          account_name?: string | null
+          account_number?: string | null
           active?: boolean
           admin_hourly_rate?: number
+          bsb?: string | null
           business_id?: string | null
           created_at?: string
           department?: string | null
@@ -483,6 +494,7 @@ export type Database = {
           id?: string
           job_title?: string | null
           name?: string
+          pay_id?: string | null
           pay_rate?: number
           phone?: string | null
           updated_at?: string

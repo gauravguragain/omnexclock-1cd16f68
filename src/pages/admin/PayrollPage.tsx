@@ -40,6 +40,10 @@ interface PayrollEntry {
   employee_pay: number;
   admin_pay: number;
   admin_pay_incl_gst: number;
+  pay_id: string | null;
+  account_name: string | null;
+  bsb: string | null;
+  account_number: string | null;
 }
 
 type SortKey = "name" | "net_hours" | "employee_pay" | "admin_pay" | "total_hours";
@@ -226,6 +230,10 @@ export default function PayrollPage() {
         employee_pay: employeePay,
         admin_pay: adminPay,
         admin_pay_incl_gst: adminPayInclGst,
+        pay_id: (emp as any).pay_id || null,
+        account_name: (emp as any).account_name || null,
+        bsb: (emp as any).bsb || null,
+        account_number: (emp as any).account_number || null,
       });
     }
 
@@ -287,11 +295,11 @@ export default function PayrollPage() {
 
     const isEmp = activeTab === "employee";
     const headers = isEmp
-      ? "Name,Rate ($/hr),Total Hours,Break Hours,Net Hours,Employee Pay\n"
+      ? "Name,Rate ($/hr),Total Hours,Break Hours,Net Hours,Employee Pay,Pay ID,Account Name,BSB,Account Number\n"
       : "Name,Admin Rate ($/hr incl GST),Total Hours,Break Hours,Net Hours,Admin Cost (ex GST),Admin Cost (incl GST)\n";
     const rows = filtered.map((e) =>
       isEmp
-        ? `${e.name},${e.pay_rate.toFixed(2)},${e.total_hours.toFixed(2)},${e.break_hours.toFixed(2)},${e.net_hours.toFixed(2)},${e.employee_pay.toFixed(2)}`
+        ? `${e.name},${e.pay_rate.toFixed(2)},${e.total_hours.toFixed(2)},${e.break_hours.toFixed(2)},${e.net_hours.toFixed(2)},${e.employee_pay.toFixed(2)},${e.pay_id || ""},${e.account_name || ""},${e.bsb || ""},${e.account_number || ""}`
         : `${e.name},${e.admin_hourly_rate.toFixed(2)},${e.total_hours.toFixed(2)},${e.break_hours.toFixed(2)},${e.net_hours.toFixed(2)},${e.admin_pay.toFixed(2)},${e.admin_pay_incl_gst.toFixed(2)}`
     ).join("\n");
     const totTotalHrs = filtered.reduce((s, e) => s + e.total_hours, 0);
