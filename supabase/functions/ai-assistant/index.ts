@@ -351,36 +351,77 @@ RULES:
       });
     }
 
-    // Use Gemini streaming API
-    const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:streamGenerateContent?alt=sse&key=${GEMINI_API_KEY}`;
-    
-    const response = await fetch(geminiUrl, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        system_instruction: { parts: [{ text: finalSystemPrompt }] },
-        contents: geminiContents,
-        generationConfig: {
-          maxOutputTokens: 4096,
-          temperature: 0.3,
-        },
-      }),
-    });
+    // Try Gemini first, fallback to Groq if it fails
+    let useGroqFallback = false;
+    let geminiResponse: Response | null = null;
 
-    if (!response.ok) {
-      const errText = await response.text();
-      console.error("Gemini API error:", response.status, errText);
-      if (response.status === 429) {
-        return new Response(JSON.stringify({ error: "Rate limit exceeded, please try again in a moment." }), {
-          status: 429,
+    try {
+      const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:streamGenerateContent?alt=sse&key=${GEMINI_API_KEY}`;
+      
+      geminiResponse = await fetch(geminiUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          system_instruction: { parts: [{ text: finalSystemPrompt }] },
+          contents: geminiContents,
+          generationConfig: {
+            maxOutputTokens: 4096,
+            temperature: 0.3,
+          },
+        }),
+      });
+
+      if (!geminiResponse.ok) {
+        const errText = await geminiResponse.text();
+        console.error("Gemini API error:", geminiResponse.status, errText);
+        console.log("Falling back to Groq...");
+        useGroqFallback = true;
+      }
+    } catch (geminiErr) {
+      console.error("Gemini fetch failed:", geminiErr);
+      console.log("Falling back to Groq...");
+      useGroqFallback = true;
+    }
+
+    // ─── GROQ FALLBACK (when Gemini is unavailable) ───
+    if (useGroqFallback) {
+      const groqMessages = [
+        { role: "system", content: finalSystemPrompt },
+        ...messages.map((m: any) => ({ role: m.role, content: m.content })),
+      ];
+
+      const groqRes = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${GROQ_API_KEY}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model: "llama-3.3-70b-versatile",
+          messages: groqMessages,
+          max_tokens: 4096,
+          temperature: 0.3,
+          stream: true,
+        }),
+      });
+
+      if (!groqRes.ok) {
+        const errText = await groqRes.text();
+        console.error("Groq fallback also failed:", groqRes.status, errText);
+        return new Response(JSON.stringify({ error: "Both AI providers are unavailable. Please try again later." }), {
+          status: 503,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
-      throw new Error("AI request failed");
+
+      console.log("Groq fallback successful — streaming response");
+      return new Response(groqRes.body, {
+        headers: { ...corsHeaders, "Content-Type": "text/event-stream" },
+      });
     }
 
-    // Transform Gemini SSE stream to OpenAI-compatible SSE stream
-    const reader = response.body!.getReader();
+    // ─── GEMINI SUCCESS — Transform SSE stream to OpenAI-compatible format ───
+    const reader = geminiResponse!.body!.getReader();
     const encoder = new TextEncoder();
     const decoder = new TextDecoder();
     
