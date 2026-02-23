@@ -27,14 +27,19 @@ interface EmployeeForm {
   pay_rate: string;
   admin_hourly_rate: string;
   employee_code: string;
+  pay_id: string;
+  account_name: string;
+  bsb: string;
+  account_number: string;
 }
 
 const EMPTY_FORM: EmployeeForm = {
   name: "", email: "", phone: "", job_title: "", department: "",
   pay_rate: "", admin_hourly_rate: "", employee_code: "",
+  pay_id: "", account_name: "", bsb: "", account_number: "",
 };
 
-const STEPS = ["Personal Details", "Payroll Setup", "System Access"];
+const STEPS = ["Personal Details", "Payroll Setup", "Bank Details", "System Access"];
 
 function generateEmployeeCode(existing: string[]): string {
   for (let i = 1; i <= 9999; i++) {
@@ -105,6 +110,17 @@ export default function EmployeesPage() {
       }
     }
     if (s === 2) {
+      // Bank details validation (all optional but if BSB provided, must be valid format)
+      if (form.bsb && !/^\d{3}-?\d{3}$/.test(form.bsb.trim())) {
+        toast({ title: "Validation Error", description: "BSB must be 6 digits (e.g. 123-456 or 123456).", variant: "destructive" });
+        return false;
+      }
+      if (form.account_number && !/^\d{4,10}$/.test(form.account_number.trim())) {
+        toast({ title: "Validation Error", description: "Account number must be 4-10 digits.", variant: "destructive" });
+        return false;
+      }
+    }
+    if (s === 3) {
       const trimmedCode = form.employee_code.trim();
       if (!/^\d{4}$/.test(trimmedCode)) {
         toast({ title: "Validation Error", description: "Employee code must be exactly 4 digits.", variant: "destructive" });
@@ -126,7 +142,7 @@ export default function EmployeesPage() {
   };
 
   const handleSave = async () => {
-    if (saving || !validateStep(2)) return;
+    if (saving || !validateStep(3)) return;
     await runAction(async () => {
       setSaving(true);
       try {
@@ -140,6 +156,10 @@ export default function EmployeesPage() {
           admin_hourly_rate: parseFloat(form.admin_hourly_rate) || 0,
           employee_code: form.employee_code.trim(),
           business_id: business?.id || null,
+          pay_id: form.pay_id.trim() || null,
+          account_name: form.account_name.trim() || null,
+          bsb: form.bsb.trim() || null,
+          account_number: form.account_number.trim() || null,
         };
 
         if (editing) {
@@ -234,6 +254,10 @@ export default function EmployeesPage() {
       pay_rate: emp.pay_rate.toString(),
       admin_hourly_rate: emp.admin_hourly_rate.toString(),
       employee_code: emp.employee_code,
+      pay_id: (emp as any).pay_id || "",
+      account_name: (emp as any).account_name || "",
+      bsb: (emp as any).bsb || "",
+      account_number: (emp as any).account_number || "",
     });
     setStep(0);
     setDialogOpen(true);
@@ -447,6 +471,34 @@ export default function EmployeesPage() {
 
           {step === 2 && (
             <div className="space-y-4">
+              <p className="text-xs text-muted-foreground">Bank details for payroll processing. All fields are optional.</p>
+              <div className="space-y-2">
+                <Label>Pay ID</Label>
+                <Input value={form.pay_id} onChange={(e) => setForm({ ...form, pay_id: e.target.value })} placeholder="email@example.com or phone" maxLength={100} />
+              </div>
+              <div className="space-y-2">
+                <Label>Account Name</Label>
+                <Input value={form.account_name} onChange={(e) => setForm({ ...form, account_name: e.target.value })} placeholder="John Doe" maxLength={100} />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-2">
+                  <Label>BSB</Label>
+                  <Input value={form.bsb} onChange={(e) => setForm({ ...form, bsb: e.target.value.replace(/[^0-9-]/g, "").slice(0, 7) })} placeholder="123-456" maxLength={7} />
+                </div>
+                <div className="space-y-2">
+                  <Label>Account Number</Label>
+                  <Input value={form.account_number} onChange={(e) => setForm({ ...form, account_number: e.target.value.replace(/[^0-9]/g, "").slice(0, 10) })} placeholder="12345678" maxLength={10} />
+                </div>
+              </div>
+              <div className="flex justify-between">
+                <Button variant="outline" onClick={() => setStep(1)}><ChevronLeft className="mr-1 h-4 w-4" /> Back</Button>
+                <Button onClick={handleNext}>Next <ChevronRight className="ml-1 h-4 w-4" /></Button>
+              </div>
+            </div>
+          )}
+
+          {step === 3 && (
+            <div className="space-y-4">
               <div className="space-y-2">
                 <Label>Employee Code *</Label>
                 <p className="text-xs text-muted-foreground">4-digit code used for kiosk access and employee portal.</p>
@@ -481,11 +533,13 @@ export default function EmployeesPage() {
                   {form.department && <p><span className="text-muted-foreground">Dept:</span> {form.department}</p>}
                   <p><span className="text-muted-foreground">Emp Rate:</span> ${parseFloat(form.pay_rate || "0").toFixed(2)}/hr</p>
                   <p><span className="text-muted-foreground">Admin Rate:</span> ${parseFloat(form.admin_hourly_rate || "0").toFixed(2)}/hr</p>
+                  {form.account_name && <p><span className="text-muted-foreground">Account:</span> {form.account_name}</p>}
+                  {form.bsb && <p><span className="text-muted-foreground">BSB:</span> {form.bsb}</p>}
                   <p><span className="text-muted-foreground">Code:</span> <span className="font-mono font-bold">{form.employee_code}</span></p>
                 </CardContent>
               </Card>
               <div className="flex justify-between">
-                <Button variant="outline" onClick={() => setStep(1)}><ChevronLeft className="mr-1 h-4 w-4" /> Back</Button>
+                <Button variant="outline" onClick={() => setStep(2)}><ChevronLeft className="mr-1 h-4 w-4" /> Back</Button>
                 <Button onClick={handleSave} disabled={saving}>
                   {saving ? "Saving..." : editing ? "Update Employee" : "Add Employee"}
                 </Button>
