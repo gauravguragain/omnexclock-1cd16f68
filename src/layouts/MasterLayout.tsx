@@ -143,7 +143,7 @@ export default function MasterLayout() {
       )}
 
       {/* Main */}
-      <main className="flex-1 lg:ml-64 min-w-0 flex flex-col h-dvh lg:h-auto">
+      <main className="flex-1 lg:ml-64 min-w-0 flex flex-col h-dvh min-h-0">
         <header className="sticky top-0 z-30 glass border-b border-border/40 px-3 py-2.5 flex items-center gap-2 lg:px-6 lg:py-3 flex-shrink-0">
           <div className="flex items-center gap-2 min-w-0 flex-1">
             <h2 className="text-sm font-semibold text-foreground tracking-tight truncate lg:text-base">
@@ -151,7 +151,7 @@ export default function MasterLayout() {
             </h2>
           </div>
         </header>
-        <div className="flex-1 overflow-y-auto p-3 lg:p-6 page-enter has-bottom-nav lg:pb-6">
+        <div className="min-h-0 flex-1 overflow-y-auto p-3 lg:p-6 page-enter has-bottom-nav lg:pb-6">
           <Outlet />
         </div>
       </main>
