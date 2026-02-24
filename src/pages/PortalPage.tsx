@@ -773,10 +773,7 @@ export default function PortalPage() {
     return Object.entries(weeks).sort(([a], [b]) => a.localeCompare(b));
   }, [shifts]);
 
-  /* ── timesheet totals ── */
-  const timesheetTotalHours = useMemo(() => {
-    return timesheets.reduce((sum, t) => sum + (t.net_hours || 0), 0);
-  }, [timesheets]);
+  /* ── timesheet totals (removed overall — per-week only) ── */
 
   /* ── total scheduled hours this week ── */
   const thisWeekHours = useMemo(() => {
@@ -1023,14 +1020,6 @@ export default function PortalPage() {
               </Card>
             ) : (
               <>
-                {/* Summary */}
-                <Card>
-                  <CardContent className="p-3 flex items-center justify-between">
-                    <span className="text-sm text-muted-foreground">Total worked</span>
-                    <span className="font-mono font-bold text-foreground">{timesheetTotalHours.toFixed(2)}h</span>
-                  </CardContent>
-                </Card>
-
                 {/* Timesheets grouped by week */}
                 {(() => {
                   // Group timesheets by week (Mon-Sun)
