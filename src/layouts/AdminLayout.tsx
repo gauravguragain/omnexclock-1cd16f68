@@ -290,7 +290,7 @@ export default function AdminLayout() {
       )}
 
       {/* Main */}
-      <main className="flex-1 lg:ml-64 min-w-0 flex flex-col h-dvh lg:h-auto">
+      <main className="flex-1 lg:ml-64 min-w-0 flex flex-col h-dvh min-h-0">
         {/* Header — compact on mobile, refined spacing */}
         <header className="sticky top-0 z-30 glass border-b border-border/20 px-4 py-2 flex items-center gap-2.5 lg:px-6 lg:py-3 flex-shrink-0">
           <div className="flex items-center gap-2.5 min-w-0 flex-1">
@@ -315,7 +315,7 @@ export default function AdminLayout() {
           </div>
         </header>
         {/* Content — scrollable below fixed header */}
-        <div className="flex-1 overflow-y-auto overflow-x-hidden overscroll-y-contain p-3 lg:p-6 page-enter has-bottom-nav lg:pb-6 scroll-native">
+        <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden overscroll-y-contain p-3 lg:p-6 page-enter has-bottom-nav lg:pb-6 scroll-native">
           <Outlet />
         </div>
       </main>
