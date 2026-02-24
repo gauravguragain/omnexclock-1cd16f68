@@ -300,8 +300,8 @@ export default function PayrollPage() {
     // Helper: wrap value so Excel/Sheets won't strip leading + or interpret as formula
     const csvSafe = (v: string | null | undefined) => {
       if (!v) return "";
-      // If starts with +, -, =, @ or 0, wrap in quotes with leading tab to force text
-      if (/^[+=@\-0]/.test(v) || /^o/i.test(v)) return `"\t${v}"`;
+      // Force Excel/Sheets to treat as literal text using ="value" pattern
+      if (/^[+=@\-0]/.test(v) || /^o/i.test(v)) return `"=""${v.replace(/"/g, '""')}"""`;
       if (v.includes(",") || v.includes('"')) return `"${v.replace(/"/g, '""')}"`;
       return v;
     };
