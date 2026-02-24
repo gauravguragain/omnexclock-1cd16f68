@@ -124,14 +124,21 @@ function EventCard({ ev }: { ev: any }) {
     ev.live_stall && "🍳 Live Stall",
   ].filter(Boolean) as string[];
 
-  const viewPdf = (urlOrPath: string) => {
+  const viewPdf = async (urlOrPath: string) => {
     let url = urlOrPath;
-    // If it's a file path (not a full URL), construct the public URL
     if (!urlOrPath.startsWith("http")) {
-      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-      url = `${supabaseUrl}/storage/v1/object/public/event-runsheets/${encodeURIComponent(urlOrPath).replace(/%2F/g, "/")}`;
+      // The bucket may be private — use a signed URL for reliable access
+      const { data: signedData, error } = await supabase.storage
+        .from("event-runsheets")
+        .createSignedUrl(urlOrPath, 600); // 10 min expiry
+      if (signedData?.signedUrl) {
+        url = signedData.signedUrl;
+      } else {
+        // Fallback to public URL construction
+        const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+        url = `${supabaseUrl}/storage/v1/object/public/event-runsheets/${encodeURIComponent(urlOrPath).replace(/%2F/g, "/")}`;
+      }
     }
-    // Use link click instead of window.open to avoid popup blockers on laptops/desktops
     const a = document.createElement("a");
     a.href = url;
     a.target = "_blank";
@@ -747,10 +754,18 @@ export default function PortalPage() {
     };
   }, [authenticated]);
 
-  /* ── group shifts by week ── */
+  /* ── group shifts by week — only show current week ── */
   const shiftsByWeek = useMemo(() => {
+    const todayStr = ausToday();
+    const [y, m, d] = todayStr.split("-").map(Number);
+    const todayDate = new Date(y, m - 1, d);
+    const mondayDate = getMonday(todayDate);
+    const mondayStr = `${mondayDate.getFullYear()}-${String(mondayDate.getMonth() + 1).padStart(2, "0")}-${String(mondayDate.getDate()).padStart(2, "0")}`;
+
     const weeks: Record<string, PortalShift[]> = {};
     for (const s of shifts) {
+      // Only include current week and future weeks
+      if (s.week_start_date < mondayStr) continue;
       const key = s.week_start_date;
       if (!weeks[key]) weeks[key] = [];
       weeks[key].push(s);
@@ -847,7 +862,7 @@ export default function PortalPage() {
 
   /* ── PORTAL DASHBOARD ── */
   return (
-    <div className="h-dvh bg-background standalone-top-pad flex flex-col overflow-hidden">
+    <div className="h-dvh bg-background standalone-top-pad flex flex-col" style={{ overflow: "hidden" }}>
       {/* Header */}
       <header className="shrink-0 z-30 bg-card/80 backdrop-blur border-b border-border px-4 py-3">
         <div className="max-w-3xl mx-auto flex items-center justify-between">
@@ -889,7 +904,7 @@ export default function PortalPage() {
       </header>
 
       {/* Content */}
-      <main className="flex-1 overflow-y-auto overscroll-none scroll-native">
+      <main className="flex-1 overflow-y-auto overscroll-none scroll-native" style={{ WebkitOverflowScrolling: "touch", overflowY: "auto" }}>
        <div className="max-w-3xl mx-auto p-4 space-y-4 pb-8">
         {/* Summary cards */}
         <div className="grid grid-cols-2 gap-3">
@@ -1016,85 +1031,131 @@ export default function PortalPage() {
                   </CardContent>
                 </Card>
 
-                {/* Timesheet rows */}
-                {timesheets.map((ts) => {
-                  const d = new Date(ts.work_date + "T00:00:00");
-                  const dayName = toAusFormatted(d, { weekday: "short" });
-                  const dateLabel = toAusFormatted(d, { day: "numeric", month: "short" });
-                  const isActive = ts.clock_in && !ts.clock_out;
-                  const isApproved = timesheetApprovals.get(ts.work_date);
+                {/* Timesheets grouped by week */}
+                {(() => {
+                  // Group timesheets by week (Mon-Sun)
+                  const weekGroups: Record<string, TimesheetEntry[]> = {};
+                  for (const ts of timesheets) {
+                    const d = new Date(ts.work_date + "T00:00:00");
+                    const mon = getMonday(d);
+                    const key = `${mon.getFullYear()}-${String(mon.getMonth() + 1).padStart(2, "0")}-${String(mon.getDate()).padStart(2, "0")}`;
+                    if (!weekGroups[key]) weekGroups[key] = [];
+                    weekGroups[key].push(ts);
+                  }
+                  const sortedWeeks = Object.entries(weekGroups).sort(([a], [b]) => b.localeCompare(a));
 
-                  return (
-                    <Card key={ts.work_date} className={isActive ? "border-warning/40" : isApproved ? "border-success/30" : ""}>
-                      <CardContent className="p-3">
-                        <div className="flex items-center justify-between mb-2">
-                          <div className="flex items-center gap-2">
-                            {isApproved === true ? (
-                              <CheckCircle2 className="h-4 w-4 text-success" />
-                            ) : isApproved === false ? (
-                              <XCircle className="h-4 w-4 text-muted-foreground" />
-                            ) : null}
-                            <span className="text-sm font-medium text-foreground">{dayName}</span>
-                            <span className="text-xs text-muted-foreground">{dateLabel}</span>
-                            {isActive && (
-                              <Badge className="bg-warning/15 text-warning text-[10px] px-1.5 py-0">Active</Badge>
-                            )}
-                            {isApproved === true && (
-                              <Badge className="bg-success/15 text-success text-[10px] px-1.5 py-0">Approved</Badge>
-                            )}
-                            {isApproved === false && (
-                              <Badge variant="outline" className="text-muted-foreground text-[10px] px-1.5 py-0">Pending</Badge>
-                            )}
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => openTsHistory(ts.work_date)}
-                              className="h-7 w-7 p-0 text-muted-foreground hover:text-primary"
-                            >
-                              <History className="h-3.5 w-3.5" />
-                            </Button>
-                            <span className="font-mono font-semibold text-foreground text-sm">
-                              {ts.net_hours.toFixed(2)}h
-                            </span>
-                          </div>
-                        </div>
-                        <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
-                          <div className="flex items-center gap-1.5">
-                            <LogIn className="h-3 w-3 text-success" />
-                            <span className="text-muted-foreground">In:</span>
-                            <span className="text-foreground font-mono">{fmtTimestamp(ts.clock_in)}</span>
-                          </div>
-                          <div className="flex items-center gap-1.5">
-                            <LogOut className="h-3 w-3 text-destructive" />
-                            <span className="text-muted-foreground">Out:</span>
-                            <span className="text-foreground font-mono">{fmtTimestamp(ts.clock_out)}</span>
-                          </div>
-                          {(ts.break_start || ts.break_end) && (
-                            <>
-                              <div className="flex items-center gap-1.5">
-                                <Coffee className="h-3 w-3 text-warning" />
-                                <span className="text-muted-foreground">Break:</span>
-                                <span className="text-foreground font-mono">{fmtTimestamp(ts.break_start)}</span>
+                  return sortedWeeks.map(([weekStart, weekEntries]) => {
+                    const ws = new Date(weekStart + "T00:00:00");
+                    const we = new Date(ws);
+                    we.setDate(we.getDate() + 6);
+                    const weekTotal = weekEntries.reduce((sum, t) => sum + (t.net_hours || 0), 0);
+                    const todayStr = ausToday();
+                    const todayMon = (() => { const td = new Date(todayStr + "T00:00:00"); const m = getMonday(td); return `${m.getFullYear()}-${String(m.getMonth() + 1).padStart(2, "0")}-${String(m.getDate()).padStart(2, "0")}`; })();
+                    const isCurrentWeek = weekStart === todayMon;
+
+                    return (
+                      <Collapsible key={weekStart} defaultOpen={isCurrentWeek}>
+                        <CollapsibleTrigger className="w-full">
+                          <Card className={isCurrentWeek ? "border-primary/30" : ""}>
+                            <CardContent className="p-3 flex items-center justify-between">
+                              <div className="flex items-center gap-2">
+                                <CalendarRange className="h-3.5 w-3.5 text-primary" />
+                                <span className="text-sm font-medium text-foreground">
+                                  {toAusFormatted(ws, { day: "numeric", month: "short" })} – {toAusFormatted(we, { day: "numeric", month: "short" })}
+                                </span>
+                                {isCurrentWeek && <Badge className="bg-primary/15 text-primary text-[10px] px-1.5 py-0">This Week</Badge>}
                               </div>
-                              <div className="flex items-center gap-1.5">
-                                <Clock className="h-3 w-3 text-primary" />
-                                <span className="text-muted-foreground">Resume:</span>
-                                <span className="text-foreground font-mono">{fmtTimestamp(ts.break_end)}</span>
+                              <div className="flex items-center gap-2">
+                                <Badge variant="outline" className="font-mono text-xs">{weekTotal.toFixed(2)}h</Badge>
+                                <ChevronDown className="h-4 w-4 text-muted-foreground transition-transform [[data-state=open]_&]:rotate-180" />
                               </div>
-                            </>
-                          )}
-                        </div>
-                        {ts.break_minutes > 0 && (
-                          <p className="text-[10px] text-muted-foreground mt-1.5">
-                            {ts.break_minutes}m break · {ts.total_hours.toFixed(2)}h gross
-                          </p>
-                        )}
-                      </CardContent>
-                    </Card>
-                  );
-                })}
+                            </CardContent>
+                          </Card>
+                        </CollapsibleTrigger>
+                        <CollapsibleContent className="space-y-2 mt-2">
+                          {weekEntries.map((ts) => {
+                            const d = new Date(ts.work_date + "T00:00:00");
+                            const dayName = toAusFormatted(d, { weekday: "short" });
+                            const dateLabel = toAusFormatted(d, { day: "numeric", month: "short" });
+                            const isActive = ts.clock_in && !ts.clock_out;
+                            const isApproved = timesheetApprovals.get(ts.work_date);
+
+                            return (
+                              <Card key={ts.work_date} className={isActive ? "border-warning/40" : isApproved ? "border-success/30" : ""}>
+                                <CardContent className="p-3">
+                                  <div className="flex items-center justify-between mb-2">
+                                    <div className="flex items-center gap-2">
+                                      {isApproved === true ? (
+                                        <CheckCircle2 className="h-4 w-4 text-success" />
+                                      ) : isApproved === false ? (
+                                        <XCircle className="h-4 w-4 text-muted-foreground" />
+                                      ) : null}
+                                      <span className="text-sm font-medium text-foreground">{dayName}</span>
+                                      <span className="text-xs text-muted-foreground">{dateLabel}</span>
+                                      {isActive && (
+                                        <Badge className="bg-warning/15 text-warning text-[10px] px-1.5 py-0">Active</Badge>
+                                      )}
+                                      {isApproved === true && (
+                                        <Badge className="bg-success/15 text-success text-[10px] px-1.5 py-0">Approved</Badge>
+                                      )}
+                                      {isApproved === false && (
+                                        <Badge variant="outline" className="text-muted-foreground text-[10px] px-1.5 py-0">Pending</Badge>
+                                      )}
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                      <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        onClick={() => openTsHistory(ts.work_date)}
+                                        className="h-7 w-7 p-0 text-muted-foreground hover:text-primary"
+                                      >
+                                        <History className="h-3.5 w-3.5" />
+                                      </Button>
+                                      <span className="font-mono font-semibold text-foreground text-sm">
+                                        {ts.net_hours.toFixed(2)}h
+                                      </span>
+                                    </div>
+                                  </div>
+                                  <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
+                                    <div className="flex items-center gap-1.5">
+                                      <LogIn className="h-3 w-3 text-success" />
+                                      <span className="text-muted-foreground">In:</span>
+                                      <span className="text-foreground font-mono">{fmtTimestamp(ts.clock_in)}</span>
+                                    </div>
+                                    <div className="flex items-center gap-1.5">
+                                      <LogOut className="h-3 w-3 text-destructive" />
+                                      <span className="text-muted-foreground">Out:</span>
+                                      <span className="text-foreground font-mono">{fmtTimestamp(ts.clock_out)}</span>
+                                    </div>
+                                    {(ts.break_start || ts.break_end) && (
+                                      <>
+                                        <div className="flex items-center gap-1.5">
+                                          <Coffee className="h-3 w-3 text-warning" />
+                                          <span className="text-muted-foreground">Break:</span>
+                                          <span className="text-foreground font-mono">{fmtTimestamp(ts.break_start)}</span>
+                                        </div>
+                                        <div className="flex items-center gap-1.5">
+                                          <Clock className="h-3 w-3 text-primary" />
+                                          <span className="text-muted-foreground">Resume:</span>
+                                          <span className="text-foreground font-mono">{fmtTimestamp(ts.break_end)}</span>
+                                        </div>
+                                      </>
+                                    )}
+                                  </div>
+                                  {ts.break_minutes > 0 && (
+                                    <p className="text-[10px] text-muted-foreground mt-1.5">
+                                      {ts.break_minutes}m break · {ts.total_hours.toFixed(2)}h gross
+                                    </p>
+                                  )}
+                                </CardContent>
+                              </Card>
+                            );
+                          })}
+                        </CollapsibleContent>
+                      </Collapsible>
+                    );
+                  });
+                })()}
               </>
             )}
           </TabsContent>

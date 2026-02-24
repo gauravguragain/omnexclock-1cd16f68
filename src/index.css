@@ -630,6 +630,9 @@
 .scroll-native {
   -webkit-overflow-scrolling: touch;
   overscroll-behavior: contain;
+  overflow-y: auto !important;
+  /* Fix PWA desktop (Mac/Windows) scrolling */
+  height: 100%;
 }
 
 /* Safe area top padding for notched devices — always apply, not just standalone */
