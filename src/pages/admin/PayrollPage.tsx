@@ -297,9 +297,17 @@ export default function PayrollPage() {
     const headers = isEmp
       ? "Name,Rate ($/hr),Total Hours,Break Hours,Net Hours,Employee Pay,Pay ID,Account Name,BSB,Account Number\n"
       : "Name,Admin Rate ($/hr incl GST),Total Hours,Break Hours,Net Hours,Admin Cost (ex GST),Admin Cost (incl GST)\n";
+    // Helper: wrap value so Excel/Sheets won't strip leading + or interpret as formula
+    const csvSafe = (v: string | null | undefined) => {
+      if (!v) return "";
+      // If starts with +, -, =, @ or 0, wrap in quotes with leading tab to force text
+      if (/^[+=@\-0]/.test(v) || /^o/i.test(v)) return `"\t${v}"`;
+      if (v.includes(",") || v.includes('"')) return `"${v.replace(/"/g, '""')}"`;
+      return v;
+    };
     const rows = filtered.map((e) =>
       isEmp
-        ? `${e.name},${e.pay_rate.toFixed(2)},${e.total_hours.toFixed(2)},${e.break_hours.toFixed(2)},${e.net_hours.toFixed(2)},${e.employee_pay.toFixed(2)},${e.pay_id || ""},${e.account_name || ""},${e.bsb || ""},${e.account_number || ""}`
+        ? `${e.name},${e.pay_rate.toFixed(2)},${e.total_hours.toFixed(2)},${e.break_hours.toFixed(2)},${e.net_hours.toFixed(2)},${e.employee_pay.toFixed(2)},${csvSafe(e.pay_id)},${csvSafe(e.account_name)},${csvSafe(e.bsb)},${csvSafe(e.account_number)}`
         : `${e.name},${e.admin_hourly_rate.toFixed(2)},${e.total_hours.toFixed(2)},${e.break_hours.toFixed(2)},${e.net_hours.toFixed(2)},${e.admin_pay.toFixed(2)},${e.admin_pay_incl_gst.toFixed(2)}`
     ).join("\n");
     const totTotalHrs = filtered.reduce((s, e) => s + e.total_hours, 0);
