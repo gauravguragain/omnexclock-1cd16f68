@@ -252,6 +252,9 @@ export default function VoiceChatMode({
   }, []);
 
   // Browser TTS — enhanced for natural, human-like speech
+  // Fixed: delay after cancel() to avoid Chrome silently dropping speak(),
+  // chunk long text to prevent Chrome's 15s cutoff bug,
+  // and retry mechanism for when speechSynthesis silently fails.
   const playBrowserTTS = useCallback((text: string): Promise<void> => {
     return new Promise<void>(async (resolve) => {
       if (!activeRef.current) { resolve(); return; }
@@ -281,41 +284,35 @@ export default function VoiceChatMode({
       };
 
       try {
+        // CRITICAL FIX: cancel any ongoing speech, then wait before speaking.
+        // Chrome silently drops speak() calls immediately after cancel().
         synth.cancel();
+        await new Promise(r => setTimeout(r, 150));
+
         const voices = await getVoices();
 
-        const utterance = new SpeechSynthesisUtterance(text);
-
         // Prioritize the most natural-sounding voices available
-        // Google and Microsoft Neural voices sound significantly more human
         const preferredVoiceNames = [
-          // Google's natural voices (Chrome)
           "Google UK English Female",
           "Google UK English Male",
           "Google US English",
-          // Microsoft Neural voices (Edge)
           "Microsoft Natasha Online (Natural) - English (Australia)",
           "Microsoft Libby Online (Natural) - English (United Kingdom)",
           "Microsoft Ryan Online (Natural) - English (United Kingdom)",
           "Microsoft Jenny Online (Natural) - English (United States)",
           "Microsoft Aria Online (Natural) - English (United States)",
-          // macOS/iOS high-quality voices
-          "Karen",      // Australian
-          "Samantha",   // US (very natural on Apple)
-          "Daniel",     // UK
-          "Moira",      // Irish
-          "Tessa",      // South African
+          "Karen",
+          "Samantha",
+          "Daniel",
+          "Moira",
+          "Tessa",
         ];
 
         let selectedVoice: SpeechSynthesisVoice | undefined;
-        
-        // Try preferred voices first
         for (const name of preferredVoiceNames) {
           selectedVoice = voices.find(v => v.name.includes(name));
           if (selectedVoice) break;
         }
-        
-        // Fallback: any en-AU, then en-GB, then any English voice
         if (!selectedVoice) {
           selectedVoice = voices.find(v => v.lang === "en-AU")
             || voices.find(v => v.lang.startsWith("en-AU"))
@@ -325,40 +322,75 @@ export default function VoiceChatMode({
             || voices[0];
         }
 
-        if (selectedVoice) {
-          utterance.voice = selectedVoice;
-          utterance.lang = selectedVoice.lang;
-          console.log("[Voice] Using voice:", selectedVoice.name, selectedVoice.lang);
-        } else {
-          utterance.lang = "en-AU";
+        // CHUNK TEXT: Chrome cuts off after ~15 seconds. Split at sentence boundaries.
+        const chunks = text.match(/[^.!?]+[.!?]+[\s]*/g) || [text];
+        // Group small sentences together, max ~200 chars per chunk
+        const groupedChunks: string[] = [];
+        let current = "";
+        for (const chunk of chunks) {
+          if (current.length + chunk.length > 200 && current.length > 0) {
+            groupedChunks.push(current.trim());
+            current = chunk;
+          } else {
+            current += chunk;
+          }
+        }
+        if (current.trim()) groupedChunks.push(current.trim());
+
+        console.log("[Voice] TTS speaking", groupedChunks.length, "chunks:", text.substring(0, 50) + "...");
+
+        // Speak each chunk sequentially
+        for (let i = 0; i < groupedChunks.length; i++) {
+          if (!activeRef.current || done) break;
+
+          await new Promise<void>((chunkResolve) => {
+            const utterance = new SpeechSynthesisUtterance(groupedChunks[i]);
+
+            if (selectedVoice) {
+              utterance.voice = selectedVoice;
+              utterance.lang = selectedVoice.lang;
+              if (i === 0) console.log("[Voice] Using voice:", selectedVoice.name, selectedVoice.lang);
+            } else {
+              utterance.lang = "en-AU";
+            }
+
+            utterance.rate = 0.95;
+            utterance.pitch = 1.0;
+            utterance.volume = 1.0;
+
+            let chunkDone = false;
+            const chunkFinish = () => { if (!chunkDone) { chunkDone = true; chunkResolve(); } };
+
+            utterance.onend = chunkFinish;
+            utterance.onerror = (e) => {
+              console.log("[Voice] TTS chunk error:", (e as any)?.error || e);
+              chunkFinish();
+            };
+
+            synth.speak(utterance);
+
+            // Chrome bug: speechSynthesis can pause mid-utterance or silently stop.
+            const resumeInterval = setInterval(() => {
+              if (chunkDone || done) { clearInterval(resumeInterval); return; }
+              if (synth.paused) synth.resume();
+              // Detect if speaking stopped without onend firing
+              if (!synth.speaking && !synth.pending) {
+                clearInterval(resumeInterval);
+                chunkFinish();
+              }
+            }, 250);
+
+            // Safety timeout per chunk
+            setTimeout(() => { clearInterval(resumeInterval); chunkFinish(); }, 15000);
+          });
+
+          // Small gap between chunks for natural pacing
+          if (i < groupedChunks.length - 1 && activeRef.current) {
+            await new Promise(r => setTimeout(r, 80));
+          }
         }
 
-        // Natural speech parameters — slightly slower with natural pitch
-        utterance.rate = 0.95;    // Slightly slower than default for warmth
-        utterance.pitch = 1.0;    // Natural pitch
-        utterance.volume = 1.0;
-
-        utterance.onend = finish;
-        utterance.onerror = (e) => {
-          console.log("[Voice] Browser TTS error:", (e as any)?.error || e);
-          finish();
-        };
-
-        synth.speak(utterance);
-        console.log("[Voice] TTS speaking:", text.substring(0, 50) + "...");
-
-        // Chrome bug: speechSynthesis can pause mid-utterance. Periodically resume.
-        const resumeInterval = setInterval(() => {
-          if (done) { clearInterval(resumeInterval); return; }
-          if (synth.paused) synth.resume();
-          if (!synth.speaking && !synth.pending) {
-            clearInterval(resumeInterval);
-            finish();
-          }
-        }, 300);
-
-        // Safety timeout
-        setTimeout(() => { clearInterval(resumeInterval); finish(); }, 30000);
+        finish();
       } catch (e) {
         console.log("[Voice] Browser TTS exception:", e);
         finish();
