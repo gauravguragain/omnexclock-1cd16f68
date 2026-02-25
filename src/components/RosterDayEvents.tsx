@@ -206,7 +206,7 @@ export default function RosterDayEvents({ weekDates, fmtDate }: Props) {
       setUploading(null);
       return;
     }
-    // Store the file path (not public URL) since bucket is now private
+    // Store the file path (not a temporary signed URL)
     const { error: updateError } = await supabase.from("roster_day_events").update({ runsheet_url: filePath, updated_at: new Date().toISOString() }).eq("id", eventId);
     if (updateError) {
       toast({ title: "Error saving URL", description: updateError.message, variant: "destructive" });
@@ -214,11 +214,12 @@ export default function RosterDayEvents({ weekDates, fmtDate }: Props) {
       setEvents(prev => prev.map(e => e.id === eventId ? { ...e, runsheet_url: filePath } : e));
       toast({ title: "Runsheet uploaded, extracting data..." });
       await logAudit("runsheet_upload", { event_id: eventId, filename: file.name });
-      // Generate a signed URL for extraction
-      const { data: signedData } = await supabase.storage.from("event-runsheets").createSignedUrl(filePath, 300);
-      if (signedData?.signedUrl) {
-        extractRunsheetData(eventId, signedData.signedUrl);
-      }
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+      const publicPdfUrl = `${supabaseUrl}/storage/v1/object/public/event-runsheets/${filePath
+        .split("/")
+        .map((segment) => encodeURIComponent(segment))
+        .join("/")}`;
+      extractRunsheetData(eventId, publicPdfUrl);
     }
     setUploading(null);
   };
@@ -245,14 +246,17 @@ export default function RosterDayEvents({ weekDates, fmtDate }: Props) {
       setSectionUploading(false);
       return;
     }
-    // Generate a signed URL for extraction
-    const { data: signedUrlData } = await supabase.storage.from("event-runsheets").createSignedUrl(filePath, 300);
+    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+    const publicPdfUrl = `${supabaseUrl}/storage/v1/object/public/event-runsheets/${filePath
+      .split("/")
+      .map((segment) => encodeURIComponent(segment))
+      .join("/")}`;
     setSectionUploading(false);
     setSectionExtracting(true);
 
     try {
       const { data, error } = await supabase.functions.invoke("extract-runsheet", {
-        body: { pdfUrl: signedUrlData?.signedUrl || filePath },
+        body: { pdfUrl: publicPdfUrl },
       });
       if (error) throw error;
       if (!data) throw new Error("No data returned");
