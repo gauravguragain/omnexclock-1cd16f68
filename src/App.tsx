@@ -32,7 +32,7 @@ const ResetPasswordPage = React.lazy(() => import("./pages/ResetPasswordPage"));
 const RegisterBusinessPage = React.lazy(() => import("./pages/RegisterBusinessPage"));
 const BusinessHubPage = React.lazy(() => import("./pages/BusinessHubPage"));
 const KioskPage = React.lazy(() => import("./pages/KioskPage"));
-const PortalPage = React.lazy(() => import("./pages/PortalPage"));
+const PortalPage = React.lazy(() => import("./pages/PortalPageV2"));
 const EmployeePortalEntry = React.lazy(() => import("./pages/EmployeePortalEntry"));
 const AdminLayout = React.lazy(() => import("./layouts/AdminLayout"));
 const MasterLayout = React.lazy(() => import("./layouts/MasterLayout"));
