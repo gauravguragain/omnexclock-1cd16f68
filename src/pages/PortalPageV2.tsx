@@ -23,7 +23,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Checkbox } from "@/components/ui/checkbox";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { cn } from "@/lib/utils";
-import { ausToday, toAusFormatted, toAusTime12, toAusLocaleString, ensureTime12 } from "@/lib/dateUtils";
+import { ausToday, toAusDate, toAusFormatted, toAusTime12, toAusLocaleString, ensureTime12 } from "@/lib/dateUtils";
 import { format } from "date-fns";
 import {
   ArrowLeft, Delete, CalendarRange, Clock, LogIn, LogOut, Coffee, User, FileText,
@@ -232,7 +232,7 @@ function TodayTab({ employeeCode, businessCode, shifts }: {
   for (let i = 0; i < 7; i++) {
     const d = new Date(monday);
     d.setDate(monday.getDate() + i);
-    weekDates.push(d.toISOString().split("T")[0]);
+    weekDates.push(toAusDate(d));
   }
   const weekEvents = allEvents.filter((e: any) => weekDates.includes(e.date));
   const eventsByDate = weekEvents.reduce((acc: Record<string, any[]>, ev: any) => {
