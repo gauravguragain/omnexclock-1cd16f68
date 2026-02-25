@@ -9,6 +9,22 @@ import { ArrowLeft, Clock, Users, RefreshCw } from "lucide-react";
 import { Link } from "react-router-dom";
 
 const STORAGE_KEY = "omnexclock_portal_business_code";
+const MAX_RETRIES = 3;
+const RETRY_DELAY = 1000;
+
+async function fetchBusiness(code: string, retries = MAX_RETRIES): Promise<{ data: { business_code: string; status: string } | null; error: any }> {
+  for (let attempt = 1; attempt <= retries; attempt++) {
+    const result = await supabase
+      .from("businesses_public" as any)
+      .select("business_code, status")
+      .eq("business_code", code)
+      .maybeSingle() as { data: { business_code: string; status: string } | null; error: any };
+    if (!result.error) return result;
+    if (attempt < retries) await new Promise(r => setTimeout(r, RETRY_DELAY * attempt));
+  }
+  // Final attempt already failed, return it
+  return { data: null, error: "Network error after retries" };
+}
 
 export default function EmployeePortalEntry() {
   const [businessCode, setBusinessCode] = useState("");
@@ -23,20 +39,18 @@ export default function EmployeePortalEntry() {
     const saved = localStorage.getItem(STORAGE_KEY);
     if (saved) {
       setHasSaved(true);
-      (supabase
-        .from("businesses_public" as any)
-        .select("business_code, status")
-        .eq("business_code", saved)
-        .maybeSingle() as unknown as Promise<{ data: { business_code: string; status: string } | null; error: any }>)
-        .then(({ data, error }) => {
-          if (!error && data && data.status === "active") {
-            navigate(`/b/${data.business_code}/portal`, { replace: true });
-          } else {
-            localStorage.removeItem(STORAGE_KEY);
-            setHasSaved(false);
-            setLoading(false);
-          }
-        });
+      fetchBusiness(saved).then(({ data, error }) => {
+        if (!error && data && data.status === "active") {
+          navigate(`/b/${data.business_code}/portal`, { replace: true });
+        } else if (error) {
+          // Network issue — don't clear saved code, just show entry form
+          setLoading(false);
+        } else {
+          localStorage.removeItem(STORAGE_KEY);
+          setHasSaved(false);
+          setLoading(false);
+        }
+      });
     } else {
       setLoading(false);
     }
@@ -57,31 +71,25 @@ export default function EmployeePortalEntry() {
     }
 
     setLoading(true);
-    const result = await supabase
-      .from("businesses_public" as any)
-      .select("business_code, status")
-      .eq("business_code", code)
-      .maybeSingle() as { data: { business_code: string; status: string } | null; error: any };
+    const { data, error } = await fetchBusiness(code);
 
-    if (result.error) {
+    if (error) {
       toast({ title: "Connection Error", description: "Could not reach the server. Please check your internet connection and try again.", variant: "destructive" });
       setLoading(false);
       return;
     }
 
-    if (!result.data) {
+    if (!data) {
       toast({ title: "Business Not Found", description: "No business found with that code. Please check and try again.", variant: "destructive" });
       setLoading(false);
       return;
     }
 
-    if (result.data.status !== "active") {
+    if (data.status !== "active") {
       toast({ title: "Business Inactive", description: "This business is not currently active. Contact your administrator.", variant: "destructive" });
       setLoading(false);
       return;
     }
-
-    const data = result.data;
 
     localStorage.setItem(STORAGE_KEY, data.business_code);
     navigate(`/b/${data.business_code}/portal`);
