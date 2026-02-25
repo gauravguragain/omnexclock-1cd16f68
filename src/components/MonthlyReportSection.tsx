@@ -579,7 +579,7 @@ export default function MonthlyReportSection() {
           ["Employee", "Department", "Net Hours", "Rate $/Hr", "Employee Pay"],
           payroll.map((p: any) => [p.name, p.department, Number(p.net_hours).toFixed(2), `$${Number(p.pay_rate).toFixed(2)}`, `$${Number(p.employee_pay).toFixed(2)}`]),
           SECTION_COLORS.Finance,
-          ["TOTAL", "", totalHours.toFixed(2), `$${avgRate.toFixed(2)}`, `$${totalEmpPay.toFixed(2)}`]
+          ["TOTAL", "", totalHours.toFixed(2), "", `$${totalEmpPay.toFixed(2)}`]
         );
 
         // Department breakdown
@@ -630,7 +630,7 @@ export default function MonthlyReportSection() {
           ["Employee", "Department", "Net Hours", "Rate $/Hr (incl GST)", "Cost (ex GST)", "Cost (incl GST)"],
           payroll.map((p: any) => [p.name, p.department, Number(p.net_hours).toFixed(2), `$${Number(p.admin_hourly_rate).toFixed(2)}`, `$${Number(p.admin_pay).toFixed(2)}`, `$${Number(p.admin_pay_incl_gst || 0).toFixed(2)}`]),
           SECTION_COLORS.Finance,
-          ["TOTAL", "", totalHours.toFixed(2), `$${avgRate.toFixed(2)}`, `$${totalAdminPay.toFixed(2)}`, `$${totalAdminPayIncl.toFixed(2)}`]
+          ["TOTAL", "", totalHours.toFixed(2), "", `$${totalAdminPay.toFixed(2)}`, `$${totalAdminPayIncl.toFixed(2)}`]
         );
 
         // Department breakdown
