@@ -25,11 +25,11 @@ export default function EmployeePortalEntry() {
       setHasSaved(true);
       (supabase
         .from("businesses_public" as any)
-        .select("business_code")
+        .select("business_code, status")
         .eq("business_code", saved)
-        .maybeSingle() as unknown as Promise<{ data: { business_code: string } | null }>)
-        .then(({ data }) => {
-          if (data) {
+        .maybeSingle() as unknown as Promise<{ data: { business_code: string; status: string } | null; error: any }>)
+        .then(({ data, error }) => {
+          if (!error && data && data.status === "active") {
             navigate(`/b/${data.business_code}/portal`, { replace: true });
           } else {
             localStorage.removeItem(STORAGE_KEY);
@@ -57,17 +57,31 @@ export default function EmployeePortalEntry() {
     }
 
     setLoading(true);
-    const { data } = await supabase
+    const result = await supabase
       .from("businesses_public" as any)
-      .select("business_code")
+      .select("business_code, status")
       .eq("business_code", code)
-      .maybeSingle() as { data: { business_code: string } | null };
+      .maybeSingle() as { data: { business_code: string; status: string } | null; error: any };
 
-    if (!data) {
-      toast({ title: "Business Not Found", description: "No business found with that code.", variant: "destructive" });
+    if (result.error) {
+      toast({ title: "Connection Error", description: "Could not reach the server. Please check your internet connection and try again.", variant: "destructive" });
       setLoading(false);
       return;
     }
+
+    if (!result.data) {
+      toast({ title: "Business Not Found", description: "No business found with that code. Please check and try again.", variant: "destructive" });
+      setLoading(false);
+      return;
+    }
+
+    if (result.data.status !== "active") {
+      toast({ title: "Business Inactive", description: "This business is not currently active. Contact your administrator.", variant: "destructive" });
+      setLoading(false);
+      return;
+    }
+
+    const data = result.data;
 
     localStorage.setItem(STORAGE_KEY, data.business_code);
     navigate(`/b/${data.business_code}/portal`);
