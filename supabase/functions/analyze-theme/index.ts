@@ -111,10 +111,10 @@ Make themes distinct: one dark luxury, one modern minimal, one bold vibrant, one
     const content = aiData.candidates?.[0]?.content?.parts?.[0]?.text || "";
 
     // Extract JSON from response (may be wrapped in markdown code blocks)
-    let jsonStr = content;
-    const jsonMatch = content.match(/```(?:json)?\s*([\s\S]*?)```/);
-    if (jsonMatch) {
-      jsonStr = jsonMatch[1];
+    let jsonStr = content.trim();
+    // Remove markdown code fences if present
+    if (jsonStr.startsWith("```")) {
+      jsonStr = jsonStr.replace(/^```(?:json)?\s*\n?/, "").replace(/\n?```\s*$/, "");
     }
 
     const parsed = JSON.parse(jsonStr.trim());

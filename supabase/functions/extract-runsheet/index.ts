@@ -108,11 +108,10 @@ Return ONLY valid JSON, no markdown, no extra text.`;
     const content = aiData.candidates?.[0]?.content?.parts?.[0]?.text || "";
     console.log("[extract-runsheet] Gemini response length:", content.length);
 
-    // Extract JSON from response
-    let jsonStr = content;
-    const jsonMatch = content.match(/```(?:json)?\s*([\s\S]*?)```/);
-    if (jsonMatch) {
-      jsonStr = jsonMatch[1];
+    // Extract JSON from response (may be wrapped in markdown code blocks)
+    let jsonStr = content.trim();
+    if (jsonStr.startsWith("```")) {
+      jsonStr = jsonStr.replace(/^```(?:json)?\s*\n?/, "").replace(/\n?```\s*$/, "");
     }
 
     const extracted = JSON.parse(jsonStr.trim());
