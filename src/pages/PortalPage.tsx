@@ -124,29 +124,27 @@ function EventCard({ ev }: { ev: any }) {
     ev.live_stall && "🍳 Live Stall",
   ].filter(Boolean) as string[];
 
-  const viewPdf = async (urlOrPath: string) => {
+  const viewPdf = (urlOrPath: string) => {
     const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-    const storagePathMatch = urlOrPath.match(/\/storage\/v1\/object\/(?:public\/)?event-runsheets\/(.+)$/);
+    const storagePathMatch = urlOrPath.match(/\/storage\/v1\/object\/(?:public\/|sign\/)?event-runsheets\/([^?#]+)/);
 
-    // Normalize to bucket path when URL was stored instead of path
-    const filePath = storagePathMatch
-      ? decodeURIComponent(storagePathMatch[1])
-      : urlOrPath;
+    // Normalize any stored storage URL to plain object path
+    const rawPath = storagePathMatch ? decodeURIComponent(storagePathMatch[1]) : urlOrPath;
 
-    // Non-storage external URL
-    if (filePath.startsWith("http") && !storagePathMatch) {
-      window.open(filePath, "_blank", "noopener,noreferrer");
+    // Truly external URL (not our runsheet storage)
+    if (rawPath.startsWith("http") && !storagePathMatch) {
+      window.open(rawPath, "_blank", "noopener,noreferrer");
       return;
     }
 
-    // Always use signed URL for path-based files; fallback to direct public URL
-    const { data: signedData } = await supabase.storage
-      .from("event-runsheets")
-      .createSignedUrl(filePath, 600);
+    const normalizedPath = rawPath.split("?")[0].trim();
+    const encodedPath = normalizedPath
+      .split("/")
+      .map((segment) => encodeURIComponent(segment))
+      .join("/");
 
-    const url = signedData?.signedUrl
-      || `${supabaseUrl}/storage/v1/object/public/event-runsheets/${encodeURIComponent(filePath).replace(/%2F/g, "/")}`;
-
+    // event-runsheets bucket is public; avoid signed URL endpoint to prevent 404 on filenames with spaces/parentheses
+    const url = `${supabaseUrl}/storage/v1/object/public/event-runsheets/${encodedPath}`;
     window.open(url, "_blank", "noopener,noreferrer");
   };
 
