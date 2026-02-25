@@ -9,20 +9,47 @@ import { ArrowLeft, Clock, Users, RefreshCw } from "lucide-react";
 import { Link } from "react-router-dom";
 
 const STORAGE_KEY = "omnexclock_portal_business_code";
-const MAX_RETRIES = 3;
-const RETRY_DELAY = 1000;
+const MAX_RETRIES = 4;
+const RETRY_DELAY = 1200;
 
 async function fetchBusiness(code: string, retries = MAX_RETRIES): Promise<{ data: { business_code: string; status: string } | null; error: any }> {
   for (let attempt = 1; attempt <= retries; attempt++) {
-    const result = await supabase
-      .from("businesses_public" as any)
-      .select("business_code, status")
-      .eq("business_code", code)
-      .maybeSingle() as { data: { business_code: string; status: string } | null; error: any };
-    if (!result.error) return result;
-    if (attempt < retries) await new Promise(r => setTimeout(r, RETRY_DELAY * attempt));
+    try {
+      // Use direct fetch to bypass service worker cache on problematic devices
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+      const supabaseKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+      const url = `${supabaseUrl}/rest/v1/businesses_public?select=business_code,status&business_code=eq.${encodeURIComponent(code)}`;
+      
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000);
+      
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          'apikey': supabaseKey,
+          'Authorization': `Bearer ${supabaseKey}`,
+          'Accept': 'application/json',
+          'Cache-Control': 'no-cache, no-store',
+          'Pragma': 'no-cache',
+        },
+        cache: 'no-store',
+        signal: controller.signal,
+      });
+      
+      clearTimeout(timeoutId);
+      
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+      }
+      
+      const rows = await response.json();
+      const data = Array.isArray(rows) && rows.length > 0 ? rows[0] : null;
+      return { data, error: null };
+    } catch (err) {
+      console.warn(`[PortalEntry] Attempt ${attempt}/${retries} failed:`, err);
+      if (attempt < retries) await new Promise(r => setTimeout(r, RETRY_DELAY * attempt));
+    }
   }
-  // Final attempt already failed, return it
   return { data: null, error: "Network error after retries" };
 }
 
