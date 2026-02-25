@@ -144,6 +144,8 @@ export default function RosterPage() {
   const [emailDialogOpen, setEmailDialogOpen] = useState(false);
   const [adminUsers, setAdminUsers] = useState<{ id: string; email: string; full_name: string | null; role: string }[]>([]);
   const [selectedAdminIds, setSelectedAdminIds] = useState<string[]>([]);
+  const [customEmails, setCustomEmails] = useState<string[]>([]);
+  const [customEmailInput, setCustomEmailInput] = useState("");
   const [sendingEmail, setSendingEmail] = useState(false);
 
   const weekDates = useMemo(() => DAYS.map((_, i) => addDays(weekStart, i)), [weekStart]);
@@ -224,7 +226,24 @@ export default function RosterPage() {
   const openEmailDialog = async () => {
     await fetchAdminUsers();
     setSelectedAdminIds([]);
+    setCustomEmails([]);
+    setCustomEmailInput("");
     setEmailDialogOpen(true);
+  };
+
+  const addCustomEmail = () => {
+    const email = customEmailInput.trim().toLowerCase();
+    if (!email) return;
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      toast({ title: "Invalid email", variant: "destructive" });
+      return;
+    }
+    if (customEmails.includes(email) || adminUsers.some(a => a.email.toLowerCase() === email)) {
+      toast({ title: "Email already added", variant: "destructive" });
+      return;
+    }
+    setCustomEmails(prev => [...prev, email]);
+    setCustomEmailInput("");
   };
 
   const buildRosterPDFDoc = (): jsPDF => {
@@ -349,8 +368,9 @@ export default function RosterPage() {
     logAudit("roster_pdf_downloaded", { week_start: fmtDate(weekStart) });
   };
 
+  const totalRecipients = selectedAdminIds.length + customEmails.length;
   const handleSendRosterEmail = async () => {
-    if (selectedAdminIds.length === 0) {
+    if (totalRecipients === 0) {
       toast({ title: "No recipients selected", variant: "destructive" });
       return;
     }
@@ -389,11 +409,32 @@ export default function RosterPage() {
         }
       }
 
+      // Send to custom emails
+      for (const email of customEmails) {
+        try {
+          await supabase.functions.invoke("send-email", {
+            body: {
+              type: "roster_pdf",
+              to: email,
+              adminName: email,
+              weekLabel,
+              pdfBase64,
+              pdfFilename,
+              businessName: business?.name,
+              senderName: currentProfile?.full_name || currentProfile?.email || "Admin",
+            },
+          });
+          sentCount++;
+        } catch (err) {
+          console.error(`Failed to email ${email}:`, err);
+        }
+      }
+
       if (sentCount > 0) {
-        toast({ title: "Roster sent!", description: `PDF roster emailed to ${sentCount} admin(s).` });
+        toast({ title: "Roster sent!", description: `PDF roster emailed to ${sentCount} recipient(s).` });
         await logAudit("roster_email_sent", {
           week_start: fmtDate(weekStart),
-          recipients: selectedAdminIds.length,
+          recipients: totalRecipients,
         });
       } else {
         toast({ title: "Failed to send", description: "No emails were sent.", variant: "destructive" });
@@ -701,6 +742,9 @@ export default function RosterPage() {
         }
 
         sendRosterEmails(draftShifts);
+
+        // Auto-prompt to email roster PDF to admins
+        openEmailDialog();
       } catch (err: any) {
         toast({ title: "Error", description: err.message, variant: "destructive" });
       } finally {
@@ -1422,12 +1466,41 @@ export default function RosterPage() {
                 </div>
               )}
             </div>
+            {/* Custom email input */}
+            <div className="space-y-2">
+              <Label className="text-xs font-medium">Add Other Email</Label>
+              <div className="flex gap-2">
+                <Input
+                  type="email"
+                  placeholder="email@example.com"
+                  value={customEmailInput}
+                  onChange={e => setCustomEmailInput(e.target.value)}
+                  onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); addCustomEmail(); } }}
+                  className="text-sm h-8"
+                />
+                <Button type="button" size="sm" variant="outline" onClick={addCustomEmail} className="shrink-0 h-8">
+                  <Plus className="h-3.5 w-3.5" />
+                </Button>
+              </div>
+              {customEmails.length > 0 && (
+                <div className="flex flex-wrap gap-1.5">
+                  {customEmails.map(email => (
+                    <Badge key={email} variant="secondary" className="text-[11px] gap-1 pr-1">
+                      {email}
+                      <button onClick={() => setCustomEmails(prev => prev.filter(e => e !== email))} className="hover:text-destructive">
+                        <X className="h-3 w-3" />
+                      </button>
+                    </Badge>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
           <DialogFooter>
             <DialogClose asChild><Button variant="outline">Cancel</Button></DialogClose>
-            <Button onClick={handleSendRosterEmail} disabled={sendingEmail || selectedAdminIds.length === 0}>
+            <Button onClick={handleSendRosterEmail} disabled={sendingEmail || totalRecipients === 0}>
               <Mail className="mr-1.5 h-3.5 w-3.5" />
-              {sendingEmail ? "Sending..." : `Send to ${selectedAdminIds.length} admin(s)`}
+              {sendingEmail ? "Sending..." : `Send to ${totalRecipients} recipient(s)`}
             </Button>
           </DialogFooter>
         </DialogContent>
