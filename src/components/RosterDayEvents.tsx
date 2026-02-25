@@ -398,26 +398,27 @@ export default function RosterDayEvents({ weekDates, fmtDate }: Props) {
   };
 
   const viewPdf = async (urlOrPath: string) => {
-    let url = urlOrPath;
+    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+    const storagePathMatch = urlOrPath.match(/\/storage\/v1\/object\/(?:public\/)?event-runsheets\/(.+)$/);
 
-    if (urlOrPath.startsWith("http")) {
-      // Already a full URL (legacy or external) — open directly
-      window.open(url, "_blank", "noopener,noreferrer");
+    // Normalize to bucket path when URL was stored instead of path
+    const filePath = storagePathMatch
+      ? decodeURIComponent(storagePathMatch[1])
+      : urlOrPath;
+
+    // Non-storage external URL
+    if (filePath.startsWith("http") && !storagePathMatch) {
+      window.open(filePath, "_blank", "noopener,noreferrer");
       return;
     }
 
-    // It's a storage path — try signed URL, fall back to public URL
+    // Generate signed URL from storage path; fallback to public URL for this bucket
     const { data } = await supabase.storage
       .from("event-runsheets")
-      .createSignedUrl(urlOrPath, 3600);
+      .createSignedUrl(filePath, 3600);
 
-    if (data?.signedUrl) {
-      url = data.signedUrl;
-    } else {
-      // Bucket is public — construct direct URL as fallback
-      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-      url = `${supabaseUrl}/storage/v1/object/public/event-runsheets/${encodeURIComponent(urlOrPath).replace(/%2F/g, "/")}`;
-    }
+    const url = data?.signedUrl
+      || `${supabaseUrl}/storage/v1/object/public/event-runsheets/${encodeURIComponent(filePath).replace(/%2F/g, "/")}`;
 
     window.open(url, "_blank", "noopener,noreferrer");
   };
