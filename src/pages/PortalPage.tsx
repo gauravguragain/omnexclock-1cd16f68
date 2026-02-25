@@ -97,6 +97,33 @@ function fmtTimestamp(ts: string | null): string {
   return toAusTime12(new Date(ts));
 }
 
+async function fetchRestNoCache<T>(table: string, params: URLSearchParams): Promise<T[]> {
+  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+  const supabaseKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+  const query = new URLSearchParams(params);
+  query.set("_ts", `${Date.now()}`); // cache-busting query param for stale SW clients
+
+  const response = await fetch(`${supabaseUrl}/rest/v1/${table}?${query.toString()}`, {
+    method: "GET",
+    headers: {
+      apikey: supabaseKey,
+      Authorization: `Bearer ${supabaseKey}`,
+      Accept: "application/json",
+      "Cache-Control": "no-cache, no-store, max-age=0, must-revalidate",
+      Pragma: "no-cache",
+      Expires: "0",
+    },
+    cache: "no-store",
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to fetch ${table}: ${response.status}`);
+  }
+
+  const rows = await response.json();
+  return Array.isArray(rows) ? rows : [];
+}
+
 /* ── portal notification wrapper ─────────────────────────── */
 function PortalNotifications({ employeeCode, businessCode }: { employeeCode: string | null; businessCode: string | null }) {
   const { notifications, unreadCount, markRead, markAllRead } = useEmployeeNotifications(employeeCode, businessCode);
@@ -509,50 +536,80 @@ export default function PortalPage() {
   const fetchPortalData = async (employeeCodeValue: string) => {
     const bizCode = urlBusinessCode?.toUpperCase() || null;
 
-    // Step 1: Resolve employee_id directly from employees_public (no RLS, most reliable)
-    let empQuery = supabase.from("employees_public" as any).select("id, business_id").eq("employee_code", employeeCodeValue).eq("active", true) as any;
-    if (bizCode) {
-      const { data: bizRow } = await supabase.from("businesses_public" as any).select("id").eq("business_code", bizCode).maybeSingle() as { data: { id: string } | null };
-      if (bizRow) empQuery = empQuery.eq("business_id", bizRow.id);
-    }
-    const { data: empRow } = await empQuery.maybeSingle();
-    const resolvedEmpId: string | null = empRow?.id || null;
+    // Step 1: Resolve business and employee with hard no-cache fetches
+    const businessRows = bizCode
+      ? await fetchRestNoCache<{ id: string }>(
+          "businesses_public",
+          new URLSearchParams({
+            select: "id",
+            business_code: `eq.${bizCode}`,
+            limit: "1",
+          })
+        )
+      : [];
 
-    // Step 2: Fetch everything in parallel — use direct table query for shifts
-    const shiftsPromise = resolvedEmpId
-      ? supabase
-          .from("shifts")
-          .select("id, date, day_of_week, start_time, end_time, break_minutes, hours_worked, notes, week_start_date")
-          .eq("employee_id", resolvedEmpId)
-          .eq("status", "published")
-          .order("date")
-          .order("start_time")
-      : Promise.resolve({ data: [] });
+    const businessId = businessRows[0]?.id || null;
 
-    const [statusRes, shiftsRes, tsRes, forumRes, requestsRes, approvalsRes] = await Promise.all([
+    const employeeParams = new URLSearchParams({
+      select: "id,business_id,name",
+      employee_code: `eq.${employeeCodeValue}`,
+      active: "eq.true",
+      limit: "1",
+    });
+    if (businessId) employeeParams.set("business_id", `eq.${businessId}`);
+
+    const employeeRows = await fetchRestNoCache<{ id: string; business_id: string | null; name: string | null }>(
+      "employees_public",
+      employeeParams
+    );
+
+    const employeeRow = employeeRows[0] || null;
+    const resolvedEmpId = employeeRow?.id || null;
+    if (!resolvedEmpId) return false;
+
+    // Step 2: Fetch critical sync data through no-cache REST + remaining data via RPC
+    const shiftsParams = new URLSearchParams({
+      select: "id,date,day_of_week,start_time,end_time,break_minutes,hours_worked,notes,week_start_date",
+      employee_id: `eq.${resolvedEmpId}`,
+      status: "eq.published",
+      order: "date.asc,start_time.asc",
+    });
+
+    const approvalsParams = new URLSearchParams({
+      select: "date,approved",
+      employee_id: `eq.${resolvedEmpId}`,
+      order: "date.desc",
+    });
+
+    const [statusRes, shiftsRows, approvalsRows, tsRes, forumRes, requestsRes] = await Promise.all([
       supabase.rpc("get_employee_status", { _employee_code: employeeCodeValue, _business_code: bizCode }),
-      shiftsPromise,
+      fetchRestNoCache<PortalShift>("shifts", shiftsParams),
+      fetchRestNoCache<{ date: string; approved: boolean }>("timesheet_approvals", approvalsParams),
       supabase.rpc("get_employee_timesheets", { _employee_code: employeeCodeValue, _business_code: bizCode }),
       supabase.rpc("get_forum_posts", { _employee_code: employeeCodeValue, _business_code: bizCode }),
       supabase.rpc("get_employee_requests", { _employee_code: employeeCodeValue, _business_code: bizCode }),
-      supabase.rpc("get_employee_timesheet_approvals", { _employee_code: employeeCodeValue, _business_code: bizCode }),
     ]);
 
-    if (!statusRes.data || statusRes.data.length === 0) {
-      return false;
-    }
+    const statusRow = (statusRes.data && statusRes.data[0]) as EmployeeInfo | undefined;
+    const info: EmployeeInfo = statusRow || {
+      employee_id: resolvedEmpId,
+      employee_name: employeeRow?.name || `Employee ${employeeCodeValue}`,
+      current_status: "clocked_out",
+      last_event_time: null,
+    };
 
-    const info = statusRes.data[0] as EmployeeInfo;
     setEmployeeInfo(info);
     setEmployeeCode(employeeCodeValue);
-    setShifts((shiftsRes.data as PortalShift[]) || []);
+    setShifts(shiftsRows || []);
     setTimesheets((tsRes.data as TimesheetEntry[]) || []);
     setForumPosts(forumRes.data || []);
     setMyRequests(requestsRes.data || []);
 
     const approvalMap = new Map<string, boolean>();
-    for (const a of (approvalsRes.data || []) as any[]) {
-      approvalMap.set(a.approval_date, a.is_approved);
+    for (const a of (approvalsRows || []) as any[]) {
+      const approvalDate = (a.approval_date ?? a.date) as string | undefined;
+      const isApproved = Boolean(a.is_approved ?? a.approved);
+      if (approvalDate) approvalMap.set(approvalDate, isApproved);
     }
     setTimesheetApprovals(approvalMap);
 
