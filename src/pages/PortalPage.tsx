@@ -535,39 +535,6 @@ export default function PortalPage() {
 
   const fetchPortalData = async (employeeCodeValue: string) => {
     const bizCode = urlBusinessCode?.toUpperCase() || null;
-
-    // Step 1: Resolve business and employee with hard no-cache fetches
-    const businessRows = bizCode
-      ? await fetchRestNoCache<{ id: string }>(
-          "businesses_public",
-          new URLSearchParams({
-            select: "id",
-            business_code: `eq.${bizCode}`,
-            limit: "1",
-          })
-        )
-      : [];
-
-    const businessId = businessRows[0]?.id || null;
-
-    const employeeParams = new URLSearchParams({
-      select: "id,business_id,name",
-      employee_code: `eq.${employeeCodeValue}`,
-      active: "eq.true",
-      limit: "1",
-    });
-    if (businessId) employeeParams.set("business_id", `eq.${businessId}`);
-
-    const employeeRows = await fetchRestNoCache<{ id: string; business_id: string | null; name: string | null }>(
-      "employees_public",
-      employeeParams
-    );
-
-    const employeeRow = employeeRows[0] || null;
-    const resolvedEmpId = employeeRow?.id || null;
-    if (!resolvedEmpId) return false;
-
-    // Step 2: Fetch all data via RPC functions (these bypass RLS and always return fresh data)
     const rpcArgs = { _employee_code: employeeCodeValue, _business_code: bizCode };
 
     const [statusRes, shiftsRes, approvalsRes, tsRes, forumRes, requestsRes] = await Promise.all([
@@ -579,20 +546,28 @@ export default function PortalPage() {
       supabase.rpc("get_employee_requests", rpcArgs),
     ]);
 
+    if (statusRes.error) throw statusRes.error;
+
     const statusRow = (statusRes.data && statusRes.data[0]) as EmployeeInfo | undefined;
-    const info: EmployeeInfo = statusRow || {
-      employee_id: resolvedEmpId,
-      employee_name: employeeRow?.name || `Employee ${employeeCodeValue}`,
-      current_status: "clocked_out",
-      last_event_time: null,
+    if (!statusRow?.employee_id) return false;
+
+    const info: EmployeeInfo = {
+      employee_id: statusRow.employee_id,
+      employee_name: statusRow.employee_name || `Employee ${employeeCodeValue}`,
+      current_status: statusRow.current_status || "clocked_out",
+      last_event_time: statusRow.last_event_time || null,
     };
 
     setEmployeeInfo(info);
     setEmployeeCode(employeeCodeValue);
 
-    // Map RPC shift results (published only for portal)
-    const allShifts = (shiftsRes.data as PortalShift[]) || [];
-    setShifts(allShifts);
+    if (shiftsRes.error) console.error("[Portal] get_employee_shifts error:", shiftsRes.error);
+    if (approvalsRes.error) console.error("[Portal] get_employee_timesheet_approvals error:", approvalsRes.error);
+    if (tsRes.error) console.error("[Portal] get_employee_timesheets error:", tsRes.error);
+    if (forumRes.error) console.error("[Portal] get_forum_posts error:", forumRes.error);
+    if (requestsRes.error) console.error("[Portal] get_employee_requests error:", requestsRes.error);
+
+    setShifts((shiftsRes.data as PortalShift[]) || []);
     setTimesheets((tsRes.data as TimesheetEntry[]) || []);
     setForumPosts(forumRes.data || []);
     setMyRequests(requestsRes.data || []);
