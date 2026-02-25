@@ -18,21 +18,10 @@ serve(async (req) => {
       });
     }
 
-    const GROQ_API_KEY = Deno.env.get("GROQ_API_KEY");
-    if (!GROQ_API_KEY) throw new Error("GROQ_API_KEY not configured");
+    const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
+    if (!GEMINI_API_KEY) throw new Error("GEMINI_API_KEY not configured");
 
-    const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${GROQ_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "llama-3.2-90b-vision-preview",
-        messages: [
-          {
-            role: "system",
-            content: `You are a design expert. Analyze the provided logo image and suggest 4 color themes that would work well as app themes based on the logo's colors, mood, and style.
+    const systemPrompt = `You are a design expert. Analyze the provided logo image and suggest 4 color themes that would work well as app themes based on the logo's colors, mood, and style.
 
 Each theme must have these HSL values (without the hsl() wrapper, just the values like "43 72% 52%"):
 - primary: Main accent color
@@ -61,40 +50,65 @@ Return ONLY valid JSON in this exact format, no other text:
   ]
 }
 
-Make themes distinct: one dark luxury, one modern minimal, one bold vibrant, one warm professional.`,
-          },
-          {
-            role: "user",
-            content: [
-              {
-                type: "image_url",
-                image_url: { url: imageUrl },
-              },
-              {
-                type: "text",
-                text: "Analyze this logo and suggest 4 color themes for an app. Return only JSON.",
-              },
-            ],
-          },
-        ],
-      }),
-    });
+Make themes distinct: one dark luxury, one modern minimal, one bold vibrant, one warm professional.`;
 
-    if (!response.ok) {
-      if (response.status === 429) {
+    // Download the logo image and convert to base64 for Gemini vision
+    const imgResponse = await fetch(imageUrl);
+    if (!imgResponse.ok) throw new Error("Failed to fetch logo image");
+
+    const imgBuffer = await imgResponse.arrayBuffer();
+    const bytes = new Uint8Array(imgBuffer);
+    let binary = "";
+    for (let i = 0; i < bytes.length; i++) {
+      binary += String.fromCharCode(bytes[i]);
+    }
+    const base64 = btoa(binary);
+    const mimeType = imgResponse.headers.get("content-type") || "image/png";
+
+    const geminiResponse = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          system_instruction: { parts: [{ text: systemPrompt }] },
+          contents: [
+            {
+              parts: [
+                {
+                  inline_data: {
+                    mime_type: mimeType,
+                    data: base64,
+                  },
+                },
+                {
+                  text: "Analyze this logo and suggest 4 color themes for an app. Return only JSON.",
+                },
+              ],
+            },
+          ],
+          generationConfig: {
+            temperature: 0.4,
+            maxOutputTokens: 2048,
+          },
+        }),
+      }
+    );
+
+    if (!geminiResponse.ok) {
+      const t = await geminiResponse.text();
+      console.error("Gemini API error:", geminiResponse.status, t);
+      if (geminiResponse.status === 429) {
         return new Response(JSON.stringify({ error: "Rate limit exceeded, please try again later." }), {
           status: 429,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
-      const t = await response.text();
-      console.error("Groq API error:", response.status, t);
       throw new Error("AI analysis failed");
-      
     }
 
-    const aiData = await response.json();
-    const content = aiData.choices?.[0]?.message?.content || "";
+    const aiData = await geminiResponse.json();
+    const content = aiData.candidates?.[0]?.content?.parts?.[0]?.text || "";
 
     // Extract JSON from response (may be wrapped in markdown code blocks)
     let jsonStr = content;
