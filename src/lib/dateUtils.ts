@@ -5,13 +5,27 @@
 export const TIMEZONE = "Australia/Sydney";
 
 /** Get current date/time in Australia/Sydney as a formatted YYYY-MM-DD string */
+function getAusDateParts(d: Date): { year: string; month: string; day: string } {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: TIMEZONE,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(d);
+
+  const get = (type: "year" | "month" | "day") => parts.find((p) => p.type === type)?.value ?? "00";
+  return { year: get("year"), month: get("month"), day: get("day") };
+}
+
 export function ausToday(): string {
-  return new Date().toLocaleDateString("en-CA", { timeZone: TIMEZONE });
+  const { year, month, day } = getAusDateParts(new Date());
+  return `${year}-${month}-${day}`;
 }
 
 /** Format a Date to YYYY-MM-DD in Australia/Sydney timezone */
 export function toAusDate(d: Date): string {
-  return d.toLocaleDateString("en-CA", { timeZone: TIMEZONE }); // en-CA gives YYYY-MM-DD
+  const { year, month, day } = getAusDateParts(d);
+  return `${year}-${month}-${day}`;
 }
 
 /** Format a Date to DD/MM/YYYY in Australia/Sydney timezone */
