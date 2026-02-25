@@ -567,27 +567,16 @@ export default function PortalPage() {
     const resolvedEmpId = employeeRow?.id || null;
     if (!resolvedEmpId) return false;
 
-    // Step 2: Fetch critical sync data through no-cache REST + remaining data via RPC
-    const shiftsParams = new URLSearchParams({
-      select: "id,date,day_of_week,start_time,end_time,break_minutes,hours_worked,notes,week_start_date",
-      employee_id: `eq.${resolvedEmpId}`,
-      status: "eq.published",
-      order: "date.asc,start_time.asc",
-    });
+    // Step 2: Fetch all data via RPC functions (these bypass RLS and always return fresh data)
+    const rpcArgs = { _employee_code: employeeCodeValue, _business_code: bizCode };
 
-    const approvalsParams = new URLSearchParams({
-      select: "date,approved",
-      employee_id: `eq.${resolvedEmpId}`,
-      order: "date.desc",
-    });
-
-    const [statusRes, shiftsRows, approvalsRows, tsRes, forumRes, requestsRes] = await Promise.all([
-      supabase.rpc("get_employee_status", { _employee_code: employeeCodeValue, _business_code: bizCode }),
-      fetchRestNoCache<PortalShift>("shifts", shiftsParams),
-      fetchRestNoCache<{ date: string; approved: boolean }>("timesheet_approvals", approvalsParams),
-      supabase.rpc("get_employee_timesheets", { _employee_code: employeeCodeValue, _business_code: bizCode }),
-      supabase.rpc("get_forum_posts", { _employee_code: employeeCodeValue, _business_code: bizCode }),
-      supabase.rpc("get_employee_requests", { _employee_code: employeeCodeValue, _business_code: bizCode }),
+    const [statusRes, shiftsRes, approvalsRes, tsRes, forumRes, requestsRes] = await Promise.all([
+      supabase.rpc("get_employee_status", rpcArgs),
+      supabase.rpc("get_employee_shifts", rpcArgs),
+      supabase.rpc("get_employee_timesheet_approvals", rpcArgs),
+      supabase.rpc("get_employee_timesheets", rpcArgs),
+      supabase.rpc("get_forum_posts", rpcArgs),
+      supabase.rpc("get_employee_requests", rpcArgs),
     ]);
 
     const statusRow = (statusRes.data && statusRes.data[0]) as EmployeeInfo | undefined;
@@ -600,13 +589,16 @@ export default function PortalPage() {
 
     setEmployeeInfo(info);
     setEmployeeCode(employeeCodeValue);
-    setShifts(shiftsRows || []);
+
+    // Map RPC shift results (published only for portal)
+    const allShifts = (shiftsRes.data as PortalShift[]) || [];
+    setShifts(allShifts);
     setTimesheets((tsRes.data as TimesheetEntry[]) || []);
     setForumPosts(forumRes.data || []);
     setMyRequests(requestsRes.data || []);
 
     const approvalMap = new Map<string, boolean>();
-    for (const a of (approvalsRows || []) as any[]) {
+    for (const a of ((approvalsRes.data || []) as any[])) {
       const approvalDate = (a.approval_date ?? a.date) as string | undefined;
       const isApproved = Boolean(a.is_approved ?? a.approved);
       if (approvalDate) approvalMap.set(approvalDate, isApproved);
