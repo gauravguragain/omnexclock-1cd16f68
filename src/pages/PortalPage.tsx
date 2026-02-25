@@ -796,6 +796,31 @@ export default function PortalPage() {
     };
   }, [authenticated, employeeCode, urlBusinessCode]);
 
+  // Realtime sync for published-shift changes across devices
+  useEffect(() => {
+    if (!authenticated || !employeeCode || !employeeInfo?.employee_id) return;
+
+    const channel = supabase
+      .channel(`portal-live-${employeeInfo.employee_id}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "shifts",
+          filter: `employee_id=eq.${employeeInfo.employee_id}`,
+        },
+        () => {
+          void fetchPortalData(employeeCode);
+        }
+      )
+      .subscribe();
+
+    return () => {
+      void supabase.removeChannel(channel);
+    };
+  }, [authenticated, employeeCode, employeeInfo?.employee_id, urlBusinessCode]);
+
   /* ── group shifts by week — only show current week ── */
   const shiftsByWeek = useMemo(() => {
     const todayStr = ausToday();
