@@ -362,16 +362,18 @@ export default function MonthlyReportSection() {
         yPos += 22;
       };
 
-      const addTable = (headers: string[], rows: string[][], categoryColor?: [number, number, number]) => {
+      const addTable = (headers: string[], rows: string[][], categoryColor?: [number, number, number], totalRow?: string[]) => {
         if (yPos > 260) { newPage(); }
         const headColor: [number, number, number] = categoryColor || HEADER_BG;
         autoTable(doc, {
           startY: yPos,
           head: [headers],
           body: rows,
+          foot: totalRow ? [totalRow] : undefined,
           margin: { left: 14, right: 14 },
           styles: { fontSize: 7, cellPadding: 2.5, textColor: [40, 40, 40], lineColor: [220, 220, 220], lineWidth: 0.1 },
           headStyles: { fillColor: headColor, textColor: [255, 255, 255], fontStyle: "bold", fontSize: 7.5 },
+          footStyles: { fillColor: [230, 230, 230], textColor: [20, 20, 20], fontStyle: "bold", fontSize: 8 },
           alternateRowStyles: { fillColor: [250, 250, 250] },
           columnStyles: {},
           didParseCell: (data) => {
@@ -576,7 +578,8 @@ export default function MonthlyReportSection() {
         addTable(
           ["Employee", "Department", "Net Hours", "Rate $/Hr", "Employee Pay"],
           payroll.map((p: any) => [p.name, p.department, Number(p.net_hours).toFixed(2), `$${Number(p.pay_rate).toFixed(2)}`, `$${Number(p.employee_pay).toFixed(2)}`]),
-          SECTION_COLORS.Finance
+          SECTION_COLORS.Finance,
+          ["TOTAL", "", totalHours.toFixed(2), `$${avgRate.toFixed(2)}`, `$${totalEmpPay.toFixed(2)}`]
         );
 
         // Department breakdown
@@ -626,7 +629,8 @@ export default function MonthlyReportSection() {
         addTable(
           ["Employee", "Department", "Net Hours", "Rate $/Hr (incl GST)", "Cost (ex GST)", "Cost (incl GST)"],
           payroll.map((p: any) => [p.name, p.department, Number(p.net_hours).toFixed(2), `$${Number(p.admin_hourly_rate).toFixed(2)}`, `$${Number(p.admin_pay).toFixed(2)}`, `$${Number(p.admin_pay_incl_gst || 0).toFixed(2)}`]),
-          SECTION_COLORS.Finance
+          SECTION_COLORS.Finance,
+          ["TOTAL", "", totalHours.toFixed(2), `$${avgRate.toFixed(2)}`, `$${totalAdminPay.toFixed(2)}`, `$${totalAdminPayIncl.toFixed(2)}`]
         );
 
         // Department breakdown
