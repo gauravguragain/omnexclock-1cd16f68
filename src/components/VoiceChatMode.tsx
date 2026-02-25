@@ -424,54 +424,75 @@ export default function VoiceChatMode({
       recognitionRef.current = rec;
 
       let finalText = "";
+      let interimText = "";
       let resolved = false;
+
+      let timeoutId: ReturnType<typeof setTimeout> | null = null;
 
       const done = (text: string) => {
         if (resolved) return;
         resolved = true;
+        if (timeoutId) clearTimeout(timeoutId);
         recognitionRef.current = null;
-        resolve(text);
+        resolve(text.trim());
       };
 
       rec.onresult = (e: any) => {
-        let interim = "";
-        finalText = "";
-        for (let i = 0; i < e.results.length; i++) {
-          const r = e.results[i];
-          if (r.isFinal) finalText += r[0].transcript;
-          else interim += r[0].transcript;
+        let localFinal = "";
+        let localInterim = "";
+
+        for (let i = e.resultIndex; i < e.results.length; i++) {
+          const chunk = (e.results[i]?.[0]?.transcript || "").trim();
+          if (!chunk) continue;
+          if (e.results[i].isFinal) localFinal += `${chunk} `;
+          else localInterim += `${chunk} `;
         }
-        setTranscript(finalText || interim);
+
+        if (localFinal) {
+          finalText = `${finalText} ${localFinal}`.trim();
+          interimText = "";
+        } else {
+          interimText = localInterim.trim();
+        }
+
+        setTranscript((finalText || interimText).trim());
       };
 
       rec.onerror = (e: any) => {
         console.log("[Voice] Recognition error:", e.error);
+
         if (e.error === "not-allowed" || e.error === "service-not-allowed") {
           toast.error("Microphone access denied. Please allow mic access and try again.");
-          activeRef.current = false; // Kill the whole session
+          activeRef.current = false;
+          done("");
+          return;
         }
-        // Let onend handle resolution
+
+        if (e.error === "no-speech") {
+          // Keep loop alive; onend will resolve with any captured interim/final text.
+          return;
+        }
       };
 
       rec.onend = () => {
-        const result = finalText.trim();
+        const result = (finalText || interimText).trim();
         console.log("[Voice] Recognition ended →", result || "(silence)");
         done(result);
       };
 
-      // Safety: 12s timeout (recognition usually ends by itself within 5-10s)
-      setTimeout(() => {
+      // Safety: stop after 15s to allow finalization instead of aborting partial speech.
+      timeoutId = setTimeout(() => {
         if (!resolved) {
-          console.log("[Voice] Recognition timeout, aborting");
-          try { rec.abort(); } catch {}
-          done(finalText.trim());
+          console.log("[Voice] Recognition timeout, stopping");
+          try { rec.stop(); } catch {}
         }
-      }, 12000);
+      }, 15000);
 
       try {
         rec.start();
         console.log("[Voice] 🎤 Listening...");
       } catch (e: any) {
+        clearTimeout(timeoutId);
         console.error("[Voice] rec.start() failed:", e.message);
         done("");
       }
