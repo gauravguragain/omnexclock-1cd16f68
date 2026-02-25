@@ -125,27 +125,29 @@ function EventCard({ ev }: { ev: any }) {
   ].filter(Boolean) as string[];
 
   const viewPdf = async (urlOrPath: string) => {
-    let url = urlOrPath;
-    if (!urlOrPath.startsWith("http")) {
-      // The bucket may be private — use a signed URL for reliable access
-      const { data: signedData, error } = await supabase.storage
-        .from("event-runsheets")
-        .createSignedUrl(urlOrPath, 600); // 10 min expiry
-      if (signedData?.signedUrl) {
-        url = signedData.signedUrl;
-      } else {
-        // Fallback to public URL construction
-        const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-        url = `${supabaseUrl}/storage/v1/object/public/event-runsheets/${encodeURIComponent(urlOrPath).replace(/%2F/g, "/")}`;
-      }
+    let filePath = urlOrPath;
+
+    // If it's a full URL pointing to our storage, extract the path
+    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+    const bucketPrefix = `${supabaseUrl}/storage/v1/object/public/event-runsheets/`;
+    const bucketPrefixPrivate = `${supabaseUrl}/storage/v1/object/event-runsheets/`;
+    if (filePath.startsWith(bucketPrefix)) {
+      filePath = decodeURIComponent(filePath.replace(bucketPrefix, ""));
+    } else if (filePath.startsWith(bucketPrefixPrivate)) {
+      filePath = decodeURIComponent(filePath.replace(bucketPrefixPrivate, ""));
+    } else if (filePath.startsWith("http")) {
+      // External URL — just open it directly
+      window.open(filePath, "_blank", "noopener,noreferrer");
+      return;
     }
-    const a = document.createElement("a");
-    a.href = url;
-    a.target = "_blank";
-    a.rel = "noopener noreferrer";
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
+
+    // Always use a signed URL for reliable access
+    const { data: signedData } = await supabase.storage
+      .from("event-runsheets")
+      .createSignedUrl(filePath, 600);
+
+    const url = signedData?.signedUrl || `${bucketPrefix}${encodeURIComponent(filePath).replace(/%2F/g, "/")}`;
+    window.open(url, "_blank", "noopener,noreferrer");
   };
 
   const detailRow = (label: string, value: string | null | undefined) => {
