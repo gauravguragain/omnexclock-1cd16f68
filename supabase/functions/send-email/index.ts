@@ -117,7 +117,7 @@ serve(async (req) => {
               <strong>⚠️ Disclaimer:</strong> The shift and break times stated in this roster are indicative and may vary according to the operational needs of the business and at the discretion of management. You may be required to start earlier, finish later, or take breaks at different times depending on business demands. Please check with your manager if you have any concerns.
             </p>
           </div>
-          <p style="color:#6b7280;font-size:13px;margin-top:16px;">This is an automated notification. Please contact your manager if you have questions.</p>
+          <p style="color:#6b7280;font-size:13px;margin-top:16px;">This is an automated notification from Omnex Ventures. Please contact your manager if you have questions.</p>
         </div>
       `;
 
@@ -190,7 +190,7 @@ serve(async (req) => {
               ${tableHtml}
             </div>
             <div style="text-align:center;padding:16px 20px;background:#f8f9fa;border-radius:0 0 12px 12px;">
-              <p style="color:#999;font-size:11px;margin:0;">This is an automated report from your workforce management system.</p>
+              <p style="color:#999;font-size:11px;margin:0;">This is an automated report from <strong>Omnex Ventures</strong>.</p>
             </div>
           </div>
         `,
@@ -324,7 +324,7 @@ serve(async (req) => {
           <!-- Footer -->
           <div style="text-align:center;padding:20px 30px;background:#f8f9fa;border-radius:0 0 12px 12px;">
             <p style="color:#999;font-size:11px;margin:0;">
-              This is an automated welcome email from <strong>${body.businessName || "OmnexClock"}</strong>.<br/>
+              This is an automated welcome email from <strong>Omnex Ventures</strong>.<br/>
               If you received this in error, please contact your manager.
             </p>
           </div>
@@ -378,7 +378,7 @@ serve(async (req) => {
           <!-- Footer -->
           <div style="text-align:center;padding:16px 30px;background:#f8f9fa;border-radius:0 0 12px 12px;">
             <p style="color:#999;font-size:11px;margin:0;">
-              This is an automated email from <strong>${body.businessName || "OmnexClock"}</strong>.
+              This is an automated email from <strong>Omnex Ventures</strong>.
             </p>
           </div>
         </div>
@@ -421,7 +421,7 @@ serve(async (req) => {
             </div>
           </div>
           <div style="text-align:center;padding:16px 30px;background:#f8f9fa;border-radius:0 0 12px 12px;">
-            <p style="color:#999;font-size:11px;margin:0;">This is an automated report from <strong>${body.businessName || "OmnexClock"}</strong>.</p>
+            <p style="color:#999;font-size:11px;margin:0;">This is an automated report from <strong>Omnex Ventures</strong>.</p>
           </div>
         </div>
       `;

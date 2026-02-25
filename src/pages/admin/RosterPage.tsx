@@ -370,7 +370,16 @@ export default function RosterPage() {
 
   const totalRecipients = selectedAdminIds.length + customEmails.length;
   const handleSendRosterEmail = async () => {
-    if (totalRecipients === 0) {
+    // Auto-add any email currently typed in the input field
+    const pendingEmail = customEmailInput.trim().toLowerCase();
+    if (pendingEmail && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(pendingEmail) && !customEmails.includes(pendingEmail)) {
+      customEmails.push(pendingEmail);
+      setCustomEmails([...customEmails]);
+      setCustomEmailInput("");
+    }
+
+    const actualTotal = selectedAdminIds.length + customEmails.length;
+    if (actualTotal === 0) {
       toast({ title: "No recipients selected", variant: "destructive" });
       return;
     }
