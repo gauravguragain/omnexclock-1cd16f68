@@ -44,7 +44,7 @@ async function classifyQuery(userMessage: string, groqKey: string): Promise<"sim
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "llama-3.1-8b-instant",
+        model: "llama-3.3-70b-versatile",
         messages: [
           {
             role: "system",
@@ -134,7 +134,7 @@ Keep responses concise and warm.${voiceMode ? "\nVOICE MODE: 1-2 sentences max. 
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
-      model: "llama-3.1-70b-versatile",
+      model: "llama-3.3-70b-versatile",
       messages: groqMessages,
       max_tokens: 1024,
       temperature: 0.7,
