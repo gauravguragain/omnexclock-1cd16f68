@@ -18,6 +18,7 @@ serve(async (req) => {
       });
     }
 
+    // ── AI Provider: Google Gemini (direct, uses GEMINI_API_KEY) ──
     const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
     if (!GEMINI_API_KEY) throw new Error("GEMINI_API_KEY not configured");
 
@@ -41,15 +42,15 @@ serve(async (req) => {
     const systemPrompt = `You are a data extraction assistant. You will receive a PDF runsheet for an event venue. Extract the following fields from the document. If a field is not found, set it to null.
 
 Rules:
-- event_date: The date of the event in YYYY-MM-DD format. Look for "Date", "Event Date", or similar. If not found, set to null.
-- event_time: The time of the event as a readable string (e.g. "6:00 PM - 11:00 PM", "7pm start"). Look for "Time", "Event Time", "Start Time", "Doors Open" etc. If not found, set to null.
-- event_space: The name of the event space/room/venue area. Extract the exact text.
+- event_date: The date of the event in YYYY-MM-DD format.
+- event_time: The time of the event as a readable string (e.g. "6:00 PM - 11:00 PM").
+- event_space: The name of the event space/room/venue area.
 - event_type: The type of event (e.g. Wedding, Birthday, Corporate, etc.).
 - tablecloth_color: The tablecloth color. Default to "black" if not specified.
 - adult_guests: Number of adult guests. Integer only.
 - kids_guests: Number of kids/children guests. Integer only.
 - chairs_per_table: Number of chairs per table. Default is 8.
-- num_tables: Calculate as Math.ceil((adult_guests + kids_guests) / chairs_per_table). Use stated number if explicit.
+- num_tables: Calculate as Math.ceil((adult_guests + kids_guests) / chairs_per_table).
 - cold_sparkles: true/false
 - dry_ice: true/false
 - red_carpet: true/false
@@ -59,11 +60,9 @@ Rules:
 - live_stall_details: Details if live_stall is true, otherwise null.
 - host_name: The name of the host/client.
 - host_contact_number: The contact phone number of the host/client.
-- bev_package: The beverage package or all beverage-related information. Look for headings like "Beverage Package", "Drinks", "Bar", "Beverages" etc. If no explicit heading exists, scan the entire document for ANY mentions of drinks, alcohol, wine, beer, spirits, cocktails, soft drinks, juice, water, coffee, tea, BYO, corkage, bar tab, drink packages, or similar beverage-related items. Combine all found beverage details into a single descriptive string (e.g. "Gold Package", "BYO with corkage", "House wines, tap beer, soft drinks", "5hr drinks package - Premium"). If absolutely nothing beverage-related is found, set to null.
-- banquet_tier: The banquet tier or menu tier name (e.g. "Premium", "Gold", "Silver", "Platinum", "Standard"). Just the tier name, not the full menu details.
-- notes: Any other important details or special requests.
-
-Return ONLY valid JSON, no markdown, no extra text.`;
+- bev_package: The beverage package or all beverage-related information. Scan the entire document for ANY mentions of drinks, alcohol, wine, beer, spirits, cocktails, soft drinks, juice, water, coffee, tea, BYO, corkage, bar tab, drink packages, or similar. If absolutely nothing beverage-related is found, set to null.
+- banquet_tier: The banquet tier or menu tier name (e.g. "Premium", "Gold", "Silver"). Just the tier name.
+- notes: Any other important details or special requests.`;
 
     const response = await fetch(
       `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`,
@@ -74,7 +73,7 @@ Return ONLY valid JSON, no markdown, no extra text.`;
           contents: [
             {
               parts: [
-                { text: systemPrompt + "\n\nExtract all event details from this runsheet PDF. Return only JSON." },
+                { text: systemPrompt + "\n\nExtract all event details from this runsheet PDF." },
                 {
                   inline_data: {
                     mime_type: "application/pdf",
@@ -86,7 +85,34 @@ Return ONLY valid JSON, no markdown, no extra text.`;
           ],
           generationConfig: {
             temperature: 0.1,
-            maxOutputTokens: 4096,
+            maxOutputTokens: 8192,
+            responseMimeType: "application/json",
+            responseSchema: {
+              type: "object",
+              properties: {
+                event_date: { type: "string", nullable: true },
+                event_time: { type: "string", nullable: true },
+                event_space: { type: "string", nullable: true },
+                event_type: { type: "string", nullable: true },
+                tablecloth_color: { type: "string", nullable: true },
+                adult_guests: { type: "integer", nullable: true },
+                kids_guests: { type: "integer", nullable: true },
+                chairs_per_table: { type: "integer", nullable: true },
+                num_tables: { type: "integer", nullable: true },
+                cold_sparkles: { type: "boolean", nullable: true },
+                dry_ice: { type: "boolean", nullable: true },
+                red_carpet: { type: "boolean", nullable: true },
+                smoke_machine: { type: "boolean", nullable: true },
+                decor_access: { type: "boolean", nullable: true },
+                live_stall: { type: "boolean", nullable: true },
+                live_stall_details: { type: "string", nullable: true },
+                host_name: { type: "string", nullable: true },
+                host_contact_number: { type: "string", nullable: true },
+                bev_package: { type: "string", nullable: true },
+                banquet_tier: { type: "string", nullable: true },
+                notes: { type: "string", nullable: true },
+              },
+            },
           },
         }),
       }
@@ -108,13 +134,7 @@ Return ONLY valid JSON, no markdown, no extra text.`;
     const content = aiData.candidates?.[0]?.content?.parts?.[0]?.text || "";
     console.log("[extract-runsheet] Gemini response length:", content.length);
 
-    // Extract JSON from response (may be wrapped in markdown code blocks)
-    let jsonStr = content.trim();
-    if (jsonStr.startsWith("```")) {
-      jsonStr = jsonStr.replace(/^```(?:json)?\s*\n?/, "").replace(/\n?```\s*$/, "");
-    }
-
-    const extracted = JSON.parse(jsonStr.trim());
+    const extracted = JSON.parse(content);
 
     // Ensure num_tables is calculated if not set but guests/chairs are
     if (extracted.num_tables == null && (extracted.adult_guests != null || extracted.kids_guests != null)) {
