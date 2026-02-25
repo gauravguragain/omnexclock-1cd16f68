@@ -508,15 +508,17 @@ export default function PortalPage() {
 
   const fetchPortalData = async (employeeCodeValue: string) => {
     const bizCode = urlBusinessCode?.toUpperCase() || null;
+    // Cache-bust: add timestamp header to force fresh data past any SW/browser cache
+    const headers = { 'Cache-Control': 'no-cache, no-store', 'x-cache-bust': String(Date.now()) };
 
     // Fetch everything in parallel using SECURITY DEFINER RPCs (portal users have no auth session)
     const [statusRes, shiftsRes, tsRes, forumRes, requestsRes, approvalsRes] = await Promise.all([
-      supabase.rpc("get_employee_status", { _employee_code: employeeCodeValue, _business_code: bizCode }),
-      supabase.rpc("get_employee_shifts", { _employee_code: employeeCodeValue, _business_code: bizCode }),
-      supabase.rpc("get_employee_timesheets", { _employee_code: employeeCodeValue, _business_code: bizCode }),
-      supabase.rpc("get_forum_posts", { _employee_code: employeeCodeValue, _business_code: bizCode }),
-      supabase.rpc("get_employee_requests", { _employee_code: employeeCodeValue, _business_code: bizCode }),
-      supabase.rpc("get_employee_timesheet_approvals", { _employee_code: employeeCodeValue, _business_code: bizCode }),
+      supabase.rpc("get_employee_status", { _employee_code: employeeCodeValue, _business_code: bizCode }).throwOnError(),
+      supabase.rpc("get_employee_shifts", { _employee_code: employeeCodeValue, _business_code: bizCode }).throwOnError(),
+      supabase.rpc("get_employee_timesheets", { _employee_code: employeeCodeValue, _business_code: bizCode }).throwOnError(),
+      supabase.rpc("get_forum_posts", { _employee_code: employeeCodeValue, _business_code: bizCode }).throwOnError(),
+      supabase.rpc("get_employee_requests", { _employee_code: employeeCodeValue, _business_code: bizCode }).throwOnError(),
+      supabase.rpc("get_employee_timesheet_approvals", { _employee_code: employeeCodeValue, _business_code: bizCode }).throwOnError(),
     ]);
 
     if (!statusRes.data || statusRes.data.length === 0) {
