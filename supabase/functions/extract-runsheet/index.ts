@@ -18,27 +18,27 @@ serve(async (req) => {
       });
     }
 
-    const GROQ_API_KEY = Deno.env.get("GROQ_API_KEY");
-    if (!GROQ_API_KEY) throw new Error("GROQ_API_KEY not configured");
+    const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
+    if (!GEMINI_API_KEY) throw new Error("GEMINI_API_KEY not configured");
 
     // Fetch the PDF and convert to base64
+    console.log("[extract-runsheet] Fetching PDF from:", pdfUrl);
     const pdfResponse = await fetch(pdfUrl);
-    if (!pdfResponse.ok) throw new Error("Failed to fetch PDF");
+    if (!pdfResponse.ok) throw new Error(`Failed to fetch PDF: ${pdfResponse.status} ${pdfResponse.statusText}`);
     const pdfBuffer = await pdfResponse.arrayBuffer();
-    const pdfBase64 = btoa(String.fromCharCode(...new Uint8Array(pdfBuffer)));
+    const pdfBytes = new Uint8Array(pdfBuffer);
+    
+    // Convert to base64 in chunks to avoid stack overflow on large files
+    let pdfBase64 = "";
+    const chunkSize = 8192;
+    for (let i = 0; i < pdfBytes.length; i += chunkSize) {
+      pdfBase64 += String.fromCharCode(...pdfBytes.slice(i, i + chunkSize));
+    }
+    pdfBase64 = btoa(pdfBase64);
 
-    const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${GROQ_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "llama-3.2-90b-vision-preview",
-        messages: [
-          {
-            role: "system",
-            content: `You are a data extraction assistant. You will receive a PDF runsheet for an event venue. Extract the following fields from the document. If a field is not found, set it to null.
+    console.log("[extract-runsheet] PDF fetched, size:", pdfBytes.length, "bytes. Calling Gemini...");
+
+    const systemPrompt = `You are a data extraction assistant. You will receive a PDF runsheet for an event venue. Extract the following fields from the document. If a field is not found, set it to null.
 
 Rules:
 - event_date: The date of the event in YYYY-MM-DD format. Look for "Date", "Event Date", or similar. If not found, set to null.
@@ -63,42 +63,50 @@ Rules:
 - banquet_tier: The banquet tier or menu tier name (e.g. "Premium", "Gold", "Silver", "Platinum", "Standard"). Just the tier name, not the full menu details.
 - notes: Any other important details or special requests.
 
-Return ONLY valid JSON, no markdown, no extra text.`,
-          },
-          {
-            role: "user",
-            content: [
-              {
-                type: "image_url",
-                image_url: {
-                  url: `data:application/pdf;base64,${pdfBase64}`,
+Return ONLY valid JSON, no markdown, no extra text.`;
+
+    const response = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          contents: [
+            {
+              parts: [
+                { text: systemPrompt + "\n\nExtract all event details from this runsheet PDF. Return only JSON." },
+                {
+                  inline_data: {
+                    mime_type: "application/pdf",
+                    data: pdfBase64,
+                  },
                 },
-              },
-              {
-                type: "text",
-                text: "Extract all event details from this runsheet PDF. Return only JSON.",
-              },
-            ],
+              ],
+            },
+          ],
+          generationConfig: {
+            temperature: 0.1,
+            maxOutputTokens: 4096,
           },
-        ],
-      }),
-    });
+        }),
+      }
+    );
 
     if (!response.ok) {
+      const t = await response.text();
+      console.error("Gemini API error:", response.status, t);
       if (response.status === 429) {
         return new Response(JSON.stringify({ error: "Rate limit exceeded, please try again later." }), {
           status: 429,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
-      const t = await response.text();
-      console.error("Groq API error:", response.status, t);
-      throw new Error("AI extraction failed");
-      
+      throw new Error(`AI extraction failed: ${response.status}`);
     }
 
     const aiData = await response.json();
-    const content = aiData.choices?.[0]?.message?.content || "";
+    const content = aiData.candidates?.[0]?.content?.parts?.[0]?.text || "";
+    console.log("[extract-runsheet] Gemini response length:", content.length);
 
     // Extract JSON from response
     let jsonStr = content;
