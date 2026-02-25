@@ -18,8 +18,23 @@ serve(async (req) => {
       });
     }
 
+    // ── AI Provider: Google Gemini (direct, uses GEMINI_API_KEY) ──
     const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
     if (!GEMINI_API_KEY) throw new Error("GEMINI_API_KEY not configured");
+
+    // Download the logo image and convert to base64
+    const imgResponse = await fetch(imageUrl);
+    if (!imgResponse.ok) throw new Error("Failed to fetch logo image");
+
+    const imgBuffer = await imgResponse.arrayBuffer();
+    const imgBytes = new Uint8Array(imgBuffer);
+    let binary = "";
+    const chunkSize = 8192;
+    for (let i = 0; i < imgBytes.length; i += chunkSize) {
+      binary += String.fromCharCode(...imgBytes.slice(i, i + chunkSize));
+    }
+    const base64 = btoa(binary);
+    const mimeType = imgResponse.headers.get("content-type") || "image/png";
 
     const systemPrompt = `You are a design expert. Analyze the provided logo image and suggest 4 color themes that would work well as app themes based on the logo's colors, mood, and style.
 
@@ -32,38 +47,7 @@ Each theme must have these HSL values (without the hsl() wrapper, just the value
 - muted: Muted background for subtle elements
 - border: Border color
 
-Return ONLY valid JSON in this exact format, no other text:
-{
-  "themes": [
-    {
-      "name": "Theme Name",
-      "theme": {
-        "primary": "H S% L%",
-        "background": "H S% L%",
-        "foreground": "H S% L%",
-        "card": "H S% L%",
-        "accent": "H S% L%",
-        "muted": "H S% L%",
-        "border": "H S% L%"
-      }
-    }
-  ]
-}
-
 Make themes distinct: one dark luxury, one modern minimal, one bold vibrant, one warm professional.`;
-
-    // Download the logo image and convert to base64 for Gemini vision
-    const imgResponse = await fetch(imageUrl);
-    if (!imgResponse.ok) throw new Error("Failed to fetch logo image");
-
-    const imgBuffer = await imgResponse.arrayBuffer();
-    const bytes = new Uint8Array(imgBuffer);
-    let binary = "";
-    for (let i = 0; i < bytes.length; i++) {
-      binary += String.fromCharCode(bytes[i]);
-    }
-    const base64 = btoa(binary);
-    const mimeType = imgResponse.headers.get("content-type") || "image/png";
 
     const geminiResponse = await fetch(
       `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`,
@@ -82,14 +66,44 @@ Make themes distinct: one dark luxury, one modern minimal, one bold vibrant, one
                   },
                 },
                 {
-                  text: "Analyze this logo and suggest 4 color themes for an app. Return only JSON.",
+                  text: "Analyze this logo and suggest 4 color themes for an app.",
                 },
               ],
             },
           ],
           generationConfig: {
             temperature: 0.4,
-            maxOutputTokens: 2048,
+            maxOutputTokens: 8192,
+            responseMimeType: "application/json",
+            responseSchema: {
+              type: "object",
+              properties: {
+                themes: {
+                  type: "array",
+                  items: {
+                    type: "object",
+                    properties: {
+                      name: { type: "string" },
+                      theme: {
+                        type: "object",
+                        properties: {
+                          primary: { type: "string" },
+                          background: { type: "string" },
+                          foreground: { type: "string" },
+                          card: { type: "string" },
+                          accent: { type: "string" },
+                          muted: { type: "string" },
+                          border: { type: "string" },
+                        },
+                        required: ["primary", "background", "foreground", "card", "accent", "muted", "border"],
+                      },
+                    },
+                    required: ["name", "theme"],
+                  },
+                },
+              },
+              required: ["themes"],
+            },
           },
         }),
       }
@@ -110,14 +124,8 @@ Make themes distinct: one dark luxury, one modern minimal, one bold vibrant, one
     const aiData = await geminiResponse.json();
     const content = aiData.candidates?.[0]?.content?.parts?.[0]?.text || "";
 
-    // Extract JSON from response (may be wrapped in markdown code blocks)
-    let jsonStr = content.trim();
-    // Remove markdown code fences if present
-    if (jsonStr.startsWith("```")) {
-      jsonStr = jsonStr.replace(/^```(?:json)?\s*\n?/, "").replace(/\n?```\s*$/, "");
-    }
-
-    const parsed = JSON.parse(jsonStr.trim());
+    // With responseMimeType: "application/json", Gemini returns clean JSON
+    const parsed = JSON.parse(content);
 
     return new Response(JSON.stringify(parsed), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
