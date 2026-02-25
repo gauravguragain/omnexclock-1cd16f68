@@ -518,7 +518,7 @@ export default function PortalPage() {
     const { data: empRow } = await empQuery.maybeSingle();
     const resolvedEmpId: string | null = empRow?.id || null;
 
-    // Step 2: Fetch everything in parallel — use direct table query for shifts (avoids RPC overload issues)
+    // Step 2: Fetch everything in parallel — use direct table query for shifts
     const shiftsPromise = resolvedEmpId
       ? supabase
           .from("shifts")
