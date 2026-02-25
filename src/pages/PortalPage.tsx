@@ -506,6 +506,39 @@ export default function PortalPage() {
     if (code.length < 4) setCode(prev => prev + num);
   };
 
+  const fetchPortalData = async (employeeCodeValue: string) => {
+    const bizCode = urlBusinessCode?.toUpperCase() || null;
+
+    const [statusRes, shiftsRes, tsRes, forumRes, requestsRes, approvalsRes] = await Promise.all([
+      supabase.rpc("get_employee_status", { _employee_code: employeeCodeValue, _business_code: bizCode }),
+      supabase.rpc("get_employee_shifts", { _employee_code: employeeCodeValue, _business_code: bizCode }),
+      supabase.rpc("get_employee_timesheets", { _employee_code: employeeCodeValue, _business_code: bizCode }),
+      supabase.rpc("get_forum_posts", { _employee_code: employeeCodeValue, _business_code: bizCode }),
+      supabase.rpc("get_employee_requests", { _employee_code: employeeCodeValue, _business_code: bizCode }),
+      supabase.rpc("get_employee_timesheet_approvals", { _employee_code: employeeCodeValue, _business_code: bizCode }),
+    ]);
+
+    if (!statusRes.data || statusRes.data.length === 0) {
+      return false;
+    }
+
+    const info = statusRes.data[0] as EmployeeInfo;
+    setEmployeeInfo(info);
+    setEmployeeCode(employeeCodeValue);
+    setShifts((shiftsRes.data as PortalShift[]) || []);
+    setTimesheets((tsRes.data as TimesheetEntry[]) || []);
+    setForumPosts(forumRes.data || []);
+    setMyRequests(requestsRes.data || []);
+
+    const approvalMap = new Map<string, boolean>();
+    for (const a of (approvalsRes.data || []) as any[]) {
+      approvalMap.set(a.approval_date, a.is_approved);
+    }
+    setTimesheetApprovals(approvalMap);
+
+    return true;
+  };
+
   const handleLogin = async () => {
     if (!/^\d{4}$/.test(code)) {
       toast({ title: "Invalid Code", description: "Please enter your 4-digit employee code.", variant: "destructive" });
@@ -516,35 +549,12 @@ export default function PortalPage() {
     await runAction(async () => {
       setLoading(true);
       try {
-        const bizCode = urlBusinessCode?.toUpperCase() || null;
-        const { data: statusData } = await supabase.rpc("get_employee_status", { _employee_code: code, _business_code: bizCode });
-        if (!statusData || statusData.length === 0) {
+        const ok = await fetchPortalData(code);
+        if (!ok) {
           toast({ title: "Invalid Code", description: "Employee not found.", variant: "destructive" });
           setLoading(false);
           return;
         }
-
-        const info = statusData[0] as EmployeeInfo;
-        setEmployeeInfo(info);
-        setEmployeeCode(code);
-
-        const [shiftsRes, tsRes, forumRes, requestsRes, approvalsRes] = await Promise.all([
-          supabase.rpc("get_employee_shifts", { _employee_code: code, _business_code: bizCode }),
-          supabase.rpc("get_employee_timesheets", { _employee_code: code, _business_code: bizCode }),
-          supabase.rpc("get_forum_posts", { _employee_code: code, _business_code: bizCode }),
-          supabase.rpc("get_employee_requests", { _employee_code: code, _business_code: bizCode }),
-          supabase.rpc("get_employee_timesheet_approvals", { _employee_code: code, _business_code: bizCode }),
-        ]);
-
-        setShifts((shiftsRes.data as PortalShift[]) || []);
-        setTimesheets((tsRes.data as TimesheetEntry[]) || []);
-        setForumPosts(forumRes.data || []);
-        setMyRequests(requestsRes.data || []);
-        const approvalMap = new Map<string, boolean>();
-        for (const a of (approvalsRes.data || []) as any[]) {
-          approvalMap.set(a.approval_date, a.is_approved);
-        }
-        setTimesheetApprovals(approvalMap);
         setAuthenticated(true);
       } catch {
         toast({ title: "Error", description: "Unable to load portal.", variant: "destructive" });
@@ -753,6 +763,37 @@ export default function PortalPage() {
       window.removeEventListener("keydown", reset);
     };
   }, [authenticated]);
+
+  // Keep portal data synced with admin actions
+  useEffect(() => {
+    if (!authenticated || !employeeCode) return;
+
+    let cancelled = false;
+    const refresh = async () => {
+      try {
+        const ok = await fetchPortalData(employeeCode);
+        if (!ok && !cancelled) handleLogout();
+      } catch {
+        // silently ignore intermittent network errors during auto-refresh
+      }
+    };
+
+    const intervalId = setInterval(refresh, 15000);
+    const onFocus = () => { void refresh(); };
+    const onVisibility = () => {
+      if (document.visibilityState === "visible") void refresh();
+    };
+
+    window.addEventListener("focus", onFocus);
+    document.addEventListener("visibilitychange", onVisibility);
+
+    return () => {
+      cancelled = true;
+      clearInterval(intervalId);
+      window.removeEventListener("focus", onFocus);
+      document.removeEventListener("visibilitychange", onVisibility);
+    };
+  }, [authenticated, employeeCode, urlBusinessCode]);
 
   /* ── group shifts by week — only show current week ── */
   const shiftsByWeek = useMemo(() => {
@@ -1066,8 +1107,8 @@ export default function PortalPage() {
                             const d = new Date(ts.work_date + "T00:00:00");
                             const dayName = toAusFormatted(d, { weekday: "short" });
                             const dateLabel = toAusFormatted(d, { day: "numeric", month: "short" });
-                            const isActive = ts.clock_in && !ts.clock_out;
-                            const isApproved = timesheetApprovals.get(ts.work_date);
+                            const isActive = !!ts.clock_in && !ts.clock_out;
+                            const isApproved = isActive ? false : timesheetApprovals.get(ts.work_date);
 
                             return (
                               <Card key={ts.work_date} className={isActive ? "border-warning/40" : isApproved ? "border-success/30" : ""}>
