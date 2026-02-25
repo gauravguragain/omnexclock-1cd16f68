@@ -125,28 +125,28 @@ function EventCard({ ev }: { ev: any }) {
   ].filter(Boolean) as string[];
 
   const viewPdf = async (urlOrPath: string) => {
-    let filePath = urlOrPath;
-
-    // If it's a full URL pointing to our storage, extract the path
     const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-    const bucketPrefix = `${supabaseUrl}/storage/v1/object/public/event-runsheets/`;
-    const bucketPrefixPrivate = `${supabaseUrl}/storage/v1/object/event-runsheets/`;
-    if (filePath.startsWith(bucketPrefix)) {
-      filePath = decodeURIComponent(filePath.replace(bucketPrefix, ""));
-    } else if (filePath.startsWith(bucketPrefixPrivate)) {
-      filePath = decodeURIComponent(filePath.replace(bucketPrefixPrivate, ""));
-    } else if (filePath.startsWith("http")) {
-      // External URL — just open it directly
+    const storagePathMatch = urlOrPath.match(/\/storage\/v1\/object\/(?:public\/)?event-runsheets\/(.+)$/);
+
+    // Normalize to bucket path when URL was stored instead of path
+    const filePath = storagePathMatch
+      ? decodeURIComponent(storagePathMatch[1])
+      : urlOrPath;
+
+    // Non-storage external URL
+    if (filePath.startsWith("http") && !storagePathMatch) {
       window.open(filePath, "_blank", "noopener,noreferrer");
       return;
     }
 
-    // Always use a signed URL for reliable access
+    // Always use signed URL for path-based files; fallback to direct public URL
     const { data: signedData } = await supabase.storage
       .from("event-runsheets")
       .createSignedUrl(filePath, 600);
 
-    const url = signedData?.signedUrl || `${bucketPrefix}${encodeURIComponent(filePath).replace(/%2F/g, "/")}`;
+    const url = signedData?.signedUrl
+      || `${supabaseUrl}/storage/v1/object/public/event-runsheets/${encodeURIComponent(filePath).replace(/%2F/g, "/")}`;
+
     window.open(url, "_blank", "noopener,noreferrer");
   };
 
