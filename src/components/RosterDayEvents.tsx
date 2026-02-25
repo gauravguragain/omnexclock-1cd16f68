@@ -398,25 +398,28 @@ export default function RosterDayEvents({ weekDates, fmtDate }: Props) {
   };
 
   const viewPdf = async (urlOrPath: string) => {
-    // If it's already a full URL (legacy data), open directly; otherwise generate signed URL
     let url = urlOrPath;
-    if (!urlOrPath.startsWith("http")) {
-      const { data } = await supabase.storage.from("event-runsheets").createSignedUrl(urlOrPath, 3600);
-      if (data?.signedUrl) {
-        url = data.signedUrl;
-      } else {
-        toast({ title: "Error", description: "Could not generate access link for PDF.", variant: "destructive" });
-        return;
-      }
+
+    if (urlOrPath.startsWith("http")) {
+      // Already a full URL (legacy or external) — open directly
+      window.open(url, "_blank", "noopener,noreferrer");
+      return;
     }
-    // Use link click instead of window.open to avoid popup blockers on laptops/desktops
-    const a = document.createElement("a");
-    a.href = url;
-    a.target = "_blank";
-    a.rel = "noopener noreferrer";
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
+
+    // It's a storage path — try signed URL, fall back to public URL
+    const { data } = await supabase.storage
+      .from("event-runsheets")
+      .createSignedUrl(urlOrPath, 3600);
+
+    if (data?.signedUrl) {
+      url = data.signedUrl;
+    } else {
+      // Bucket is public — construct direct URL as fallback
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+      url = `${supabaseUrl}/storage/v1/object/public/event-runsheets/${encodeURIComponent(urlOrPath).replace(/%2F/g, "/")}`;
+    }
+
+    window.open(url, "_blank", "noopener,noreferrer");
   };
 
   const getEquipmentBadges = (ev: DayEvent) => {
