@@ -509,29 +509,10 @@ export default function PortalPage() {
   const fetchPortalData = async (employeeCodeValue: string) => {
     const bizCode = urlBusinessCode?.toUpperCase() || null;
 
-    // Step 1: Resolve employee_id directly from employees_public (no RLS, most reliable)
-    let empQuery = supabase.from("employees_public" as any).select("id, business_id").eq("employee_code", employeeCodeValue).eq("active", true) as any;
-    if (bizCode) {
-      const { data: bizRow } = await supabase.from("businesses_public" as any).select("id").eq("business_code", bizCode).maybeSingle() as { data: { id: string } | null };
-      if (bizRow) empQuery = empQuery.eq("business_id", bizRow.id);
-    }
-    const { data: empRow } = await empQuery.maybeSingle();
-    const resolvedEmpId: string | null = empRow?.id || null;
-
-    // Step 2: Fetch everything in parallel — use direct table query for shifts (avoids RPC overload issues)
-    const shiftsPromise = resolvedEmpId
-      ? supabase
-          .from("shifts")
-          .select("id, date, day_of_week, start_time, end_time, break_minutes, hours_worked, notes, week_start_date")
-          .eq("employee_id", resolvedEmpId)
-          .eq("status", "published")
-          .order("date")
-          .order("start_time")
-      : Promise.resolve({ data: [] });
-
+    // Fetch everything in parallel using SECURITY DEFINER RPCs (portal users have no auth session)
     const [statusRes, shiftsRes, tsRes, forumRes, requestsRes, approvalsRes] = await Promise.all([
       supabase.rpc("get_employee_status", { _employee_code: employeeCodeValue, _business_code: bizCode }),
-      shiftsPromise,
+      supabase.rpc("get_employee_shifts", { _employee_code: employeeCodeValue, _business_code: bizCode }),
       supabase.rpc("get_employee_timesheets", { _employee_code: employeeCodeValue, _business_code: bizCode }),
       supabase.rpc("get_forum_posts", { _employee_code: employeeCodeValue, _business_code: bizCode }),
       supabase.rpc("get_employee_requests", { _employee_code: employeeCodeValue, _business_code: bizCode }),
