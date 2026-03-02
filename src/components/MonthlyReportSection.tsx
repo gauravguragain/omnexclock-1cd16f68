@@ -65,13 +65,12 @@ function getWeekOptions(monthStr: string) {
   const weeks = eachWeekOfInterval({ start, end }, { weekStartsOn: 1 });
   return weeks.map((ws, idx) => {
     const we = endOfWeek(ws, { weekStartsOn: 1 });
-    const clampedStart = ws < start ? start : ws;
-    const clampedEnd = we > end ? end : we;
+    // Don't clamp to month boundaries — use full Mon–Sun week
     return {
       value: `week-${idx}`,
-      label: `Week ${idx + 1}: ${format(clampedStart, "dd MMM")} - ${format(clampedEnd, "dd MMM")}`,
-      start: clampedStart,
-      end: clampedEnd,
+      label: `Week ${idx + 1}: ${format(ws, "dd MMM")} - ${format(we, "dd MMM")}`,
+      start: ws,
+      end: we,
     };
   });
 }
