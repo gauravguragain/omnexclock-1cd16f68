@@ -410,9 +410,8 @@ export default function MonthlyReportSection() {
         const weeks = eachWeekOfInterval({ start: monthStart, end: monthEnd }, { weekStartsOn: 1 });
         return weeks.map((ws, idx) => {
           const we = endOfWeek(ws, { weekStartsOn: 1 });
-          const s = ws < monthStart ? monthStart : ws;
-          const e = we > monthEnd ? monthEnd : we;
-          return { start: s, end: e, label: `Week ${idx + 1}: ${format(s, "dd MMM")} - ${format(e, "dd MMM")}` };
+          // Don't clamp to month boundaries — use full Mon–Sun week
+          return { start: ws, end: we, label: `Week ${idx + 1}: ${format(ws, "dd MMM")} - ${format(we, "dd MMM")}` };
         });
       };
 
