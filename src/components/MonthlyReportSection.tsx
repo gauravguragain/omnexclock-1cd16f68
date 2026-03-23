@@ -194,11 +194,9 @@ export default function MonthlyReportSection() {
         const allEmps = results.employees || [];
         const empMap = new Map((allEmps as any[]).map((e: any) => [e.id, e]));
         
-        // Use shared timesheet computation
         const allTimesheetEntries = computeTimesheetEntries(clockEvents);
         const approvedEntries = filterApprovedEntries(allTimesheetEntries, approvedSet);
         
-        // Aggregate per employee
         const empAgg = new Map<string, { totalHours: number; breakHours: number; netHours: number }>();
         for (const entry of approvedEntries) {
           if (!empMap.has(entry.employee_id)) continue;
@@ -211,20 +209,10 @@ export default function MonthlyReportSection() {
           agg.netHours += entry.net_hours;
         }
 
-        // Aggregate deliveries per driver
-        const delAgg = new Map<string, number>();
-        (deliveries as any[]).forEach((d: any) => {
-          if (d.driver_id) {
-            delAgg.set(d.driver_id, (delAgg.get(d.driver_id) || 0) + 1);
-          }
-        });
-
-        // Ensure drivers with deliveries but no shifts are included
-        for (const driverId of delAgg.keys()) {
-          if (!empAgg.has(driverId) && empMap.has(driverId)) {
-            empAgg.set(driverId, { totalHours: 0, breakHours: 0, netHours: 0 });
-          }
-        }
+        // Standalone delivery summary (not per employee)
+        const delCount = (deliveries as any[]).length;
+        const delCostExcl = (deliveries as any[]).reduce((s: number, d: any) => s + (Number(d.cost_excl_gst) || 0), 0);
+        const delCostIncl = (deliveries as any[]).reduce((s: number, d: any) => s + (Number(d.cost_incl_gst) || 0), 0);
         
         const computedPayroll: any[] = [];
         for (const [empId, agg] of empAgg) {
@@ -234,11 +222,6 @@ export default function MonthlyReportSection() {
           const employeePay = Math.round(netHours * emp.pay_rate * 100) / 100;
           const adminPayInclGst = Math.round(netHours * emp.admin_hourly_rate * 100) / 100;
           const adminPay = Math.round(adminPayInclGst / 1.10 * 100) / 100;
-
-          const deliveryCount = delAgg.get(empId) || 0;
-          const deliveryEmployeePay = Math.round(deliveryCount * 36.36 * 100) / 100;
-          const deliveryAdminPayIncl = Math.round(deliveryCount * 40.00 * 100) / 100;
-          const deliveryAdminPay = Math.round(deliveryAdminPayIncl / 1.10 * 100) / 100;
           
           computedPayroll.push({
             employee_id: empId,
@@ -252,17 +235,11 @@ export default function MonthlyReportSection() {
             employee_pay: employeePay,
             admin_pay: adminPay,
             admin_pay_incl_gst: adminPayInclGst,
-            delivery_count: deliveryCount,
-            delivery_employee_pay: deliveryEmployeePay,
-            delivery_admin_pay: deliveryAdminPay,
-            delivery_admin_pay_incl_gst: deliveryAdminPayIncl,
-            total_employee_pay: employeePay + deliveryEmployeePay,
-            total_admin_pay: adminPay + deliveryAdminPay,
-            total_admin_pay_incl_gst: adminPayInclGst + deliveryAdminPayIncl,
           });
         }
         
         results.payroll = computedPayroll;
+        results.payroll_delivery = { count: delCount, cost_excl_gst: delCostExcl, cost_incl_gst: delCostIncl };
       }
 
       // ===== EXCEL GENERATION =====
