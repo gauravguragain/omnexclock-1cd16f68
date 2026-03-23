@@ -925,10 +925,6 @@ export default function PortalPageV2() {
               )}
             </TabsContent>
 
-            {/* DELIVERIES TAB */}
-            <TabsContent value="deliveries" className="space-y-3 mt-4">
-              <DeliveriesTab employeeCode={portal.employeeCode} businessCode={bizCode} />
-            </TabsContent>
 
             {/* REQUESTS TAB */}
             <TabsContent value="requests" className="space-y-3 mt-4">
