@@ -176,6 +176,9 @@ export default function MonthlyReportSection() {
       if (selectedReports.has("audit")) {
         fetchers.audit = wrap(supabase.from("audit_logs").select("*").eq("business_id", businessId).gte("timestamp", `${startStr}T00:00:00`).lte("timestamp", `${endStr}T23:59:59`).order("timestamp", { ascending: false }).limit(500).then(r => r.data || []));
       }
+      if (selectedReports.has("catering_deliveries")) {
+        fetchers.deliveries = wrap(supabase.from("catering_deliveries").select("*, employees:driver_id(name)").eq("business_id", businessId).gte("delivery_date", startStr).lte("delivery_date", endStr).order("delivery_date").then(r => r.data || []));
+      }
 
       const results: Record<string, any> = {};
       const entries = Object.entries(fetchers);
