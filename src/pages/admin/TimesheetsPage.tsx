@@ -12,7 +12,8 @@ import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import { CalendarIcon, Search, Pencil, Trash2, Plus, ChevronLeft, ChevronRight, CheckCircle2, XCircle, Download, Mail, History, FileDown } from "lucide-react";
+import { CalendarIcon, Search, Pencil, Trash2, Plus, ChevronLeft, ChevronRight, CheckCircle2, XCircle, Download, Mail, History, FileDown, FileSpreadsheet } from "lucide-react";
+import * as XLSX from "xlsx";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -795,6 +796,35 @@ export default function TimesheetsPage() {
     });
   };
 
+  const downloadExcel = () => {
+    if (filtered.length === 0) { toast.info("No data to export"); return; }
+    const rows = filtered.map(e => ({
+      "Employee": e.employee_name,
+      "Department": e.employee_department || "",
+      "Date": e.date,
+      "Clock In": e.clock_in || "",
+      "Clock Out": e.clock_out || "",
+      "Break Start": e.break_start || "",
+      "Break End": e.break_end || "",
+      "Break (min)": e.break_minutes,
+      "Total Hours": e.total_hours,
+      "Net Hours": e.net_hours,
+      "Approved": e.approved ? "Yes" : "No",
+    }));
+    const ws = XLSX.utils.json_to_sheet(rows);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Timesheets");
+    const filename = `timesheets_${format(dateFrom, "yyyy-MM-dd")}_to_${format(dateTo, "yyyy-MM-dd")}.xlsx`;
+    XLSX.writeFile(wb, filename);
+    toast.success("Downloaded timesheet Excel");
+    logAudit("excel_download", {
+      source: "timesheets",
+      filename,
+      row_count: filtered.length,
+      device: getDeviceInfo(),
+    });
+  };
+
   const generatePdfBase64 = async (): Promise<string> => {
     const doc = await generatePdfDoc();
     // Get raw binary string then convert to base64
@@ -933,6 +963,9 @@ export default function TimesheetsPage() {
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => setEmailDialogOpen(true)}>
                 <Mail className="mr-2 h-4 w-4" /> Email PDF
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={downloadExcel}>
+                <FileSpreadsheet className="mr-2 h-4 w-4" /> Download Excel
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
