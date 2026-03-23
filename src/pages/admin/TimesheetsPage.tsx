@@ -935,6 +935,9 @@ export default function TimesheetsPage() {
               <DropdownMenuItem onClick={() => setEmailDialogOpen(true)}>
                 <Mail className="mr-2 h-4 w-4" /> Email PDF
               </DropdownMenuItem>
+              <DropdownMenuItem onClick={downloadExcel}>
+                <FileSpreadsheet className="mr-2 h-4 w-4" /> Download Excel
+              </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
           {!isViewer && (
