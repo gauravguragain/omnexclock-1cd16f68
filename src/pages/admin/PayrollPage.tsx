@@ -362,12 +362,12 @@ export default function PayrollPage() {
     }
   };
 
-  const totalEmployeePay = filtered.reduce((sum, e) => sum + e.employee_pay + e.delivery_employee_pay, 0);
-  const totalAdminPay = filtered.reduce((sum, e) => sum + e.admin_pay + e.delivery_admin_pay, 0);
+  const totalEmployeePay = filtered.reduce((sum, e) => sum + e.employee_pay, 0) + deliverySummary.cost_excl_gst;
+  const totalAdminPay = filtered.reduce((sum, e) => sum + e.admin_pay, 0) + Math.round(deliverySummary.cost_incl_gst / 1.10 * 100) / 100;
   const totalNetHours = filtered.reduce((sum, e) => sum + e.net_hours, 0);
   const totalBreakHours = filtered.reduce((sum, e) => sum + e.break_hours, 0);
-  const totalAdminPayInclGst = filtered.reduce((sum, e) => sum + e.admin_pay_incl_gst + e.delivery_admin_pay_incl_gst, 0);
-  const totalDeliveryCount = filtered.reduce((sum, e) => sum + e.delivery_count, 0);
+  const totalAdminPayInclGst = filtered.reduce((sum, e) => sum + e.admin_pay_incl_gst, 0) + deliverySummary.cost_incl_gst;
+  const totalDeliveryCount = deliverySummary.count;
   const totalMargin = totalAdminPay - totalEmployeePay;
   const totalMarginInclGst = totalAdminPayInclGst - totalEmployeePay;
   const marginPercentage = totalAdminPay > 0 ? (totalMargin / totalAdminPay * 100) : 0;
