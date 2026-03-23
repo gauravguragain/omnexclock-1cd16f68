@@ -715,17 +715,61 @@ export default function PayrollPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {pageEntries.map((e) => (
-                <TableRow key={e.employee_id}>
-                  <TableCell className="font-medium sticky left-0 bg-card z-20 border-r border-border/60">{e.name}</TableCell>
-                  <TableCell>${(isEmployee ? e.pay_rate : e.admin_hourly_rate).toFixed(2)}</TableCell>
-                  <TableCell>{e.total_hours.toFixed(2)}</TableCell>
-                  <TableCell>{e.break_hours.toFixed(2)}</TableCell>
-                  <TableCell>{e.net_hours.toFixed(2)}</TableCell>
-                  <TableCell className="text-right font-semibold">${(isEmployee ? e.employee_pay : e.admin_pay).toFixed(2)}</TableCell>
-                  {!isEmployee && <TableCell className="text-right text-muted-foreground">${e.admin_pay_incl_gst.toFixed(2)}</TableCell>}
-                </TableRow>
-              ))}
+              {pageEntries.flatMap((e) => {
+                const hasDelivery = e.delivery_count > 0;
+                const rows = [];
+                // Shift row (only if they have hours)
+                if (e.net_hours > 0) {
+                  rows.push(
+                    <TableRow key={e.employee_id + "-shift"}>
+                      <TableCell className="font-medium sticky left-0 bg-card z-20 border-r border-border/60">{e.name}</TableCell>
+                      <TableCell>${(isEmployee ? e.pay_rate : e.admin_hourly_rate).toFixed(2)}</TableCell>
+                      <TableCell>{e.total_hours.toFixed(2)}</TableCell>
+                      <TableCell>{e.break_hours.toFixed(2)}</TableCell>
+                      <TableCell>{e.net_hours.toFixed(2)}</TableCell>
+                      <TableCell className="text-right font-semibold">${(isEmployee ? e.employee_pay : e.admin_pay).toFixed(2)}</TableCell>
+                      {!isEmployee && <TableCell className="text-right text-muted-foreground">${e.admin_pay_incl_gst.toFixed(2)}</TableCell>}
+                    </TableRow>
+                  );
+                }
+                // Delivery row
+                if (hasDelivery) {
+                  const delPay = isEmployee ? e.delivery_employee_pay : e.delivery_admin_pay;
+                  rows.push(
+                    <TableRow key={e.employee_id + "-delivery"} className="bg-primary/5 border-l-2 border-l-primary">
+                      <TableCell className="font-medium sticky left-0 bg-primary/5 z-20 border-r border-border/60">
+                        <span className="flex items-center gap-1.5">
+                          {e.net_hours > 0 ? "" : e.name}
+                          <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-primary/40 text-primary">
+                            🚚 Delivery ×{e.delivery_count}
+                          </Badge>
+                        </span>
+                      </TableCell>
+                      <TableCell className="text-xs text-muted-foreground italic">flat rate</TableCell>
+                      <TableCell className="text-xs text-muted-foreground">—</TableCell>
+                      <TableCell className="text-xs text-muted-foreground">—</TableCell>
+                      <TableCell className="text-xs text-muted-foreground">—</TableCell>
+                      <TableCell className="text-right font-semibold">${delPay.toFixed(2)}</TableCell>
+                      {!isEmployee && <TableCell className="text-right text-muted-foreground">${e.delivery_admin_pay_incl_gst.toFixed(2)}</TableCell>}
+                    </TableRow>
+                  );
+                }
+                // If employee has neither shifts nor deliveries, show empty row
+                if (rows.length === 0) {
+                  rows.push(
+                    <TableRow key={e.employee_id}>
+                      <TableCell className="font-medium sticky left-0 bg-card z-20 border-r border-border/60">{e.name}</TableCell>
+                      <TableCell>${(isEmployee ? e.pay_rate : e.admin_hourly_rate).toFixed(2)}</TableCell>
+                      <TableCell>{e.total_hours.toFixed(2)}</TableCell>
+                      <TableCell>{e.break_hours.toFixed(2)}</TableCell>
+                      <TableCell>{e.net_hours.toFixed(2)}</TableCell>
+                      <TableCell className="text-right font-semibold">$0.00</TableCell>
+                      {!isEmployee && <TableCell className="text-right text-muted-foreground">$0.00</TableCell>}
+                    </TableRow>
+                  );
+                }
+                return rows;
+              })}
               {pageEntries.length === 0 && (
                 <TableRow>
                   <TableCell colSpan={isEmployee ? 6 : 7} className="text-center text-muted-foreground py-8">
