@@ -307,21 +307,35 @@ export default function MonthlyReportSection() {
 
         // Employee Payroll
         if (selectedReports.has("employee_payroll") && results.payroll?.length) {
-          const rows = results.payroll.map((p: any) => ({
-            "Employee": p.name, "Department": p.department, "Net Hours": Number(p.net_hours).toFixed(2),
-            "Rate $/Hr": Number(p.pay_rate).toFixed(2), "Employee Pay": Number(p.employee_pay).toFixed(2),
-          }));
+          const rows: any[] = [];
+          results.payroll.forEach((p: any) => {
+            if (Number(p.net_hours) > 0) {
+              rows.push({ "Employee": p.name, "Department": p.department, "Type": "Shift", "Net Hours": Number(p.net_hours).toFixed(2), "Rate $/Hr": Number(p.pay_rate).toFixed(2), "Employee Pay": Number(p.employee_pay).toFixed(2) });
+            }
+            if (p.delivery_count > 0) {
+              rows.push({ "Employee": p.name, "Department": p.department, "Type": `🚚 Delivery ×${p.delivery_count}`, "Net Hours": "-", "Rate $/Hr": "flat rate", "Employee Pay": Number(p.delivery_employee_pay).toFixed(2) });
+            }
+          });
+          // Add total row
+          const totalPay = results.payroll.reduce((s: number, p: any) => s + Number(p.total_employee_pay), 0);
+          rows.push({ "Employee": "TOTAL", "Department": "", "Type": "", "Net Hours": "", "Rate $/Hr": "", "Employee Pay": totalPay.toFixed(2) });
           XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows), "Employee Payroll");
         }
 
         // Admin Payroll
         if (selectedReports.has("admin_payroll") && results.payroll?.length) {
-          const rows = results.payroll.map((p: any) => ({
-            "Employee": p.name, "Department": p.department, "Net Hours": Number(p.net_hours).toFixed(2),
-            "Rate $/Hr (incl GST)": Number(p.admin_hourly_rate).toFixed(2),
-            "Cost (ex GST)": Number(p.admin_pay).toFixed(2),
-            "Cost (incl GST)": Number(p.admin_pay_incl_gst || 0).toFixed(2),
-          }));
+          const rows: any[] = [];
+          results.payroll.forEach((p: any) => {
+            if (Number(p.net_hours) > 0) {
+              rows.push({ "Employee": p.name, "Department": p.department, "Type": "Shift", "Net Hours": Number(p.net_hours).toFixed(2), "Rate $/Hr (incl GST)": Number(p.admin_hourly_rate).toFixed(2), "Cost (ex GST)": Number(p.admin_pay).toFixed(2), "Cost (incl GST)": Number(p.admin_pay_incl_gst || 0).toFixed(2) });
+            }
+            if (p.delivery_count > 0) {
+              rows.push({ "Employee": p.name, "Department": p.department, "Type": `🚚 Delivery ×${p.delivery_count}`, "Net Hours": "-", "Rate $/Hr (incl GST)": "flat rate", "Cost (ex GST)": Number(p.delivery_admin_pay).toFixed(2), "Cost (incl GST)": Number(p.delivery_admin_pay_incl_gst).toFixed(2) });
+            }
+          });
+          const totalExcl = results.payroll.reduce((s: number, p: any) => s + Number(p.total_admin_pay), 0);
+          const totalIncl = results.payroll.reduce((s: number, p: any) => s + Number(p.total_admin_pay_incl_gst), 0);
+          rows.push({ "Employee": "TOTAL", "Department": "", "Type": "", "Net Hours": "", "Rate $/Hr (incl GST)": "", "Cost (ex GST)": totalExcl.toFixed(2), "Cost (incl GST)": totalIncl.toFixed(2) });
           XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows), "Admin Payroll");
         }
 
