@@ -86,6 +86,7 @@ export default function MonthlyReportSection() {
   // Default: select all except margin_analysis
   const [selectedReports, setSelectedReports] = useState<Set<ReportId>>(new Set(REPORT_OPTIONS.filter(r => r.id !== "margin_analysis").map(r => r.id)));
   const [generating, setGenerating] = useState(false);
+  const [exportFormat, setExportFormat] = useState<"pdf" | "excel">("pdf");
 
   const currentBusinessId = business?.id || "";
   const isSuperAdmin = isSuperAdminOf(currentBusinessId);
