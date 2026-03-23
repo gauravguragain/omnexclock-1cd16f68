@@ -117,6 +117,7 @@ export default function PayrollPage() {
   const { business } = useBusiness();
   const { isSuperAdminOf } = useAuth();
   const [entries, setEntries] = useState<PayrollEntry[]>([]);
+  const [deliverySummary, setDeliverySummary] = useState<DeliverySummary>({ count: 0, cost_excl_gst: 0, cost_incl_gst: 0 });
   const [allEmployees, setAllEmployees] = useState<{ id: string; name: string; department: string | null }[]>([]);
   const [loading, setLoading] = useState(false);
   const [dateFrom, setDateFrom] = useState<Date>(() => startOfWeek(ausNow(), { weekStartsOn: 1 }));
