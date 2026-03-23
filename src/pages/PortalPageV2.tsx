@@ -721,9 +721,6 @@ export default function PortalPageV2() {
               <TabsTrigger value="timesheets" className="gap-1 text-xs touch-active py-2.5" data-tour="portal-timesheets">
                 <FileText className="h-3.5 w-3.5" /> <span className="hidden xs:inline">Time</span>
               </TabsTrigger>
-              <TabsTrigger value="deliveries" className="gap-1 text-xs touch-active py-2.5">
-                <Truck className="h-3.5 w-3.5" /> <span className="hidden xs:inline">Delivery</span>
-              </TabsTrigger>
               <TabsTrigger value="forum" className="gap-1 text-xs touch-active py-2.5" data-tour="portal-forum">
                 <MessageSquare className="h-3.5 w-3.5" /> <span className="hidden xs:inline">Forum</span>
               </TabsTrigger>
