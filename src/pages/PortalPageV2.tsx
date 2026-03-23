@@ -192,6 +192,116 @@ function EventCard({ ev }: { ev: any }) {
 
 /* ── Today Tab ────────────────────────────────────── */
 
+/* ── Deliveries Tab ────────────────────────────────── */
+
+const DELIVERY_STATUS_FLOW = ["pending", "picked_up", "on_the_way", "delivered"] as const;
+const DELIVERY_STATUS_LABELS: Record<string, string> = {
+  pending: "Pending", picked_up: "Picked Up", on_the_way: "On the Way", delivered: "Delivered",
+};
+const DELIVERY_STATUS_COLORS: Record<string, string> = {
+  pending: "bg-muted text-muted-foreground", picked_up: "bg-blue-500/20 text-blue-400",
+  on_the_way: "bg-amber-500/20 text-amber-400", delivered: "bg-green-500/20 text-green-400",
+};
+
+function DeliveriesTab({ employeeCode, businessCode }: { employeeCode: string; businessCode: string | null }) {
+  const [deliveries, setDeliveries] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const { toast } = useToast();
+
+  const fetchDeliveries = async () => {
+    setLoading(true);
+    const { data } = await supabase.rpc("get_employee_deliveries", {
+      _employee_code: employeeCode,
+      _business_code: businessCode,
+    });
+    setDeliveries(data || []);
+    setLoading(false);
+  };
+
+  useEffect(() => { fetchDeliveries(); }, [employeeCode, businessCode]);
+
+  const updateStatus = async (deliveryId: string, newStatus: string) => {
+    const { data } = await supabase.rpc("update_delivery_status", {
+      _employee_code: employeeCode,
+      _delivery_id: deliveryId,
+      _status: newStatus,
+      _business_code: businessCode,
+    });
+    if (data) {
+      toast({ title: "Status updated", description: `Delivery marked as ${DELIVERY_STATUS_LABELS[newStatus]}` });
+      fetchDeliveries();
+    } else {
+      toast({ title: "Error", description: "Could not update status", variant: "destructive" });
+    }
+  };
+
+  const getNextStatus = (current: string): string | null => {
+    const idx = DELIVERY_STATUS_FLOW.indexOf(current as any);
+    if (idx < 0 || idx >= DELIVERY_STATUS_FLOW.length - 1) return null;
+    return DELIVERY_STATUS_FLOW[idx + 1];
+  };
+
+  if (loading) return <p className="text-center text-muted-foreground text-sm py-6">Loading deliveries...</p>;
+  if (deliveries.length === 0) return (
+    <Card><CardContent className="p-8 text-center text-muted-foreground">
+      <Truck className="h-8 w-8 mx-auto mb-2 opacity-40" />
+      <p className="text-sm">No deliveries assigned to you.</p>
+    </CardContent></Card>
+  );
+
+  return (
+    <div className="space-y-3">
+      {deliveries.map((d: any) => {
+        const next = getNextStatus(d.delivery_status);
+        return (
+          <Card key={d.delivery_id} className="overflow-hidden">
+            <CardContent className="p-3 space-y-2">
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2 min-w-0">
+                  <Badge className={cn("text-xs shrink-0", DELIVERY_STATUS_COLORS[d.delivery_status] || "bg-muted")}>
+                    {DELIVERY_STATUS_LABELS[d.delivery_status] || d.delivery_status}
+                  </Badge>
+                  <span className="text-xs text-muted-foreground">
+                    {format(new Date(d.delivery_date + "T00:00:00"), "dd MMM yyyy")}
+                    {d.delivery_time && ` • ${d.delivery_time}`}
+                  </span>
+                </div>
+                <span className="text-xs text-muted-foreground flex items-center gap-1"><Users className="h-3 w-3" />{d.number_of_guests}</span>
+              </div>
+              <div className="space-y-1 text-xs">
+                <div className="flex items-start gap-1.5">
+                  <span className="text-muted-foreground w-16 shrink-0">Address</span>
+                  <span className="font-medium text-foreground">{d.delivery_address}</span>
+                </div>
+                <div className="flex items-start gap-1.5">
+                  <span className="text-muted-foreground w-16 shrink-0">Contact</span>
+                  <span className="font-medium text-foreground">{d.contact_person}{d.contact_number && ` • ${d.contact_number}`}</span>
+                </div>
+                {d.delivery_notes && (
+                  <div className="flex items-start gap-1.5">
+                    <span className="text-muted-foreground w-16 shrink-0">Notes</span>
+                    <span className="text-foreground">{d.delivery_notes}</span>
+                  </div>
+                )}
+              </div>
+              {next && (
+                <Button size="sm" className="w-full mt-1" onClick={() => updateStatus(d.delivery_id, next)}>
+                  Mark as {DELIVERY_STATUS_LABELS[next]}
+                </Button>
+              )}
+              {d.delivery_status === "delivered" && (
+                <div className="flex items-center gap-1.5 text-xs text-green-400">
+                  <CheckCircle2 className="h-3.5 w-3.5" /> Delivery completed
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        );
+      })}
+    </div>
+  );
+}
+
 function TodayTab({ employeeCode, businessCode, shifts }: {
   employeeCode: string;
   businessCode: string | null;
