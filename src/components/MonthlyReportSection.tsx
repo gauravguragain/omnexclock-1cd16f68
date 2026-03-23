@@ -827,23 +827,36 @@ export default function MonthlyReportSection() {
       if (selectedReports.has("employee_payroll") && results.payroll && results.payroll.length > 0) {
         addSectionHeader("Employee Payroll", "Finance");
         const payroll = results.payroll;
-        const totalEmpPay = payroll.reduce((s: number, p: any) => s + Number(p.employee_pay), 0);
+        const totalEmpPay = payroll.reduce((s: number, p: any) => s + Number(p.total_employee_pay), 0);
         const totalHours = payroll.reduce((s: number, p: any) => s + Number(p.net_hours), 0);
-        const avgRate = totalHours > 0 ? totalEmpPay / totalHours : 0;
+        const totalDelCount = payroll.reduce((s: number, p: any) => s + (p.delivery_count || 0), 0);
+        const totalDelPay = payroll.reduce((s: number, p: any) => s + Number(p.delivery_employee_pay || 0), 0);
+        const shiftPay = totalEmpPay - totalDelPay;
 
         addStatsRow([
           { label: "Total Employee Pay", value: `$${totalEmpPay.toFixed(2)}`, color: [16, 124, 65] },
-          { label: "Total Net Hours", value: totalHours.toFixed(1), color: [41, 98, 255] },
-          { label: "Avg $/Hr", value: `$${avgRate.toFixed(2)}`, color: [124, 58, 237] },
-          { label: "Employees", value: String(payroll.length), color: [180, 83, 9] },
+          { label: "Shift Pay", value: `$${shiftPay.toFixed(2)}`, color: [41, 98, 255] },
+          { label: "Delivery Pay", value: `$${totalDelPay.toFixed(2)}` + (totalDelCount > 0 ? ` (${totalDelCount})` : ""), color: [180, 83, 9] },
+          { label: "Employees", value: String(payroll.length), color: [124, 58, 237] },
         ]);
+
+        // Build rows with shift + delivery lines
+        const tableRows: string[][] = [];
+        payroll.forEach((p: any) => {
+          if (Number(p.net_hours) > 0) {
+            tableRows.push([p.name, p.department, "Shift", Number(p.net_hours).toFixed(2), `$${Number(p.pay_rate).toFixed(2)}`, `$${Number(p.employee_pay).toFixed(2)}`]);
+          }
+          if (p.delivery_count > 0) {
+            tableRows.push([p.name, p.department, `🚚 ×${p.delivery_count}`, "-", "flat rate", `$${Number(p.delivery_employee_pay).toFixed(2)}`]);
+          }
+        });
 
         addSubHeader("Employee Pay Entries");
         addTable(
-          ["Employee", "Department", "Net Hours", "Rate $/Hr", "Employee Pay"],
-          payroll.map((p: any) => [p.name, p.department, Number(p.net_hours).toFixed(2), `$${Number(p.pay_rate).toFixed(2)}`, `$${Number(p.employee_pay).toFixed(2)}`]),
+          ["Employee", "Department", "Type", "Net Hours", "Rate", "Pay"],
+          tableRows,
           SECTION_COLORS.Finance,
-          ["TOTAL", "", totalHours.toFixed(2), "", `$${totalEmpPay.toFixed(2)}`]
+          ["TOTAL", "", "", totalHours.toFixed(2), "", `$${totalEmpPay.toFixed(2)}`]
         );
 
         // Department breakdown
@@ -852,7 +865,7 @@ export default function MonthlyReportSection() {
           const dept = p.department || "Unassigned";
           if (!deptPay[dept]) deptPay[dept] = { hours: 0, pay: 0, count: 0 };
           deptPay[dept].hours += Number(p.net_hours);
-          deptPay[dept].pay += Number(p.employee_pay);
+          deptPay[dept].pay += Number(p.total_employee_pay);
           deptPay[dept].count++;
         });
 
