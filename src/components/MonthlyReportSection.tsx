@@ -32,6 +32,7 @@ const REPORT_OPTIONS = [
   { id: "service", label: "Service & Maintenance", description: "Task schedules, overdue items, compliance", category: "Compliance" },
   { id: "audit", label: "Audit Trail", description: "Admin actions, system changes, security log", category: "Compliance" },
   { id: "dept_breakdown", label: "Department Breakdown", description: "Hours, headcount, and costs per department", category: "Analytics" },
+  { id: "catering_deliveries", label: "Catering Deliveries", description: "Delivery records, driver allocation, revenue & driver cost breakdown", category: "Operations" },
   { id: "margin_analysis", label: "Margin Analysis", description: "Difference between admin pay and employee pay per employee", category: "Finance", superAdminOnly: true },
 ] as const;
 
@@ -174,6 +175,9 @@ export default function MonthlyReportSection() {
       }
       if (selectedReports.has("audit")) {
         fetchers.audit = wrap(supabase.from("audit_logs").select("*").eq("business_id", businessId).gte("timestamp", `${startStr}T00:00:00`).lte("timestamp", `${endStr}T23:59:59`).order("timestamp", { ascending: false }).limit(500).then(r => r.data || []));
+      }
+      if (selectedReports.has("catering_deliveries")) {
+        fetchers.deliveries = wrap(supabase.from("catering_deliveries").select("*, employees:driver_id(name)").eq("business_id", businessId).gte("delivery_date", startStr).lte("delivery_date", endStr).order("delivery_date").then(r => r.data || []));
       }
 
       const results: Record<string, any> = {};
@@ -391,7 +395,30 @@ export default function MonthlyReportSection() {
           XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows), "Audit Log");
         }
 
-        // Department Breakdown
+        // Catering Deliveries
+        if (selectedReports.has("catering_deliveries") && results.deliveries) {
+          const dels = results.deliveries;
+          const rows = dels.map((d: any) => ({
+            "Date": format(parseISO(d.delivery_date), "dd MMM yyyy"),
+            "Day": format(parseISO(d.delivery_date), "EEEE"),
+            "Driver": d.employees?.name || "Unassigned",
+            "Cost (excl GST)": Number(d.cost_excl_gst).toFixed(2),
+            "Cost (incl GST)": Number(d.cost_incl_gst).toFixed(2),
+            "Margin": (Number(d.cost_incl_gst) - Number(d.cost_excl_gst)).toFixed(2),
+          }));
+          const totalExcl = dels.reduce((s: number, d: any) => s + Number(d.cost_excl_gst), 0);
+          const totalIncl = dels.reduce((s: number, d: any) => s + Number(d.cost_incl_gst), 0);
+          rows.push({
+            "Date": "TOTAL",
+            "Day": "",
+            "Driver": `${dels.length} deliveries`,
+            "Cost (excl GST)": totalExcl.toFixed(2),
+            "Cost (incl GST)": totalIncl.toFixed(2),
+            "Margin": (totalIncl - totalExcl).toFixed(2),
+          });
+          XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows), "Catering Deliveries");
+        }
+
         if (selectedReports.has("dept_breakdown") && results.employees) {
           const employees = results.employees.filter((e: any) => e.active);
           const shifts = results.shifts || [];
@@ -1265,7 +1292,61 @@ export default function MonthlyReportSection() {
         );
       }
 
-      // ---- PAGE FOOTERS ----
+      // ==========================================
+      // SECTION: CATERING DELIVERIES
+      // ==========================================
+      if (selectedReports.has("catering_deliveries") && results.deliveries) {
+        addSectionHeader("Catering Deliveries", "Operations");
+        const dels = results.deliveries;
+        const totalExcl = dels.reduce((s: number, d: any) => s + Number(d.cost_excl_gst), 0);
+        const totalIncl = dels.reduce((s: number, d: any) => s + Number(d.cost_incl_gst), 0);
+        const totalMarginDel = totalIncl - totalExcl;
+
+        // Group by driver
+        const driverAgg: Record<string, { name: string; count: number; excl: number; incl: number }> = {};
+        dels.forEach((d: any) => {
+          const driverName = d.employees?.name || "Unassigned";
+          if (!driverAgg[driverName]) driverAgg[driverName] = { name: driverName, count: 0, excl: 0, incl: 0 };
+          driverAgg[driverName].count++;
+          driverAgg[driverName].excl += Number(d.cost_excl_gst);
+          driverAgg[driverName].incl += Number(d.cost_incl_gst);
+        });
+
+        addStatsRow([
+          { label: "Total Deliveries", value: String(dels.length), color: [16, 124, 65] },
+          { label: "Revenue (incl GST)", value: `$${totalIncl.toFixed(2)}`, color: [41, 98, 255] },
+          { label: "Driver Cost (excl GST)", value: `$${totalExcl.toFixed(2)}`, color: [180, 83, 9] },
+          { label: "Margin", value: `$${totalMarginDel.toFixed(2)}`, color: [124, 58, 237] },
+        ]);
+
+        addSubHeader("Delivery Log");
+        addTable(
+          ["Date", "Day", "Driver", "Cost (excl GST)", "Cost (incl GST)", "Margin"],
+          dels.map((d: any) => [
+            format(parseISO(d.delivery_date), "dd MMM yyyy"),
+            format(parseISO(d.delivery_date), "EEEE"),
+            d.employees?.name || "Unassigned",
+            `$${Number(d.cost_excl_gst).toFixed(2)}`,
+            `$${Number(d.cost_incl_gst).toFixed(2)}`,
+            `$${(Number(d.cost_incl_gst) - Number(d.cost_excl_gst)).toFixed(2)}`,
+          ]),
+          SECTION_COLORS.Operations,
+          ["TOTAL", "", `${dels.length} deliveries`, `$${totalExcl.toFixed(2)}`, `$${totalIncl.toFixed(2)}`, `$${totalMarginDel.toFixed(2)}`]
+        );
+
+        if (Object.keys(driverAgg).length > 1) {
+          addSubHeader("Summary by Driver");
+          addTable(
+            ["Driver", "Deliveries", "Cost (excl GST)", "Revenue (incl GST)", "Margin"],
+            Object.values(driverAgg).sort((a, b) => b.count - a.count).map(d => [
+              d.name, String(d.count), `$${d.excl.toFixed(2)}`, `$${d.incl.toFixed(2)}`, `$${(d.incl - d.excl).toFixed(2)}`,
+            ]),
+            SECTION_COLORS.Operations
+          );
+        }
+      }
+
+
       const totalPages = doc.getNumberOfPages();
       for (let i = 2; i <= totalPages; i++) {
         doc.setPage(i);
