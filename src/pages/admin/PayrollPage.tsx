@@ -197,16 +197,13 @@ export default function PayrollPage() {
       }
     }
 
-    // Aggregate deliveries per driver
-    const deliveryAgg = new Map<string, { count: number; exclGst: number; inclGst: number }>();
+    // Aggregate deliveries (standalone, not per employee)
+    let delSummary: DeliverySummary = { count: 0, cost_excl_gst: 0, cost_incl_gst: 0 };
     if (deliveryData) {
       for (const d of deliveryData as any[]) {
-        if (!d.driver_id) continue;
-        if (!deliveryAgg.has(d.driver_id)) deliveryAgg.set(d.driver_id, { count: 0, exclGst: 0, inclGst: 0 });
-        const agg = deliveryAgg.get(d.driver_id)!;
-        agg.count += 1;
-        agg.exclGst += Number(d.cost_excl_gst) || 0;
-        agg.inclGst += Number(d.cost_incl_gst) || 0;
+        delSummary.count += 1;
+        delSummary.cost_excl_gst += Number(d.cost_excl_gst) || 0;
+        delSummary.cost_incl_gst += Number(d.cost_incl_gst) || 0;
       }
     }
 
@@ -229,15 +226,10 @@ export default function PayrollPage() {
       agg.netHours += entry.net_hours;
     }
 
-    // Merge: ensure drivers with deliveries but no shifts also appear
-    const allEmpIds = new Set([...empAgg.keys(), ...deliveryAgg.keys()]);
-
     const result: PayrollEntry[] = [];
-    for (const empId of allEmpIds) {
+    for (const [empId, agg] of empAgg) {
       const emp = empMap.get(empId);
       if (!emp) continue;
-      const agg = empAgg.get(empId) || { totalHours: 0, breakHours: 0, netHours: 0 };
-      const delAgg = deliveryAgg.get(empId) || { count: 0, exclGst: 0, inclGst: 0 };
       const netHours = Math.round(agg.netHours * 100) / 100;
       const totalHours = Math.round(agg.totalHours * 100) / 100;
       const breakHours = Math.round(agg.breakHours * 100) / 100;
@@ -261,15 +253,12 @@ export default function PayrollPage() {
         account_name: (emp as any).account_name || null,
         bsb: (emp as any).bsb || null,
         account_number: (emp as any).account_number || null,
-        delivery_count: delAgg.count,
-        delivery_employee_pay: Math.round(delAgg.exclGst * 100) / 100,
-        delivery_admin_pay: Math.round(delAgg.exclGst * 100) / 100,
-        delivery_admin_pay_incl_gst: Math.round(delAgg.inclGst * 100) / 100,
       });
     }
 
     setAllEmployees((employees || []).map(e => ({ id: e.id, name: e.name, department: e.department })));
     setEntries(result);
+    setDeliverySummary(delSummary);
     setLoading(false);
   };
 
