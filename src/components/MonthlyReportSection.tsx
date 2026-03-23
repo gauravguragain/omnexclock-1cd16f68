@@ -359,13 +359,14 @@ export default function MonthlyReportSection() {
         // Margin Analysis
         if (selectedReports.has("margin_analysis") && results.payroll?.length) {
           const rows = results.payroll.map((p: any) => {
-            const marginEx = Number(p.admin_pay) - Number(p.employee_pay);
-            const marginIncl = Number(p.admin_pay_incl_gst || 0) - Number(p.employee_pay);
-            const mPct = Number(p.admin_pay) > 0 ? (marginEx / Number(p.admin_pay) * 100) : 0;
+            const marginEx = Number(p.total_admin_pay) - Number(p.total_employee_pay);
+            const marginIncl = Number(p.total_admin_pay_incl_gst) - Number(p.total_employee_pay);
+            const mPct = Number(p.total_admin_pay) > 0 ? (marginEx / Number(p.total_admin_pay) * 100) : 0;
             return {
               "Employee": p.name, "Department": p.department, "Hours": Number(p.net_hours).toFixed(2),
-              "Employee Pay": Number(p.employee_pay).toFixed(2), "Admin (ex GST)": Number(p.admin_pay).toFixed(2),
-              "Admin (incl GST)": Number(p.admin_pay_incl_gst || 0).toFixed(2),
+              "Deliveries": p.delivery_count || 0,
+              "Employee Pay": Number(p.total_employee_pay).toFixed(2), "Admin (ex GST)": Number(p.total_admin_pay).toFixed(2),
+              "Admin (incl GST)": Number(p.total_admin_pay_incl_gst).toFixed(2),
               "Margin (ex GST)": marginEx.toFixed(2), "Margin (incl GST)": marginIncl.toFixed(2),
               "Margin %": `${mPct.toFixed(1)}%`,
             };
