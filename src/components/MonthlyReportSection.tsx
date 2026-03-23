@@ -889,25 +889,36 @@ export default function MonthlyReportSection() {
       if (selectedReports.has("admin_payroll") && results.payroll && results.payroll.length > 0) {
         addSectionHeader("Admin Payroll", "Finance");
         const payroll = results.payroll;
-        const totalAdminPay = payroll.reduce((s: number, p: any) => s + Number(p.admin_pay), 0);
-        const totalAdminPayIncl = payroll.reduce((s: number, p: any) => s + Number(p.admin_pay_incl_gst || 0), 0);
+        const totalAdminPay = payroll.reduce((s: number, p: any) => s + Number(p.total_admin_pay), 0);
+        const totalAdminPayIncl = payroll.reduce((s: number, p: any) => s + Number(p.total_admin_pay_incl_gst), 0);
         const totalHours = payroll.reduce((s: number, p: any) => s + Number(p.net_hours), 0);
-        const avgRate = totalHours > 0 ? totalAdminPay / totalHours : 0;
+        const totalDelCount = payroll.reduce((s: number, p: any) => s + (p.delivery_count || 0), 0);
+        const totalDelCost = payroll.reduce((s: number, p: any) => s + Number(p.delivery_admin_pay_incl_gst || 0), 0);
         const gstAmount = totalAdminPayIncl - totalAdminPay;
 
         addStatsRow([
-          { label: "Admin Cost (incl GST)", value: `$${totalAdminPayIncl.toFixed(2)}`, color: [220, 38, 38] },
-          { label: "Admin Cost (ex GST)", value: `$${totalAdminPay.toFixed(2)}`, color: [180, 83, 9] },
-          { label: "GST Component", value: `$${gstAmount.toFixed(2)}`, color: [41, 98, 255] },
-          { label: "Avg $/Hr (ex GST)", value: `$${avgRate.toFixed(2)}`, color: [124, 58, 237] },
+          { label: "Total Admin Cost (incl GST)", value: `$${totalAdminPayIncl.toFixed(2)}`, color: [220, 38, 38] },
+          { label: "Shift Cost (incl GST)", value: `$${(totalAdminPayIncl - totalDelCost).toFixed(2)}`, color: [180, 83, 9] },
+          { label: "Delivery Cost (incl GST)", value: `$${totalDelCost.toFixed(2)}` + (totalDelCount > 0 ? ` (${totalDelCount})` : ""), color: [41, 98, 255] },
+          { label: "GST Component", value: `$${gstAmount.toFixed(2)}`, color: [124, 58, 237] },
         ]);
+
+        const tableRows: string[][] = [];
+        payroll.forEach((p: any) => {
+          if (Number(p.net_hours) > 0) {
+            tableRows.push([p.name, p.department, "Shift", Number(p.net_hours).toFixed(2), `$${Number(p.admin_hourly_rate).toFixed(2)}`, `$${Number(p.admin_pay).toFixed(2)}`, `$${Number(p.admin_pay_incl_gst || 0).toFixed(2)}`]);
+          }
+          if (p.delivery_count > 0) {
+            tableRows.push([p.name, p.department, `🚚 ×${p.delivery_count}`, "-", "flat rate", `$${Number(p.delivery_admin_pay).toFixed(2)}`, `$${Number(p.delivery_admin_pay_incl_gst).toFixed(2)}`]);
+          }
+        });
 
         addSubHeader("Admin Pay Entries");
         addTable(
-          ["Employee", "Department", "Net Hours", "Rate $/Hr (incl GST)", "Cost (ex GST)", "Cost (incl GST)"],
-          payroll.map((p: any) => [p.name, p.department, Number(p.net_hours).toFixed(2), `$${Number(p.admin_hourly_rate).toFixed(2)}`, `$${Number(p.admin_pay).toFixed(2)}`, `$${Number(p.admin_pay_incl_gst || 0).toFixed(2)}`]),
+          ["Employee", "Department", "Type", "Net Hours", "Rate (incl GST)", "Cost (ex GST)", "Cost (incl GST)"],
+          tableRows,
           SECTION_COLORS.Finance,
-          ["TOTAL", "", totalHours.toFixed(2), "", `$${totalAdminPay.toFixed(2)}`, `$${totalAdminPayIncl.toFixed(2)}`]
+          ["TOTAL", "", "", totalHours.toFixed(2), "", `$${totalAdminPay.toFixed(2)}`, `$${totalAdminPayIncl.toFixed(2)}`]
         );
 
         // Department breakdown
@@ -916,7 +927,7 @@ export default function MonthlyReportSection() {
           const dept = p.department || "Unassigned";
           if (!deptPay[dept]) deptPay[dept] = { hours: 0, pay: 0, count: 0 };
           deptPay[dept].hours += Number(p.net_hours);
-          deptPay[dept].pay += Number(p.admin_pay);
+          deptPay[dept].pay += Number(p.total_admin_pay);
           deptPay[dept].count++;
         });
 
