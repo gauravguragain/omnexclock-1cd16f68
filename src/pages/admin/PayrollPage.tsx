@@ -461,9 +461,9 @@ export default function PayrollPage() {
                     </TableCell>
                     <TableCell>{e.department || "-"}</TableCell>
                     <TableCell>{e.net_hours.toFixed(2)}</TableCell>
-                    <TableCell>${totalEmpPay.toFixed(2)}</TableCell>
-                    <TableCell>${totalAdmPay.toFixed(2)}</TableCell>
-                    <TableCell>${totalAdmPayIncl.toFixed(2)}</TableCell>
+                    <TableCell>${e.employee_pay.toFixed(2)}</TableCell>
+                    <TableCell>${e.admin_pay.toFixed(2)}</TableCell>
+                    <TableCell>${e.admin_pay_incl_gst.toFixed(2)}</TableCell>
                     <TableCell className={`text-right font-semibold ${marginEx >= 0 ? "text-green-500" : "text-red-500"}`}>
                       ${marginEx.toFixed(2)}
                     </TableCell>
