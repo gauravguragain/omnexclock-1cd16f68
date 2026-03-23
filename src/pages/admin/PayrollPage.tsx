@@ -297,20 +297,29 @@ export default function PayrollPage() {
   const buildPayrollCSV = () => {
     if (activeTab === "margin") {
       const headers = "Name,Department,Net Hours,Employee Pay,Admin Cost (ex GST),Admin Cost (incl GST),Margin (ex GST),Margin (incl GST),Margin %\n";
-      const rows = filtered.map((e) => {
+      const rows: string[] = filtered.map((e) => {
         const marginEx = e.admin_pay - e.employee_pay;
         const marginIncl = e.admin_pay_incl_gst - e.employee_pay;
         const marginPct = e.admin_pay > 0 ? (marginEx / e.admin_pay * 100) : 0;
         return `${e.name},${e.department || "-"},${e.net_hours.toFixed(2)},${e.employee_pay.toFixed(2)},${e.admin_pay.toFixed(2)},${e.admin_pay_incl_gst.toFixed(2)},${marginEx.toFixed(2)},${marginIncl.toFixed(2)},${marginPct.toFixed(1)}%`;
-      }).join("\n");
+      });
+      const delAdminExcl = Math.round(deliverySummary.cost_incl_gst / 1.10 * 100) / 100;
+      const delMarginEx = delAdminExcl - deliverySummary.cost_excl_gst;
+      const delMarginIncl = deliverySummary.cost_incl_gst - deliverySummary.cost_excl_gst;
+      if (deliverySummary.count > 0) {
+        rows.push(`Delivery x${deliverySummary.count},-,-,${deliverySummary.cost_excl_gst.toFixed(2)},${delAdminExcl.toFixed(2)},${deliverySummary.cost_incl_gst.toFixed(2)},${delMarginEx.toFixed(2)},${delMarginIncl.toFixed(2)},`);
+      }
       const totEmpPay = filtered.reduce((s, e) => s + e.employee_pay, 0);
       const totAdminPay = filtered.reduce((s, e) => s + e.admin_pay, 0);
       const totAdminPayIncl = filtered.reduce((s, e) => s + e.admin_pay_incl_gst, 0);
-      const totMarginEx = totAdminPay - totEmpPay;
-      const totMarginIncl = totAdminPayIncl - totEmpPay;
+      const totalEmpPay = totEmpPay + deliverySummary.cost_excl_gst;
+      const totalAdminPay = totAdminPay + delAdminExcl;
+      const totalAdminPayIncl = totAdminPayIncl + deliverySummary.cost_incl_gst;
+      const totMarginEx = totalAdminPay - totalEmpPay;
+      const totMarginIncl = totalAdminPayIncl - totalEmpPay;
       const totNetHrs = filtered.reduce((s, e) => s + e.net_hours, 0);
-      const totalRow = `\nTOTAL,,${totNetHrs.toFixed(2)},${totEmpPay.toFixed(2)},${totAdminPay.toFixed(2)},${totAdminPayIncl.toFixed(2)},${totMarginEx.toFixed(2)},${totMarginIncl.toFixed(2)},${totAdminPay > 0 ? (totMarginEx / totAdminPay * 100).toFixed(1) : 0}%`;
-      return headers + rows + totalRow;
+      const totalRow = `\nTOTAL,,${totNetHrs.toFixed(2)},${totalEmpPay.toFixed(2)},${totalAdminPay.toFixed(2)},${totalAdminPayIncl.toFixed(2)},${totMarginEx.toFixed(2)},${totMarginIncl.toFixed(2)},${totalAdminPay > 0 ? (totMarginEx / totalAdminPay * 100).toFixed(1) : 0}%`;
+      return headers + rows.join("\n") + totalRow;
     }
 
     const isEmp = activeTab === "employee";
@@ -325,16 +334,27 @@ export default function PayrollPage() {
       if (v.includes(",") || v.includes('"')) return `"${v.replace(/"/g, '""')}"`;
       return v;
     };
-    const rows = filtered.map((e) =>
+    const rowLines: string[] = filtered.map((e) =>
       isEmp
         ? `${e.name},${e.pay_rate.toFixed(2)},${e.total_hours.toFixed(2)},${e.break_hours.toFixed(2)},${e.net_hours.toFixed(2)},${e.employee_pay.toFixed(2)},${csvSafe(e.pay_id)},${csvSafe(e.account_name)},${csvSafe(e.bsb)},${csvSafe(e.account_number)}`
         : `${e.name},${e.admin_hourly_rate.toFixed(2)},${e.total_hours.toFixed(2)},${e.break_hours.toFixed(2)},${e.net_hours.toFixed(2)},${e.admin_pay.toFixed(2)},${e.admin_pay_incl_gst.toFixed(2)}`
-    ).join("\n");
+    );
     const totTotalHrs = filtered.reduce((s, e) => s + e.total_hours, 0);
     const totBreakHrs = filtered.reduce((s, e) => s + e.break_hours, 0);
     const totNetHrs = filtered.reduce((s, e) => s + e.net_hours, 0);
-    const totPay = filtered.reduce((s, e) => s + (isEmp ? e.employee_pay : e.admin_pay), 0);
-    const totPayIncl = isEmp ? 0 : filtered.reduce((s, e) => s + e.admin_pay_incl_gst, 0);
+    const deliveryExcl = deliverySummary.cost_excl_gst;
+    const deliveryIncl = deliverySummary.cost_incl_gst;
+    const deliveryAdminExcl = Math.round(deliveryIncl / 1.10 * 100) / 100;
+    if (deliverySummary.count > 0) {
+      if (isEmp) {
+        rowLines.push(`Delivery x${deliverySummary.count},flat rate,-,-,-,${deliveryExcl.toFixed(2)},,,,`);
+      } else {
+        rowLines.push(`Delivery x${deliverySummary.count},flat rate,-,-,-,${deliveryAdminExcl.toFixed(2)},${deliveryIncl.toFixed(2)}`);
+      }
+    }
+    const totPay = filtered.reduce((s, e) => s + (isEmp ? e.employee_pay : e.admin_pay), 0) + (isEmp ? deliveryExcl : deliveryAdminExcl);
+    const totPayIncl = (isEmp ? 0 : filtered.reduce((s, e) => s + e.admin_pay_incl_gst, 0)) + (isEmp ? 0 : deliveryIncl);
+    const rows = rowLines.join("\n");
     const totalRow = isEmp
       ? `\nTOTAL,,${totTotalHrs.toFixed(2)},${totBreakHrs.toFixed(2)},${totNetHrs.toFixed(2)},${totPay.toFixed(2)}`
       : `\nTOTAL,,${totTotalHrs.toFixed(2)},${totBreakHrs.toFixed(2)},${totNetHrs.toFixed(2)},${totPay.toFixed(2)},${totPayIncl.toFixed(2)}`;
