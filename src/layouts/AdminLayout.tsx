@@ -80,6 +80,7 @@ export default function AdminLayout() {
     { path: `${basePath}/forum`, label: "Forum", icon: MessageSquare, tourId: "forum", access: "admin" },
     { path: `${basePath}/inventory`, label: "Inventory", icon: Package, tourId: "inventory", access: "inventory" },
     { path: `${basePath}/service`, label: "Service", icon: Wrench, tourId: "service", access: "admin" },
+    { path: `${basePath}/deliveries`, label: "Deliveries", icon: Truck, tourId: "deliveries", access: "admin" },
     { path: `${basePath}/users`, label: "User Management", icon: UserCog, tourId: "users", access: "super_admin_only" },
     
     { path: `${basePath}/my-business`, label: "My Business", icon: Building2, tourId: "my-business", access: "admin" },
