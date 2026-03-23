@@ -796,7 +796,35 @@ export default function TimesheetsPage() {
     });
   };
 
-  const generatePdfBase64 = async (): Promise<string> => {
+  const downloadExcel = () => {
+    if (filtered.length === 0) { toast.info("No data to export"); return; }
+    const rows = filtered.map(e => ({
+      "Employee": e.employee_name,
+      "Department": e.employee_department || "",
+      "Date": e.date,
+      "Clock In": e.clock_in || "",
+      "Clock Out": e.clock_out || "",
+      "Break Start": e.break_start || "",
+      "Break End": e.break_end || "",
+      "Break (min)": e.break_minutes,
+      "Total Hours": e.total_hours,
+      "Net Hours": e.net_hours,
+      "Approved": e.approved ? "Yes" : "No",
+    }));
+    const ws = XLSX.utils.json_to_sheet(rows);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Timesheets");
+    const filename = `timesheets_${format(dateFrom, "yyyy-MM-dd")}_to_${format(dateTo, "yyyy-MM-dd")}.xlsx`;
+    XLSX.writeFile(wb, filename);
+    toast.success("Downloaded timesheet Excel");
+    logAudit("excel_download", {
+      source: "timesheets",
+      filename,
+      row_count: filtered.length,
+      device: getDeviceInfo(),
+    });
+  };
+
     const doc = await generatePdfDoc();
     // Get raw binary string then convert to base64
     const binaryStr = doc.output("datauristring");
