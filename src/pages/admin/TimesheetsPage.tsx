@@ -825,6 +825,7 @@ export default function TimesheetsPage() {
     });
   };
 
+  const generatePdfBase64 = async (): Promise<string> => {
     const doc = await generatePdfDoc();
     // Get raw binary string then convert to base64
     const binaryStr = doc.output("datauristring");
