@@ -32,7 +32,7 @@ const REPORT_OPTIONS = [
   { id: "service", label: "Service & Maintenance", description: "Task schedules, overdue items, compliance", category: "Compliance" },
   { id: "audit", label: "Audit Trail", description: "Admin actions, system changes, security log", category: "Compliance" },
   { id: "dept_breakdown", label: "Department Breakdown", description: "Hours, headcount, and costs per department", category: "Analytics" },
-  { id: "catering_deliveries", label: "Catering Deliveries", description: "Delivery records, driver allocation, revenue & driver cost breakdown", category: "Operations" },
+  { id: "catering_deliveries", label: "Catering Deliveries", description: "Delivery records, cost breakdown (excl/incl GST)", category: "Operations" },
   { id: "margin_analysis", label: "Margin Analysis", description: "Difference between admin pay and employee pay per employee", category: "Finance", superAdminOnly: true },
 ] as const;
 
