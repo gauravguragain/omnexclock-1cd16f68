@@ -1388,6 +1388,27 @@ export default function MonthlyReportSection() {
           )}
         </div>
 
+        {/* Export Format Selection */}
+        <div className="space-y-2">
+          <Label>Export Format</Label>
+          <RadioGroup
+            value={exportFormat}
+            onValueChange={(v) => setExportFormat(v as "pdf" | "excel")}
+            className="flex gap-4"
+          >
+            <label className="flex items-center gap-2 cursor-pointer">
+              <RadioGroupItem value="pdf" />
+              <FileText className="h-4 w-4 text-muted-foreground" />
+              <span className="text-sm">PDF</span>
+            </label>
+            <label className="flex items-center gap-2 cursor-pointer">
+              <RadioGroupItem value="excel" />
+              <FileSpreadsheet className="h-4 w-4 text-muted-foreground" />
+              <span className="text-sm">Excel (.xlsx)</span>
+            </label>
+          </RadioGroup>
+        </div>
+
         {/* Generate Button */}
         <Button
           onClick={handleGenerate}
@@ -1396,7 +1417,7 @@ export default function MonthlyReportSection() {
           size="lg"
         >
           {generating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
-          {generating ? "Generating Report..." : `Download ${selectedWeek === "full-month" ? "Monthly" : "Weekly"} Report PDF`}
+          {generating ? "Generating Report..." : `Download ${selectedWeek === "full-month" ? "Monthly" : "Weekly"} Report (${exportFormat === "pdf" ? "PDF" : "Excel"})`}
         </Button>
 
         {selectedReports.size === 0 && (
