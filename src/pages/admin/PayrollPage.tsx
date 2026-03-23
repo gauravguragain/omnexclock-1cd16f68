@@ -44,10 +44,12 @@ interface PayrollEntry {
   account_name: string | null;
   bsb: string | null;
   account_number: string | null;
-  delivery_count: number;
-  delivery_employee_pay: number;
-  delivery_admin_pay: number;
-  delivery_admin_pay_incl_gst: number;
+}
+
+interface DeliverySummary {
+  count: number;
+  cost_excl_gst: number;
+  cost_incl_gst: number;
 }
 
 type SortKey = "name" | "net_hours" | "employee_pay" | "admin_pay" | "total_hours";
