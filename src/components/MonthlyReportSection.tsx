@@ -346,7 +346,7 @@ export default function MonthlyReportSection() {
             const dept = p.department || "Unassigned";
             if (!deptCosts[dept]) deptCosts[dept] = { hours: 0, cost: 0, count: 0 };
             deptCosts[dept].hours += Number(p.net_hours);
-            deptCosts[dept].cost += Number(p.admin_pay);
+            deptCosts[dept].cost += Number(p.total_admin_pay);
             deptCosts[dept].count++;
           });
           const rows = Object.entries(deptCosts).map(([dept, d]) => ({
