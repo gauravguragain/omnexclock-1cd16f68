@@ -710,7 +710,7 @@ export default function PortalPageV2() {
 
           {/* Tabs */}
           <Tabs defaultValue="today" className="w-full">
-            <TabsList className="w-full grid grid-cols-5 h-11">
+            <TabsList className="w-full grid grid-cols-6 h-11">
               <TabsTrigger value="today" className="gap-1 text-xs touch-active py-2.5">
                 <Clock className="h-3.5 w-3.5" /> <span className="hidden xs:inline">Today</span>
               </TabsTrigger>
@@ -719,6 +719,9 @@ export default function PortalPageV2() {
               </TabsTrigger>
               <TabsTrigger value="timesheets" className="gap-1 text-xs touch-active py-2.5" data-tour="portal-timesheets">
                 <FileText className="h-3.5 w-3.5" /> <span className="hidden xs:inline">Time</span>
+              </TabsTrigger>
+              <TabsTrigger value="deliveries" className="gap-1 text-xs touch-active py-2.5">
+                <Truck className="h-3.5 w-3.5" /> <span className="hidden xs:inline">Delivery</span>
               </TabsTrigger>
               <TabsTrigger value="forum" className="gap-1 text-xs touch-active py-2.5" data-tour="portal-forum">
                 <MessageSquare className="h-3.5 w-3.5" /> <span className="hidden xs:inline">Forum</span>
