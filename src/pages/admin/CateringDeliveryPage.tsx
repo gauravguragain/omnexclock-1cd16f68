@@ -234,7 +234,7 @@ export default function CateringDeliveryPage() {
       await logAudit("delivery_create", {
         contact_person: formContactPerson.trim(),
         delivery_date: format(formDate, "yyyy-MM-dd"),
-      }, business.id);
+      });
       toast({ title: "Delivery created" });
     }
 
