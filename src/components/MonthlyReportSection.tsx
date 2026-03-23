@@ -834,7 +834,7 @@ export default function MonthlyReportSection() {
         addStatsRow([
           { label: "Total Employee Pay", value: `$${totalEmpPay.toFixed(2)}`, color: [16, 124, 65] },
           { label: "Shift Pay", value: `$${shiftPay.toFixed(2)}`, color: [41, 98, 255] },
-          { label: "Delivery Pay", value: `$${del.cost_excl_gst.toFixed(2)}` + (del.count > 0 ? ` (×${del.count})` : ""), color: [180, 83, 9] },
+          { label: "Delivery Pay", value: `$${del.cost_excl_gst.toFixed(2)}` + (del.count > 0 ? ` (x${del.count})` : ""), color: [180, 83, 9] },
           { label: "Employees", value: String(payroll.length), color: [124, 58, 237] },
         ]);
 
@@ -894,7 +894,7 @@ export default function MonthlyReportSection() {
         addStatsRow([
           { label: "Total Admin Cost (incl GST)", value: `$${totalAdminPayIncl.toFixed(2)}`, color: [220, 38, 38] },
           { label: "Shift Cost (incl GST)", value: `$${shiftAdminPayIncl.toFixed(2)}`, color: [180, 83, 9] },
-          { label: "Delivery Cost (incl GST)", value: `$${del.cost_incl_gst.toFixed(2)}` + (del.count > 0 ? ` (×${del.count})` : ""), color: [41, 98, 255] },
+          { label: "Delivery Cost (incl GST)", value: `$${del.cost_incl_gst.toFixed(2)}` + (del.count > 0 ? ` (x${del.count})` : ""), color: [41, 98, 255] },
           { label: "GST Component", value: `$${gstAmount.toFixed(2)}`, color: [124, 58, 237] },
         ]);
 
