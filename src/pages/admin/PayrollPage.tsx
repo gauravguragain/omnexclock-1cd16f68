@@ -177,10 +177,11 @@ export default function PayrollPage() {
       return allEvents;
     };
 
-    const [{ data: employees }, events, { data: approvalData }] = await Promise.all([
+    const [{ data: employees }, events, { data: approvalData }, { data: deliveryData }] = await Promise.all([
       supabase.from("employees").select("*").eq("active", true).eq("business_id", business!.id),
       fetchAllEvents(),
       supabase.from("timesheet_approvals").select("employee_id, date, approved").gte("date", from).lte("date", to).eq("approved", true),
+      supabase.from("catering_deliveries").select("driver_id, cost_excl_gst, cost_incl_gst, status").eq("business_id", business!.id).gte("delivery_date", from).lte("delivery_date", to).eq("status", "delivered"),
     ]);
 
     if (!employees) { setLoading(false); return; }
@@ -190,6 +191,19 @@ export default function PayrollPage() {
     if (approvalData) {
       for (const a of approvalData) {
         approvedSet.add(`${a.employee_id}-${a.date}`);
+      }
+    }
+
+    // Aggregate deliveries per driver
+    const deliveryAgg = new Map<string, { count: number; exclGst: number; inclGst: number }>();
+    if (deliveryData) {
+      for (const d of deliveryData as any[]) {
+        if (!d.driver_id) continue;
+        if (!deliveryAgg.has(d.driver_id)) deliveryAgg.set(d.driver_id, { count: 0, exclGst: 0, inclGst: 0 });
+        const agg = deliveryAgg.get(d.driver_id)!;
+        agg.count += 1;
+        agg.exclGst += Number(d.cost_excl_gst) || 0;
+        agg.inclGst += Number(d.cost_incl_gst) || 0;
       }
     }
 
@@ -212,9 +226,15 @@ export default function PayrollPage() {
       agg.netHours += entry.net_hours;
     }
 
+    // Merge: ensure drivers with deliveries but no shifts also appear
+    const allEmpIds = new Set([...empAgg.keys(), ...deliveryAgg.keys()]);
+
     const result: PayrollEntry[] = [];
-    for (const [empId, agg] of empAgg) {
-      const emp = empMap.get(empId)!;
+    for (const empId of allEmpIds) {
+      const emp = empMap.get(empId);
+      if (!emp) continue;
+      const agg = empAgg.get(empId) || { totalHours: 0, breakHours: 0, netHours: 0 };
+      const delAgg = deliveryAgg.get(empId) || { count: 0, exclGst: 0, inclGst: 0 };
       const netHours = Math.round(agg.netHours * 100) / 100;
       const totalHours = Math.round(agg.totalHours * 100) / 100;
       const breakHours = Math.round(agg.breakHours * 100) / 100;
@@ -238,6 +258,10 @@ export default function PayrollPage() {
         account_name: (emp as any).account_name || null,
         bsb: (emp as any).bsb || null,
         account_number: (emp as any).account_number || null,
+        delivery_count: delAgg.count,
+        delivery_employee_pay: Math.round(delAgg.exclGst * 100) / 100,
+        delivery_admin_pay: Math.round(delAgg.exclGst * 100) / 100,
+        delivery_admin_pay_incl_gst: Math.round(delAgg.inclGst * 100) / 100,
       });
     }
 
