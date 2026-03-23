@@ -424,12 +424,11 @@ export default function MonthlyReportSection() {
         // Catering Deliveries
         if (selectedReports.has("catering_deliveries") && results.deliveries) {
           const dels = results.deliveries;
-          const rows = dels.map((d: any) => ({
+          const rows: any[] = dels.map((d: any) => ({
             "Date": format(parseISO(d.delivery_date), "dd MMM yyyy"),
             "Day": format(parseISO(d.delivery_date), "EEEE"),
             "Cost (excl GST)": Number(d.cost_excl_gst).toFixed(2),
             "Cost (incl GST)": Number(d.cost_incl_gst).toFixed(2),
-            "Margin": (Number(d.cost_incl_gst) - Number(d.cost_excl_gst)).toFixed(2),
           }));
           const totalExcl = dels.reduce((s: number, d: any) => s + Number(d.cost_excl_gst), 0);
           const totalIncl = dels.reduce((s: number, d: any) => s + Number(d.cost_incl_gst), 0);
@@ -438,7 +437,6 @@ export default function MonthlyReportSection() {
             "Day": `${dels.length} deliveries`,
             "Cost (excl GST)": totalExcl.toFixed(2),
             "Cost (incl GST)": totalIncl.toFixed(2),
-            "Margin": (totalIncl - totalExcl).toFixed(2),
           });
           XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows), "Catering Deliveries");
         }
