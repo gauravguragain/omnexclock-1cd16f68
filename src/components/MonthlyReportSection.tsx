@@ -150,11 +150,13 @@ export default function MonthlyReportSection() {
       const needsPayroll = (selectedReports.has("employee_payroll") || selectedReports.has("admin_payroll") || selectedReports.has("labour_cost") || selectedReports.has("margin_analysis")) && empIds.length > 0;
       let payrollClockPromise: Promise<any> | null = null;
       let payrollApprovalPromise: Promise<any> | null = null;
+      let payrollDeliveryPromise: Promise<any> | null = null;
       if (needsPayroll) {
         const fromISO = ausStartOfDay(startStr);
         const toISO = ausEndOfDay(endStr);
         payrollClockPromise = wrap(supabase.from("clock_events").select("*").gte("timestamp", fromISO).lte("timestamp", toISO).in("employee_id", empIds).order("timestamp").then(r => r.data || []));
         payrollApprovalPromise = wrap(supabase.from("timesheet_approvals").select("employee_id, date, approved").gte("date", startStr).lte("date", endStr).eq("approved", true).then(r => r.data || []));
+        payrollDeliveryPromise = wrap(supabase.from("catering_deliveries").select("*").eq("business_id", businessId).gte("delivery_date", startStr).lte("delivery_date", endStr).then(r => r.data || []));
       }
       if (selectedReports.has("requests") && empIds.length > 0) {
         fetchers.requests = wrap(supabase.from("employee_requests").select("*, employees!inner(name, department)").gte("created_at", `${startStr}T00:00:00`).lte("created_at", `${endStr}T23:59:59`).in("employee_id", empIds).then(r => r.data || []));
