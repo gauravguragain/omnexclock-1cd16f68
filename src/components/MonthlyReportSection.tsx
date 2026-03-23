@@ -1292,7 +1292,61 @@ export default function MonthlyReportSection() {
         );
       }
 
-      // ---- PAGE FOOTERS ----
+      // ==========================================
+      // SECTION: CATERING DELIVERIES
+      // ==========================================
+      if (selectedReports.has("catering_deliveries") && results.deliveries) {
+        addSectionHeader("Catering Deliveries", "Operations");
+        const dels = results.deliveries;
+        const totalExcl = dels.reduce((s: number, d: any) => s + Number(d.cost_excl_gst), 0);
+        const totalIncl = dels.reduce((s: number, d: any) => s + Number(d.cost_incl_gst), 0);
+        const totalMarginDel = totalIncl - totalExcl;
+
+        // Group by driver
+        const driverAgg: Record<string, { name: string; count: number; excl: number; incl: number }> = {};
+        dels.forEach((d: any) => {
+          const driverName = d.employees?.name || "Unassigned";
+          if (!driverAgg[driverName]) driverAgg[driverName] = { name: driverName, count: 0, excl: 0, incl: 0 };
+          driverAgg[driverName].count++;
+          driverAgg[driverName].excl += Number(d.cost_excl_gst);
+          driverAgg[driverName].incl += Number(d.cost_incl_gst);
+        });
+
+        addStatsRow([
+          { label: "Total Deliveries", value: String(dels.length), color: [16, 124, 65] },
+          { label: "Revenue (incl GST)", value: `$${totalIncl.toFixed(2)}`, color: [41, 98, 255] },
+          { label: "Driver Cost (excl GST)", value: `$${totalExcl.toFixed(2)}`, color: [180, 83, 9] },
+          { label: "Margin", value: `$${totalMarginDel.toFixed(2)}`, color: [124, 58, 237] },
+        ]);
+
+        addSubHeader("Delivery Log");
+        addTable(
+          ["Date", "Day", "Driver", "Cost (excl GST)", "Cost (incl GST)", "Margin"],
+          dels.map((d: any) => [
+            format(parseISO(d.delivery_date), "dd MMM yyyy"),
+            format(parseISO(d.delivery_date), "EEEE"),
+            d.employees?.name || "Unassigned",
+            `$${Number(d.cost_excl_gst).toFixed(2)}`,
+            `$${Number(d.cost_incl_gst).toFixed(2)}`,
+            `$${(Number(d.cost_incl_gst) - Number(d.cost_excl_gst)).toFixed(2)}`,
+          ]),
+          SECTION_COLORS.Operations,
+          ["TOTAL", "", `${dels.length} deliveries`, `$${totalExcl.toFixed(2)}`, `$${totalIncl.toFixed(2)}`, `$${totalMarginDel.toFixed(2)}`]
+        );
+
+        if (Object.keys(driverAgg).length > 1) {
+          addSubHeader("Summary by Driver");
+          addTable(
+            ["Driver", "Deliveries", "Cost (excl GST)", "Revenue (incl GST)", "Margin"],
+            Object.values(driverAgg).sort((a, b) => b.count - a.count).map(d => [
+              d.name, String(d.count), `$${d.excl.toFixed(2)}`, `$${d.incl.toFixed(2)}`, `$${(d.incl - d.excl).toFixed(2)}`,
+            ]),
+            SECTION_COLORS.Operations
+          );
+        }
+      }
+
+
       const totalPages = doc.getNumberOfPages();
       for (let i = 2; i <= totalPages; i++) {
         doc.setPage(i);
