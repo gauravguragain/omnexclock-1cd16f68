@@ -147,16 +147,18 @@ export default function MonthlyReportSection() {
       if ((selectedReports.has("timesheets") || selectedReports.has("dept_breakdown")) && empIds.length > 0) {
         fetchers.clockEvents = wrap(supabase.from("clock_events").select("*, employees!inner(name, department)").gte("timestamp", `${startStr}T00:00:00`).lte("timestamp", `${endStr}T23:59:59`).in("employee_id", empIds).then(r => r.data || []));
       }
-      const needsPayroll = (selectedReports.has("employee_payroll") || selectedReports.has("admin_payroll") || selectedReports.has("labour_cost") || selectedReports.has("margin_analysis")) && empIds.length > 0;
+      const needsPayroll = selectedReports.has("employee_payroll") || selectedReports.has("admin_payroll") || selectedReports.has("labour_cost") || selectedReports.has("margin_analysis");
       let payrollClockPromise: Promise<any> | null = null;
       let payrollApprovalPromise: Promise<any> | null = null;
       let payrollDeliveryPromise: Promise<any> | null = null;
       if (needsPayroll) {
-        const fromISO = ausStartOfDay(startStr);
-        const toISO = ausEndOfDay(endStr);
-        payrollClockPromise = wrap(supabase.from("clock_events").select("*").gte("timestamp", fromISO).lte("timestamp", toISO).in("employee_id", empIds).order("timestamp").then(r => r.data || []));
-        payrollApprovalPromise = wrap(supabase.from("timesheet_approvals").select("employee_id, date, approved").gte("date", startStr).lte("date", endStr).eq("approved", true).then(r => r.data || []));
         payrollDeliveryPromise = wrap(supabase.from("catering_deliveries").select("*").eq("business_id", businessId).gte("delivery_date", startStr).lte("delivery_date", endStr).then(r => r.data || []));
+        if (empIds.length > 0) {
+          const fromISO = ausStartOfDay(startStr);
+          const toISO = ausEndOfDay(endStr);
+          payrollClockPromise = wrap(supabase.from("clock_events").select("*").gte("timestamp", fromISO).lte("timestamp", toISO).in("employee_id", empIds).order("timestamp").then(r => r.data || []));
+          payrollApprovalPromise = wrap(supabase.from("timesheet_approvals").select("employee_id, date, approved").gte("date", startStr).lte("date", endStr).eq("approved", true).then(r => r.data || []));
+        }
       }
       if (selectedReports.has("requests") && empIds.length > 0) {
         fetchers.requests = wrap(supabase.from("employee_requests").select("*, employees!inner(name, department)").gte("created_at", `${startStr}T00:00:00`).lte("created_at", `${endStr}T23:59:59`).in("employee_id", empIds).then(r => r.data || []));
@@ -188,8 +190,12 @@ export default function MonthlyReportSection() {
       entries.forEach(([key], i) => { results[key] = resolved[i]; });
 
       // Compute payroll from clock_events + approvals (matches Payroll page logic)
-      if (needsPayroll && payrollClockPromise && payrollApprovalPromise) {
-        const [clockEvents, approvals, deliveries] = await Promise.all([payrollClockPromise, payrollApprovalPromise, payrollDeliveryPromise || Promise.resolve([])]);
+      if (needsPayroll) {
+        const [clockEvents, approvals, deliveries] = await Promise.all([
+          payrollClockPromise || Promise.resolve([]),
+          payrollApprovalPromise || Promise.resolve([]),
+          payrollDeliveryPromise || Promise.resolve([])
+        ]);
         const approvedSet = new Set((approvals as any[]).map((a: any) => `${a.employee_id}-${a.date}`));
         const allEmps = results.employees || [];
         const empMap = new Map((allEmps as any[]).map((e: any) => [e.id, e]));
@@ -282,8 +288,10 @@ export default function MonthlyReportSection() {
           XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows), "Timesheets");
         }
 
+        const hasPayrollContent = (results.payroll?.length || 0) > 0 || (results.payroll_delivery?.count || 0) > 0;
+
         // Employee Payroll
-        if (selectedReports.has("employee_payroll") && results.payroll?.length) {
+        if (selectedReports.has("employee_payroll") && hasPayrollContent) {
           const del = results.payroll_delivery || { count: 0, cost_excl_gst: 0, cost_incl_gst: 0 };
           const rows: any[] = results.payroll.map((p: any) => ({
             "Employee": p.name, "Department": p.department, "Net Hours": Number(p.net_hours).toFixed(2),
@@ -298,7 +306,7 @@ export default function MonthlyReportSection() {
         }
 
         // Admin Payroll
-        if (selectedReports.has("admin_payroll") && results.payroll?.length) {
+        if (selectedReports.has("admin_payroll") && hasPayrollContent) {
           const del = results.payroll_delivery || { count: 0, cost_excl_gst: 0, cost_incl_gst: 0 };
           const delAdminExcl = Math.round(del.cost_incl_gst / 1.10 * 100) / 100;
           const rows: any[] = results.payroll.map((p: any) => ({
@@ -316,7 +324,7 @@ export default function MonthlyReportSection() {
         }
 
         // Labour Cost
-        if (selectedReports.has("labour_cost") && results.payroll?.length) {
+        if (selectedReports.has("labour_cost") && hasPayrollContent) {
           const deptCosts: Record<string, { hours: number; cost: number; count: number }> = {};
           results.payroll.forEach((p: any) => {
             const dept = p.department || "Unassigned";
@@ -329,11 +337,22 @@ export default function MonthlyReportSection() {
             "Department": dept, "Employees": d.count, "Hours": d.hours.toFixed(1),
             "Admin Pay Cost": d.cost.toFixed(2), "Avg $/Hr": d.hours ? (d.cost / d.hours).toFixed(2) : "-",
           }));
+          const del = results.payroll_delivery || { count: 0, cost_excl_gst: 0, cost_incl_gst: 0 };
+          if (del.count > 0) {
+            const delAdminExcl = Math.round(del.cost_incl_gst / 1.10 * 100) / 100;
+            rows.push({
+              "Department": "Delivery",
+              "Employees": del.count,
+              "Hours": "-",
+              "Admin Pay Cost": delAdminExcl.toFixed(2),
+              "Avg $/Hr": "-",
+            });
+          }
           XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows), "Labour Cost");
         }
 
         // Margin Analysis
-        if (selectedReports.has("margin_analysis") && results.payroll?.length) {
+        if (selectedReports.has("margin_analysis") && hasPayrollContent) {
           const del = results.payroll_delivery || { count: 0, cost_excl_gst: 0, cost_incl_gst: 0 };
           const rows = results.payroll.map((p: any) => {
             const marginEx = Number(p.admin_pay) - Number(p.employee_pay);
@@ -803,7 +822,9 @@ export default function MonthlyReportSection() {
       // ==========================================
       // SECTION: EMPLOYEE PAYROLL
       // ==========================================
-      if (selectedReports.has("employee_payroll") && results.payroll && results.payroll.length > 0) {
+      const hasPayrollContent = (results.payroll?.length || 0) > 0 || (results.payroll_delivery?.count || 0) > 0;
+
+      if (selectedReports.has("employee_payroll") && hasPayrollContent) {
         addSectionHeader("Employee Payroll", "Finance");
         const payroll = results.payroll;
         const del = results.payroll_delivery || { count: 0, cost_excl_gst: 0, cost_incl_gst: 0 };
@@ -859,7 +880,7 @@ export default function MonthlyReportSection() {
       // ==========================================
       // SECTION: ADMIN PAYROLL
       // ==========================================
-      if (selectedReports.has("admin_payroll") && results.payroll && results.payroll.length > 0) {
+      if (selectedReports.has("admin_payroll") && hasPayrollContent) {
         addSectionHeader("Admin Payroll", "Finance");
         const payroll = results.payroll;
         const del = results.payroll_delivery || { count: 0, cost_excl_gst: 0, cost_incl_gst: 0 };
@@ -919,9 +940,10 @@ export default function MonthlyReportSection() {
       // ==========================================
       // SECTION: LABOUR COST ANALYSIS (based on Admin Payroll)
       // ==========================================
-      if (selectedReports.has("labour_cost") && results.payroll && results.payroll.length > 0) {
+      if (selectedReports.has("labour_cost") && hasPayrollContent) {
         addSectionHeader("Labour Cost Analysis", "Finance");
         const payroll = results.payroll;
+        const del = results.payroll_delivery || { count: 0, cost_excl_gst: 0, cost_incl_gst: 0 };
 
         const deptCosts: Record<string, { hours: number; cost: number; empCount: Set<string> }> = {};
         payroll.forEach((p: any) => {
@@ -932,7 +954,8 @@ export default function MonthlyReportSection() {
           deptCosts[dept].empCount.add(p.employee_id);
         });
 
-        const totalLabourCost = Object.values(deptCosts).reduce((s, d) => s + d.cost, 0);
+        const delAdminExcl = Math.round(del.cost_incl_gst / 1.10 * 100) / 100;
+        const totalLabourCost = Object.values(deptCosts).reduce((s, d) => s + d.cost, 0) + delAdminExcl;
         const totalLabourHours = Object.values(deptCosts).reduce((s, d) => s + d.hours, 0);
         const gstComponent = totalLabourCost / 11;
 
@@ -946,11 +969,14 @@ export default function MonthlyReportSection() {
         addSubHeader("Cost by Department (Admin Payroll)");
         addTable(
           ["Department", "Employees", "Hours", "Admin Pay Cost", "% of Total", "Avg $/Hr"],
-          Object.entries(deptCosts).sort((a, b) => b[1].cost - a[1].cost).map(([dept, d]) => [
+          [
+            ...Object.entries(deptCosts).sort((a, b) => b[1].cost - a[1].cost).map(([dept, d]) => [
             dept, String(d.empCount.size), d.hours.toFixed(1), `$${d.cost.toFixed(2)}`,
             totalLabourCost ? `${((d.cost / totalLabourCost) * 100).toFixed(1)}%` : "0%",
             d.hours ? `$${(d.cost / d.hours).toFixed(2)}` : "-"
-          ]),
+            ]),
+            ...(del.count > 0 ? [["Delivery", String(del.count), "-", `$${delAdminExcl.toFixed(2)}`, totalLabourCost ? `${((delAdminExcl / totalLabourCost) * 100).toFixed(1)}%` : "0%", "-"]] : [])
+          ],
           SECTION_COLORS.Finance
         );
 
@@ -975,7 +1001,7 @@ export default function MonthlyReportSection() {
       // ==========================================
       // SECTION: MARGIN ANALYSIS (Super Admin only)
       // ==========================================
-      if (selectedReports.has("margin_analysis") && results.payroll && results.payroll.length > 0) {
+      if (selectedReports.has("margin_analysis") && hasPayrollContent) {
         addSectionHeader("Margin Analysis", "Finance");
         const payroll = results.payroll;
         const del = results.payroll_delivery || { count: 0, cost_excl_gst: 0, cost_incl_gst: 0 };
