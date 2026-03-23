@@ -194,11 +194,9 @@ export default function MonthlyReportSection() {
         const allEmps = results.employees || [];
         const empMap = new Map((allEmps as any[]).map((e: any) => [e.id, e]));
         
-        // Use shared timesheet computation
         const allTimesheetEntries = computeTimesheetEntries(clockEvents);
         const approvedEntries = filterApprovedEntries(allTimesheetEntries, approvedSet);
         
-        // Aggregate per employee
         const empAgg = new Map<string, { totalHours: number; breakHours: number; netHours: number }>();
         for (const entry of approvedEntries) {
           if (!empMap.has(entry.employee_id)) continue;
@@ -211,20 +209,10 @@ export default function MonthlyReportSection() {
           agg.netHours += entry.net_hours;
         }
 
-        // Aggregate deliveries per driver
-        const delAgg = new Map<string, number>();
-        (deliveries as any[]).forEach((d: any) => {
-          if (d.driver_id) {
-            delAgg.set(d.driver_id, (delAgg.get(d.driver_id) || 0) + 1);
-          }
-        });
-
-        // Ensure drivers with deliveries but no shifts are included
-        for (const driverId of delAgg.keys()) {
-          if (!empAgg.has(driverId) && empMap.has(driverId)) {
-            empAgg.set(driverId, { totalHours: 0, breakHours: 0, netHours: 0 });
-          }
-        }
+        // Standalone delivery summary (not per employee)
+        const delCount = (deliveries as any[]).length;
+        const delCostExcl = (deliveries as any[]).reduce((s: number, d: any) => s + (Number(d.cost_excl_gst) || 0), 0);
+        const delCostIncl = (deliveries as any[]).reduce((s: number, d: any) => s + (Number(d.cost_incl_gst) || 0), 0);
         
         const computedPayroll: any[] = [];
         for (const [empId, agg] of empAgg) {
@@ -234,11 +222,6 @@ export default function MonthlyReportSection() {
           const employeePay = Math.round(netHours * emp.pay_rate * 100) / 100;
           const adminPayInclGst = Math.round(netHours * emp.admin_hourly_rate * 100) / 100;
           const adminPay = Math.round(adminPayInclGst / 1.10 * 100) / 100;
-
-          const deliveryCount = delAgg.get(empId) || 0;
-          const deliveryEmployeePay = Math.round(deliveryCount * 36.36 * 100) / 100;
-          const deliveryAdminPayIncl = Math.round(deliveryCount * 40.00 * 100) / 100;
-          const deliveryAdminPay = Math.round(deliveryAdminPayIncl / 1.10 * 100) / 100;
           
           computedPayroll.push({
             employee_id: empId,
@@ -252,17 +235,11 @@ export default function MonthlyReportSection() {
             employee_pay: employeePay,
             admin_pay: adminPay,
             admin_pay_incl_gst: adminPayInclGst,
-            delivery_count: deliveryCount,
-            delivery_employee_pay: deliveryEmployeePay,
-            delivery_admin_pay: deliveryAdminPay,
-            delivery_admin_pay_incl_gst: deliveryAdminPayIncl,
-            total_employee_pay: employeePay + deliveryEmployeePay,
-            total_admin_pay: adminPay + deliveryAdminPay,
-            total_admin_pay_incl_gst: adminPayInclGst + deliveryAdminPayIncl,
           });
         }
         
         results.payroll = computedPayroll;
+        results.payroll_delivery = { count: delCount, cost_excl_gst: delCostExcl, cost_incl_gst: delCostIncl };
       }
 
       // ===== EXCEL GENERATION =====
@@ -307,35 +284,34 @@ export default function MonthlyReportSection() {
 
         // Employee Payroll
         if (selectedReports.has("employee_payroll") && results.payroll?.length) {
-          const rows: any[] = [];
-          results.payroll.forEach((p: any) => {
-            if (Number(p.net_hours) > 0) {
-              rows.push({ "Employee": p.name, "Department": p.department, "Type": "Shift", "Net Hours": Number(p.net_hours).toFixed(2), "Rate $/Hr": Number(p.pay_rate).toFixed(2), "Employee Pay": Number(p.employee_pay).toFixed(2) });
-            }
-            if (p.delivery_count > 0) {
-              rows.push({ "Employee": p.name, "Department": p.department, "Type": `🚚 Delivery ×${p.delivery_count}`, "Net Hours": "-", "Rate $/Hr": "flat rate", "Employee Pay": Number(p.delivery_employee_pay).toFixed(2) });
-            }
-          });
-          // Add total row
-          const totalPay = results.payroll.reduce((s: number, p: any) => s + Number(p.total_employee_pay), 0);
-          rows.push({ "Employee": "TOTAL", "Department": "", "Type": "", "Net Hours": "", "Rate $/Hr": "", "Employee Pay": totalPay.toFixed(2) });
+          const del = results.payroll_delivery || { count: 0, cost_excl_gst: 0, cost_incl_gst: 0 };
+          const rows: any[] = results.payroll.map((p: any) => ({
+            "Employee": p.name, "Department": p.department, "Net Hours": Number(p.net_hours).toFixed(2),
+            "Rate $/Hr": Number(p.pay_rate).toFixed(2), "Employee Pay": Number(p.employee_pay).toFixed(2),
+          }));
+          if (del.count > 0) {
+            rows.push({ "Employee": `🚚 Delivery ×${del.count}`, "Department": "", "Net Hours": "-", "Rate $/Hr": "flat rate", "Employee Pay": del.cost_excl_gst.toFixed(2) });
+          }
+          const totalPay = results.payroll.reduce((s: number, p: any) => s + Number(p.employee_pay), 0) + del.cost_excl_gst;
+          rows.push({ "Employee": "TOTAL", "Department": "", "Net Hours": "", "Rate $/Hr": "", "Employee Pay": totalPay.toFixed(2) });
           XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows), "Employee Payroll");
         }
 
         // Admin Payroll
         if (selectedReports.has("admin_payroll") && results.payroll?.length) {
-          const rows: any[] = [];
-          results.payroll.forEach((p: any) => {
-            if (Number(p.net_hours) > 0) {
-              rows.push({ "Employee": p.name, "Department": p.department, "Type": "Shift", "Net Hours": Number(p.net_hours).toFixed(2), "Rate $/Hr (incl GST)": Number(p.admin_hourly_rate).toFixed(2), "Cost (ex GST)": Number(p.admin_pay).toFixed(2), "Cost (incl GST)": Number(p.admin_pay_incl_gst || 0).toFixed(2) });
-            }
-            if (p.delivery_count > 0) {
-              rows.push({ "Employee": p.name, "Department": p.department, "Type": `🚚 Delivery ×${p.delivery_count}`, "Net Hours": "-", "Rate $/Hr (incl GST)": "flat rate", "Cost (ex GST)": Number(p.delivery_admin_pay).toFixed(2), "Cost (incl GST)": Number(p.delivery_admin_pay_incl_gst).toFixed(2) });
-            }
-          });
-          const totalExcl = results.payroll.reduce((s: number, p: any) => s + Number(p.total_admin_pay), 0);
-          const totalIncl = results.payroll.reduce((s: number, p: any) => s + Number(p.total_admin_pay_incl_gst), 0);
-          rows.push({ "Employee": "TOTAL", "Department": "", "Type": "", "Net Hours": "", "Rate $/Hr (incl GST)": "", "Cost (ex GST)": totalExcl.toFixed(2), "Cost (incl GST)": totalIncl.toFixed(2) });
+          const del = results.payroll_delivery || { count: 0, cost_excl_gst: 0, cost_incl_gst: 0 };
+          const delAdminExcl = Math.round(del.cost_incl_gst / 1.10 * 100) / 100;
+          const rows: any[] = results.payroll.map((p: any) => ({
+            "Employee": p.name, "Department": p.department, "Net Hours": Number(p.net_hours).toFixed(2),
+            "Rate $/Hr (incl GST)": Number(p.admin_hourly_rate).toFixed(2), "Cost (ex GST)": Number(p.admin_pay).toFixed(2),
+            "Cost (incl GST)": Number(p.admin_pay_incl_gst || 0).toFixed(2),
+          }));
+          if (del.count > 0) {
+            rows.push({ "Employee": `🚚 Delivery ×${del.count}`, "Department": "", "Net Hours": "-", "Rate $/Hr (incl GST)": "flat rate", "Cost (ex GST)": delAdminExcl.toFixed(2), "Cost (incl GST)": del.cost_incl_gst.toFixed(2) });
+          }
+          const totalExcl = results.payroll.reduce((s: number, p: any) => s + Number(p.admin_pay), 0) + delAdminExcl;
+          const totalIncl = results.payroll.reduce((s: number, p: any) => s + Number(p.admin_pay_incl_gst || 0), 0) + del.cost_incl_gst;
+          rows.push({ "Employee": "TOTAL", "Department": "", "Net Hours": "", "Rate $/Hr (incl GST)": "", "Cost (ex GST)": totalExcl.toFixed(2), "Cost (incl GST)": totalIncl.toFixed(2) });
           XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows), "Admin Payroll");
         }
 
@@ -346,7 +322,7 @@ export default function MonthlyReportSection() {
             const dept = p.department || "Unassigned";
             if (!deptCosts[dept]) deptCosts[dept] = { hours: 0, cost: 0, count: 0 };
             deptCosts[dept].hours += Number(p.net_hours);
-            deptCosts[dept].cost += Number(p.total_admin_pay);
+            deptCosts[dept].cost += Number(p.admin_pay);
             deptCosts[dept].count++;
           });
           const rows = Object.entries(deptCosts).map(([dept, d]) => ({
@@ -358,19 +334,25 @@ export default function MonthlyReportSection() {
 
         // Margin Analysis
         if (selectedReports.has("margin_analysis") && results.payroll?.length) {
+          const del = results.payroll_delivery || { count: 0, cost_excl_gst: 0, cost_incl_gst: 0 };
           const rows = results.payroll.map((p: any) => {
-            const marginEx = Number(p.total_admin_pay) - Number(p.total_employee_pay);
-            const marginIncl = Number(p.total_admin_pay_incl_gst) - Number(p.total_employee_pay);
-            const mPct = Number(p.total_admin_pay) > 0 ? (marginEx / Number(p.total_admin_pay) * 100) : 0;
+            const marginEx = Number(p.admin_pay) - Number(p.employee_pay);
+            const marginIncl = Number(p.admin_pay_incl_gst || 0) - Number(p.employee_pay);
+            const mPct = Number(p.admin_pay) > 0 ? (marginEx / Number(p.admin_pay) * 100) : 0;
             return {
               "Employee": p.name, "Department": p.department, "Hours": Number(p.net_hours).toFixed(2),
-              "Deliveries": p.delivery_count || 0,
-              "Employee Pay": Number(p.total_employee_pay).toFixed(2), "Admin (ex GST)": Number(p.total_admin_pay).toFixed(2),
-              "Admin (incl GST)": Number(p.total_admin_pay_incl_gst).toFixed(2),
+              "Employee Pay": Number(p.employee_pay).toFixed(2), "Admin (ex GST)": Number(p.admin_pay).toFixed(2),
+              "Admin (incl GST)": Number(p.admin_pay_incl_gst || 0).toFixed(2),
               "Margin (ex GST)": marginEx.toFixed(2), "Margin (incl GST)": marginIncl.toFixed(2),
               "Margin %": `${mPct.toFixed(1)}%`,
             };
           });
+          if (del.count > 0) {
+            const delAdminExcl = Math.round(del.cost_incl_gst / 1.10 * 100) / 100;
+            const delMarginEx = delAdminExcl - del.cost_excl_gst;
+            const delMarginIncl = del.cost_incl_gst - del.cost_excl_gst;
+            rows.push({ "Employee": `🚚 Delivery ×${del.count}`, "Department": "", "Hours": "-", "Employee Pay": del.cost_excl_gst.toFixed(2), "Admin (ex GST)": delAdminExcl.toFixed(2), "Admin (incl GST)": del.cost_incl_gst.toFixed(2), "Margin (ex GST)": delMarginEx.toFixed(2), "Margin (incl GST)": delMarginIncl.toFixed(2), "Margin %": "" });
+          }
           XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows), "Margin Analysis");
         }
 

@@ -44,10 +44,12 @@ interface PayrollEntry {
   account_name: string | null;
   bsb: string | null;
   account_number: string | null;
-  delivery_count: number;
-  delivery_employee_pay: number;
-  delivery_admin_pay: number;
-  delivery_admin_pay_incl_gst: number;
+}
+
+interface DeliverySummary {
+  count: number;
+  cost_excl_gst: number;
+  cost_incl_gst: number;
 }
 
 type SortKey = "name" | "net_hours" | "employee_pay" | "admin_pay" | "total_hours";
@@ -115,6 +117,7 @@ export default function PayrollPage() {
   const { business } = useBusiness();
   const { isSuperAdminOf } = useAuth();
   const [entries, setEntries] = useState<PayrollEntry[]>([]);
+  const [deliverySummary, setDeliverySummary] = useState<DeliverySummary>({ count: 0, cost_excl_gst: 0, cost_incl_gst: 0 });
   const [allEmployees, setAllEmployees] = useState<{ id: string; name: string; department: string | null }[]>([]);
   const [loading, setLoading] = useState(false);
   const [dateFrom, setDateFrom] = useState<Date>(() => startOfWeek(ausNow(), { weekStartsOn: 1 }));
@@ -181,7 +184,7 @@ export default function PayrollPage() {
       supabase.from("employees").select("*").eq("active", true).eq("business_id", business!.id),
       fetchAllEvents(),
       supabase.from("timesheet_approvals").select("employee_id, date, approved").gte("date", from).lte("date", to).eq("approved", true),
-      supabase.from("catering_deliveries").select("driver_id, cost_excl_gst, cost_incl_gst, status").eq("business_id", business!.id).gte("delivery_date", from).lte("delivery_date", to).eq("status", "delivered"),
+      supabase.from("catering_deliveries").select("cost_excl_gst, cost_incl_gst").eq("business_id", business!.id).gte("delivery_date", from).lte("delivery_date", to),
     ]);
 
     if (!employees) { setLoading(false); return; }
@@ -194,16 +197,13 @@ export default function PayrollPage() {
       }
     }
 
-    // Aggregate deliveries per driver
-    const deliveryAgg = new Map<string, { count: number; exclGst: number; inclGst: number }>();
+    // Aggregate deliveries (standalone, not per employee)
+    let delSummary: DeliverySummary = { count: 0, cost_excl_gst: 0, cost_incl_gst: 0 };
     if (deliveryData) {
       for (const d of deliveryData as any[]) {
-        if (!d.driver_id) continue;
-        if (!deliveryAgg.has(d.driver_id)) deliveryAgg.set(d.driver_id, { count: 0, exclGst: 0, inclGst: 0 });
-        const agg = deliveryAgg.get(d.driver_id)!;
-        agg.count += 1;
-        agg.exclGst += Number(d.cost_excl_gst) || 0;
-        agg.inclGst += Number(d.cost_incl_gst) || 0;
+        delSummary.count += 1;
+        delSummary.cost_excl_gst += Number(d.cost_excl_gst) || 0;
+        delSummary.cost_incl_gst += Number(d.cost_incl_gst) || 0;
       }
     }
 
@@ -226,15 +226,10 @@ export default function PayrollPage() {
       agg.netHours += entry.net_hours;
     }
 
-    // Merge: ensure drivers with deliveries but no shifts also appear
-    const allEmpIds = new Set([...empAgg.keys(), ...deliveryAgg.keys()]);
-
     const result: PayrollEntry[] = [];
-    for (const empId of allEmpIds) {
+    for (const [empId, agg] of empAgg) {
       const emp = empMap.get(empId);
       if (!emp) continue;
-      const agg = empAgg.get(empId) || { totalHours: 0, breakHours: 0, netHours: 0 };
-      const delAgg = deliveryAgg.get(empId) || { count: 0, exclGst: 0, inclGst: 0 };
       const netHours = Math.round(agg.netHours * 100) / 100;
       const totalHours = Math.round(agg.totalHours * 100) / 100;
       const breakHours = Math.round(agg.breakHours * 100) / 100;
@@ -258,15 +253,12 @@ export default function PayrollPage() {
         account_name: (emp as any).account_name || null,
         bsb: (emp as any).bsb || null,
         account_number: (emp as any).account_number || null,
-        delivery_count: delAgg.count,
-        delivery_employee_pay: Math.round(delAgg.exclGst * 100) / 100,
-        delivery_admin_pay: Math.round(delAgg.exclGst * 100) / 100,
-        delivery_admin_pay_incl_gst: Math.round(delAgg.inclGst * 100) / 100,
       });
     }
 
     setAllEmployees((employees || []).map(e => ({ id: e.id, name: e.name, department: e.department })));
     setEntries(result);
+    setDeliverySummary(delSummary);
     setLoading(false);
   };
 
@@ -370,12 +362,12 @@ export default function PayrollPage() {
     }
   };
 
-  const totalEmployeePay = filtered.reduce((sum, e) => sum + e.employee_pay + e.delivery_employee_pay, 0);
-  const totalAdminPay = filtered.reduce((sum, e) => sum + e.admin_pay + e.delivery_admin_pay, 0);
+  const totalEmployeePay = filtered.reduce((sum, e) => sum + e.employee_pay, 0) + deliverySummary.cost_excl_gst;
+  const totalAdminPay = filtered.reduce((sum, e) => sum + e.admin_pay, 0) + Math.round(deliverySummary.cost_incl_gst / 1.10 * 100) / 100;
   const totalNetHours = filtered.reduce((sum, e) => sum + e.net_hours, 0);
   const totalBreakHours = filtered.reduce((sum, e) => sum + e.break_hours, 0);
-  const totalAdminPayInclGst = filtered.reduce((sum, e) => sum + e.admin_pay_incl_gst + e.delivery_admin_pay_incl_gst, 0);
-  const totalDeliveryCount = filtered.reduce((sum, e) => sum + e.delivery_count, 0);
+  const totalAdminPayInclGst = filtered.reduce((sum, e) => sum + e.admin_pay_incl_gst, 0) + deliverySummary.cost_incl_gst;
+  const totalDeliveryCount = deliverySummary.count;
   const totalMargin = totalAdminPay - totalEmployeePay;
   const totalMarginInclGst = totalAdminPayInclGst - totalEmployeePay;
   const marginPercentage = totalAdminPay > 0 ? (totalMargin / totalAdminPay * 100) : 0;
@@ -459,23 +451,19 @@ export default function PayrollPage() {
             </TableHeader>
             <TableBody>
               {pageEntries.map((e) => {
-                const totalEmpPay = e.employee_pay + e.delivery_employee_pay;
-                const totalAdmPay = e.admin_pay + e.delivery_admin_pay;
-                const totalAdmPayIncl = e.admin_pay_incl_gst + e.delivery_admin_pay_incl_gst;
-                const marginEx = totalAdmPay - totalEmpPay;
-                const marginIncl = totalAdmPayIncl - totalEmpPay;
-                const marginPct = totalAdmPay > 0 ? (marginEx / totalAdmPay * 100) : 0;
+                const marginEx = e.admin_pay - e.employee_pay;
+                const marginIncl = e.admin_pay_incl_gst - e.employee_pay;
+                const marginPct = e.admin_pay > 0 ? (marginEx / e.admin_pay * 100) : 0;
                 return (
                   <TableRow key={e.employee_id}>
                     <TableCell className="font-medium sticky left-0 bg-card z-20 border-r border-border/60">
                       {e.name}
-                      {e.delivery_count > 0 && <Badge variant="outline" className="ml-1.5 text-[9px] px-1 py-0">{e.delivery_count} del</Badge>}
                     </TableCell>
                     <TableCell>{e.department || "-"}</TableCell>
                     <TableCell>{e.net_hours.toFixed(2)}</TableCell>
-                    <TableCell>${totalEmpPay.toFixed(2)}</TableCell>
-                    <TableCell>${totalAdmPay.toFixed(2)}</TableCell>
-                    <TableCell>${totalAdmPayIncl.toFixed(2)}</TableCell>
+                    <TableCell>${e.employee_pay.toFixed(2)}</TableCell>
+                    <TableCell>${e.admin_pay.toFixed(2)}</TableCell>
+                    <TableCell>${e.admin_pay_incl_gst.toFixed(2)}</TableCell>
                     <TableCell className={`text-right font-semibold ${marginEx >= 0 ? "text-green-500" : "text-red-500"}`}>
                       ${marginEx.toFixed(2)}
                     </TableCell>
@@ -715,62 +703,38 @@ export default function PayrollPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {pageEntries.flatMap((e) => {
-                const hasDelivery = e.delivery_count > 0;
-                const rows = [];
-                // Shift row (only if they have hours)
-                if (e.net_hours > 0) {
-                  rows.push(
-                    <TableRow key={e.employee_id + "-shift"}>
-                      <TableCell className="font-medium sticky left-0 bg-card z-20 border-r border-border/60">{e.name}</TableCell>
-                      <TableCell>${(isEmployee ? e.pay_rate : e.admin_hourly_rate).toFixed(2)}</TableCell>
-                      <TableCell>{e.total_hours.toFixed(2)}</TableCell>
-                      <TableCell>{e.break_hours.toFixed(2)}</TableCell>
-                      <TableCell>{e.net_hours.toFixed(2)}</TableCell>
-                      <TableCell className="text-right font-semibold">${(isEmployee ? e.employee_pay : e.admin_pay).toFixed(2)}</TableCell>
-                      {!isEmployee && <TableCell className="text-right text-muted-foreground">${e.admin_pay_incl_gst.toFixed(2)}</TableCell>}
-                    </TableRow>
-                  );
-                }
-                // Delivery row
-                if (hasDelivery) {
-                  const delPay = isEmployee ? e.delivery_employee_pay : e.delivery_admin_pay;
-                  rows.push(
-                    <TableRow key={e.employee_id + "-delivery"} className="bg-primary/5 border-l-2 border-l-primary">
-                      <TableCell className="font-medium sticky left-0 bg-primary/5 z-20 border-r border-border/60">
-                        <span className="flex items-center gap-1.5">
-                          {e.net_hours > 0 ? "" : e.name}
-                          <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-primary/40 text-primary">
-                            🚚 Delivery ×{e.delivery_count}
-                          </Badge>
-                        </span>
-                      </TableCell>
-                      <TableCell className="text-xs text-muted-foreground italic">flat rate</TableCell>
-                      <TableCell className="text-xs text-muted-foreground">—</TableCell>
-                      <TableCell className="text-xs text-muted-foreground">—</TableCell>
-                      <TableCell className="text-xs text-muted-foreground">—</TableCell>
-                      <TableCell className="text-right font-semibold">${delPay.toFixed(2)}</TableCell>
-                      {!isEmployee && <TableCell className="text-right text-muted-foreground">${e.delivery_admin_pay_incl_gst.toFixed(2)}</TableCell>}
-                    </TableRow>
-                  );
-                }
-                // If employee has neither shifts nor deliveries, show empty row
-                if (rows.length === 0) {
-                  rows.push(
-                    <TableRow key={e.employee_id}>
-                      <TableCell className="font-medium sticky left-0 bg-card z-20 border-r border-border/60">{e.name}</TableCell>
-                      <TableCell>${(isEmployee ? e.pay_rate : e.admin_hourly_rate).toFixed(2)}</TableCell>
-                      <TableCell>{e.total_hours.toFixed(2)}</TableCell>
-                      <TableCell>{e.break_hours.toFixed(2)}</TableCell>
-                      <TableCell>{e.net_hours.toFixed(2)}</TableCell>
-                      <TableCell className="text-right font-semibold">$0.00</TableCell>
-                      {!isEmployee && <TableCell className="text-right text-muted-foreground">$0.00</TableCell>}
-                    </TableRow>
-                  );
-                }
-                return rows;
-              })}
-              {pageEntries.length === 0 && (
+              {pageEntries.map((e) => (
+                <TableRow key={e.employee_id}>
+                  <TableCell className="font-medium sticky left-0 bg-card z-20 border-r border-border/60">{e.name}</TableCell>
+                  <TableCell>${(isEmployee ? e.pay_rate : e.admin_hourly_rate).toFixed(2)}</TableCell>
+                  <TableCell>{e.total_hours.toFixed(2)}</TableCell>
+                  <TableCell>{e.break_hours.toFixed(2)}</TableCell>
+                  <TableCell>{e.net_hours.toFixed(2)}</TableCell>
+                  <TableCell className="text-right font-semibold">${(isEmployee ? e.employee_pay : e.admin_pay).toFixed(2)}</TableCell>
+                  {!isEmployee && <TableCell className="text-right text-muted-foreground">${e.admin_pay_incl_gst.toFixed(2)}</TableCell>}
+                </TableRow>
+              ))}
+              {/* Standalone delivery row */}
+              {deliverySummary.count > 0 && (
+                <TableRow className="bg-primary/5 border-l-2 border-l-primary">
+                  <TableCell className="font-medium sticky left-0 bg-primary/5 z-20 border-r border-border/60">
+                    <span className="flex items-center gap-1.5">
+                      <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-primary/40 text-primary">
+                        🚚 Delivery ×{deliverySummary.count}
+                      </Badge>
+                    </span>
+                  </TableCell>
+                  <TableCell className="text-xs text-muted-foreground italic">flat rate</TableCell>
+                  <TableCell className="text-xs text-muted-foreground">—</TableCell>
+                  <TableCell className="text-xs text-muted-foreground">—</TableCell>
+                  <TableCell className="text-xs text-muted-foreground">—</TableCell>
+                  <TableCell className="text-right font-semibold">
+                    ${(isEmployee ? deliverySummary.cost_excl_gst : Math.round(deliverySummary.cost_incl_gst / 1.10 * 100) / 100).toFixed(2)}
+                  </TableCell>
+                  {!isEmployee && <TableCell className="text-right text-muted-foreground">${deliverySummary.cost_incl_gst.toFixed(2)}</TableCell>}
+                </TableRow>
+              )}
+              {pageEntries.length === 0 && deliverySummary.count === 0 && (
                 <TableRow>
                   <TableCell colSpan={isEmployee ? 6 : 7} className="text-center text-muted-foreground py-8">
                     {loading ? "Loading..." : "No approved payroll data for this period."}

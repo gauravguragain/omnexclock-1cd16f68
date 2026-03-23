@@ -1,61 +1,39 @@
 import { useEffect, useState, useMemo } from "react";
 import { useBusiness } from "@/contexts/BusinessContext";
-import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
-import { format, startOfWeek, endOfWeek, addWeeks, subWeeks, eachDayOfInterval } from "date-fns";
+import { format, startOfWeek, endOfWeek, addWeeks, subWeeks } from "date-fns";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { cn } from "@/lib/utils";
-import { Plus, Truck, CalendarIcon, Edit, Trash2, ChevronLeft, ChevronRight } from "lucide-react";
+import { Plus, Truck, CalendarIcon, Trash2, ChevronLeft, ChevronRight } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { logAudit } from "@/lib/auditLog";
 import { ausNow } from "@/lib/dateUtils";
 
 interface Delivery {
   id: string;
-  business_id: string;
   delivery_date: string;
-  driver_id: string | null;
   cost_incl_gst: number;
   cost_excl_gst: number;
-  status: string;
-  delivery_address: string;
-  contact_person: string;
-  contact_number: string | null;
-  delivery_time: string | null;
-  number_of_guests: number;
-  notes: string | null;
-  created_at: string;
 }
 
 export default function CateringDeliveryPage() {
   const { business } = useBusiness();
   const { toast } = useToast();
   const [deliveries, setDeliveries] = useState<Delivery[]>([]);
-  const [employees, setEmployees] = useState<{ id: string; name: string }[]>([]);
   const [loading, setLoading] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [editingDelivery, setEditingDelivery] = useState<Delivery | null>(null);
+  const [formDate, setFormDate] = useState<Date>(new Date());
 
-  // Week navigation
   const [weekStart, setWeekStart] = useState<Date>(() => startOfWeek(ausNow(), { weekStartsOn: 1 }));
   const weekEnd = endOfWeek(weekStart, { weekStartsOn: 1 });
 
-  // Form state - simplified: just date + driver
-  const [formDate, setFormDate] = useState<Date>(new Date());
-  const [formDriverId, setFormDriverId] = useState("");
-
   useEffect(() => {
-    if (business) {
-      fetchDeliveries();
-      fetchEmployees();
-    }
+    if (business) fetchDeliveries();
   }, [business, weekStart]);
 
   useEffect(() => {
@@ -74,7 +52,7 @@ export default function CateringDeliveryPage() {
     const to = format(weekEnd, "yyyy-MM-dd");
     const { data } = await supabase
       .from("catering_deliveries")
-      .select("*")
+      .select("id, delivery_date, cost_incl_gst, cost_excl_gst")
       .eq("business_id", business.id)
       .gte("delivery_date", from)
       .lte("delivery_date", to)
@@ -83,46 +61,16 @@ export default function CateringDeliveryPage() {
     setLoading(false);
   };
 
-  const fetchEmployees = async () => {
-    if (!business) return;
-    const { data } = await supabase
-      .from("employees")
-      .select("id, name")
-      .eq("business_id", business.id)
-      .eq("active", true)
-      .order("name");
-    setEmployees(data || []);
-  };
-
   const goToPrevWeek = () => setWeekStart(startOfWeek(subWeeks(weekStart, 1), { weekStartsOn: 1 }));
   const goToNextWeek = () => setWeekStart(startOfWeek(addWeeks(weekStart, 1), { weekStartsOn: 1 }));
   const goToThisWeek = () => setWeekStart(startOfWeek(ausNow(), { weekStartsOn: 1 }));
 
-  const openCreate = () => {
-    setEditingDelivery(null);
-    setFormDate(new Date());
-    setFormDriverId("");
-    setDialogOpen(true);
-  };
-
-  const openEdit = (d: Delivery) => {
-    setEditingDelivery(d);
-    setFormDate(new Date(d.delivery_date + "T00:00:00"));
-    setFormDriverId(d.driver_id || "");
-    setDialogOpen(true);
-  };
-
-  const handleSave = async () => {
+  const handleAdd = async () => {
     if (!business) return;
-    if (!formDriverId) {
-      toast({ title: "Missing driver", description: "Please select an allocated driver.", variant: "destructive" });
-      return;
-    }
-
     const payload = {
       business_id: business.id,
       delivery_date: format(formDate, "yyyy-MM-dd"),
-      driver_id: formDriverId || null,
+      driver_id: null as string | null,
       delivery_address: "N/A",
       contact_person: "N/A",
       contact_number: null as string | null,
@@ -133,22 +81,10 @@ export default function CateringDeliveryPage() {
       cost_incl_gst: 40,
       cost_excl_gst: 36.36,
     };
-
-    if (editingDelivery) {
-      const { error } = await supabase
-        .from("catering_deliveries")
-        .update({ delivery_date: payload.delivery_date, driver_id: payload.driver_id })
-        .eq("id", editingDelivery.id);
-      if (error) { toast({ title: "Error", description: error.message, variant: "destructive" }); return; }
-      await logAudit("delivery_update", { delivery_id: editingDelivery.id, delivery_date: payload.delivery_date });
-      toast({ title: "Delivery updated" });
-    } else {
-      const { error } = await supabase.from("catering_deliveries").insert(payload);
-      if (error) { toast({ title: "Error", description: error.message, variant: "destructive" }); return; }
-      await logAudit("delivery_create", { delivery_date: payload.delivery_date, driver: formDriverId });
-      toast({ title: "Delivery added" });
-    }
-
+    const { error } = await supabase.from("catering_deliveries").insert(payload);
+    if (error) { toast({ title: "Error", description: error.message, variant: "destructive" }); return; }
+    await logAudit("delivery_create", { delivery_date: payload.delivery_date });
+    toast({ title: "Delivery added" });
     setDialogOpen(false);
     fetchDeliveries();
   };
@@ -161,27 +97,10 @@ export default function CateringDeliveryPage() {
     fetchDeliveries();
   };
 
-  const driverName = (id: string | null) => {
-    if (!id) return "—";
-    return employees.find(e => e.id === id)?.name || "Unknown";
-  };
-
-  // Group deliveries by date for the week view
-  const weekDays = eachDayOfInterval({ start: weekStart, end: weekEnd });
-  const deliveriesByDate = useMemo(() => {
-    const map: Record<string, Delivery[]> = {};
-    for (const d of deliveries) {
-      const key = d.delivery_date;
-      if (!map[key]) map[key] = [];
-      map[key].push(d);
-    }
-    return map;
-  }, [deliveries]);
-
   const totalWeekDeliveries = deliveries.length;
-  const totalWeekRevenueInclGst = deliveries.reduce((s, d) => s + d.cost_incl_gst, 0);
-  const totalWeekCostExclGst = deliveries.reduce((s, d) => s + d.cost_excl_gst, 0);
-  const totalMargin = totalWeekRevenueInclGst - totalWeekCostExclGst;
+  const totalCostExclGst = deliveries.reduce((s, d) => s + d.cost_excl_gst, 0);
+  const totalCostInclGst = deliveries.reduce((s, d) => s + d.cost_incl_gst, 0);
+  const totalMargin = totalCostInclGst - totalCostExclGst;
 
   return (
     <div className="space-y-4">
@@ -202,7 +121,7 @@ export default function CateringDeliveryPage() {
             This Week
           </Button>
         </div>
-        <Button size="sm" onClick={openCreate} className="gap-1.5">
+        <Button size="sm" onClick={() => { setFormDate(new Date()); setDialogOpen(true); }} className="gap-1.5">
           <Plus className="h-3.5 w-3.5" /> Add Delivery
         </Button>
       </div>
@@ -211,15 +130,15 @@ export default function CateringDeliveryPage() {
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         <Card><CardContent className="p-4 text-center">
           <p className="text-2xl font-bold text-primary">{totalWeekDeliveries}</p>
-          <p className="text-xs text-muted-foreground">Deliveries This Week</p>
+          <p className="text-xs text-muted-foreground">Deliveries</p>
         </CardContent></Card>
         <Card><CardContent className="p-4 text-center">
-          <p className="text-2xl font-bold text-green-400">${totalWeekRevenueInclGst.toFixed(2)}</p>
-          <p className="text-xs text-muted-foreground">Revenue (incl GST)</p>
+          <p className="text-2xl font-bold text-green-400">${totalCostExclGst.toFixed(2)}</p>
+          <p className="text-xs text-muted-foreground">Cost (excl GST)</p>
         </CardContent></Card>
         <Card><CardContent className="p-4 text-center">
-          <p className="text-2xl font-bold text-blue-400">${totalWeekCostExclGst.toFixed(2)}</p>
-          <p className="text-xs text-muted-foreground">Driver Cost (excl GST)</p>
+          <p className="text-2xl font-bold text-blue-400">${totalCostInclGst.toFixed(2)}</p>
+          <p className="text-xs text-muted-foreground">Cost (incl GST)</p>
         </CardContent></Card>
         <Card><CardContent className="p-4 text-center">
           <p className="text-2xl font-bold text-amber-400">${totalMargin.toFixed(2)}</p>
@@ -235,16 +154,15 @@ export default function CateringDeliveryPage() {
               <TableRow>
                 <TableHead className="text-xs">Date</TableHead>
                 <TableHead className="text-xs">Day</TableHead>
-                <TableHead className="text-xs">Driver</TableHead>
                 <TableHead className="text-xs">Cost (excl GST)</TableHead>
                 <TableHead className="text-xs">Cost (incl GST)</TableHead>
-                <TableHead className="text-xs w-[80px]">Actions</TableHead>
+                <TableHead className="text-xs w-[60px]"></TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {deliveries.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
+                  <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
                     <Truck className="h-6 w-6 mx-auto mb-2 opacity-40" />
                     No deliveries this week
                   </TableCell>
@@ -253,14 +171,12 @@ export default function CateringDeliveryPage() {
                 <TableRow key={d.id}>
                   <TableCell className="text-xs whitespace-nowrap">{format(new Date(d.delivery_date + "T00:00:00"), "dd MMM yyyy")}</TableCell>
                   <TableCell className="text-xs">{format(new Date(d.delivery_date + "T00:00:00"), "EEEE")}</TableCell>
-                  <TableCell className="text-xs font-medium">{driverName(d.driver_id)}</TableCell>
                   <TableCell className="text-xs">${d.cost_excl_gst.toFixed(2)}</TableCell>
                   <TableCell className="text-xs">${d.cost_incl_gst.toFixed(2)}</TableCell>
                   <TableCell>
-                    <div className="flex gap-1">
-                      <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEdit(d)}><Edit className="h-3.5 w-3.5" /></Button>
-                      <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => handleDelete(d.id)}><Trash2 className="h-3.5 w-3.5" /></Button>
-                    </div>
+                    <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => handleDelete(d.id)}>
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </Button>
                   </TableCell>
                 </TableRow>
               ))}
@@ -269,11 +185,11 @@ export default function CateringDeliveryPage() {
         </div>
       </Card>
 
-      {/* Add/Edit Dialog */}
+      {/* Add Dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="max-w-sm">
           <DialogHeader>
-            <DialogTitle>{editingDelivery ? "Edit Delivery" : "Add Delivery"}</DialogTitle>
+            <DialogTitle>Add Delivery</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
             <div>
@@ -288,24 +204,15 @@ export default function CateringDeliveryPage() {
                 <PopoverContent className="w-auto p-0"><Calendar mode="single" selected={formDate} onSelect={d => d && setFormDate(d)} /></PopoverContent>
               </Popover>
             </div>
-            <div>
-              <Label className="text-xs">Allocated Driver</Label>
-              <Select value={formDriverId} onValueChange={setFormDriverId}>
-                <SelectTrigger className="h-9 text-xs"><SelectValue placeholder="Select driver" /></SelectTrigger>
-                <SelectContent>
-                  {employees.map(e => <SelectItem key={e.id} value={e.id}>{e.name}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            </div>
             <div className="rounded-md bg-muted/50 p-3 text-xs space-y-1">
-              <div className="flex justify-between"><span className="text-muted-foreground">Driver Pay (excl GST)</span><span className="font-medium">$36.36</span></div>
-              <div className="flex justify-between"><span className="text-muted-foreground">Admin Cost (incl GST)</span><span className="font-medium">$40.00</span></div>
+              <div className="flex justify-between"><span className="text-muted-foreground">Cost (excl GST)</span><span className="font-medium">$36.36</span></div>
+              <div className="flex justify-between"><span className="text-muted-foreground">Cost (incl GST)</span><span className="font-medium">$40.00</span></div>
               <div className="flex justify-between"><span className="text-muted-foreground">Margin</span><span className="font-medium text-primary">$3.64</span></div>
             </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancel</Button>
-            <Button onClick={handleSave}>{editingDelivery ? "Update" : "Add"}</Button>
+            <Button onClick={handleAdd}>Add</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
