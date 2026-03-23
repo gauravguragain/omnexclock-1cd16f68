@@ -100,8 +100,6 @@ export default function CateringDeliveryPage() {
   const totalWeekDeliveries = deliveries.length;
   const totalCostExclGst = deliveries.reduce((s, d) => s + d.cost_excl_gst, 0);
   const totalCostInclGst = deliveries.reduce((s, d) => s + d.cost_incl_gst, 0);
-  const totalMargin = totalCostInclGst - totalCostExclGst;
-
   return (
     <div className="space-y-4">
       {/* Week Navigation */}
@@ -127,7 +125,7 @@ export default function CateringDeliveryPage() {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         <Card><CardContent className="p-4 text-center">
           <p className="text-2xl font-bold text-primary">{totalWeekDeliveries}</p>
           <p className="text-xs text-muted-foreground">Deliveries</p>
@@ -139,10 +137,6 @@ export default function CateringDeliveryPage() {
         <Card><CardContent className="p-4 text-center">
           <p className="text-2xl font-bold text-blue-400">${totalCostInclGst.toFixed(2)}</p>
           <p className="text-xs text-muted-foreground">Cost (incl GST)</p>
-        </CardContent></Card>
-        <Card><CardContent className="p-4 text-center">
-          <p className="text-2xl font-bold text-amber-400">${totalMargin.toFixed(2)}</p>
-          <p className="text-xs text-muted-foreground">Margin</p>
         </CardContent></Card>
       </div>
 
@@ -207,7 +201,6 @@ export default function CateringDeliveryPage() {
             <div className="rounded-md bg-muted/50 p-3 text-xs space-y-1">
               <div className="flex justify-between"><span className="text-muted-foreground">Cost (excl GST)</span><span className="font-medium">$36.36</span></div>
               <div className="flex justify-between"><span className="text-muted-foreground">Cost (incl GST)</span><span className="font-medium">$40.00</span></div>
-              <div className="flex justify-between"><span className="text-muted-foreground">Margin</span><span className="font-medium text-primary">$3.64</span></div>
             </div>
           </div>
           <DialogFooter>
