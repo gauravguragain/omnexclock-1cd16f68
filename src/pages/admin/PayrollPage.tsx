@@ -44,6 +44,10 @@ interface PayrollEntry {
   account_name: string | null;
   bsb: string | null;
   account_number: string | null;
+  delivery_count: number;
+  delivery_employee_pay: number;
+  delivery_admin_pay: number;
+  delivery_admin_pay_incl_gst: number;
 }
 
 type SortKey = "name" | "net_hours" | "employee_pay" | "admin_pay" | "total_hours";
@@ -173,10 +177,11 @@ export default function PayrollPage() {
       return allEvents;
     };
 
-    const [{ data: employees }, events, { data: approvalData }] = await Promise.all([
+    const [{ data: employees }, events, { data: approvalData }, { data: deliveryData }] = await Promise.all([
       supabase.from("employees").select("*").eq("active", true).eq("business_id", business!.id),
       fetchAllEvents(),
       supabase.from("timesheet_approvals").select("employee_id, date, approved").gte("date", from).lte("date", to).eq("approved", true),
+      supabase.from("catering_deliveries").select("driver_id, cost_excl_gst, cost_incl_gst, status").eq("business_id", business!.id).gte("delivery_date", from).lte("delivery_date", to).eq("status", "delivered"),
     ]);
 
     if (!employees) { setLoading(false); return; }
@@ -186,6 +191,19 @@ export default function PayrollPage() {
     if (approvalData) {
       for (const a of approvalData) {
         approvedSet.add(`${a.employee_id}-${a.date}`);
+      }
+    }
+
+    // Aggregate deliveries per driver
+    const deliveryAgg = new Map<string, { count: number; exclGst: number; inclGst: number }>();
+    if (deliveryData) {
+      for (const d of deliveryData as any[]) {
+        if (!d.driver_id) continue;
+        if (!deliveryAgg.has(d.driver_id)) deliveryAgg.set(d.driver_id, { count: 0, exclGst: 0, inclGst: 0 });
+        const agg = deliveryAgg.get(d.driver_id)!;
+        agg.count += 1;
+        agg.exclGst += Number(d.cost_excl_gst) || 0;
+        agg.inclGst += Number(d.cost_incl_gst) || 0;
       }
     }
 
@@ -208,9 +226,15 @@ export default function PayrollPage() {
       agg.netHours += entry.net_hours;
     }
 
+    // Merge: ensure drivers with deliveries but no shifts also appear
+    const allEmpIds = new Set([...empAgg.keys(), ...deliveryAgg.keys()]);
+
     const result: PayrollEntry[] = [];
-    for (const [empId, agg] of empAgg) {
-      const emp = empMap.get(empId)!;
+    for (const empId of allEmpIds) {
+      const emp = empMap.get(empId);
+      if (!emp) continue;
+      const agg = empAgg.get(empId) || { totalHours: 0, breakHours: 0, netHours: 0 };
+      const delAgg = deliveryAgg.get(empId) || { count: 0, exclGst: 0, inclGst: 0 };
       const netHours = Math.round(agg.netHours * 100) / 100;
       const totalHours = Math.round(agg.totalHours * 100) / 100;
       const breakHours = Math.round(agg.breakHours * 100) / 100;
@@ -234,6 +258,10 @@ export default function PayrollPage() {
         account_name: (emp as any).account_name || null,
         bsb: (emp as any).bsb || null,
         account_number: (emp as any).account_number || null,
+        delivery_count: delAgg.count,
+        delivery_employee_pay: Math.round(delAgg.exclGst * 100) / 100,
+        delivery_admin_pay: Math.round(delAgg.exclGst * 100) / 100,
+        delivery_admin_pay_incl_gst: Math.round(delAgg.inclGst * 100) / 100,
       });
     }
 
@@ -342,11 +370,12 @@ export default function PayrollPage() {
     }
   };
 
-  const totalEmployeePay = filtered.reduce((sum, e) => sum + e.employee_pay, 0);
-  const totalAdminPay = filtered.reduce((sum, e) => sum + e.admin_pay, 0);
+  const totalEmployeePay = filtered.reduce((sum, e) => sum + e.employee_pay + e.delivery_employee_pay, 0);
+  const totalAdminPay = filtered.reduce((sum, e) => sum + e.admin_pay + e.delivery_admin_pay, 0);
   const totalNetHours = filtered.reduce((sum, e) => sum + e.net_hours, 0);
   const totalBreakHours = filtered.reduce((sum, e) => sum + e.break_hours, 0);
-  const totalAdminPayInclGst = filtered.reduce((sum, e) => sum + e.admin_pay_incl_gst, 0);
+  const totalAdminPayInclGst = filtered.reduce((sum, e) => sum + e.admin_pay_incl_gst + e.delivery_admin_pay_incl_gst, 0);
+  const totalDeliveryCount = filtered.reduce((sum, e) => sum + e.delivery_count, 0);
   const totalMargin = totalAdminPay - totalEmployeePay;
   const totalMarginInclGst = totalAdminPayInclGst - totalEmployeePay;
   const marginPercentage = totalAdminPay > 0 ? (totalMargin / totalAdminPay * 100) : 0;
@@ -430,17 +459,23 @@ export default function PayrollPage() {
             </TableHeader>
             <TableBody>
               {pageEntries.map((e) => {
-                const marginEx = e.admin_pay - e.employee_pay;
-                const marginIncl = e.admin_pay_incl_gst - e.employee_pay;
-                const marginPct = e.admin_pay > 0 ? (marginEx / e.admin_pay * 100) : 0;
+                const totalEmpPay = e.employee_pay + e.delivery_employee_pay;
+                const totalAdmPay = e.admin_pay + e.delivery_admin_pay;
+                const totalAdmPayIncl = e.admin_pay_incl_gst + e.delivery_admin_pay_incl_gst;
+                const marginEx = totalAdmPay - totalEmpPay;
+                const marginIncl = totalAdmPayIncl - totalEmpPay;
+                const marginPct = totalAdmPay > 0 ? (marginEx / totalAdmPay * 100) : 0;
                 return (
                   <TableRow key={e.employee_id}>
-                    <TableCell className="font-medium sticky left-0 bg-card z-20 border-r border-border/60">{e.name}</TableCell>
+                    <TableCell className="font-medium sticky left-0 bg-card z-20 border-r border-border/60">
+                      {e.name}
+                      {e.delivery_count > 0 && <Badge variant="outline" className="ml-1.5 text-[9px] px-1 py-0">{e.delivery_count} del</Badge>}
+                    </TableCell>
                     <TableCell>{e.department || "-"}</TableCell>
                     <TableCell>{e.net_hours.toFixed(2)}</TableCell>
-                    <TableCell>${e.employee_pay.toFixed(2)}</TableCell>
-                    <TableCell>${e.admin_pay.toFixed(2)}</TableCell>
-                    <TableCell>${e.admin_pay_incl_gst.toFixed(2)}</TableCell>
+                    <TableCell>${totalEmpPay.toFixed(2)}</TableCell>
+                    <TableCell>${totalAdmPay.toFixed(2)}</TableCell>
+                    <TableCell>${totalAdmPayIncl.toFixed(2)}</TableCell>
                     <TableCell className={`text-right font-semibold ${marginEx >= 0 ? "text-green-500" : "text-red-500"}`}>
                       ${marginEx.toFixed(2)}
                     </TableCell>
