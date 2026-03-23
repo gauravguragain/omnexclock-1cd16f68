@@ -395,7 +395,30 @@ export default function MonthlyReportSection() {
           XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows), "Audit Log");
         }
 
-        // Department Breakdown
+        // Catering Deliveries
+        if (selectedReports.has("catering_deliveries") && results.deliveries) {
+          const dels = results.deliveries;
+          const rows = dels.map((d: any) => ({
+            "Date": format(parseISO(d.delivery_date), "dd MMM yyyy"),
+            "Day": format(parseISO(d.delivery_date), "EEEE"),
+            "Driver": d.employees?.name || "Unassigned",
+            "Cost (excl GST)": Number(d.cost_excl_gst).toFixed(2),
+            "Cost (incl GST)": Number(d.cost_incl_gst).toFixed(2),
+            "Margin": (Number(d.cost_incl_gst) - Number(d.cost_excl_gst)).toFixed(2),
+          }));
+          const totalExcl = dels.reduce((s: number, d: any) => s + Number(d.cost_excl_gst), 0);
+          const totalIncl = dels.reduce((s: number, d: any) => s + Number(d.cost_incl_gst), 0);
+          rows.push({
+            "Date": "TOTAL",
+            "Day": "",
+            "Driver": `${dels.length} deliveries`,
+            "Cost (excl GST)": totalExcl.toFixed(2),
+            "Cost (incl GST)": totalIncl.toFixed(2),
+            "Margin": (totalIncl - totalExcl).toFixed(2),
+          });
+          XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows), "Catering Deliveries");
+        }
+
         if (selectedReports.has("dept_breakdown") && results.employees) {
           const employees = results.employees.filter((e: any) => e.active);
           const shifts = results.shifts || [];
