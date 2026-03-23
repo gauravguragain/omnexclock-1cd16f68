@@ -459,17 +459,23 @@ export default function PayrollPage() {
             </TableHeader>
             <TableBody>
               {pageEntries.map((e) => {
-                const marginEx = e.admin_pay - e.employee_pay;
-                const marginIncl = e.admin_pay_incl_gst - e.employee_pay;
-                const marginPct = e.admin_pay > 0 ? (marginEx / e.admin_pay * 100) : 0;
+                const totalEmpPay = e.employee_pay + e.delivery_employee_pay;
+                const totalAdmPay = e.admin_pay + e.delivery_admin_pay;
+                const totalAdmPayIncl = e.admin_pay_incl_gst + e.delivery_admin_pay_incl_gst;
+                const marginEx = totalAdmPay - totalEmpPay;
+                const marginIncl = totalAdmPayIncl - totalEmpPay;
+                const marginPct = totalAdmPay > 0 ? (marginEx / totalAdmPay * 100) : 0;
                 return (
                   <TableRow key={e.employee_id}>
-                    <TableCell className="font-medium sticky left-0 bg-card z-20 border-r border-border/60">{e.name}</TableCell>
+                    <TableCell className="font-medium sticky left-0 bg-card z-20 border-r border-border/60">
+                      {e.name}
+                      {e.delivery_count > 0 && <Badge variant="outline" className="ml-1.5 text-[9px] px-1 py-0">{e.delivery_count} del</Badge>}
+                    </TableCell>
                     <TableCell>{e.department || "-"}</TableCell>
                     <TableCell>{e.net_hours.toFixed(2)}</TableCell>
-                    <TableCell>${e.employee_pay.toFixed(2)}</TableCell>
-                    <TableCell>${e.admin_pay.toFixed(2)}</TableCell>
-                    <TableCell>${e.admin_pay_incl_gst.toFixed(2)}</TableCell>
+                    <TableCell>${totalEmpPay.toFixed(2)}</TableCell>
+                    <TableCell>${totalAdmPay.toFixed(2)}</TableCell>
+                    <TableCell>${totalAdmPayIncl.toFixed(2)}</TableCell>
                     <TableCell className={`text-right font-semibold ${marginEx >= 0 ? "text-green-500" : "text-red-500"}`}>
                       ${marginEx.toFixed(2)}
                     </TableCell>
