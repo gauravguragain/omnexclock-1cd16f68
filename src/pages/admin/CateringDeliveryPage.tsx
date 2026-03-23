@@ -245,7 +245,7 @@ export default function CateringDeliveryPage() {
   const handleDelete = async (id: string) => {
     if (!confirm("Delete this delivery?")) return;
     await supabase.from("catering_deliveries").delete().eq("id", id);
-    await logAudit("delivery_delete", { delivery_id: id }, business!.id);
+    await logAudit("delivery_delete", { delivery_id: id });
     toast({ title: "Delivery deleted" });
     fetchDeliveries();
   };
