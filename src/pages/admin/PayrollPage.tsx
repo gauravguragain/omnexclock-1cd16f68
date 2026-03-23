@@ -184,7 +184,7 @@ export default function PayrollPage() {
       supabase.from("employees").select("*").eq("active", true).eq("business_id", business!.id),
       fetchAllEvents(),
       supabase.from("timesheet_approvals").select("employee_id, date, approved").gte("date", from).lte("date", to).eq("approved", true),
-      supabase.from("catering_deliveries").select("driver_id, cost_excl_gst, cost_incl_gst, status").eq("business_id", business!.id).gte("delivery_date", from).lte("delivery_date", to).eq("status", "delivered"),
+      supabase.from("catering_deliveries").select("cost_excl_gst, cost_incl_gst").eq("business_id", business!.id).gte("delivery_date", from).lte("delivery_date", to),
     ]);
 
     if (!employees) { setLoading(false); return; }
