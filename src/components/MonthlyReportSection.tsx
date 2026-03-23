@@ -1346,32 +1346,29 @@ export default function MonthlyReportSection() {
       // ==========================================
       // SECTION: CATERING DELIVERIES
       // ==========================================
-      if (selectedReports.has("catering_deliveries") && results.deliveries) {
+      if (selectedReports.has("catering_deliveries") && results.deliveries && results.deliveries.length > 0) {
         addSectionHeader("Catering Deliveries", "Operations");
         const dels = results.deliveries;
         const totalExcl = dels.reduce((s: number, d: any) => s + Number(d.cost_excl_gst), 0);
         const totalIncl = dels.reduce((s: number, d: any) => s + Number(d.cost_incl_gst), 0);
-        const totalMarginDel = totalIncl - totalExcl;
 
         addStatsRow([
           { label: "Total Deliveries", value: String(dels.length), color: [16, 124, 65] },
           { label: "Cost (excl GST)", value: `$${totalExcl.toFixed(2)}`, color: [180, 83, 9] },
           { label: "Cost (incl GST)", value: `$${totalIncl.toFixed(2)}`, color: [41, 98, 255] },
-          { label: "Margin", value: `$${totalMarginDel.toFixed(2)}`, color: [124, 58, 237] },
         ]);
 
         addSubHeader("Delivery Log");
         addTable(
-          ["Date", "Day", "Cost (excl GST)", "Cost (incl GST)", "Margin"],
+          ["Date", "Day", "Cost (excl GST)", "Cost (incl GST)"],
           dels.map((d: any) => [
             format(parseISO(d.delivery_date), "dd MMM yyyy"),
             format(parseISO(d.delivery_date), "EEEE"),
             `$${Number(d.cost_excl_gst).toFixed(2)}`,
             `$${Number(d.cost_incl_gst).toFixed(2)}`,
-            `$${(Number(d.cost_incl_gst) - Number(d.cost_excl_gst)).toFixed(2)}`,
           ]),
           SECTION_COLORS.Operations,
-          ["TOTAL", `${dels.length} deliveries`, `$${totalExcl.toFixed(2)}`, `$${totalIncl.toFixed(2)}`, `$${totalMarginDel.toFixed(2)}`]
+          ["TOTAL", `${dels.length} deliveries`, `$${totalExcl.toFixed(2)}`, `$${totalIncl.toFixed(2)}`]
         );
       }
 
