@@ -982,9 +982,14 @@ export default function MonthlyReportSection() {
       if (selectedReports.has("margin_analysis") && results.payroll && results.payroll.length > 0) {
         addSectionHeader("Margin Analysis", "Finance");
         const payroll = results.payroll;
-        const totalEmpPay = payroll.reduce((s: number, p: any) => s + Number(p.total_employee_pay), 0);
-        const totalAdminPay = payroll.reduce((s: number, p: any) => s + Number(p.total_admin_pay), 0);
-        const totalAdminPayIncl = payroll.reduce((s: number, p: any) => s + Number(p.total_admin_pay_incl_gst), 0);
+        const del = results.payroll_delivery || { count: 0, cost_excl_gst: 0, cost_incl_gst: 0 };
+        const delAdminExcl = Math.round(del.cost_incl_gst / 1.10 * 100) / 100;
+        const shiftEmpPay = payroll.reduce((s: number, p: any) => s + Number(p.employee_pay), 0);
+        const shiftAdminPay = payroll.reduce((s: number, p: any) => s + Number(p.admin_pay), 0);
+        const shiftAdminPayIncl = payroll.reduce((s: number, p: any) => s + Number(p.admin_pay_incl_gst || 0), 0);
+        const totalEmpPay = shiftEmpPay + del.cost_excl_gst;
+        const totalAdminPay = shiftAdminPay + delAdminExcl;
+        const totalAdminPayIncl = shiftAdminPayIncl + del.cost_incl_gst;
         const totalMarginEx = totalAdminPay - totalEmpPay;
         const totalMarginIncl = totalAdminPayIncl - totalEmpPay;
         const totalHours = payroll.reduce((s: number, p: any) => s + Number(p.net_hours), 0);
@@ -998,19 +1003,25 @@ export default function MonthlyReportSection() {
         ]);
 
         addSubHeader("Individual Margin Breakdown");
+        const marginRows = payroll.map((p: any) => {
+          const marginEx = Number(p.admin_pay) - Number(p.employee_pay);
+          const marginIncl = Number(p.admin_pay_incl_gst || 0) - Number(p.employee_pay);
+          const mPct = Number(p.admin_pay) > 0 ? (marginEx / Number(p.admin_pay) * 100) : 0;
+          return [
+            p.name, p.department || "-", Number(p.net_hours).toFixed(2),
+            `$${Number(p.employee_pay).toFixed(2)}`, `$${Number(p.admin_pay).toFixed(2)}`,
+            `$${Number(p.admin_pay_incl_gst || 0).toFixed(2)}`,
+            `$${marginEx.toFixed(2)}`, `$${marginIncl.toFixed(2)}`, `${mPct.toFixed(1)}%`
+          ];
+        });
+        if (del.count > 0) {
+          const delMarginEx = delAdminExcl - del.cost_excl_gst;
+          const delMarginIncl = del.cost_incl_gst - del.cost_excl_gst;
+          marginRows.push([`🚚 Delivery ×${del.count}`, "", "-", `$${del.cost_excl_gst.toFixed(2)}`, `$${delAdminExcl.toFixed(2)}`, `$${del.cost_incl_gst.toFixed(2)}`, `$${delMarginEx.toFixed(2)}`, `$${delMarginIncl.toFixed(2)}`, ""]);
+        }
         addTable(
           ["Employee", "Dept", "Hrs", "Emp Pay", "Admin (ex)", "Admin (incl)", "Margin (ex)", "Margin (incl)", "%"],
-          payroll.map((p: any) => {
-            const marginEx = Number(p.total_admin_pay) - Number(p.total_employee_pay);
-            const marginIncl = Number(p.total_admin_pay_incl_gst) - Number(p.total_employee_pay);
-            const mPct = Number(p.total_admin_pay) > 0 ? (marginEx / Number(p.total_admin_pay) * 100) : 0;
-            return [
-              p.name, p.department || "-", Number(p.net_hours).toFixed(2),
-              `$${Number(p.total_employee_pay).toFixed(2)}`, `$${Number(p.total_admin_pay).toFixed(2)}`,
-              `$${Number(p.total_admin_pay_incl_gst).toFixed(2)}`,
-              `$${marginEx.toFixed(2)}`, `$${marginIncl.toFixed(2)}`, `${mPct.toFixed(1)}%`
-            ];
-          }).sort((a: string[], b: string[]) => parseFloat(b[6].replace('$', '')) - parseFloat(a[6].replace('$', ''))),
+          marginRows.sort((a: string[], b: string[]) => parseFloat(b[6].replace('$', '') || '0') - parseFloat(a[6].replace('$', '') || '0')),
           SECTION_COLORS.Finance
         );
 
@@ -1040,7 +1051,7 @@ export default function MonthlyReportSection() {
           );
         }
 
-        addNote("* Margin (ex GST) = Admin Cost (ex GST) - Employee Pay. Margin (incl GST) = Admin Cost (incl GST) - Employee Pay. Represents earnings retained between charge-out and pay rates.");
+        addNote("* Margin (ex GST) = Admin Cost (ex GST) - Employee Pay. Margin (incl GST) = Admin Cost (incl GST) - Employee Pay. Includes delivery margin.");
       }
 
       // ==========================================
