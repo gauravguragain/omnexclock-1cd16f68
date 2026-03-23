@@ -1007,9 +1007,9 @@ export default function MonthlyReportSection() {
       if (selectedReports.has("margin_analysis") && results.payroll && results.payroll.length > 0) {
         addSectionHeader("Margin Analysis", "Finance");
         const payroll = results.payroll;
-        const totalEmpPay = payroll.reduce((s: number, p: any) => s + Number(p.employee_pay), 0);
-        const totalAdminPay = payroll.reduce((s: number, p: any) => s + Number(p.admin_pay), 0);
-        const totalAdminPayIncl = payroll.reduce((s: number, p: any) => s + Number(p.admin_pay_incl_gst || 0), 0);
+        const totalEmpPay = payroll.reduce((s: number, p: any) => s + Number(p.total_employee_pay), 0);
+        const totalAdminPay = payroll.reduce((s: number, p: any) => s + Number(p.total_admin_pay), 0);
+        const totalAdminPayIncl = payroll.reduce((s: number, p: any) => s + Number(p.total_admin_pay_incl_gst), 0);
         const totalMarginEx = totalAdminPay - totalEmpPay;
         const totalMarginIncl = totalAdminPayIncl - totalEmpPay;
         const totalHours = payroll.reduce((s: number, p: any) => s + Number(p.net_hours), 0);
@@ -1026,13 +1026,13 @@ export default function MonthlyReportSection() {
         addTable(
           ["Employee", "Dept", "Hrs", "Emp Pay", "Admin (ex)", "Admin (incl)", "Margin (ex)", "Margin (incl)", "%"],
           payroll.map((p: any) => {
-            const marginEx = Number(p.admin_pay) - Number(p.employee_pay);
-            const marginIncl = Number(p.admin_pay_incl_gst || 0) - Number(p.employee_pay);
-            const mPct = Number(p.admin_pay) > 0 ? (marginEx / Number(p.admin_pay) * 100) : 0;
+            const marginEx = Number(p.total_admin_pay) - Number(p.total_employee_pay);
+            const marginIncl = Number(p.total_admin_pay_incl_gst) - Number(p.total_employee_pay);
+            const mPct = Number(p.total_admin_pay) > 0 ? (marginEx / Number(p.total_admin_pay) * 100) : 0;
             return [
               p.name, p.department || "-", Number(p.net_hours).toFixed(2),
-              `$${Number(p.employee_pay).toFixed(2)}`, `$${Number(p.admin_pay).toFixed(2)}`,
-              `$${Number(p.admin_pay_incl_gst || 0).toFixed(2)}`,
+              `$${Number(p.total_employee_pay).toFixed(2)}`, `$${Number(p.total_admin_pay).toFixed(2)}`,
+              `$${Number(p.total_admin_pay_incl_gst).toFixed(2)}`,
               `$${marginEx.toFixed(2)}`, `$${marginIncl.toFixed(2)}`, `${mPct.toFixed(1)}%`
             ];
           }).sort((a: string[], b: string[]) => parseFloat(b[6].replace('$', '')) - parseFloat(a[6].replace('$', ''))),
