@@ -4,9 +4,10 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { FileText, Download, Loader2, Calendar, BarChart3 } from "lucide-react";
+import { FileText, Download, Loader2, Calendar, BarChart3, FileSpreadsheet } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useBusiness } from "@/contexts/BusinessContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -14,6 +15,7 @@ import { toAusDate, ausStartOfDay, ausEndOfDay } from "@/lib/dateUtils";
 import { computeTimesheetEntries, filterApprovedEntries } from "@/lib/timesheetUtils";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
+import * as XLSX from "xlsx";
 import { format, startOfMonth, endOfMonth, endOfWeek, parseISO, eachWeekOfInterval } from "date-fns";
 
 const REPORT_OPTIONS = [
@@ -84,6 +86,7 @@ export default function MonthlyReportSection() {
   // Default: select all except margin_analysis
   const [selectedReports, setSelectedReports] = useState<Set<ReportId>>(new Set(REPORT_OPTIONS.filter(r => r.id !== "margin_analysis").map(r => r.id)));
   const [generating, setGenerating] = useState(false);
+  const [exportFormat, setExportFormat] = useState<"pdf" | "excel">("pdf");
 
   const currentBusinessId = business?.id || "";
   const isSuperAdmin = isSuperAdminOf(currentBusinessId);
@@ -227,6 +230,199 @@ export default function MonthlyReportSection() {
         }
         
         results.payroll = computedPayroll;
+      }
+
+      // ===== EXCEL GENERATION =====
+      if (exportFormat === "excel") {
+        const wb = XLSX.utils.book_new();
+
+        // Employees
+        if (selectedReports.has("employees") && results.employees) {
+          const emps = results.employees;
+          const rows = emps.map((e: any) => ({
+            "Name": e.name, "Code": e.employee_code, "Department": e.department || "-",
+            "Job Title": e.job_title || "-", "Pay Rate": Number(e.pay_rate).toFixed(2),
+            "Status": e.active ? "Active" : "Inactive",
+          }));
+          XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows), "Employees");
+        }
+
+        // Shifts
+        if (selectedReports.has("shifts") && results.shifts) {
+          const rows = results.shifts.map((sh: any) => ({
+            "Employee": sh.employees?.name || "-", "Date": sh.date, "Day": sh.day_of_week,
+            "Start": sh.start_time?.slice(0, 5), "End": sh.end_time?.slice(0, 5),
+            "Break (min)": sh.break_minutes, "Hours": Number(sh.hours_worked || 0).toFixed(2),
+            "Department": sh.employees?.department || "-",
+          }));
+          XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows), "Shifts");
+        }
+
+        // Timesheets
+        if (selectedReports.has("timesheets") && results.clockEvents) {
+          const entries = computeTimesheetEntries(results.clockEvents);
+          const empNameMap = new Map((results.employees || []).map((e: any) => [e.id, e.name]));
+          const rows = entries.sort((a: any, b: any) => a.date.localeCompare(b.date)).map((entry: any) => ({
+            "Date": entry.date, "Employee": empNameMap.get(entry.employee_id) || "Unknown",
+            "Clock In": entry.clock_in ? format(entry.clock_in, "hh:mm a") : "-",
+            "Clock Out": entry.clock_out ? format(entry.clock_out, "hh:mm a") : "-",
+            "Break (min)": entry.break_minutes, "Total Hours": entry.total_hours.toFixed(2),
+            "Net Hours": entry.net_hours.toFixed(2),
+          }));
+          XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows), "Timesheets");
+        }
+
+        // Employee Payroll
+        if (selectedReports.has("employee_payroll") && results.payroll?.length) {
+          const rows = results.payroll.map((p: any) => ({
+            "Employee": p.name, "Department": p.department, "Net Hours": Number(p.net_hours).toFixed(2),
+            "Rate $/Hr": Number(p.pay_rate).toFixed(2), "Employee Pay": Number(p.employee_pay).toFixed(2),
+          }));
+          XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows), "Employee Payroll");
+        }
+
+        // Admin Payroll
+        if (selectedReports.has("admin_payroll") && results.payroll?.length) {
+          const rows = results.payroll.map((p: any) => ({
+            "Employee": p.name, "Department": p.department, "Net Hours": Number(p.net_hours).toFixed(2),
+            "Rate $/Hr (incl GST)": Number(p.admin_hourly_rate).toFixed(2),
+            "Cost (ex GST)": Number(p.admin_pay).toFixed(2),
+            "Cost (incl GST)": Number(p.admin_pay_incl_gst || 0).toFixed(2),
+          }));
+          XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows), "Admin Payroll");
+        }
+
+        // Labour Cost
+        if (selectedReports.has("labour_cost") && results.payroll?.length) {
+          const deptCosts: Record<string, { hours: number; cost: number; count: number }> = {};
+          results.payroll.forEach((p: any) => {
+            const dept = p.department || "Unassigned";
+            if (!deptCosts[dept]) deptCosts[dept] = { hours: 0, cost: 0, count: 0 };
+            deptCosts[dept].hours += Number(p.net_hours);
+            deptCosts[dept].cost += Number(p.admin_pay);
+            deptCosts[dept].count++;
+          });
+          const rows = Object.entries(deptCosts).map(([dept, d]) => ({
+            "Department": dept, "Employees": d.count, "Hours": d.hours.toFixed(1),
+            "Admin Pay Cost": d.cost.toFixed(2), "Avg $/Hr": d.hours ? (d.cost / d.hours).toFixed(2) : "-",
+          }));
+          XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows), "Labour Cost");
+        }
+
+        // Margin Analysis
+        if (selectedReports.has("margin_analysis") && results.payroll?.length) {
+          const rows = results.payroll.map((p: any) => {
+            const marginEx = Number(p.admin_pay) - Number(p.employee_pay);
+            const marginIncl = Number(p.admin_pay_incl_gst || 0) - Number(p.employee_pay);
+            const mPct = Number(p.admin_pay) > 0 ? (marginEx / Number(p.admin_pay) * 100) : 0;
+            return {
+              "Employee": p.name, "Department": p.department, "Hours": Number(p.net_hours).toFixed(2),
+              "Employee Pay": Number(p.employee_pay).toFixed(2), "Admin (ex GST)": Number(p.admin_pay).toFixed(2),
+              "Admin (incl GST)": Number(p.admin_pay_incl_gst || 0).toFixed(2),
+              "Margin (ex GST)": marginEx.toFixed(2), "Margin (incl GST)": marginIncl.toFixed(2),
+              "Margin %": `${mPct.toFixed(1)}%`,
+            };
+          });
+          XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows), "Margin Analysis");
+        }
+
+        // Requests
+        if (selectedReports.has("requests") && results.requests) {
+          const rows = results.requests.map((r: any) => ({
+            "Employee": r.employees?.name || "-", "Type": r.request_type, "Status": r.status,
+            "Start Date": r.start_date || "-", "End Date": r.end_date || "-",
+            "Reason": r.reason || "-", "Submitted": format(new Date(r.created_at), "dd MMM yyyy"),
+          }));
+          XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows), "Requests");
+        }
+
+        // FOH Inventory
+        if (selectedReports.has("inventory") && results.inventory) {
+          const rows = results.inventory.map((i: any) => ({
+            "Item": i.name, "Category": i.category || "-", "Current": i.current_count,
+            "Minimum": i.min_count, "Unit": i.unit || "-",
+            "Status": i.current_count <= i.min_count ? "LOW STOCK" : "OK",
+          }));
+          XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows), "FOH Inventory");
+        }
+
+        // Bar Inventory
+        if (selectedReports.has("bar_inventory") && results.barInventory) {
+          const rows = results.barInventory.map((i: any) => ({
+            "Item": i.name, "Category": i.category || "-", "Current": i.current_count,
+            "Minimum": i.min_count, "Unit": i.unit || "-",
+            "Status": i.current_count <= i.min_count ? "LOW STOCK" : "OK",
+          }));
+          XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows), "Bar Inventory");
+        }
+
+        // Events
+        if (selectedReports.has("events") && results.events) {
+          const rows = results.events.map((e: any) => ({
+            "Date": format(parseISO(e.date), "dd MMM yyyy"), "Type": e.event_type || "-",
+            "Space": e.event_space || "-", "Time": e.event_time || "-", "Host": e.host_name || "-",
+            "Adults": e.adult_guests || 0, "Kids": e.kids_guests || 0, "Tables": e.num_tables || 0,
+            "Banquet Tier": e.banquet_tier || "-", "Bev Package": e.bev_package || "-",
+            "Notes": e.notes || "-",
+          }));
+          XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows), "Events");
+        }
+
+        // Service & Maintenance
+        if (selectedReports.has("service") && results.service) {
+          const rows = results.service.map((t: any) => ({
+            "Task": t.name, "Description": t.description || "-", "Frequency (days)": t.frequency_days,
+            "Last Service": t.last_service_date || "Never", "Next Due": t.next_service_date || "-",
+            "Status": !t.active ? "Inactive" : (t.next_service_date && new Date(t.next_service_date) < new Date() ? "OVERDUE" : "Active"),
+          }));
+          XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows), "Service Maintenance");
+        }
+
+        // Audit Logs
+        if (selectedReports.has("audit") && results.audit) {
+          const rows = results.audit.slice(0, 500).map((l: any) => {
+            const details = l.details || {};
+            const summary = Object.entries(details).filter(([k]) => ["employee_name", "date", "status", "business_name"].includes(k)).map(([k, v]) => `${k}: ${v}`).join(", ");
+            return {
+              "Date/Time": format(new Date(l.timestamp), "dd MMM yyyy hh:mm a"),
+              "Action": l.action.replace(/_/g, " "), "Details": summary || "-",
+            };
+          });
+          XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows), "Audit Log");
+        }
+
+        // Department Breakdown
+        if (selectedReports.has("dept_breakdown") && results.employees) {
+          const employees = results.employees.filter((e: any) => e.active);
+          const shifts = results.shifts || [];
+          const deptData: Record<string, { headcount: number; hours: number; shifts: number; avgRate: number[] }> = {};
+          employees.forEach((e: any) => {
+            const dept = e.department || "Unassigned";
+            if (!deptData[dept]) deptData[dept] = { headcount: 0, hours: 0, shifts: 0, avgRate: [] };
+            deptData[dept].headcount++;
+            deptData[dept].avgRate.push(Number(e.pay_rate) || 0);
+          });
+          shifts.forEach((sh: any) => {
+            const dept = sh.employees?.department || "Unassigned";
+            if (!deptData[dept]) deptData[dept] = { headcount: 0, hours: 0, shifts: 0, avgRate: [] };
+            deptData[dept].hours += Number(sh.hours_worked) || 0;
+            deptData[dept].shifts++;
+          });
+          const rows = Object.entries(deptData).map(([dept, d]) => ({
+            "Department": dept, "Headcount": d.headcount, "Shifts": d.shifts,
+            "Hours": d.hours.toFixed(1),
+            "Avg Pay Rate": d.avgRate.length ? `$${(d.avgRate.reduce((a, b) => a + b, 0) / d.avgRate.length).toFixed(2)}` : "-",
+          }));
+          XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows), "Dept Breakdown");
+        }
+
+        const fileName = isWeekly
+          ? `${business.name.replace(/[^a-zA-Z0-9]/g, "_")}_Weekly_Report_${format(dateStart, "dd_MMM")}_${format(dateEnd, "dd_MMM_yyyy")}.xlsx`
+          : `${business.name.replace(/[^a-zA-Z0-9]/g, "_")}_Monthly_Report_${format(monthStart, "MMM_yyyy")}.xlsx`;
+        XLSX.writeFile(wb, fileName);
+        toast({ title: "Report Generated", description: `${fileName} has been downloaded.` });
+        setGenerating(false);
+        return;
       }
 
       // ===== PDF GENERATION =====
@@ -1192,6 +1388,27 @@ export default function MonthlyReportSection() {
           )}
         </div>
 
+        {/* Export Format Selection */}
+        <div className="space-y-2">
+          <Label>Export Format</Label>
+          <RadioGroup
+            value={exportFormat}
+            onValueChange={(v) => setExportFormat(v as "pdf" | "excel")}
+            className="flex gap-4"
+          >
+            <label className="flex items-center gap-2 cursor-pointer">
+              <RadioGroupItem value="pdf" />
+              <FileText className="h-4 w-4 text-muted-foreground" />
+              <span className="text-sm">PDF</span>
+            </label>
+            <label className="flex items-center gap-2 cursor-pointer">
+              <RadioGroupItem value="excel" />
+              <FileSpreadsheet className="h-4 w-4 text-muted-foreground" />
+              <span className="text-sm">Excel (.xlsx)</span>
+            </label>
+          </RadioGroup>
+        </div>
+
         {/* Generate Button */}
         <Button
           onClick={handleGenerate}
@@ -1200,7 +1417,7 @@ export default function MonthlyReportSection() {
           size="lg"
         >
           {generating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
-          {generating ? "Generating Report..." : `Download ${selectedWeek === "full-month" ? "Monthly" : "Weekly"} Report PDF`}
+          {generating ? "Generating Report..." : `Download ${selectedWeek === "full-month" ? "Monthly" : "Weekly"} Report (${exportFormat === "pdf" ? "PDF" : "Excel"})`}
         </Button>
 
         {selectedReports.size === 0 && (
