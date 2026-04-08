@@ -46,12 +46,6 @@ interface PayrollEntry {
   account_number: string | null;
 }
 
-interface DeliverySummary {
-  count: number;
-  cost_excl_gst: number;
-  cost_incl_gst: number;
-}
-
 type SortKey = "name" | "net_hours" | "employee_pay" | "admin_pay" | "total_hours";
 type SortDir = "asc" | "desc";
 
@@ -117,7 +111,6 @@ export default function PayrollPage() {
   const { business } = useBusiness();
   const { isSuperAdminOf } = useAuth();
   const [entries, setEntries] = useState<PayrollEntry[]>([]);
-  const [deliverySummary, setDeliverySummary] = useState<DeliverySummary>({ count: 0, cost_excl_gst: 0, cost_incl_gst: 0 });
   const [allEmployees, setAllEmployees] = useState<{ id: string; name: string; department: string | null }[]>([]);
   const [loading, setLoading] = useState(false);
   const [dateFrom, setDateFrom] = useState<Date>(() => startOfWeek(ausNow(), { weekStartsOn: 1 }));
@@ -180,11 +173,10 @@ export default function PayrollPage() {
       return allEvents;
     };
 
-    const [{ data: employees }, events, { data: approvalData }, { data: deliveryData }] = await Promise.all([
+    const [{ data: employees }, events, { data: approvalData }] = await Promise.all([
       supabase.from("employees").select("*").eq("active", true).eq("business_id", business!.id),
       fetchAllEvents(),
       supabase.from("timesheet_approvals").select("employee_id, date, approved").gte("date", from).lte("date", to).eq("approved", true),
-      supabase.from("catering_deliveries").select("cost_excl_gst, cost_incl_gst").eq("business_id", business!.id).gte("delivery_date", from).lte("delivery_date", to),
     ]);
 
     if (!employees) { setLoading(false); return; }
@@ -194,16 +186,6 @@ export default function PayrollPage() {
     if (approvalData) {
       for (const a of approvalData) {
         approvedSet.add(`${a.employee_id}-${a.date}`);
-      }
-    }
-
-    // Aggregate deliveries (standalone, not per employee)
-    let delSummary: DeliverySummary = { count: 0, cost_excl_gst: 0, cost_incl_gst: 0 };
-    if (deliveryData) {
-      for (const d of deliveryData as any[]) {
-        delSummary.count += 1;
-        delSummary.cost_excl_gst += Number(d.cost_excl_gst) || 0;
-        delSummary.cost_incl_gst += Number(d.cost_incl_gst) || 0;
       }
     }
 
@@ -228,8 +210,7 @@ export default function PayrollPage() {
 
     const result: PayrollEntry[] = [];
     for (const [empId, agg] of empAgg) {
-      const emp = empMap.get(empId);
-      if (!emp) continue;
+      const emp = empMap.get(empId)!;
       const netHours = Math.round(agg.netHours * 100) / 100;
       const totalHours = Math.round(agg.totalHours * 100) / 100;
       const breakHours = Math.round(agg.breakHours * 100) / 100;
@@ -258,7 +239,6 @@ export default function PayrollPage() {
 
     setAllEmployees((employees || []).map(e => ({ id: e.id, name: e.name, department: e.department })));
     setEntries(result);
-    setDeliverySummary(delSummary);
     setLoading(false);
   };
 
@@ -297,29 +277,20 @@ export default function PayrollPage() {
   const buildPayrollCSV = () => {
     if (activeTab === "margin") {
       const headers = "Name,Department,Net Hours,Employee Pay,Admin Cost (ex GST),Admin Cost (incl GST),Margin (ex GST),Margin (incl GST),Margin %\n";
-      const rows: string[] = filtered.map((e) => {
+      const rows = filtered.map((e) => {
         const marginEx = e.admin_pay - e.employee_pay;
         const marginIncl = e.admin_pay_incl_gst - e.employee_pay;
         const marginPct = e.admin_pay > 0 ? (marginEx / e.admin_pay * 100) : 0;
         return `${e.name},${e.department || "-"},${e.net_hours.toFixed(2)},${e.employee_pay.toFixed(2)},${e.admin_pay.toFixed(2)},${e.admin_pay_incl_gst.toFixed(2)},${marginEx.toFixed(2)},${marginIncl.toFixed(2)},${marginPct.toFixed(1)}%`;
-      });
-      const deliveryAdminCost = deliverySummary.cost_incl_gst;
-      const delMarginEx = deliveryAdminCost - deliverySummary.cost_excl_gst;
-      const delMarginIncl = deliverySummary.cost_incl_gst - deliverySummary.cost_excl_gst;
-      if (deliverySummary.count > 0) {
-        rows.push(`Delivery x${deliverySummary.count},-,-,${deliverySummary.cost_excl_gst.toFixed(2)},${deliveryAdminCost.toFixed(2)},${deliverySummary.cost_incl_gst.toFixed(2)},${delMarginEx.toFixed(2)},${delMarginIncl.toFixed(2)},`);
-      }
+      }).join("\n");
       const totEmpPay = filtered.reduce((s, e) => s + e.employee_pay, 0);
       const totAdminPay = filtered.reduce((s, e) => s + e.admin_pay, 0);
       const totAdminPayIncl = filtered.reduce((s, e) => s + e.admin_pay_incl_gst, 0);
-      const totalEmpPay = totEmpPay + deliverySummary.cost_excl_gst;
-      const totalAdminPay = totAdminPay + deliveryAdminCost;
-      const totalAdminPayIncl = totAdminPayIncl + deliverySummary.cost_incl_gst;
-      const totMarginEx = totalAdminPay - totalEmpPay;
-      const totMarginIncl = totalAdminPayIncl - totalEmpPay;
+      const totMarginEx = totAdminPay - totEmpPay;
+      const totMarginIncl = totAdminPayIncl - totEmpPay;
       const totNetHrs = filtered.reduce((s, e) => s + e.net_hours, 0);
-      const totalRow = `\nTOTAL,,${totNetHrs.toFixed(2)},${totalEmpPay.toFixed(2)},${totalAdminPay.toFixed(2)},${totalAdminPayIncl.toFixed(2)},${totMarginEx.toFixed(2)},${totMarginIncl.toFixed(2)},${totalAdminPay > 0 ? (totMarginEx / totalAdminPay * 100).toFixed(1) : 0}%`;
-      return headers + rows.join("\n") + totalRow;
+      const totalRow = `\nTOTAL,,${totNetHrs.toFixed(2)},${totEmpPay.toFixed(2)},${totAdminPay.toFixed(2)},${totAdminPayIncl.toFixed(2)},${totMarginEx.toFixed(2)},${totMarginIncl.toFixed(2)},${totAdminPay > 0 ? (totMarginEx / totAdminPay * 100).toFixed(1) : 0}%`;
+      return headers + rows + totalRow;
     }
 
     const isEmp = activeTab === "employee";
@@ -334,27 +305,16 @@ export default function PayrollPage() {
       if (v.includes(",") || v.includes('"')) return `"${v.replace(/"/g, '""')}"`;
       return v;
     };
-    const rowLines: string[] = filtered.map((e) =>
+    const rows = filtered.map((e) =>
       isEmp
         ? `${e.name},${e.pay_rate.toFixed(2)},${e.total_hours.toFixed(2)},${e.break_hours.toFixed(2)},${e.net_hours.toFixed(2)},${e.employee_pay.toFixed(2)},${csvSafe(e.pay_id)},${csvSafe(e.account_name)},${csvSafe(e.bsb)},${csvSafe(e.account_number)}`
         : `${e.name},${e.admin_hourly_rate.toFixed(2)},${e.total_hours.toFixed(2)},${e.break_hours.toFixed(2)},${e.net_hours.toFixed(2)},${e.admin_pay.toFixed(2)},${e.admin_pay_incl_gst.toFixed(2)}`
-    );
+    ).join("\n");
     const totTotalHrs = filtered.reduce((s, e) => s + e.total_hours, 0);
     const totBreakHrs = filtered.reduce((s, e) => s + e.break_hours, 0);
     const totNetHrs = filtered.reduce((s, e) => s + e.net_hours, 0);
-    const deliveryExcl = deliverySummary.cost_excl_gst;
-    const deliveryIncl = deliverySummary.cost_incl_gst;
-    const deliveryAdminExcl = Math.round(deliveryIncl / 1.10 * 100) / 100;
-    if (deliverySummary.count > 0) {
-      if (isEmp) {
-        rowLines.push(`Delivery x${deliverySummary.count},flat rate,-,-,-,${deliveryExcl.toFixed(2)},,,,`);
-      } else {
-        rowLines.push(`Delivery x${deliverySummary.count},flat rate,-,-,-,${deliveryAdminExcl.toFixed(2)},${deliveryIncl.toFixed(2)}`);
-      }
-    }
-    const totPay = filtered.reduce((s, e) => s + (isEmp ? e.employee_pay : e.admin_pay), 0) + (isEmp ? deliveryExcl : deliveryAdminExcl);
-    const totPayIncl = (isEmp ? 0 : filtered.reduce((s, e) => s + e.admin_pay_incl_gst, 0)) + (isEmp ? 0 : deliveryIncl);
-    const rows = rowLines.join("\n");
+    const totPay = filtered.reduce((s, e) => s + (isEmp ? e.employee_pay : e.admin_pay), 0);
+    const totPayIncl = isEmp ? 0 : filtered.reduce((s, e) => s + e.admin_pay_incl_gst, 0);
     const totalRow = isEmp
       ? `\nTOTAL,,${totTotalHrs.toFixed(2)},${totBreakHrs.toFixed(2)},${totNetHrs.toFixed(2)},${totPay.toFixed(2)}`
       : `\nTOTAL,,${totTotalHrs.toFixed(2)},${totBreakHrs.toFixed(2)},${totNetHrs.toFixed(2)},${totPay.toFixed(2)},${totPayIncl.toFixed(2)}`;
@@ -382,17 +342,14 @@ export default function PayrollPage() {
     }
   };
 
-  const totalEmployeePay = filtered.reduce((sum, e) => sum + e.employee_pay, 0) + deliverySummary.cost_excl_gst;
-  const totalAdminPay = filtered.reduce((sum, e) => sum + e.admin_pay, 0) + Math.round(deliverySummary.cost_incl_gst / 1.10 * 100) / 100;
+  const totalEmployeePay = filtered.reduce((sum, e) => sum + e.employee_pay, 0);
+  const totalAdminPay = filtered.reduce((sum, e) => sum + e.admin_pay, 0);
   const totalNetHours = filtered.reduce((sum, e) => sum + e.net_hours, 0);
   const totalBreakHours = filtered.reduce((sum, e) => sum + e.break_hours, 0);
-  const totalAdminPayInclGst = filtered.reduce((sum, e) => sum + e.admin_pay_incl_gst, 0) + deliverySummary.cost_incl_gst;
-  const totalMarginAdminPay = filtered.reduce((sum, e) => sum + e.admin_pay, 0) + deliverySummary.cost_incl_gst;
-  const totalMarginAdminPayInclGst = filtered.reduce((sum, e) => sum + e.admin_pay_incl_gst, 0) + deliverySummary.cost_incl_gst;
-  const totalDeliveryCount = deliverySummary.count;
-  const totalMargin = totalMarginAdminPay - totalEmployeePay;
-  const totalMarginInclGst = totalMarginAdminPayInclGst - totalEmployeePay;
-  const marginPercentage = totalMarginAdminPay > 0 ? (totalMargin / totalMarginAdminPay * 100) : 0;
+  const totalAdminPayInclGst = filtered.reduce((sum, e) => sum + e.admin_pay_incl_gst, 0);
+  const totalMargin = totalAdminPay - totalEmployeePay;
+  const totalMarginInclGst = totalAdminPayInclGst - totalEmployeePay;
+  const marginPercentage = totalAdminPay > 0 ? (totalMargin / totalAdminPay * 100) : 0;
 
   const payKey = activeTab === "margin" ? "admin_pay" : (activeTab === "employee" ? "employee_pay" : "admin_pay");
   const topByPay = [...filtered].sort((a, b) => (b[payKey] as number) - (a[payKey] as number)).slice(0, chartLimit);
@@ -478,9 +435,7 @@ export default function PayrollPage() {
                 const marginPct = e.admin_pay > 0 ? (marginEx / e.admin_pay * 100) : 0;
                 return (
                   <TableRow key={e.employee_id}>
-                    <TableCell className="font-medium sticky left-0 bg-card z-20 border-r border-border/60">
-                      {e.name}
-                    </TableCell>
+                    <TableCell className="font-medium sticky left-0 bg-card z-20 border-r border-border/60">{e.name}</TableCell>
                     <TableCell>{e.department || "-"}</TableCell>
                     <TableCell>{e.net_hours.toFixed(2)}</TableCell>
                     <TableCell>${e.employee_pay.toFixed(2)}</TableCell>
@@ -498,36 +453,7 @@ export default function PayrollPage() {
                   </TableRow>
                 );
               })}
-              {deliverySummary.count > 0 && (() => {
-                const deliveryMarginEx = deliverySummary.cost_incl_gst - deliverySummary.cost_excl_gst;
-                const deliveryMarginPct = deliverySummary.cost_incl_gst > 0
-                  ? (deliveryMarginEx / deliverySummary.cost_incl_gst * 100)
-                  : 0;
-                return (
-                  <TableRow className="bg-primary/5 border-l-2 border-l-primary">
-                    <TableCell className="font-medium sticky left-0 bg-primary/5 z-20 border-r border-border/60">
-                      <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-primary/40 text-primary">
-                        Delivery x{deliverySummary.count}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>-</TableCell>
-                    <TableCell>-</TableCell>
-                    <TableCell>${deliverySummary.cost_excl_gst.toFixed(2)}</TableCell>
-                    <TableCell>${deliverySummary.cost_incl_gst.toFixed(2)}</TableCell>
-                    <TableCell>${deliverySummary.cost_incl_gst.toFixed(2)}</TableCell>
-                    <TableCell className="text-right font-semibold text-green-500">
-                      ${deliveryMarginEx.toFixed(2)}
-                    </TableCell>
-                    <TableCell className="text-right font-semibold text-green-500">
-                      ${deliveryMarginEx.toFixed(2)}
-                    </TableCell>
-                    <TableCell className="text-right text-green-500">
-                      {deliveryMarginPct.toFixed(1)}%
-                    </TableCell>
-                  </TableRow>
-                );
-              })()}
-              {pageEntries.length === 0 && deliverySummary.count === 0 && (
+              {pageEntries.length === 0 && (
                 <TableRow>
                   <TableCell colSpan={9} className="text-center text-muted-foreground py-8">
                     {loading ? "Loading..." : "No approved payroll data for this period."}
@@ -535,15 +461,15 @@ export default function PayrollPage() {
                 </TableRow>
               )}
             </TableBody>
-            {(pageEntries.length > 0 || deliverySummary.count > 0) && (
+            {pageEntries.length > 0 && (
               <tfoot>
                 <TableRow className="bg-muted/50 font-semibold">
                   <TableCell className="sticky left-0 bg-muted/50 z-20 border-r border-border/60">Totals</TableCell>
                   <TableCell />
                   <TableCell>{totalNetHours.toFixed(2)}</TableCell>
                   <TableCell>${totalEmployeePay.toFixed(2)}</TableCell>
-                  <TableCell>${totalMarginAdminPay.toFixed(2)}</TableCell>
-                  <TableCell>${totalMarginAdminPayInclGst.toFixed(2)}</TableCell>
+                  <TableCell>${totalAdminPay.toFixed(2)}</TableCell>
+                  <TableCell>${totalAdminPayInclGst.toFixed(2)}</TableCell>
                   <TableCell className={`text-right ${totalMargin >= 0 ? "text-green-500" : "text-red-500"}`}>
                     ${totalMargin.toFixed(2)}
                   </TableCell>
@@ -765,27 +691,7 @@ export default function PayrollPage() {
                   {!isEmployee && <TableCell className="text-right text-muted-foreground">${e.admin_pay_incl_gst.toFixed(2)}</TableCell>}
                 </TableRow>
               ))}
-              {/* Standalone delivery row */}
-              {deliverySummary.count > 0 && (
-                <TableRow className="bg-primary/5 border-l-2 border-l-primary">
-                  <TableCell className="font-medium sticky left-0 bg-primary/5 z-20 border-r border-border/60">
-                    <span className="flex items-center gap-1.5">
-                      <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-primary/40 text-primary">
-                        Delivery x{deliverySummary.count}
-                      </Badge>
-                    </span>
-                  </TableCell>
-                  <TableCell className="text-xs text-muted-foreground italic">flat rate</TableCell>
-                  <TableCell className="text-xs text-muted-foreground">—</TableCell>
-                  <TableCell className="text-xs text-muted-foreground">—</TableCell>
-                  <TableCell className="text-xs text-muted-foreground">—</TableCell>
-                  <TableCell className="text-right font-semibold">
-                    ${(isEmployee ? deliverySummary.cost_excl_gst : Math.round(deliverySummary.cost_incl_gst / 1.10 * 100) / 100).toFixed(2)}
-                  </TableCell>
-                  {!isEmployee && <TableCell className="text-right text-muted-foreground">${deliverySummary.cost_incl_gst.toFixed(2)}</TableCell>}
-                </TableRow>
-              )}
-              {pageEntries.length === 0 && deliverySummary.count === 0 && (
+              {pageEntries.length === 0 && (
                 <TableRow>
                   <TableCell colSpan={isEmployee ? 6 : 7} className="text-center text-muted-foreground py-8">
                     {loading ? "Loading..." : "No approved payroll data for this period."}

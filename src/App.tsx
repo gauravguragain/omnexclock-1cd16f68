@@ -49,7 +49,6 @@ const RequestsPage = React.lazy(() => import("./pages/admin/RequestsPage"));
 const MyBusinessPage = React.lazy(() => import("./pages/admin/MyBusinessPage"));
 const InventoryPage = React.lazy(() => import("./pages/admin/InventoryPage"));
 const ServiceMaintenancePage = React.lazy(() => import("./pages/admin/ServiceMaintenancePage"));
-const CateringDeliveryPage = React.lazy(() => import("./pages/admin/CateringDeliveryPage"));
 
 const PayDetailsPage = React.lazy(() => import("./pages/admin/PayDetailsPage"));
 const MasterDashboardPage = React.lazy(() => import("./pages/master/MasterDashboardPage"));
@@ -107,7 +106,6 @@ const App = () => (
                     <Route path="my-business" element={<MyBusinessPage />} />
                     <Route path="inventory" element={<InventoryPage />} />
                     <Route path="service" element={<ServiceMaintenancePage />} />
-                    <Route path="deliveries" element={<CateringDeliveryPage />} />
                     
                     <Route path="pay-details" element={<PayDetailsPage />} />
                   </Route>

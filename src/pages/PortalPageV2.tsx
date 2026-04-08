@@ -192,7 +192,6 @@ function EventCard({ ev }: { ev: any }) {
 
 /* ── Today Tab ────────────────────────────────────── */
 
-
 function TodayTab({ employeeCode, businessCode, shifts }: {
   employeeCode: string;
   businessCode: string | null;
@@ -711,7 +710,7 @@ export default function PortalPageV2() {
 
           {/* Tabs */}
           <Tabs defaultValue="today" className="w-full">
-            <TabsList className="w-full grid grid-cols-6 h-11">
+            <TabsList className="w-full grid grid-cols-5 h-11">
               <TabsTrigger value="today" className="gap-1 text-xs touch-active py-2.5">
                 <Clock className="h-3.5 w-3.5" /> <span className="hidden xs:inline">Today</span>
               </TabsTrigger>
@@ -924,7 +923,6 @@ export default function PortalPageV2() {
                 ))
               )}
             </TabsContent>
-
 
             {/* REQUESTS TAB */}
             <TabsContent value="requests" className="space-y-3 mt-4">
