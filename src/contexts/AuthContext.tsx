@@ -47,6 +47,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   const fetchRoles = useCallback(async (userId: string) => {
+    // Auto-accept any pending invitations matching this user's email so
+    // invited admins/roster admins aren't blocked with "Access Denied".
+    try {
+      await supabase.rpc("accept_pending_invitations_for_user");
+    } catch (e) {
+      console.warn("accept_pending_invitations_for_user failed", e);
+    }
+
     const [rolesResult, approvedResult] = await Promise.all([
       supabase.from("user_roles").select("business_id, role, departments").eq("user_id", userId),
       supabase.rpc("is_approved", { _user_id: userId }),
