@@ -1547,6 +1547,7 @@ export type Database = {
     }
     Functions: {
       accept_invitation: { Args: { _token: string }; Returns: boolean }
+      accept_pending_invitations_for_user: { Args: never; Returns: number }
       add_forum_comment:
         | {
             Args: { _content: string; _employee_code: string; _post_id: string }
