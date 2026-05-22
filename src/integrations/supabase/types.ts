@@ -312,6 +312,138 @@ export type Database = {
         }
         Relationships: []
       }
+      catering_deliveries: {
+        Row: {
+          business_id: string
+          contact_number: string | null
+          contact_person: string
+          cost_excl_gst: number
+          cost_incl_gst: number
+          created_at: string
+          delivery_address: string
+          delivery_date: string
+          delivery_time: string | null
+          driver_id: string | null
+          id: string
+          notes: string | null
+          number_of_guests: number
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          business_id: string
+          contact_number?: string | null
+          contact_person: string
+          cost_excl_gst?: number
+          cost_incl_gst?: number
+          created_at?: string
+          delivery_address: string
+          delivery_date: string
+          delivery_time?: string | null
+          driver_id?: string | null
+          id?: string
+          notes?: string | null
+          number_of_guests?: number
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          business_id?: string
+          contact_number?: string | null
+          contact_person?: string
+          cost_excl_gst?: number
+          cost_incl_gst?: number
+          created_at?: string
+          delivery_address?: string
+          delivery_date?: string
+          delivery_time?: string | null
+          driver_id?: string | null
+          id?: string
+          notes?: string | null
+          number_of_guests?: number
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "catering_deliveries_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "catering_deliveries_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses_public"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "catering_deliveries_driver_id_fkey"
+            columns: ["driver_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "catering_deliveries_driver_id_fkey"
+            columns: ["driver_id"]
+            isOneToOne: false
+            referencedRelation: "employees_public"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      catering_delivery_status_logs: {
+        Row: {
+          created_at: string
+          delivery_id: string
+          id: string
+          notes: string | null
+          status: string
+          updated_by: string | null
+        }
+        Insert: {
+          created_at?: string
+          delivery_id: string
+          id?: string
+          notes?: string | null
+          status: string
+          updated_by?: string | null
+        }
+        Update: {
+          created_at?: string
+          delivery_id?: string
+          id?: string
+          notes?: string | null
+          status?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "catering_delivery_status_logs_delivery_id_fkey"
+            columns: ["delivery_id"]
+            isOneToOne: false
+            referencedRelation: "catering_deliveries"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "catering_delivery_status_logs_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "catering_delivery_status_logs_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "employees_public"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       clock_events: {
         Row: {
           created_at: string
@@ -1415,6 +1547,7 @@ export type Database = {
     }
     Functions: {
       accept_invitation: { Args: { _token: string }; Returns: boolean }
+      accept_pending_invitations_for_user: { Args: never; Returns: number }
       add_forum_comment:
         | {
             Args: { _content: string; _employee_code: string; _post_id: string }
@@ -1492,6 +1625,23 @@ export type Database = {
           runsheet_url: string
           smoke_machine: boolean
           tablecloth_color: string
+        }[]
+      }
+      get_employee_deliveries: {
+        Args: { _business_code?: string; _employee_code: string }
+        Returns: {
+          contact_number: string
+          contact_person: string
+          cost_excl_gst: number
+          cost_incl_gst: number
+          delivery_address: string
+          delivery_created_at: string
+          delivery_date: string
+          delivery_id: string
+          delivery_notes: string
+          delivery_status: string
+          delivery_time: string
+          number_of_guests: number
         }[]
       }
       get_employee_notifications: {
@@ -1819,6 +1969,16 @@ export type Database = {
             }
             Returns: boolean
           }
+      update_delivery_status: {
+        Args: {
+          _business_code?: string
+          _delivery_id: string
+          _employee_code: string
+          _notes?: string
+          _status: string
+        }
+        Returns: boolean
+      }
       update_employee_request:
         | {
             Args: {
