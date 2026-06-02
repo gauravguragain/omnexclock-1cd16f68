@@ -28,6 +28,7 @@ import { cn } from "@/lib/utils";
 import type { Tables } from "@/integrations/supabase/types";
 import { toAusDate, toAusFormatted } from "@/lib/dateUtils";
 import RosterDayEvents from "@/components/RosterDayEvents";
+import { buildExportFilename } from "@/lib/exportNaming";
 import RosterVoiceCommand from "@/components/RosterVoiceCommand";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
@@ -362,7 +363,16 @@ export default function RosterPage() {
 
   const handleDownloadPDF = () => {
     const doc = buildRosterPDFDoc();
-    const filename = `roster-${fmtDate(weekStart)}-to-${fmtDate(addDays(weekStart, 6))}.pdf`;
+    const effectiveDept = lockedDepartment || (departmentFilter !== "all" ? departmentFilter : null);
+    const filename = buildExportFilename({
+      businessCode: business?.business_code,
+      businessName: business?.name,
+      reportType: "Roster",
+      scope: [effectiveDept],
+      dateFrom: weekStart,
+      dateTo: addDays(weekStart, 6),
+      ext: "pdf",
+    });
     doc.save(filename);
     toast({ title: "PDF downloaded", description: filename });
     logAudit("roster_pdf_downloaded", { week_start: fmtDate(weekStart) });

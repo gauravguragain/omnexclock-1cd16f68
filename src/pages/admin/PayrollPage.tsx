@@ -19,6 +19,7 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { EmailCSVDialog } from "@/components/EmailCSVDialog";
 import { logAudit, getDeviceInfo } from "@/lib/auditLog";
+import { buildExportFilename } from "@/lib/exportNaming";
 
 const CHART_COLORS = [
   "hsl(45, 60%, 53%)", "hsl(142, 71%, 45%)", "hsl(217, 91%, 60%)",
@@ -321,7 +322,21 @@ export default function PayrollPage() {
     return headers + rows + totalRow;
   };
 
-  const payrollCsvFilename = `${activeTab}-payroll-${format(dateFrom, "yyyy-MM-dd")}-to-${format(dateTo, "yyyy-MM-dd")}.csv`;
+  const payrollTabLabel = activeTab === "employee" ? "Employee-Payroll" : activeTab === "admin" ? "Admin-Payroll" : "Margin-Analysis";
+  const selectedEmpName = selectedEmployee !== "all" ? allEmployees.find(e => e.id === selectedEmployee)?.name : null;
+  const payrollCsvFilename = buildExportFilename({
+    businessCode: business?.business_code,
+    businessName: business?.name,
+    reportType: payrollTabLabel,
+    scope: [
+      selectedDepartment !== "all" ? selectedDepartment : null,
+      selectedEmpName,
+      search.trim() ? `Search-${search.trim()}` : null,
+    ],
+    dateFrom,
+    dateTo,
+    ext: "csv",
+  });
   const payrollCsvSubject = `${activeTab === "employee" ? "Employee" : activeTab === "admin" ? "Admin" : "Margin"} Payroll Report – ${format(dateFrom, "dd MMM")} to ${format(dateTo, "dd MMM yyyy")}`;
 
   const exportCSV = () => {

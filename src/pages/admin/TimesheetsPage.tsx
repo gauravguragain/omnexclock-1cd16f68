@@ -24,6 +24,7 @@ import { toAusDate, toAusDisplayDate, toAusTime24, toAusTime12, buildAusTimestam
 import { useAuth } from "@/contexts/AuthContext";
 import { EmailPDFDialog } from "@/components/EmailPDFDialog";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { buildExportFilename } from "@/lib/exportNaming";
 
 interface TimesheetEntry {
   employee_id: string;
@@ -814,7 +815,15 @@ export default function TimesheetsPage() {
     const ws = XLSX.utils.json_to_sheet(rows);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Timesheets");
-    const filename = `timesheets_${format(dateFrom, "yyyy-MM-dd")}_to_${format(dateTo, "yyyy-MM-dd")}.xlsx`;
+    const filename = buildExportFilename({
+      businessCode: business?.business_code,
+      businessName: business?.name,
+      reportType: "Timesheets",
+      scope: [searchQuery.trim() ? `Search-${searchQuery.trim()}` : null],
+      dateFrom,
+      dateTo,
+      ext: "xlsx",
+    });
     XLSX.writeFile(wb, filename);
     toast.success("Downloaded timesheet Excel");
     logAudit("excel_download", {
@@ -834,7 +843,15 @@ export default function TimesheetsPage() {
     return base64;
   };
 
-  const pdfFilename = `timesheets_${format(dateFrom, "yyyy-MM-dd")}_to_${format(dateTo, "yyyy-MM-dd")}.pdf`;
+  const pdfFilename = buildExportFilename({
+    businessCode: business?.business_code,
+    businessName: business?.name,
+    reportType: "Timesheets",
+    scope: [searchQuery.trim() ? `Search-${searchQuery.trim()}` : null],
+    dateFrom,
+    dateTo,
+    ext: "pdf",
+  });
   const pdfSubject = `Timesheet Report – ${format(dateFrom, "dd MMM")} to ${format(dateTo, "dd MMM yyyy")}`;
 
   const editFormFields = (
