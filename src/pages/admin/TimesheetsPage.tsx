@@ -843,7 +843,15 @@ export default function TimesheetsPage() {
     return base64;
   };
 
-  const pdfFilename = `timesheets_${format(dateFrom, "yyyy-MM-dd")}_to_${format(dateTo, "yyyy-MM-dd")}.pdf`;
+  const pdfFilename = buildExportFilename({
+    businessCode: business?.business_code,
+    businessName: business?.name,
+    reportType: "Timesheets",
+    scope: [searchQuery.trim() ? `Search-${searchQuery.trim()}` : null],
+    dateFrom,
+    dateTo,
+    ext: "pdf",
+  });
   const pdfSubject = `Timesheet Report – ${format(dateFrom, "dd MMM")} to ${format(dateTo, "dd MMM yyyy")}`;
 
   const editFormFields = (
