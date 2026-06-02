@@ -56,11 +56,11 @@ export function buildExportFilename(opts: ExportFilenameOptions): string {
   if (opts.periodLabel) {
     datePart = `__${sanitize(opts.periodLabel)}`;
   } else if (opts.dateFrom && opts.dateTo) {
-    const from = format(toDate(opts.dateFrom), "yyyy-MM-dd");
-    const to = format(toDate(opts.dateTo), "yyyy-MM-dd");
+    const from = format(toDate(opts.dateFrom), "dd-MM-yyyy");
+    const to = format(toDate(opts.dateTo), "dd-MM-yyyy");
     datePart = from === to ? `__${from}` : `__${from}_to_${to}`;
   } else if (opts.dateFrom) {
-    datePart = `__${format(toDate(opts.dateFrom), "yyyy-MM-dd")}`;
+    datePart = `__${format(toDate(opts.dateFrom), "dd-MM-yyyy")}`;
   }
 
   return `${biz}__${reportType}${scopePart}${datePart}.${opts.ext}`;
