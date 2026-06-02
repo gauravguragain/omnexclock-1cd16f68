@@ -848,7 +848,7 @@ export default function TimesheetsPage() {
     businessCode: business?.business_code,
     businessName: business?.name,
     reportType: "Timesheets",
-    scope: [searchQuery.trim() ? `Search-${searchQuery.trim()}` : null],
+    scope: [formatDepartmentScope(selectedDepartment), searchQuery.trim() ? `Search-${searchQuery.trim()}` : null],
     dateFrom,
     dateTo,
     ext: "pdf",
