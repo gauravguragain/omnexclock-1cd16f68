@@ -28,6 +28,7 @@ import { cn } from "@/lib/utils";
 import type { Tables } from "@/integrations/supabase/types";
 import { toAusDate, toAusFormatted } from "@/lib/dateUtils";
 import RosterDayEvents from "@/components/RosterDayEvents";
+import { buildExportFilename } from "@/lib/exportNaming";
 import RosterVoiceCommand from "@/components/RosterVoiceCommand";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
