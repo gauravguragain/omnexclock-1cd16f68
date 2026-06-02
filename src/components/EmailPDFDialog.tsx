@@ -11,14 +11,25 @@ import { logAudit, getDeviceInfo } from "@/lib/auditLog";
 interface EmailPDFDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  pdfBase64: string;
+  /** Either pass a pre-generated base64 string, or a generator function. */
+  pdfBase64?: string;
+  generatePdfBase64?: () => Promise<string>;
   pdfFilename: string;
   subject: string;
   businessName?: string;
   skipAudit?: boolean;
 }
 
-export function EmailPDFDialog({ open, onOpenChange, pdfBase64, pdfFilename, subject, businessName, skipAudit }: EmailPDFDialogProps) {
+export function EmailPDFDialog({
+  open,
+  onOpenChange,
+  pdfBase64,
+  generatePdfBase64,
+  pdfFilename,
+  subject,
+  businessName,
+  skipAudit,
+}: EmailPDFDialogProps) {
   const [email, setEmail] = useState("");
   const [sending, setSending] = useState(false);
 
@@ -34,12 +45,14 @@ export function EmailPDFDialog({ open, onOpenChange, pdfBase64, pdfFilename, sub
     }
     setSending(true);
     try {
+      const base64 = pdfBase64 ?? (generatePdfBase64 ? await generatePdfBase64() : "");
+      if (!base64) throw new Error("PDF not available");
       const { data, error } = await supabase.functions.invoke("send-email", {
         body: {
           type: "report_pdf",
           to: email.trim(),
           subject,
-          pdfBase64,
+          pdfBase64: base64,
           pdfFilename,
           businessName,
         },
