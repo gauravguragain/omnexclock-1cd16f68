@@ -989,14 +989,16 @@ export default function PayrollPage() {
         )}
       </Tabs>
 
-      <EmailCSVDialog
+      <EmailPDFDialog
         open={emailDialogOpen}
         onOpenChange={setEmailDialogOpen}
-        csvData={buildPayrollCSV()}
-        csvFilename={payrollCsvFilename}
-        subject={payrollCsvSubject}
+        generatePdfBase64={async () => payrollPdfToBase64(buildPdfDoc())}
+        pdfFilename={payrollPdfFilename}
+        subject={payrollSubject}
+        businessName={business?.name}
         skipAudit={activeTab === "margin"}
       />
     </div>
+
   );
 }
