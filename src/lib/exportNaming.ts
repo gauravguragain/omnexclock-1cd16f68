@@ -11,10 +11,10 @@ import { format } from "date-fns";
  * single hyphens. The result is filesystem-safe across Windows / macOS / Linux.
  *
  * Examples:
- *   PRP__Timesheets__FOH_John__2026-05-26_to_2026-06-01.pdf
- *   PRP__Roster__BOH__2026-05-26_to_2026-06-01.pdf
- *   PRP__Employee-Payroll__2026-05-26_to_2026-06-01.csv
- *   PRP__Weekly-Report__All__2026-05-26_to_2026-06-01.pdf
+ *   PRP__Timesheets__FOH_John__26.05.2026_to_01.06.2026.pdf
+ *   PRP__Roster__BOH__26.05.2026_to_01.06.2026.pdf
+ *   PRP__Employee-Payroll__26.05.2026_to_01.06.2026.csv
+ *   PRP__Weekly-Report__All__26.05.2026_to_01.06.2026.pdf
  *   PRP__Monthly-Report__Custom-5__May-2026.xlsx
  */
 
@@ -25,6 +25,7 @@ const sanitize = (raw: string): string =>
     .replace(/^-+|-+$/g, "");
 
 const toDate = (d: Date | string): Date => (d instanceof Date ? d : new Date(d));
+const formatFilenameDate = (d: Date | string): string => format(toDate(d), "dd.MM.yyyy");
 
 export interface ExportFilenameOptions {
   /** Business short code (preferred). Falls back to sanitized business name. */
@@ -56,11 +57,11 @@ export function buildExportFilename(opts: ExportFilenameOptions): string {
   if (opts.periodLabel) {
     datePart = `__${sanitize(opts.periodLabel)}`;
   } else if (opts.dateFrom && opts.dateTo) {
-    const from = format(toDate(opts.dateFrom), "dd-MM-yyyy");
-    const to = format(toDate(opts.dateTo), "dd-MM-yyyy");
+    const from = formatFilenameDate(opts.dateFrom);
+    const to = formatFilenameDate(opts.dateTo);
     datePart = from === to ? `__${from}` : `__${from}_to_${to}`;
   } else if (opts.dateFrom) {
-    datePart = `__${format(toDate(opts.dateFrom), "dd-MM-yyyy")}`;
+    datePart = `__${formatFilenameDate(opts.dateFrom)}`;
   }
 
   return `${biz}__${reportType}${scopePart}${datePart}.${opts.ext}`;
