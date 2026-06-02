@@ -88,11 +88,19 @@ export default function AuthPage() {
       if (!error) {
         const { data: { user: signedInUser } } = await supabase.auth.getUser();
         if (signedInUser) {
+          // Auto-accept any pending invitations for this email BEFORE checking roles,
+          // so newly-invited admins/roster admins aren't blocked on first sign-in.
+          try {
+            await supabase.rpc("accept_pending_invitations_for_user");
+          } catch (e) {
+            console.warn("accept_pending_invitations_for_user failed", e);
+          }
+
           const { data: roles } = await supabase
             .from("user_roles")
             .select("role, business_id")
             .eq("user_id", signedInUser.id);
-          const hasBusinessRole = roles?.some(r => r.business_id !== null);
+          const hasBusinessRole = roles?.some(r => r.business_id !== null || r.role === "master");
           if (!hasBusinessRole) {
             setDenied(true);
             await supabase.auth.signOut();
