@@ -815,7 +815,15 @@ export default function TimesheetsPage() {
     const ws = XLSX.utils.json_to_sheet(rows);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Timesheets");
-    const filename = `timesheets_${format(dateFrom, "yyyy-MM-dd")}_to_${format(dateTo, "yyyy-MM-dd")}.xlsx`;
+    const filename = buildExportFilename({
+      businessCode: business?.business_code,
+      businessName: business?.name,
+      reportType: "Timesheets",
+      scope: [searchQuery.trim() ? `Search-${searchQuery.trim()}` : null],
+      dateFrom,
+      dateTo,
+      ext: "xlsx",
+    });
     XLSX.writeFile(wb, filename);
     toast.success("Downloaded timesheet Excel");
     logAudit("excel_download", {
