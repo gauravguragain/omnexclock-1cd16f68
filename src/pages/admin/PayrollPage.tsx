@@ -326,20 +326,45 @@ export default function PayrollPage() {
 
   const payrollTabLabel = activeTab === "employee" ? "Employee-Payroll" : activeTab === "admin" ? "Admin-Payroll" : "Margin-Analysis";
   const selectedEmpName = selectedEmployee !== "all" ? allEmployees.find(e => e.id === selectedEmployee)?.name : null;
+  const exportScope = [
+    selectedDepartment !== "all" ? selectedDepartment : null,
+    selectedEmpName,
+    search.trim() ? `Search-${search.trim()}` : null,
+  ];
   const payrollCsvFilename = buildExportFilename({
     businessCode: business?.business_code,
     businessName: business?.name,
     reportType: payrollTabLabel,
-    scope: [
-      selectedDepartment !== "all" ? selectedDepartment : null,
-      selectedEmpName,
-      search.trim() ? `Search-${search.trim()}` : null,
-    ],
+    scope: exportScope,
     dateFrom,
     dateTo,
     ext: "csv",
   });
-  const payrollCsvSubject = `${activeTab === "employee" ? "Employee" : activeTab === "admin" ? "Admin" : "Margin"} Payroll Report – ${format(dateFrom, "dd MMM")} to ${format(dateTo, "dd MMM yyyy")}`;
+  const payrollPdfFilename = buildExportFilename({
+    businessCode: business?.business_code,
+    businessName: business?.name,
+    reportType: payrollTabLabel,
+    scope: exportScope,
+    dateFrom,
+    dateTo,
+    ext: "pdf",
+  });
+  const payrollSubject = `${activeTab === "employee" ? "Employee" : activeTab === "admin" ? "Admin" : "Margin"} Payroll Report – ${format(dateFrom, "dd MMM")} to ${format(dateTo, "dd MMM yyyy")}`;
+
+  const buildPdfDoc = () =>
+    buildPayrollPdf({
+      tab: activeTab,
+      entries: filtered,
+      businessName: business?.name || "Business",
+      businessCode: business?.business_code,
+      dateFrom,
+      dateTo,
+      filters: {
+        department: selectedDepartment !== "all" ? selectedDepartment : null,
+        employee: selectedEmpName,
+        search: search.trim() || null,
+      },
+    });
 
   const exportCSV = () => {
     const csv = buildPayrollCSV();
@@ -358,6 +383,20 @@ export default function PayrollPage() {
       });
     }
   };
+
+  const exportPDF = () => {
+    const doc = buildPdfDoc();
+    doc.save(payrollPdfFilename);
+    if (activeTab !== "margin") {
+      logAudit("pdf_download", {
+        source: "payroll",
+        tab: activeTab,
+        filename: payrollPdfFilename,
+        device: getDeviceInfo(),
+      });
+    }
+  };
+
 
   const totalEmployeePay = filtered.reduce((sum, e) => sum + e.employee_pay, 0);
   const totalAdminPay = filtered.reduce((sum, e) => sum + e.admin_pay, 0);
