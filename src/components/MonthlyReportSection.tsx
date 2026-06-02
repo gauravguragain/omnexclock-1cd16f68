@@ -417,9 +417,18 @@ export default function MonthlyReportSection() {
           XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows), "Dept Breakdown");
         }
 
-        const fileName = isWeekly
-          ? `${business.name.replace(/[^a-zA-Z0-9]/g, "_")}_Weekly_Report_${format(dateStart, "dd_MMM")}_${format(dateEnd, "dd_MMM_yyyy")}.xlsx`
-          : `${business.name.replace(/[^a-zA-Z0-9]/g, "_")}_Monthly_Report_${format(monthStart, "MMM_yyyy")}.xlsx`;
+        const totalReports = REPORT_OPTIONS.filter(r => r.id !== "margin_analysis").length;
+        const scopeToken = selectedReports.size === totalReports ? "All" : `Custom-${selectedReports.size}sec`;
+        const fileName = buildExportFilename({
+          businessCode: (business as any)?.business_code,
+          businessName: business.name,
+          reportType: isWeekly ? "Weekly-Report" : "Monthly-Report",
+          scope: [scopeToken],
+          dateFrom: isWeekly ? dateStart : undefined,
+          dateTo: isWeekly ? dateEnd : undefined,
+          periodLabel: isWeekly ? undefined : format(monthStart, "MMM-yyyy"),
+          ext: "xlsx",
+        });
         XLSX.writeFile(wb, fileName);
         toast({ title: "Report Generated", description: `${fileName} has been downloaded.` });
         setGenerating(false);
