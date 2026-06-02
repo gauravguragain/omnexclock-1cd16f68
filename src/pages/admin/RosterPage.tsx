@@ -28,7 +28,7 @@ import { cn } from "@/lib/utils";
 import type { Tables } from "@/integrations/supabase/types";
 import { toAusDate, toAusFormatted } from "@/lib/dateUtils";
 import RosterDayEvents from "@/components/RosterDayEvents";
-import { buildExportFilename } from "@/lib/exportNaming";
+import { buildExportFilename, formatDepartmentScope } from "@/lib/exportNaming";
 import RosterVoiceCommand from "@/components/RosterVoiceCommand";
 import { getPublicHolidayName } from "@/lib/publicHolidays";
 import jsPDF from "jspdf";
