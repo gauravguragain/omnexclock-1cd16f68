@@ -17,6 +17,7 @@ import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import * as XLSX from "xlsx";
 import { format, startOfMonth, endOfMonth, endOfWeek, parseISO, eachWeekOfInterval } from "date-fns";
+import { buildExportFilename } from "@/lib/exportNaming";
 
 const REPORT_OPTIONS = [
   { id: "employees", label: "Employee Summary", description: "Active/inactive employees, departments, roles, pay rates", category: "People" },
