@@ -369,7 +369,7 @@ export default function RosterPage() {
       businessCode: business?.business_code,
       businessName: business?.name,
       reportType: "Roster",
-      scope: [effectiveDept],
+      scope: [formatDepartmentScope(effectiveDept)],
       dateFrom: weekStart,
       dateTo: addDays(weekStart, 6),
       ext: "pdf",
