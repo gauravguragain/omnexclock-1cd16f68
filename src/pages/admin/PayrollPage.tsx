@@ -19,6 +19,7 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { EmailCSVDialog } from "@/components/EmailCSVDialog";
 import { logAudit, getDeviceInfo } from "@/lib/auditLog";
+import { buildExportFilename } from "@/lib/exportNaming";
 
 const CHART_COLORS = [
   "hsl(45, 60%, 53%)", "hsl(142, 71%, 45%)", "hsl(217, 91%, 60%)",
