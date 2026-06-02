@@ -19,7 +19,7 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { EmailPDFDialog } from "@/components/EmailPDFDialog";
 import { logAudit, getDeviceInfo } from "@/lib/auditLog";
-import { buildExportFilename } from "@/lib/exportNaming";
+import { buildExportFilename, formatDepartmentScope } from "@/lib/exportNaming";
 import { buildPayrollPdf, payrollPdfToBase64 } from "@/lib/payrollPdf";
 
 
