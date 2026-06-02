@@ -25,6 +25,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { EmailPDFDialog } from "@/components/EmailPDFDialog";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { buildExportFilename } from "@/lib/exportNaming";
+import { getPublicHolidayName } from "@/lib/publicHolidays";
 
 interface TimesheetEntry {
   employee_id: string;
@@ -1034,10 +1035,18 @@ export default function TimesheetsPage() {
               return (
                 <div key={group.date}>
                   {/* Day header */}
-                  <div className="flex items-center justify-between px-3 py-2 bg-muted/40 border-y border-border/60 sticky top-0 z-10">
-                    <span className="text-xs font-semibold text-foreground">
+                  <div className={cn("flex items-center justify-between px-3 py-2 border-y border-border/60 sticky top-0 z-10", getPublicHolidayName(group.date) ? "bg-amber-500/15" : "bg-muted/40")}>
+                    <span className="text-xs font-semibold text-foreground flex items-center gap-1.5">
                       {format(new Date(group.date + "T00:00:00"), "EEEE")}
-                      <span className="font-normal text-muted-foreground ml-1.5">· {group.label}</span>
+                      <span className="font-normal text-muted-foreground">· {group.label}</span>
+                      {getPublicHolidayName(group.date) && (
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <span className="inline-flex items-center rounded-full bg-amber-500/30 text-amber-700 dark:text-amber-300 text-[9px] font-bold px-1.5 py-0.5 leading-none uppercase tracking-wider cursor-help">PH</span>
+                          </TooltipTrigger>
+                          <TooltipContent side="bottom" className="text-xs">{getPublicHolidayName(group.date)}</TooltipContent>
+                        </Tooltip>
+                      )}
                     </span>
                     <div className="flex items-center gap-2 text-xs text-muted-foreground">
                       <span>{dayApproved}/{group.entries.length} approved</span>
@@ -1133,12 +1142,20 @@ export default function TimesheetsPage() {
                   return (
                     <>
                       {/* Day group header row */}
-                      <TableRow key={`hdr-${group.date}`} className="bg-muted/40 hover:bg-muted/40">
+                      <TableRow key={`hdr-${group.date}`} className={cn("hover:bg-muted/40", getPublicHolidayName(group.date) ? "bg-amber-500/15 hover:bg-amber-500/15" : "bg-muted/40")}>
                         <TableCell colSpan={10} className="py-1.5 px-4">
                           <div className="flex items-center justify-between">
-                            <span className="text-xs font-semibold text-foreground">
+                            <span className="text-xs font-semibold text-foreground flex items-center gap-1.5">
                               {format(new Date(group.date + "T00:00:00"), "EEEE")}
-                              <span className="font-normal text-muted-foreground ml-1.5">· {group.label}</span>
+                              <span className="font-normal text-muted-foreground">· {group.label}</span>
+                              {getPublicHolidayName(group.date) && (
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <span className="inline-flex items-center rounded-full bg-amber-500/30 text-amber-700 dark:text-amber-300 text-[9px] font-bold px-1.5 py-0.5 leading-none uppercase tracking-wider cursor-help">PH</span>
+                                  </TooltipTrigger>
+                                  <TooltipContent side="bottom" className="text-xs">{getPublicHolidayName(group.date)}</TooltipContent>
+                                </Tooltip>
+                              )}
                             </span>
                             <div className="flex items-center gap-3 text-xs text-muted-foreground">
                               <span>{dayApproved}/{group.entries.length} approved</span>

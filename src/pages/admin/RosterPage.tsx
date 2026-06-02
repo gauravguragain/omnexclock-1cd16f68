@@ -30,6 +30,7 @@ import { toAusDate, toAusFormatted } from "@/lib/dateUtils";
 import RosterDayEvents from "@/components/RosterDayEvents";
 import { buildExportFilename } from "@/lib/exportNaming";
 import RosterVoiceCommand from "@/components/RosterVoiceCommand";
+import { getPublicHolidayName } from "@/lib/publicHolidays";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 
@@ -1163,12 +1164,21 @@ export default function RosterPage() {
                   <th className="text-left px-3 py-3 text-muted-foreground font-semibold text-xs uppercase tracking-wider w-[160px] min-w-[160px] sticky left-0 bg-card z-20 border-r border-border/60">Employee</th>
                   {weekDates.map((d, i) => {
                     const isToday = fmtDate(d) === fmtDate(new Date());
+                    const phName = getPublicHolidayName(fmtDate(d));
                     return (
-                      <th key={i} className={`text-center px-2 py-3 min-w-[120px] ${isToday ? "bg-primary/5" : ""}`}>
-                        <div className={`text-xs font-semibold uppercase tracking-wide ${isToday ? "text-primary" : "text-muted-foreground"}`}>{DAYS[i]}</div>
-                        <div className={`text-[11px] mt-0.5 ${isToday ? "text-primary font-medium" : "text-muted-foreground/60"}`}>
+                      <th key={i} className={`text-center px-2 py-3 min-w-[120px] ${phName ? "bg-amber-500/10" : isToday ? "bg-primary/5" : ""}`}>
+                        <div className={`text-xs font-semibold uppercase tracking-wide ${phName ? "text-amber-600 dark:text-amber-400" : isToday ? "text-primary" : "text-muted-foreground"}`}>{DAYS[i]}</div>
+                        <div className={`text-[11px] mt-0.5 ${phName ? "text-amber-600/80 dark:text-amber-400/80 font-medium" : isToday ? "text-primary font-medium" : "text-muted-foreground/60"}`}>
                           {toAusFormatted(d, { day: "numeric", month: "short" })}
                         </div>
+                        {phName && (
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <span className="mt-1 inline-flex items-center rounded-full bg-amber-500/20 text-amber-700 dark:text-amber-300 text-[9px] font-bold px-1.5 py-0.5 leading-none uppercase tracking-wider cursor-help">PH</span>
+                            </TooltipTrigger>
+                            <TooltipContent side="bottom" className="text-xs">{phName}</TooltipContent>
+                          </Tooltip>
+                        )}
                       </th>
                     );
                   })}
@@ -1214,8 +1224,9 @@ export default function RosterPage() {
                           if (r.start_date) return dayStr === r.start_date;
                           return false;
                         });
+                        const isPH = !!getPublicHolidayName(dayStr);
                         return (
-                          <td key={dayIdx} className={`px-1.5 py-1.5 align-top ${isToday ? "bg-primary/[0.03]" : ""}`}>
+                          <td key={dayIdx} className={`px-1.5 py-1.5 align-top ${isPH ? "bg-amber-500/[0.06]" : isToday ? "bg-primary/[0.03]" : ""}`}>
                             <div className="space-y-1.5 min-h-[52px]">
                               {dayRequests.map(req => (
                                 <div key={req.id} className={`w-full rounded-lg px-2 py-1.5 text-[10px] border ${req.request_type === "leave" ? "bg-destructive/10 text-destructive border-destructive/20" : "bg-warning/10 text-warning border-warning/20"}`}>
