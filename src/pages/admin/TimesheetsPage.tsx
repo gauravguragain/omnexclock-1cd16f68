@@ -25,6 +25,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { EmailPDFDialog } from "@/components/EmailPDFDialog";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { buildExportFilename } from "@/lib/exportNaming";
+import { getPublicHolidayName } from "@/lib/publicHolidays";
 
 interface TimesheetEntry {
   employee_id: string;
