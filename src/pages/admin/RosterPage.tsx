@@ -1224,8 +1224,9 @@ export default function RosterPage() {
                           if (r.start_date) return dayStr === r.start_date;
                           return false;
                         });
+                        const isPH = !!getPublicHolidayName(dayStr);
                         return (
-                          <td key={dayIdx} className={`px-1.5 py-1.5 align-top ${isToday ? "bg-primary/[0.03]" : ""}`}>
+                          <td key={dayIdx} className={`px-1.5 py-1.5 align-top ${isPH ? "bg-amber-500/[0.06]" : isToday ? "bg-primary/[0.03]" : ""}`}>
                             <div className="space-y-1.5 min-h-[52px]">
                               {dayRequests.map(req => (
                                 <div key={req.id} className={`w-full rounded-lg px-2 py-1.5 text-[10px] border ${req.request_type === "leave" ? "bg-destructive/10 text-destructive border-destructive/20" : "bg-warning/10 text-warning border-warning/20"}`}>
