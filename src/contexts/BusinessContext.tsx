@@ -248,7 +248,10 @@ export function BusinessProvider({ children }: { children: React.ReactNode }) {
       setBusinessState(null);
       applyThemeToDOM(defaultTheme, getCurrentMode());
     }
-  }, [user]);
+    // Re-fetch when the user's business role assignments change (e.g. right after
+    // an invitation is auto-accepted on first sign-in).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user, businessRoles.map(r => r.business_id).filter(Boolean).sort().join(",")]);
 
   return (
     <BusinessContext.Provider value={{ business, businesses, loading, setBusiness, refreshBusiness, applyTheme, resetTheme }}>
