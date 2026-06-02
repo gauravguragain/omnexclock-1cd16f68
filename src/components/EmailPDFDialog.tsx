@@ -11,14 +11,14 @@ import { logAudit, getDeviceInfo } from "@/lib/auditLog";
 interface EmailPDFDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  /** Function that generates the PDF and returns base64 string */
-  generatePdfBase64: () => Promise<string>;
+  pdfBase64: string;
   pdfFilename: string;
   subject: string;
   businessName?: string;
+  skipAudit?: boolean;
 }
 
-export function EmailPDFDialog({ open, onOpenChange, generatePdfBase64, pdfFilename, subject, businessName }: EmailPDFDialogProps) {
+export function EmailPDFDialog({ open, onOpenChange, pdfBase64, pdfFilename, subject, businessName, skipAudit }: EmailPDFDialogProps) {
   const [email, setEmail] = useState("");
   const [sending, setSending] = useState(false);
 
@@ -34,9 +34,6 @@ export function EmailPDFDialog({ open, onOpenChange, generatePdfBase64, pdfFilen
     }
     setSending(true);
     try {
-      toast.info("Generating PDF…");
-      const pdfBase64 = await generatePdfBase64();
-
       const { data, error } = await supabase.functions.invoke("send-email", {
         body: {
           type: "report_pdf",
@@ -44,18 +41,20 @@ export function EmailPDFDialog({ open, onOpenChange, generatePdfBase64, pdfFilen
           subject,
           pdfBase64,
           pdfFilename,
-          businessName: businessName || "OmnexClock",
+          businessName,
         },
       });
       if (error) throw error;
       if (data?.success === false) throw new Error(data.error || "Failed to send email");
       toast.success(`Report sent to ${email.trim()}`);
-      logAudit("pdf_email_sent", {
-        recipient_email: email.trim(),
-        subject,
-        filename: pdfFilename,
-        device: getDeviceInfo(),
-      });
+      if (!skipAudit) {
+        logAudit("pdf_email_sent", {
+          recipient_email: email.trim(),
+          subject,
+          filename: pdfFilename,
+          device: getDeviceInfo(),
+        });
+      }
       setEmail("");
       onOpenChange(false);
     } catch (err: any) {
@@ -71,7 +70,7 @@ export function EmailPDFDialog({ open, onOpenChange, generatePdfBase64, pdfFilen
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Mail className="h-5 w-5 text-primary" />
-            Email Report
+            Email PDF Report
           </DialogTitle>
         </DialogHeader>
         <div className="space-y-4">
@@ -91,14 +90,14 @@ export function EmailPDFDialog({ open, onOpenChange, generatePdfBase64, pdfFilen
           </div>
           <div className="space-y-1">
             <Label className="text-xs text-muted-foreground">Attachment</Label>
-            <p className="text-sm text-foreground">📎 {pdfFilename}</p>
+            <p className="text-sm text-foreground">{pdfFilename}</p>
           </div>
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
           <Button onClick={handleSend} disabled={sending}>
             <Mail className="mr-1.5 h-4 w-4" />
-            {sending ? "Sending..." : "Send PDF"}
+            {sending ? "Sending..." : "Send Email"}
           </Button>
         </DialogFooter>
       </DialogContent>
