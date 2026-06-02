@@ -327,7 +327,7 @@ export default function PayrollPage() {
   const payrollTabLabel = activeTab === "employee" ? "Employee-Payroll" : activeTab === "admin" ? "Admin-Payroll" : "Margin-Analysis";
   const selectedEmpName = selectedEmployee !== "all" ? allEmployees.find(e => e.id === selectedEmployee)?.name : null;
   const exportScope = [
-    selectedDepartment !== "all" ? selectedDepartment : null,
+    formatDepartmentScope(selectedDepartment),
     selectedEmpName,
     search.trim() ? `Search-${search.trim()}` : null,
   ];
