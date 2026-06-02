@@ -24,7 +24,7 @@ import { toAusDate, toAusDisplayDate, toAusTime24, toAusTime12, buildAusTimestam
 import { useAuth } from "@/contexts/AuthContext";
 import { EmailPDFDialog } from "@/components/EmailPDFDialog";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { buildExportFilename } from "@/lib/exportNaming";
+import { buildExportFilename, formatDepartmentScope } from "@/lib/exportNaming";
 import { getPublicHolidayName } from "@/lib/publicHolidays";
 
 interface TimesheetEntry {
