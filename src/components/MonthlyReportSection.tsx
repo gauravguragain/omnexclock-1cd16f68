@@ -826,8 +826,8 @@ export default function MonthlyReportSection() {
           { label: "Admin Cost (incl GST)", value: `$${totalAdminPayIncl.toFixed(2)}`, color: [220, 38, 38] },
           { label: "Admin Cost (ex GST)", value: `$${totalAdminPay.toFixed(2)}`, color: [180, 83, 9] },
           { label: "GST Component", value: `$${gstAmount.toFixed(2)}`, color: [41, 98, 255] },
-          { label: "Avg $/Hr (ex GST)", value: `$${avgRate.toFixed(2)}`, color: [124, 58, 237] },
         ]);
+
 
         addSubHeader("Admin Pay Entries");
         addTable(

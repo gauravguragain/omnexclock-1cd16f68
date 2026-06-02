@@ -12,14 +12,16 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Download, DollarSign, Clock as ClockIcon, Users, Coffee, Search, ChevronLeft, ChevronRight, ArrowUpDown, CalendarIcon, CheckCircle2, Mail, TrendingUp } from "lucide-react";
+import { Download, DollarSign, Clock as ClockIcon, Users, Coffee, Search, ChevronLeft, ChevronRight, ArrowUpDown, CalendarIcon, CheckCircle2, Mail, TrendingUp, FileText } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from "recharts";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { EmailCSVDialog } from "@/components/EmailCSVDialog";
+import { EmailPDFDialog } from "@/components/EmailPDFDialog";
 import { logAudit, getDeviceInfo } from "@/lib/auditLog";
 import { buildExportFilename } from "@/lib/exportNaming";
+import { buildPayrollPdf, payrollPdfToBase64 } from "@/lib/payrollPdf";
+
 
 const CHART_COLORS = [
   "hsl(45, 60%, 53%)", "hsl(142, 71%, 45%)", "hsl(217, 91%, 60%)",
@@ -324,20 +326,45 @@ export default function PayrollPage() {
 
   const payrollTabLabel = activeTab === "employee" ? "Employee-Payroll" : activeTab === "admin" ? "Admin-Payroll" : "Margin-Analysis";
   const selectedEmpName = selectedEmployee !== "all" ? allEmployees.find(e => e.id === selectedEmployee)?.name : null;
+  const exportScope = [
+    selectedDepartment !== "all" ? selectedDepartment : null,
+    selectedEmpName,
+    search.trim() ? `Search-${search.trim()}` : null,
+  ];
   const payrollCsvFilename = buildExportFilename({
     businessCode: business?.business_code,
     businessName: business?.name,
     reportType: payrollTabLabel,
-    scope: [
-      selectedDepartment !== "all" ? selectedDepartment : null,
-      selectedEmpName,
-      search.trim() ? `Search-${search.trim()}` : null,
-    ],
+    scope: exportScope,
     dateFrom,
     dateTo,
     ext: "csv",
   });
-  const payrollCsvSubject = `${activeTab === "employee" ? "Employee" : activeTab === "admin" ? "Admin" : "Margin"} Payroll Report – ${format(dateFrom, "dd MMM")} to ${format(dateTo, "dd MMM yyyy")}`;
+  const payrollPdfFilename = buildExportFilename({
+    businessCode: business?.business_code,
+    businessName: business?.name,
+    reportType: payrollTabLabel,
+    scope: exportScope,
+    dateFrom,
+    dateTo,
+    ext: "pdf",
+  });
+  const payrollSubject = `${activeTab === "employee" ? "Employee" : activeTab === "admin" ? "Admin" : "Margin"} Payroll Report – ${format(dateFrom, "dd MMM")} to ${format(dateTo, "dd MMM yyyy")}`;
+
+  const buildPdfDoc = () =>
+    buildPayrollPdf({
+      tab: activeTab,
+      entries: filtered,
+      businessName: business?.name || "Business",
+      businessCode: business?.business_code,
+      dateFrom,
+      dateTo,
+      filters: {
+        department: selectedDepartment !== "all" ? selectedDepartment : null,
+        employee: selectedEmpName,
+        search: search.trim() || null,
+      },
+    });
 
   const exportCSV = () => {
     const csv = buildPayrollCSV();
@@ -356,6 +383,20 @@ export default function PayrollPage() {
       });
     }
   };
+
+  const exportPDF = () => {
+    const doc = buildPdfDoc();
+    doc.save(payrollPdfFilename);
+    if (activeTab !== "margin") {
+      logAudit("pdf_download", {
+        source: "payroll",
+        tab: activeTab,
+        filename: payrollPdfFilename,
+        device: getDeviceInfo(),
+      });
+    }
+  };
+
 
   const totalEmployeePay = filtered.reduce((sum, e) => sum + e.employee_pay, 0);
   const totalAdminPay = filtered.reduce((sum, e) => sum + e.admin_pay, 0);
@@ -856,12 +897,16 @@ export default function PayrollPage() {
           <DateRangeSelector dateFrom={dateFrom} dateTo={dateTo} onChangeFrom={setDateFrom} onChangeTo={setDateTo} />
           <div className="flex gap-1.5 shrink-0">
             <Button variant="outline" size="sm" onClick={exportCSV} className="h-8 text-xs gap-1.5">
-              <Download className="h-3.5 w-3.5" /> Export
+              <Download className="h-3.5 w-3.5" /> CSV
+            </Button>
+            <Button variant="outline" size="sm" onClick={exportPDF} className="h-8 text-xs gap-1.5">
+              <FileText className="h-3.5 w-3.5" /> PDF
             </Button>
             <Button variant="outline" size="sm" onClick={() => setEmailDialogOpen(true)} className="h-8 text-xs gap-1.5">
               <Mail className="h-3.5 w-3.5" /> Email
             </Button>
           </div>
+
         </div>
       </div>
 
@@ -944,14 +989,16 @@ export default function PayrollPage() {
         )}
       </Tabs>
 
-      <EmailCSVDialog
+      <EmailPDFDialog
         open={emailDialogOpen}
         onOpenChange={setEmailDialogOpen}
-        csvData={buildPayrollCSV()}
-        csvFilename={payrollCsvFilename}
-        subject={payrollCsvSubject}
+        generatePdfBase64={async () => payrollPdfToBase64(buildPdfDoc())}
+        pdfFilename={payrollPdfFilename}
+        subject={payrollSubject}
+        businessName={business?.name}
         skipAudit={activeTab === "margin"}
       />
     </div>
+
   );
 }
