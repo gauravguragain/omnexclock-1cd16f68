@@ -24,7 +24,7 @@ import { toAusDate, toAusDisplayDate, toAusTime24, toAusTime12, buildAusTimestam
 import { useAuth } from "@/contexts/AuthContext";
 import { EmailPDFDialog } from "@/components/EmailPDFDialog";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { buildExportFilename } from "@/lib/exportNaming";
+import { buildExportFilename, formatDepartmentScope } from "@/lib/exportNaming";
 import { getPublicHolidayName } from "@/lib/publicHolidays";
 
 interface TimesheetEntry {
@@ -820,7 +820,7 @@ export default function TimesheetsPage() {
       businessCode: business?.business_code,
       businessName: business?.name,
       reportType: "Timesheets",
-      scope: [searchQuery.trim() ? `Search-${searchQuery.trim()}` : null],
+      scope: [formatDepartmentScope(selectedDepartment), searchQuery.trim() ? `Search-${searchQuery.trim()}` : null],
       dateFrom,
       dateTo,
       ext: "xlsx",
@@ -848,7 +848,7 @@ export default function TimesheetsPage() {
     businessCode: business?.business_code,
     businessName: business?.name,
     reportType: "Timesheets",
-    scope: [searchQuery.trim() ? `Search-${searchQuery.trim()}` : null],
+    scope: [formatDepartmentScope(selectedDepartment), searchQuery.trim() ? `Search-${searchQuery.trim()}` : null],
     dateFrom,
     dateTo,
     ext: "pdf",

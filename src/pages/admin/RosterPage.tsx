@@ -28,7 +28,7 @@ import { cn } from "@/lib/utils";
 import type { Tables } from "@/integrations/supabase/types";
 import { toAusDate, toAusFormatted } from "@/lib/dateUtils";
 import RosterDayEvents from "@/components/RosterDayEvents";
-import { buildExportFilename } from "@/lib/exportNaming";
+import { buildExportFilename, formatDepartmentScope } from "@/lib/exportNaming";
 import RosterVoiceCommand from "@/components/RosterVoiceCommand";
 import { getPublicHolidayName } from "@/lib/publicHolidays";
 import jsPDF from "jspdf";
@@ -369,7 +369,7 @@ export default function RosterPage() {
       businessCode: business?.business_code,
       businessName: business?.name,
       reportType: "Roster",
-      scope: [effectiveDept],
+      scope: [formatDepartmentScope(effectiveDept)],
       dateFrom: weekStart,
       dateTo: addDays(weekStart, 6),
       ext: "pdf",

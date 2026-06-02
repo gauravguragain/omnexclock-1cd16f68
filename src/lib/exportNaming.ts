@@ -27,6 +27,24 @@ const sanitize = (raw: string): string =>
 const toDate = (d: Date | string): Date => (d instanceof Date ? d : new Date(d));
 const formatFilenameDate = (d: Date | string): string => format(toDate(d), "dd.MM.yyyy");
 
+/**
+ * Normalises a department filter value into a filename-safe token.
+ * Use across every export so "All Departments" and specific picks
+ * (FOH, BOH, Kitchen, etc.) are always visible in the file name.
+ *
+ *   formatDepartmentScope(null)            -> "All-Depts"
+ *   formatDepartmentScope("all")           -> "All-Depts"
+ *   formatDepartmentScope("FOH")           -> "FOH"
+ *   formatDepartmentScope("Back of House") -> "Back-of-House"
+ */
+export function formatDepartmentScope(
+  dept: string | null | undefined,
+): string {
+  const raw = (dept || "").trim();
+  if (!raw || raw.toLowerCase() === "all") return "All-Depts";
+  return sanitize(raw);
+}
+
 export interface ExportFilenameOptions {
   /** Business short code (preferred). Falls back to sanitized business name. */
   businessCode?: string | null;
