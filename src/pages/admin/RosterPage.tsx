@@ -30,6 +30,7 @@ import { toAusDate, toAusFormatted } from "@/lib/dateUtils";
 import RosterDayEvents from "@/components/RosterDayEvents";
 import { buildExportFilename } from "@/lib/exportNaming";
 import RosterVoiceCommand from "@/components/RosterVoiceCommand";
+import { getPublicHolidayName } from "@/lib/publicHolidays";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 
