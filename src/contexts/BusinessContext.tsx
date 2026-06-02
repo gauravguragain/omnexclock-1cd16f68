@@ -139,7 +139,7 @@ function applyThemeToDOM(theme: BusinessTheme, isDark: boolean) {
 }
 
 export function BusinessProvider({ children }: { children: React.ReactNode }) {
-  const { user } = useAuth();
+  const { user, businessRoles } = useAuth();
   const [business, setBusinessState] = useState<Business | null>(null);
   const [businesses, setBusinesses] = useState<Business[]>([]);
   const [loading, setLoading] = useState(false);
