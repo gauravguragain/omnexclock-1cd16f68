@@ -1290,9 +1290,18 @@ export default function MonthlyReportSection() {
       }
 
       // Save
-      const fileName = isWeekly
-        ? `${business.name.replace(/[^a-zA-Z0-9]/g, "_")}_Weekly_Report_${format(dateStart, "dd_MMM")}_${format(dateEnd, "dd_MMM_yyyy")}.pdf`
-        : `${business.name.replace(/[^a-zA-Z0-9]/g, "_")}_Monthly_Report_${format(monthStart, "MMM_yyyy")}.pdf`;
+      const totalReportsPdf = REPORT_OPTIONS.filter(r => r.id !== "margin_analysis").length;
+      const scopeTokenPdf = selectedReports.size === totalReportsPdf ? "All" : `Custom-${selectedReports.size}sec`;
+      const fileName = buildExportFilename({
+        businessCode: (business as any)?.business_code,
+        businessName: business.name,
+        reportType: isWeekly ? "Weekly-Report" : "Monthly-Report",
+        scope: [scopeTokenPdf],
+        dateFrom: isWeekly ? dateStart : undefined,
+        dateTo: isWeekly ? dateEnd : undefined,
+        periodLabel: isWeekly ? undefined : format(monthStart, "MMM-yyyy"),
+        ext: "pdf",
+      });
       doc.save(fileName);
 
       toast({ title: "Report Generated", description: `${fileName} has been downloaded.` });
