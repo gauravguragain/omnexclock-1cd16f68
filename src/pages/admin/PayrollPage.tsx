@@ -897,12 +897,16 @@ export default function PayrollPage() {
           <DateRangeSelector dateFrom={dateFrom} dateTo={dateTo} onChangeFrom={setDateFrom} onChangeTo={setDateTo} />
           <div className="flex gap-1.5 shrink-0">
             <Button variant="outline" size="sm" onClick={exportCSV} className="h-8 text-xs gap-1.5">
-              <Download className="h-3.5 w-3.5" /> Export
+              <Download className="h-3.5 w-3.5" /> CSV
+            </Button>
+            <Button variant="outline" size="sm" onClick={exportPDF} className="h-8 text-xs gap-1.5">
+              <FileText className="h-3.5 w-3.5" /> PDF
             </Button>
             <Button variant="outline" size="sm" onClick={() => setEmailDialogOpen(true)} className="h-8 text-xs gap-1.5">
               <Mail className="h-3.5 w-3.5" /> Email
             </Button>
           </div>
+
         </div>
       </div>
 
