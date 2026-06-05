@@ -299,32 +299,49 @@ export default function KioskPage() {
     await runAction(async () => {
       setLoading(true);
       try {
-        const { data, error } = await supabase.functions.invoke("kiosk-clock", {
-          body: {
+        // Use fetch directly so we can read the error body on non-2xx responses
+        // (supabase.functions.invoke swallows the body and returns a generic message).
+        const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/kiosk-clock`;
+        const anonKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+        const res = await fetch(url, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            apikey: anonKey,
+            Authorization: `Bearer ${anonKey}`,
+          },
+          body: JSON.stringify({
             employee_code: codeRef.current,
             event_type: actionRef.current,
             photo_base64: photo,
             business_code: urlBusinessCode?.toUpperCase() || null,
             device_info: { userAgent: navigator.userAgent, screen: `${screen.width}x${screen.height}` },
             ...(note ? { notes: note } : {}),
-          },
+          }),
         });
 
-        if (error || data?.error) {
-          toast({ title: "Error", description: data?.error || error?.message || "Failed to clock", variant: "destructive" });
+        let data: any = null;
+        try { data = await res.json(); } catch { /* ignore parse error */ }
+
+        if (!res.ok || data?.error) {
+          toast({
+            title: "Error",
+            description: data?.error || `Failed to clock (status ${res.status})`,
+            variant: "destructive",
+          });
           resetKiosk();
         } else {
           setEmployeeName(data.employee_name);
           setStep("confirmation");
           setTimeout(resetKiosk, 4000);
         }
-      } catch {
-        toast({ title: "Error", description: "Network error", variant: "destructive" });
+      } catch (e: any) {
+        toast({ title: "Error", description: e?.message || "Network error", variant: "destructive" });
         resetKiosk();
       }
       setLoading(false);
     });
-  }, [toast, runAction]);
+  }, [toast, runAction, urlBusinessCode]);
 
   const captureAndSubmit = useCallback((note?: string) => {
     if (!videoRef.current || !canvasRef.current) {
