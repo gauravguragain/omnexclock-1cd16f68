@@ -1788,6 +1788,7 @@ export type Database = {
               break_start: string
               clock_in: string
               clock_out: string
+              crossed_midnight: boolean
               net_hours: number
               total_hours: number
               work_date: string
@@ -1801,6 +1802,7 @@ export type Database = {
               break_start: string
               clock_in: string
               clock_out: string
+              crossed_midnight: boolean
               net_hours: number
               total_hours: number
               work_date: string
