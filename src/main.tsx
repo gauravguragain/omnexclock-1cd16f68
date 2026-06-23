@@ -2,7 +2,7 @@ import { createRoot } from "react-dom/client";
 import App from "./App.tsx";
 import "./index.css";
 
-const GLOBAL_SYNC_VERSION = "2026-03-02-unclamped-weeks-v1";
+const GLOBAL_SYNC_VERSION = "2026-06-23-force-refresh-v1";
 const GLOBAL_SYNC_KEY = "omnex_global_sync_version";
 
 const runOneTimeGlobalSyncRefresh = async () => {
