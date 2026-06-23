@@ -1118,6 +1118,14 @@ export default function TimesheetsPage() {
                               </Button>
                             )}
                             <span className="font-medium text-foreground">{e.employee_name}</span>
+                            {e.crossed_midnight && (
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <span className="inline-flex items-center rounded-full bg-indigo-500/20 text-indigo-700 dark:text-indigo-300 text-[9px] font-bold px-1.5 py-0.5 leading-none uppercase tracking-wider cursor-help">+1d</span>
+                                </TooltipTrigger>
+                                <TooltipContent side="top" className="text-xs">Shift crossed midnight — clocked out the next day</TooltipContent>
+                              </Tooltip>
+                            )}
                           </div>
                           <div className="flex gap-1">
                             <Button variant="ghost" size="sm" onClick={() => openHistory(e)} className="h-7 w-7 p-0 text-muted-foreground hover:text-primary">
