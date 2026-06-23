@@ -227,88 +227,134 @@ export default function TimesheetsPage() {
 
     if (!data) return;
 
-    const dailyMap = new Map<string, any>();
-
+    // Group events by employee, then walk chronologically to build sessions
+    // (clock_in -> clock_out spans), so overnight shifts stay on ONE row
+    // pinned to the clock-in day.
+    const byEmp = new Map<string, any[]>();
     for (const ev of data) {
-      const evDate = new Date(ev.timestamp);
-      const date = toAusDisplayDate(evDate);
-      const localDate = toAusDate(evDate);
-      const key = `${ev.employee_id}-${localDate}`;
-      const empName = (ev.employees as any)?.name || "Unknown";
-      const empDept = (ev.employees as any)?.department || null;
-
-      if (!dailyMap.has(key)) {
-        dailyMap.set(key, {
-          employee_id: ev.employee_id,
-          employee_name: empName,
-          employee_department: empDept,
-          date,
-          raw_date: localDate,
-          clock_in: null,
-          clock_out: null,
-          first_break_start: null,
-          last_break_end: null,
-          break_start: null,
-          break_minutes: 0,
-          raw_clock_in: null,
-          raw_clock_out: null,
-          raw_break_start: null,
-          raw_break_end: null,
-          event_ids: [],
-          clock_out_notes: null,
-        });
-      }
-
-      const entry = dailyMap.get(key)!;
-      entry.event_ids.push(ev.id);
-      const time = new Date(ev.timestamp);
-
-      switch (ev.event_type) {
-        case "clock_in":
-          if (!entry.clock_in || time < new Date(entry.clock_in)) {
-            entry.clock_in = ev.timestamp;
-            entry.raw_clock_in = ev.timestamp;
-          }
-          break;
-        case "clock_out":
-          if (!entry.clock_out || time > new Date(entry.clock_out)) {
-            entry.clock_out = ev.timestamp;
-            entry.raw_clock_out = ev.timestamp;
-          }
-          if ((ev as any).notes) {
-            entry.clock_out_notes = (ev as any).notes;
-          }
-          break;
-        case "break_start":
-          entry.break_start = ev.timestamp;
-          entry.raw_break_start = ev.timestamp;
-          if (!entry.first_break_start) entry.first_break_start = ev.timestamp;
-          break;
-        case "break_end":
-          if (entry.break_start) {
-            entry.break_minutes += (time.getTime() - new Date(entry.break_start).getTime()) / 60000;
-            entry.last_break_end = ev.timestamp;
-            entry.raw_break_end = ev.timestamp;
-            entry.break_start = null;
-          }
-          break;
-      }
+      if (!byEmp.has(ev.employee_id)) byEmp.set(ev.employee_id, []);
+      byEmp.get(ev.employee_id)!.push(ev);
     }
 
-    const result: TimesheetEntry[] = Array.from(dailyMap.values()).map((e) => {
+    type SessionAcc = {
+      employee_id: string;
+      employee_name: string;
+      employee_department: string | null;
+      raw_date: string;
+      clock_in: string | null;
+      clock_out: string | null;
+      first_break_start: string | null;
+      last_break_end: string | null;
+      current_break_start: string | null;
+      break_minutes: number;
+      event_ids: string[];
+      clock_out_notes: string | null;
+    };
+
+    const sessions: SessionAcc[] = [];
+
+    for (const [empId, list] of byEmp) {
+      list.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+      const empName = (list[0]?.employees as any)?.name || "Unknown";
+      const empDept = (list[0]?.employees as any)?.department || null;
+
+      const newSess = (date: string): SessionAcc => ({
+        employee_id: empId,
+        employee_name: empName,
+        employee_department: empDept,
+        raw_date: date,
+        clock_in: null,
+        clock_out: null,
+        first_break_start: null,
+        last_break_end: null,
+        current_break_start: null,
+        break_minutes: 0,
+        event_ids: [],
+        clock_out_notes: null,
+      });
+
+      let open: SessionAcc | null = null;
+      const orphans = new Map<string, SessionAcc>();
+      const getOrphan = (date: string) => {
+        if (!orphans.has(date)) orphans.set(date, newSess(date));
+        return orphans.get(date)!;
+      };
+
+      for (const ev of list) {
+        const time = new Date(ev.timestamp);
+        const evDate = toAusDate(time);
+
+        switch (ev.event_type) {
+          case "clock_in":
+            if (open) sessions.push(open);
+            open = newSess(evDate);
+            open.clock_in = ev.timestamp;
+            open.event_ids.push(ev.id);
+            break;
+          case "clock_out":
+            if (open) {
+              open.clock_out = ev.timestamp;
+              open.event_ids.push(ev.id);
+              if ((ev as any).notes) open.clock_out_notes = (ev as any).notes;
+              if (open.current_break_start) {
+                open.break_minutes +=
+                  (time.getTime() - new Date(open.current_break_start).getTime()) / 60000;
+                open.last_break_end = ev.timestamp;
+                open.current_break_start = null;
+              }
+              sessions.push(open);
+              open = null;
+            } else {
+              const o = getOrphan(evDate);
+              o.event_ids.push(ev.id);
+              if (!o.clock_out || time > new Date(o.clock_out)) o.clock_out = ev.timestamp;
+              if ((ev as any).notes) o.clock_out_notes = (ev as any).notes;
+            }
+            break;
+          case "break_start": {
+            const bucket = open ?? getOrphan(evDate);
+            bucket.event_ids.push(ev.id);
+            bucket.current_break_start = ev.timestamp;
+            if (!bucket.first_break_start) bucket.first_break_start = ev.timestamp;
+            break;
+          }
+          case "break_end": {
+            const bucket = open ?? getOrphan(evDate);
+            bucket.event_ids.push(ev.id);
+            if (bucket.current_break_start) {
+              bucket.break_minutes +=
+                (time.getTime() - new Date(bucket.current_break_start).getTime()) / 60000;
+              bucket.last_break_end = ev.timestamp;
+              bucket.current_break_start = null;
+            } else {
+              bucket.last_break_end = ev.timestamp;
+            }
+            break;
+          }
+        }
+      }
+
+      if (open) sessions.push(open);
+      for (const o of orphans.values()) sessions.push(o);
+    }
+
+    const result: TimesheetEntry[] = sessions.map((e) => {
       let totalHours = e.clock_in && e.clock_out
         ? (new Date(e.clock_out).getTime() - new Date(e.clock_in).getTime()) / 3600000
         : 0;
-      // Handle overnight shifts: if result is negative, the shift crossed midnight
       if (totalHours < 0) totalHours += 24;
       const netHours = Math.max(0, totalHours - e.break_minutes / 60);
       const approvalKey = `${e.employee_id}-${e.raw_date}`;
+      const crossed =
+        !!(e.clock_in && e.clock_out) &&
+        toAusDate(new Date(e.clock_in)) !== toAusDate(new Date(e.clock_out));
+      const displayDate = toAusDisplayDate(new Date(e.clock_in ?? e.clock_out ?? `${e.raw_date}T00:00:00`));
 
       return {
         employee_id: e.employee_id,
         employee_name: e.employee_name,
         employee_department: e.employee_department,
-        date: e.date,
+        date: displayDate,
         raw_date: e.raw_date,
         clock_in: e.clock_in ? toAusTime12(new Date(e.clock_in)) : null,
         clock_out: e.clock_out ? toAusTime12(new Date(e.clock_out)) : null,
@@ -317,13 +363,14 @@ export default function TimesheetsPage() {
         break_minutes: Math.round(e.break_minutes),
         total_hours: Math.round(totalHours * 100) / 100,
         net_hours: Math.round(netHours * 100) / 100,
-        raw_clock_in: e.raw_clock_in,
-        raw_clock_out: e.raw_clock_out,
-        raw_break_start: e.raw_break_start,
-        raw_break_end: e.raw_break_end,
+        raw_clock_in: e.clock_in,
+        raw_clock_out: e.clock_out,
+        raw_break_start: e.first_break_start,
+        raw_break_end: e.last_break_end,
         event_ids: e.event_ids,
         approved: appMap.get(approvalKey) || false,
         clock_out_notes: e.clock_out_notes || null,
+        crossed_midnight: crossed,
       };
     });
 
