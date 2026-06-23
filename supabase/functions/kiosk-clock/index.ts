@@ -126,21 +126,20 @@ serve(async (req) => {
       });
     }
 
-    // Status validation — use Australian time (AEST/AEDT = UTC+11) for "today"
-    const now = new Date();
-    const ausOffsetMs = 11 * 60 * 60 * 1000; // UTC+11
-    const ausNow = new Date(now.getTime() + ausOffsetMs);
-    const ausToday = new Date(Date.UTC(ausNow.getUTCFullYear(), ausNow.getUTCMonth(), ausNow.getUTCDate()));
-    const ausTodayUtc = new Date(ausToday.getTime() - ausOffsetMs); // midnight AEDT in UTC
+    // Status validation — look back 36h so overnight shifts persist across midnight.
+    // Older sessions auto-reset to "clocked_out" so stale clock-ins don't block new shifts.
+    const lookbackMs = 36 * 60 * 60 * 1000;
+    const lookbackIso = new Date(Date.now() - lookbackMs).toISOString();
 
-    const { data: todayEvents } = await supabase
+    const { data: recentEvents } = await supabase
       .from("clock_events")
       .select("event_type, created_at")
       .eq("employee_id", employee.id)
-      .gte("created_at", ausTodayUtc.toISOString())
-      .order("created_at", { ascending: false });
+      .gte("created_at", lookbackIso)
+      .order("created_at", { ascending: false })
+      .limit(1);
 
-    const lastEventType = todayEvents && todayEvents.length > 0 ? todayEvents[0].event_type : null;
+    const lastEventType = recentEvents && recentEvents.length > 0 ? recentEvents[0].event_type : null;
 
     let currentStatus: string;
     switch (lastEventType) {
