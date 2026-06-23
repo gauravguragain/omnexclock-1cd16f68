@@ -47,6 +47,7 @@ interface TimesheetEntry {
   event_ids: string[];
   approved: boolean;
   clock_out_notes: string | null;
+  crossed_midnight: boolean;
 }
 
 interface EditForm {
