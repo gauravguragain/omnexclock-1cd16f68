@@ -197,7 +197,9 @@ export default function TimesheetsPage() {
     const from = format(dateFrom, "yyyy-MM-dd");
     const to = format(dateTo, "yyyy-MM-dd");
     const fromISO = ausStartOfDay(from);
-    const toISO = ausEndOfDay(to);
+    // Extend upper bound by 12h so overnight shifts (clock_out after midnight on the day AFTER `to`)
+    // are included and paired with their clock_in on `to`. Sessions are still pinned to clock-in day.
+    const toISO = new Date(new Date(ausEndOfDay(to)).getTime() + 12 * 60 * 60 * 1000).toISOString();
 
     let query = supabase
       .from("clock_events")
@@ -338,7 +340,11 @@ export default function TimesheetsPage() {
       for (const o of orphans.values()) sessions.push(o);
     }
 
-    const result: TimesheetEntry[] = sessions.map((e) => {
+    const rangeFrom = format(dateFrom, "yyyy-MM-dd");
+    const rangeTo = format(dateTo, "yyyy-MM-dd");
+    const result: TimesheetEntry[] = sessions
+      .filter((e) => e.raw_date >= rangeFrom && e.raw_date <= rangeTo)
+      .map((e) => {
       let totalHours = e.clock_in && e.clock_out
         ? (new Date(e.clock_out).getTime() - new Date(e.clock_in).getTime()) / 3600000
         : 0;
@@ -489,7 +495,7 @@ export default function TimesheetsPage() {
         const nextDate = (() => {
           const [y, m, d] = editForm.date.split("-").map(Number);
           const nd = new Date(y, m - 1, d + 1);
-          return nd.toISOString().slice(0, 10);
+          return toAusDate(nd);
         })();
         const isOvernight = (time: string) => editForm.clock_in && time < editForm.clock_in;
         const dateFor = (time: string) => isOvernight(time) ? nextDate : editForm.date;
@@ -540,7 +546,7 @@ export default function TimesheetsPage() {
         const nextDate = (() => {
           const [y, m, d] = editForm.date.split("-").map(Number);
           const nd = new Date(y, m - 1, d + 1);
-          return nd.toISOString().slice(0, 10);
+          return toAusDate(nd);
         })();
         const isOvernight = (time: string) => editForm.clock_in && time < editForm.clock_in;
         const dateFor = (time: string) => isOvernight(time) ? nextDate : editForm.date;
