@@ -197,7 +197,9 @@ export default function TimesheetsPage() {
     const from = format(dateFrom, "yyyy-MM-dd");
     const to = format(dateTo, "yyyy-MM-dd");
     const fromISO = ausStartOfDay(from);
-    const toISO = ausEndOfDay(to);
+    // Extend upper bound by 12h so overnight shifts (clock_out after midnight on the day AFTER `to`)
+    // are included and paired with their clock_in on `to`. Sessions are still pinned to clock-in day.
+    const toISO = new Date(new Date(ausEndOfDay(to)).getTime() + 12 * 60 * 60 * 1000).toISOString();
 
     let query = supabase
       .from("clock_events")
