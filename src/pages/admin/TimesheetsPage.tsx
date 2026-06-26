@@ -540,7 +540,7 @@ export default function TimesheetsPage() {
         const nextDate = (() => {
           const [y, m, d] = editForm.date.split("-").map(Number);
           const nd = new Date(y, m - 1, d + 1);
-          return nd.toISOString().slice(0, 10);
+          return toAusDate(nd);
         })();
         const isOvernight = (time: string) => editForm.clock_in && time < editForm.clock_in;
         const dateFor = (time: string) => isOvernight(time) ? nextDate : editForm.date;
