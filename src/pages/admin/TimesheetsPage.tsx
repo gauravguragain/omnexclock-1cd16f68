@@ -340,7 +340,11 @@ export default function TimesheetsPage() {
       for (const o of orphans.values()) sessions.push(o);
     }
 
-    const result: TimesheetEntry[] = sessions.map((e) => {
+    const rangeFrom = format(dateFrom, "yyyy-MM-dd");
+    const rangeTo = format(dateTo, "yyyy-MM-dd");
+    const result: TimesheetEntry[] = sessions
+      .filter((e) => e.raw_date >= rangeFrom && e.raw_date <= rangeTo)
+      .map((e) => {
       let totalHours = e.clock_in && e.clock_out
         ? (new Date(e.clock_out).getTime() - new Date(e.clock_in).getTime()) / 3600000
         : 0;
