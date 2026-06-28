@@ -196,7 +196,12 @@ export default function TimesheetsPage() {
   const fetchTimesheets = async () => {
     const from = format(dateFrom, "yyyy-MM-dd");
     const to = format(dateTo, "yyyy-MM-dd");
-    const fromISO = ausStartOfDay(from);
+    // Pull a 36h lead-in before the selected range so post-midnight clock-outs
+    // can still pair with their previous-day clock-in. The final filter below
+    // only keeps sessions whose clock-in day is inside the selected range, so a
+    // Sunday 5pm → Monday 1am shift stays on Sunday and never appears as a
+    // standalone Monday timesheet.
+    const fromISO = new Date(new Date(ausStartOfDay(from)).getTime() - 36 * 60 * 60 * 1000).toISOString();
     // Extend upper bound by 12h so overnight shifts (clock_out after midnight on the day AFTER `to`)
     // are included and paired with their clock_in on `to`. Sessions are still pinned to clock-in day.
     const toISO = new Date(new Date(ausEndOfDay(to)).getTime() + 12 * 60 * 60 * 1000).toISOString();
