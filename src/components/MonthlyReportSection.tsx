@@ -11,8 +11,7 @@ import { FileText, Download, Loader2, Calendar, BarChart3, FileSpreadsheet } fro
 import { useToast } from "@/hooks/use-toast";
 import { useBusiness } from "@/contexts/BusinessContext";
 import { supabase } from "@/integrations/supabase/client";
-import { toAusDate, ausStartOfDay, ausEndOfDay } from "@/lib/dateUtils";
-import { computeTimesheetEntries, filterApprovedEntries } from "@/lib/timesheetUtils";
+import { computeTimesheetEntries, filterApprovedEntries, filterTimesheetEntriesByDateRange, getTimesheetEventWindow } from "@/lib/timesheetUtils";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import * as XLSX from "xlsx";
@@ -130,6 +129,7 @@ export default function MonthlyReportSection() {
 
       const startStr = format(dateStart, "yyyy-MM-dd");
       const endStr = format(dateEnd, "yyyy-MM-dd");
+      const { fromISO: timesheetFromISO, toISO: timesheetToISO } = getTimesheetEventWindow(startStr, endStr);
       const businessId = business.id;
 
       const { data: empRows } = await supabase.from("employees").select("id").eq("business_id", businessId);
@@ -145,14 +145,13 @@ export default function MonthlyReportSection() {
         fetchers.shifts = wrap(supabase.from("shifts").select("*, employees!inner(name, department, pay_rate, admin_hourly_rate, job_title)").gte("date", startStr).lte("date", endStr).in("employee_id", empIds).then(r => r.data || []));
       }
       if ((selectedReports.has("timesheets") || selectedReports.has("dept_breakdown")) && empIds.length > 0) {
-        fetchers.clockEvents = wrap(supabase.from("clock_events").select("*, employees!inner(name, department)").gte("timestamp", `${startStr}T00:00:00`).lte("timestamp", `${endStr}T23:59:59`).in("employee_id", empIds).then(r => r.data || []));
+        fetchers.clockEvents = wrap(supabase.from("clock_events").select("*, employees!inner(name, department)").gte("timestamp", timesheetFromISO).lte("timestamp", timesheetToISO).in("employee_id", empIds).then(r => r.data || []));
       }
       const needsPayroll = (selectedReports.has("employee_payroll") || selectedReports.has("admin_payroll") || selectedReports.has("labour_cost") || selectedReports.has("margin_analysis")) && empIds.length > 0;
       let payrollClockPromise: Promise<any> | null = null;
       let payrollApprovalPromise: Promise<any> | null = null;
       if (needsPayroll) {
-        const fromISO = ausStartOfDay(startStr);
-        const toISO = ausEndOfDay(endStr);
+        const { fromISO, toISO } = getTimesheetEventWindow(startStr, endStr);
         payrollClockPromise = wrap(supabase.from("clock_events").select("*").gte("timestamp", fromISO).lte("timestamp", toISO).in("employee_id", empIds).order("timestamp").then(r => r.data || []));
         payrollApprovalPromise = wrap(supabase.from("timesheet_approvals").select("employee_id, date, approved").gte("date", startStr).lte("date", endStr).eq("approved", true).then(r => r.data || []));
       }
@@ -190,7 +189,7 @@ export default function MonthlyReportSection() {
         const empMap = new Map((allEmps as any[]).map((e: any) => [e.id, e]));
         
         // Use shared timesheet computation
-        const allTimesheetEntries = computeTimesheetEntries(clockEvents);
+        const allTimesheetEntries = filterTimesheetEntriesByDateRange(computeTimesheetEntries(clockEvents), startStr, endStr);
         const approvedEntries = filterApprovedEntries(allTimesheetEntries, approvedSet);
         
         // Aggregate per employee
@@ -261,10 +260,10 @@ export default function MonthlyReportSection() {
 
         // Timesheets
         if (selectedReports.has("timesheets") && results.clockEvents) {
-          const entries = computeTimesheetEntries(results.clockEvents);
+          const entries = filterTimesheetEntriesByDateRange(computeTimesheetEntries(results.clockEvents), startStr, endStr);
           const empNameMap = new Map((results.employees || []).map((e: any) => [e.id, e.name]));
           const rows = entries.sort((a: any, b: any) => a.date.localeCompare(b.date)).map((entry: any) => ({
-            "Date": entry.date, "Employee": empNameMap.get(entry.employee_id) || "Unknown",
+            "Date": entry.date, "Day Flag": entry.crossed_midnight ? "+1d" : "", "Employee": empNameMap.get(entry.employee_id) || "Unknown",
             "Clock In": entry.clock_in ? format(entry.clock_in, "hh:mm a") : "-",
             "Clock Out": entry.clock_out ? format(entry.clock_out, "hh:mm a") : "-",
             "Break (min)": entry.break_minutes, "Total Hours": entry.total_hours.toFixed(2),
@@ -730,15 +729,15 @@ export default function MonthlyReportSection() {
         const events = results.clockEvents;
 
         // Use shared utility to compute timesheet entries (handles overnight shifts)
-        const timesheetEntries = computeTimesheetEntries(events);
+        const timesheetEntries = filterTimesheetEntriesByDateRange(computeTimesheetEntries(events), startStr, endStr);
         const empNameMapReport = new Map<string, string>((results.employees || []).map((e: any) => [e.id, e.name]));
 
         const uniqueDays = new Set(timesheetEntries.map(e => e.date)).size;
         const uniqueEmployees = new Set(timesheetEntries.map(e => e.employee_id)).size;
-        const clockInCount = events.filter((e: any) => e.event_type === "clock_in").length;
+        const clockInCount = timesheetEntries.filter((e: any) => e.clock_in).length;
 
         addStatsRow([
-          { label: "Clock Events", value: String(events.length), color: [16, 124, 65] },
+          { label: "Timesheets", value: String(timesheetEntries.length), color: [16, 124, 65] },
           { label: "Working Days", value: String(uniqueDays), color: [41, 98, 255] },
           { label: "Employees Active", value: String(uniqueEmployees), color: [124, 58, 237] },
           { label: "Total Clock-Ins", value: String(clockInCount), color: [180, 83, 9] },
@@ -752,7 +751,7 @@ export default function MonthlyReportSection() {
           const outTime = entry.clock_out ? format(entry.clock_out, "hh:mm a") : "-";
           const breakMins = entry.break_minutes > 0 ? `${entry.break_minutes}m` : "-";
           const hours = entry.total_hours > 0 ? entry.net_hours.toFixed(2) : "-";
-          return [format(parseISO(entry.date), "dd MMM"), name, inTime, outTime, breakMins, hours];
+          return [`${format(parseISO(entry.date), "dd MMM")}${entry.crossed_midnight ? " +1d" : ""}`, name, inTime, outTime, breakMins, hours];
         });
 
         if (dailyRows.length > 0) {
@@ -1243,11 +1242,12 @@ export default function MonthlyReportSection() {
           deptData[dept].shiftCount++;
         });
 
-        clockEvents.forEach((ev: any) => {
-          if (ev.event_type === "clock_in") {
-            const dept = ev.employees?.department || "Unassigned";
-            const d = format(new Date(ev.timestamp), "yyyy-MM-dd");
-            if (deptData[dept]) deptData[dept].clockDays.add(`${ev.employee_id}-${d}`);
+        const empDeptMap = new Map<string, string>((employees || []).map((e: any) => [e.id, e.department || "Unassigned"]));
+        const clockEntries = filterTimesheetEntriesByDateRange(computeTimesheetEntries(clockEvents), startStr, endStr);
+        clockEntries.forEach((entry: any) => {
+          if (entry.clock_in) {
+            const dept = String(empDeptMap.get(entry.employee_id) || "Unassigned");
+            if (deptData[dept]) deptData[dept].clockDays.add(`${entry.employee_id}-${entry.date}`);
           }
         });
 

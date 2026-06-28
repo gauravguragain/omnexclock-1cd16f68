@@ -10,8 +10,8 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell, Legend, AreaChart, Area,
 } from "recharts";
-import { toAusDateKey, toAusTime12, toAusFormatted, toAusDisplayDate, ausStartOfToday, ausStartOfTomorrow, ausCurrentHour, ausStartOfDay, toAusDate } from "@/lib/dateUtils";
-import { computeTimesheetEntries, filterApprovedEntries } from "@/lib/timesheetUtils";
+import { toAusDateKey, toAusTime12, toAusFormatted, toAusDisplayDate, ausStartOfToday, ausStartOfTomorrow, ausCurrentHour, toAusDate } from "@/lib/dateUtils";
+import { computeTimesheetEntries, filterApprovedEntries, filterTimesheetEntriesByDateRange, getTimesheetEventWindow } from "@/lib/timesheetUtils";
 
 interface DailyHours {
   date: string;
@@ -163,14 +163,11 @@ export default function DashboardPage() {
     const now = new Date();
     const dayOfWeek = now.getDay();
     const mondayOffset = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
-    const weekStartDate = new Date(now);
-    weekStartDate.setDate(now.getDate() + mondayOffset);
-    const weekStartISO = ausStartOfToday(); // We'll use date-key based approach instead
-
     const weekAgo = new Date();
     weekAgo.setDate(weekAgo.getDate() - 7);
-    const weekAgoKey = toLocalDateKey(weekAgo);
-    const weekAgoISO = ausStartOfDay(toAusDate(weekAgo));
+    const weekAgoStr = toAusDate(weekAgo);
+    const todayStr = toAusDate(new Date());
+    const { fromISO: weekAgoISO, toISO: todayRangeEndISO } = getTimesheetEventWindow(weekAgoStr, todayStr);
 
     // For this-week events, compute Monday's ISO
     const mondayDate = new Date(now);
@@ -178,13 +175,17 @@ export default function DashboardPage() {
     mondayDate.setHours(0, 0, 0, 0);
     const sundayDate = new Date(mondayDate);
     sundayDate.setDate(mondayDate.getDate() + 7);
-    const mondayISO = ausStartOfDay(toAusDate(mondayDate));
-    const sundayISO = ausStartOfDay(toAusDate(sundayDate));
+    const weekEndDate = new Date(mondayDate);
+    weekEndDate.setDate(mondayDate.getDate() + 6);
+    const mondayStr = toAusDate(mondayDate);
+    const sundayStr = toAusDate(sundayDate);
+    const weekEndStr = toAusDate(weekEndDate);
+    const { fromISO: mondayISO, toISO: sundayISO } = getTimesheetEventWindow(mondayStr, weekEndStr);
 
     const [empRes, todayEventsRes, weekEventsRes, thisWeekEventsRes, recentRes] = await Promise.all([
       supabase.from("employees").select("id, name", { count: "exact" }).eq("active", true).eq("business_id", business!.id),
       supabase.from("clock_events").select("*").gte("timestamp", todayISO).lt("timestamp", tomorrowISO).order("timestamp"),
-      supabase.from("clock_events").select("*, employees!inner(name, business_id)").eq("employees.business_id", business!.id).gte("timestamp", weekAgoISO).order("timestamp"),
+      supabase.from("clock_events").select("*, employees!inner(name, business_id)").eq("employees.business_id", business!.id).gte("timestamp", weekAgoISO).lte("timestamp", todayRangeEndISO).order("timestamp"),
       supabase.from("clock_events").select("*, employees!inner(name, business_id)").eq("employees.business_id", business!.id).gte("timestamp", mondayISO).lt("timestamp", sundayISO).order("timestamp"),
       supabase.from("clock_events").select("*, employees!inner(name, business_id)").eq("employees.business_id", business!.id).order("created_at", { ascending: false }).limit(10),
     ]);
@@ -207,8 +208,6 @@ export default function DashboardPage() {
     const todayKey = toLocalDateKey(new Date());
 
     // Fetch approved timesheets for this week
-    const mondayStr = toAusDate(mondayDate);
-    const sundayStr = toAusDate(sundayDate);
     const { data: approvedTimesheets } = await supabase
       .from("timesheet_approvals")
       .select("employee_id, date")
@@ -221,7 +220,7 @@ export default function DashboardPage() {
     );
 
     // Compute timesheet entries from this week's events using shared utility
-    const thisWeekTimesheets = computeTimesheetEntries(thisWeekEvents);
+    const thisWeekTimesheets = filterTimesheetEntriesByDateRange(computeTimesheetEntries(thisWeekEvents), mondayStr, weekEndStr);
     const approvedThisWeek = filterApprovedEntries(thisWeekTimesheets, approvedSet);
 
     let totalHoursWeek = 0;
@@ -242,8 +241,6 @@ export default function DashboardPage() {
 
     // Weekly daily hours - use approved timesheet data from shared utility
     // Fetch approvals for the last 7 days
-    const weekAgoStr = toAusDate(weekAgo);
-    const todayStr = toAusDate(new Date());
     const { data: weekApprovals } = await supabase
       .from("timesheet_approvals")
       .select("employee_id, date")
@@ -255,7 +252,7 @@ export default function DashboardPage() {
       (weekApprovals || []).map((a) => `${a.employee_id}-${a.date}`)
     );
 
-    const weekTimesheets = computeTimesheetEntries(weekEvents);
+    const weekTimesheets = filterTimesheetEntriesByDateRange(computeTimesheetEntries(weekEvents), weekAgoStr, todayStr);
     const approvedWeekEntries = filterApprovedEntries(weekTimesheets, weekApprovedSet);
 
     // Group approved entries by date

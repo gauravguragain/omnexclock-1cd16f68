@@ -20,12 +20,13 @@ import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { TimeDropdownPicker } from "@/components/TimeDropdownPicker";
 import { logAudit, getDeviceInfo } from "@/lib/auditLog";
-import { toAusDate, toAusDisplayDate, toAusTime24, toAusTime12, buildAusTimestamp, ausToday, ausNow, ausStartOfDay, ausEndOfDay, ensureTime12 } from "@/lib/dateUtils";
+import { toAusDate, toAusDisplayDate, toAusTime24, toAusTime12, buildAusTimestamp, ausToday, ausNow, ensureTime12 } from "@/lib/dateUtils";
 import { useAuth } from "@/contexts/AuthContext";
 import { EmailPDFDialog } from "@/components/EmailPDFDialog";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { buildExportFilename, formatDepartmentScope } from "@/lib/exportNaming";
 import { getPublicHolidayName } from "@/lib/publicHolidays";
+import { getTimesheetEventWindow } from "@/lib/timesheetUtils";
 
 interface TimesheetEntry {
   employee_id: string;
@@ -196,10 +197,14 @@ export default function TimesheetsPage() {
   const fetchTimesheets = async () => {
     const from = format(dateFrom, "yyyy-MM-dd");
     const to = format(dateTo, "yyyy-MM-dd");
-    const fromISO = ausStartOfDay(from);
+    // Pull a 36h lead-in before the selected range so post-midnight clock-outs
+    // can still pair with their previous-day clock-in. The final filter below
+    // only keeps sessions whose clock-in day is inside the selected range, so a
+    // Sunday 5pm → Monday 1am shift stays on Sunday and never appears as a
+    // standalone Monday timesheet.
+    const { fromISO, toISO } = getTimesheetEventWindow(from, to);
     // Extend upper bound by 12h so overnight shifts (clock_out after midnight on the day AFTER `to`)
     // are included and paired with their clock_in on `to`. Sessions are still pinned to clock-in day.
-    const toISO = new Date(new Date(ausEndOfDay(to)).getTime() + 12 * 60 * 60 * 1000).toISOString();
 
     let query = supabase
       .from("clock_events")
@@ -343,7 +348,7 @@ export default function TimesheetsPage() {
     const rangeFrom = format(dateFrom, "yyyy-MM-dd");
     const rangeTo = format(dateTo, "yyyy-MM-dd");
     const result: TimesheetEntry[] = sessions
-      .filter((e) => e.raw_date >= rangeFrom && e.raw_date <= rangeTo)
+      .filter((e) => !!e.clock_in && e.raw_date >= rangeFrom && e.raw_date <= rangeTo)
       .map((e) => {
       let totalHours = e.clock_in && e.clock_out
         ? (new Date(e.clock_out).getTime() - new Date(e.clock_in).getTime()) / 3600000
@@ -651,7 +656,7 @@ export default function TimesheetsPage() {
       let empBreakMins = 0, empTotalHrs = 0, empNetHrs = 0;
       for (const e of entries) {
         allRows.push([
-          e.employee_name, e.date, e.approved ? "Approved" : "Pending",
+          e.employee_name, `${e.date}${e.crossed_midnight ? " +1d" : ""}`, e.approved ? "Approved" : "Pending",
           e.clock_in || "", e.clock_out || "", e.break_start || "", e.break_end || "",
           e.break_minutes.toString(), e.total_hours.toFixed(2), e.net_hours.toFixed(2),
         ]);
@@ -759,7 +764,7 @@ export default function TimesheetsPage() {
         const isApproved = e.approved;
         const rowBg: [number, number, number] = i % 2 === 0 ? [255, 255, 255] : [248, 249, 250];
         tableBody.push([
-          { content: e.date, styles: { fillColor: rowBg, fontSize: 8 } },
+          { content: `${e.date}${e.crossed_midnight ? " +1d" : ""}`, styles: { fillColor: rowBg, fontSize: 8, textColor: e.crossed_midnight ? [67, 56, 202] : undefined, fontStyle: e.crossed_midnight ? "bold" : "normal" } },
           { content: isApproved ? "✓ Approved" : "○ Pending", styles: { fillColor: rowBg, textColor: isApproved ? [34, 139, 34] : [200, 140, 40], fontStyle: "bold", fontSize: 7.5 } },
           { content: e.clock_in || "—", styles: { fillColor: rowBg, fontSize: 8 } },
           { content: e.clock_out || "—", styles: { fillColor: rowBg, fontSize: 8 } },
