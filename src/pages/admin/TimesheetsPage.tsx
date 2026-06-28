@@ -20,12 +20,13 @@ import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { TimeDropdownPicker } from "@/components/TimeDropdownPicker";
 import { logAudit, getDeviceInfo } from "@/lib/auditLog";
-import { toAusDate, toAusDisplayDate, toAusTime24, toAusTime12, buildAusTimestamp, ausToday, ausNow, ausStartOfDay, ausEndOfDay, ensureTime12 } from "@/lib/dateUtils";
+import { toAusDate, toAusDisplayDate, toAusTime24, toAusTime12, buildAusTimestamp, ausToday, ausNow, ensureTime12 } from "@/lib/dateUtils";
 import { useAuth } from "@/contexts/AuthContext";
 import { EmailPDFDialog } from "@/components/EmailPDFDialog";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { buildExportFilename, formatDepartmentScope } from "@/lib/exportNaming";
 import { getPublicHolidayName } from "@/lib/publicHolidays";
+import { getTimesheetEventWindow } from "@/lib/timesheetUtils";
 
 interface TimesheetEntry {
   employee_id: string;
@@ -201,10 +202,9 @@ export default function TimesheetsPage() {
     // only keeps sessions whose clock-in day is inside the selected range, so a
     // Sunday 5pm → Monday 1am shift stays on Sunday and never appears as a
     // standalone Monday timesheet.
-    const fromISO = new Date(new Date(ausStartOfDay(from)).getTime() - 36 * 60 * 60 * 1000).toISOString();
+    const { fromISO, toISO } = getTimesheetEventWindow(from, to);
     // Extend upper bound by 12h so overnight shifts (clock_out after midnight on the day AFTER `to`)
     // are included and paired with their clock_in on `to`. Sessions are still pinned to clock-in day.
-    const toISO = new Date(new Date(ausEndOfDay(to)).getTime() + 12 * 60 * 60 * 1000).toISOString();
 
     let query = supabase
       .from("clock_events")
