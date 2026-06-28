@@ -11,8 +11,8 @@ import { FileText, Download, Loader2, Calendar, BarChart3, FileSpreadsheet } fro
 import { useToast } from "@/hooks/use-toast";
 import { useBusiness } from "@/contexts/BusinessContext";
 import { supabase } from "@/integrations/supabase/client";
-import { toAusDate, ausStartOfDay, ausEndOfDay } from "@/lib/dateUtils";
-import { computeTimesheetEntries, filterApprovedEntries } from "@/lib/timesheetUtils";
+import { toAusDate } from "@/lib/dateUtils";
+import { computeTimesheetEntries, filterApprovedEntries, filterTimesheetEntriesByDateRange, getTimesheetEventWindow } from "@/lib/timesheetUtils";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import * as XLSX from "xlsx";
@@ -130,6 +130,7 @@ export default function MonthlyReportSection() {
 
       const startStr = format(dateStart, "yyyy-MM-dd");
       const endStr = format(dateEnd, "yyyy-MM-dd");
+      const { fromISO: timesheetFromISO, toISO: timesheetToISO } = getTimesheetEventWindow(startStr, endStr);
       const businessId = business.id;
 
       const { data: empRows } = await supabase.from("employees").select("id").eq("business_id", businessId);
@@ -145,14 +146,13 @@ export default function MonthlyReportSection() {
         fetchers.shifts = wrap(supabase.from("shifts").select("*, employees!inner(name, department, pay_rate, admin_hourly_rate, job_title)").gte("date", startStr).lte("date", endStr).in("employee_id", empIds).then(r => r.data || []));
       }
       if ((selectedReports.has("timesheets") || selectedReports.has("dept_breakdown")) && empIds.length > 0) {
-        fetchers.clockEvents = wrap(supabase.from("clock_events").select("*, employees!inner(name, department)").gte("timestamp", `${startStr}T00:00:00`).lte("timestamp", `${endStr}T23:59:59`).in("employee_id", empIds).then(r => r.data || []));
+        fetchers.clockEvents = wrap(supabase.from("clock_events").select("*, employees!inner(name, department)").gte("timestamp", timesheetFromISO).lte("timestamp", timesheetToISO).in("employee_id", empIds).then(r => r.data || []));
       }
       const needsPayroll = (selectedReports.has("employee_payroll") || selectedReports.has("admin_payroll") || selectedReports.has("labour_cost") || selectedReports.has("margin_analysis")) && empIds.length > 0;
       let payrollClockPromise: Promise<any> | null = null;
       let payrollApprovalPromise: Promise<any> | null = null;
       if (needsPayroll) {
-        const fromISO = ausStartOfDay(startStr);
-        const toISO = ausEndOfDay(endStr);
+        const { fromISO, toISO } = getTimesheetEventWindow(startStr, endStr);
         payrollClockPromise = wrap(supabase.from("clock_events").select("*").gte("timestamp", fromISO).lte("timestamp", toISO).in("employee_id", empIds).order("timestamp").then(r => r.data || []));
         payrollApprovalPromise = wrap(supabase.from("timesheet_approvals").select("employee_id, date, approved").gte("date", startStr).lte("date", endStr).eq("approved", true).then(r => r.data || []));
       }
@@ -190,7 +190,7 @@ export default function MonthlyReportSection() {
         const empMap = new Map((allEmps as any[]).map((e: any) => [e.id, e]));
         
         // Use shared timesheet computation
-        const allTimesheetEntries = computeTimesheetEntries(clockEvents);
+        const allTimesheetEntries = filterTimesheetEntriesByDateRange(computeTimesheetEntries(clockEvents), startStr, endStr);
         const approvedEntries = filterApprovedEntries(allTimesheetEntries, approvedSet);
         
         // Aggregate per employee
@@ -261,7 +261,7 @@ export default function MonthlyReportSection() {
 
         // Timesheets
         if (selectedReports.has("timesheets") && results.clockEvents) {
-          const entries = computeTimesheetEntries(results.clockEvents);
+          const entries = filterTimesheetEntriesByDateRange(computeTimesheetEntries(results.clockEvents), startStr, endStr);
           const empNameMap = new Map((results.employees || []).map((e: any) => [e.id, e.name]));
           const rows = entries.sort((a: any, b: any) => a.date.localeCompare(b.date)).map((entry: any) => ({
             "Date": entry.date, "Employee": empNameMap.get(entry.employee_id) || "Unknown",
@@ -730,7 +730,7 @@ export default function MonthlyReportSection() {
         const events = results.clockEvents;
 
         // Use shared utility to compute timesheet entries (handles overnight shifts)
-        const timesheetEntries = computeTimesheetEntries(events);
+        const timesheetEntries = filterTimesheetEntriesByDateRange(computeTimesheetEntries(events), startStr, endStr);
         const empNameMapReport = new Map<string, string>((results.employees || []).map((e: any) => [e.id, e.name]));
 
         const uniqueDays = new Set(timesheetEntries.map(e => e.date)).size;
