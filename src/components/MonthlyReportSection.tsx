@@ -11,7 +11,6 @@ import { FileText, Download, Loader2, Calendar, BarChart3, FileSpreadsheet } fro
 import { useToast } from "@/hooks/use-toast";
 import { useBusiness } from "@/contexts/BusinessContext";
 import { supabase } from "@/integrations/supabase/client";
-import { toAusDate } from "@/lib/dateUtils";
 import { computeTimesheetEntries, filterApprovedEntries, filterTimesheetEntriesByDateRange, getTimesheetEventWindow } from "@/lib/timesheetUtils";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
