@@ -7,7 +7,7 @@
  * tagged with `crossed_midnight = true` so reports show them on one row
  * while still computing total + break duration across the day boundary.
  */
-import { toAusDate } from "@/lib/dateUtils";
+import { ausEndOfDay, ausStartOfDay, toAusDate } from "@/lib/dateUtils";
 
 export interface ComputedTimesheetEntry {
   employee_id: string;
@@ -160,6 +160,36 @@ export function computeTimesheetEntries(events: any[]): ComputedTimesheetEntry[]
       crossed_midnight: crossed,
     };
   });
+}
+
+/**
+ * Query window used by all admin/report/payroll timesheet reads.
+ *
+ * We intentionally fetch a lead-in before the visible date range so a
+ * post-midnight clock_out can pair with the previous day's clock_in instead of
+ * becoming a standalone next-day row. We also fetch a short look-ahead after
+ * the range so a shift that starts on the final selected day and ends after
+ * midnight is completed and still pinned to the clock-in day.
+ */
+export function getTimesheetEventWindow(
+  fromDate: string,
+  toDate: string,
+  leadInHours = 36,
+  lookAheadHours = 12
+): { fromISO: string; toISO: string } {
+  return {
+    fromISO: new Date(new Date(ausStartOfDay(fromDate)).getTime() - leadInHours * 60 * 60 * 1000).toISOString(),
+    toISO: new Date(new Date(ausEndOfDay(toDate)).getTime() + lookAheadHours * 60 * 60 * 1000).toISOString(),
+  };
+}
+
+/** Keep only sessions whose clock-in/work date is inside the selected range. */
+export function filterTimesheetEntriesByDateRange<T extends { date: string }>(
+  entries: T[],
+  fromDate: string,
+  toDate: string
+): T[] {
+  return entries.filter((entry) => entry.date >= fromDate && entry.date <= toDate);
 }
 
 /**
