@@ -1242,11 +1242,11 @@ export default function MonthlyReportSection() {
           deptData[dept].shiftCount++;
         });
 
-        const empDeptMap = new Map((employees || []).map((e: any) => [e.id, e.department || "Unassigned"]));
+        const empDeptMap = new Map<string, string>((employees || []).map((e: any) => [e.id, e.department || "Unassigned"]));
         const clockEntries = filterTimesheetEntriesByDateRange(computeTimesheetEntries(clockEvents), startStr, endStr);
         clockEntries.forEach((entry: any) => {
           if (entry.clock_in) {
-            const dept = empDeptMap.get(entry.employee_id) || "Unassigned";
+            const dept = String(empDeptMap.get(entry.employee_id) || "Unassigned");
             if (deptData[dept]) deptData[dept].clockDays.add(`${entry.employee_id}-${entry.date}`);
           }
         });
