@@ -54,6 +54,7 @@ interface TimesheetEntry {
   break_minutes: number;
   total_hours: number;
   net_hours: number;
+  crossed_midnight?: boolean;
 }
 
 interface EmployeeInfo {
@@ -1150,6 +1151,9 @@ export default function PortalPage() {
                                       <span className="text-xs text-muted-foreground">{dateLabel}</span>
                                       {isActive && (
                                         <Badge className="bg-warning/15 text-warning text-[10px] px-1.5 py-0">Active</Badge>
+                                      )}
+                                      {ts.crossed_midnight && (
+                                        <Badge className="bg-indigo-500/15 text-indigo-700 dark:text-indigo-300 text-[10px] px-1.5 py-0">+1d</Badge>
                                       )}
                                       {isApproved === true && (
                                         <Badge className="bg-success/15 text-success text-[10px] px-1.5 py-0">Approved</Badge>

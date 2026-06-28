@@ -263,7 +263,7 @@ export default function MonthlyReportSection() {
           const entries = filterTimesheetEntriesByDateRange(computeTimesheetEntries(results.clockEvents), startStr, endStr);
           const empNameMap = new Map((results.employees || []).map((e: any) => [e.id, e.name]));
           const rows = entries.sort((a: any, b: any) => a.date.localeCompare(b.date)).map((entry: any) => ({
-            "Date": entry.date, "Employee": empNameMap.get(entry.employee_id) || "Unknown",
+            "Date": entry.date, "Day Flag": entry.crossed_midnight ? "+1d" : "", "Employee": empNameMap.get(entry.employee_id) || "Unknown",
             "Clock In": entry.clock_in ? format(entry.clock_in, "hh:mm a") : "-",
             "Clock Out": entry.clock_out ? format(entry.clock_out, "hh:mm a") : "-",
             "Break (min)": entry.break_minutes, "Total Hours": entry.total_hours.toFixed(2),
@@ -751,7 +751,7 @@ export default function MonthlyReportSection() {
           const outTime = entry.clock_out ? format(entry.clock_out, "hh:mm a") : "-";
           const breakMins = entry.break_minutes > 0 ? `${entry.break_minutes}m` : "-";
           const hours = entry.total_hours > 0 ? entry.net_hours.toFixed(2) : "-";
-          return [format(parseISO(entry.date), "dd MMM"), name, inTime, outTime, breakMins, hours];
+          return [`${format(parseISO(entry.date), "dd MMM")}${entry.crossed_midnight ? " +1d" : ""}`, name, inTime, outTime, breakMins, hours];
         });
 
         if (dailyRows.length > 0) {

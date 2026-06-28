@@ -183,13 +183,17 @@ export function getTimesheetEventWindow(
   };
 }
 
-/** Keep only sessions whose clock-in/work date is inside the selected range. */
-export function filterTimesheetEntriesByDateRange<T extends { date: string }>(
+/**
+ * Keep only real timesheet sessions whose clock-in/work date is inside the selected range.
+ * Clock-out-only orphan events are intentionally excluded so an overnight shift never
+ * appears as a next-day timesheet when the clock-in belongs to the previous day.
+ */
+export function filterTimesheetEntriesByDateRange<T extends { date: string; clock_in?: unknown | null }>(
   entries: T[],
   fromDate: string,
   toDate: string
 ): T[] {
-  return entries.filter((entry) => entry.date >= fromDate && entry.date <= toDate);
+  return entries.filter((entry) => !!entry.clock_in && entry.date >= fromDate && entry.date <= toDate);
 }
 
 /**

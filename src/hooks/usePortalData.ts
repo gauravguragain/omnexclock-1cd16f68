@@ -24,6 +24,7 @@ export interface TimesheetEntry {
   break_minutes: number;
   total_hours: number;
   net_hours: number;
+  crossed_midnight?: boolean;
 }
 
 export interface EmployeeInfo {
