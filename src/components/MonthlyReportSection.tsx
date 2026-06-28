@@ -734,10 +734,10 @@ export default function MonthlyReportSection() {
 
         const uniqueDays = new Set(timesheetEntries.map(e => e.date)).size;
         const uniqueEmployees = new Set(timesheetEntries.map(e => e.employee_id)).size;
-        const clockInCount = events.filter((e: any) => e.event_type === "clock_in").length;
+        const clockInCount = timesheetEntries.filter((e: any) => e.clock_in).length;
 
         addStatsRow([
-          { label: "Clock Events", value: String(events.length), color: [16, 124, 65] },
+          { label: "Timesheets", value: String(timesheetEntries.length), color: [16, 124, 65] },
           { label: "Working Days", value: String(uniqueDays), color: [41, 98, 255] },
           { label: "Employees Active", value: String(uniqueEmployees), color: [124, 58, 237] },
           { label: "Total Clock-Ins", value: String(clockInCount), color: [180, 83, 9] },
@@ -1242,11 +1242,12 @@ export default function MonthlyReportSection() {
           deptData[dept].shiftCount++;
         });
 
-        clockEvents.forEach((ev: any) => {
-          if (ev.event_type === "clock_in") {
-            const dept = ev.employees?.department || "Unassigned";
-            const d = format(new Date(ev.timestamp), "yyyy-MM-dd");
-            if (deptData[dept]) deptData[dept].clockDays.add(`${ev.employee_id}-${d}`);
+        const empDeptMap = new Map((employees || []).map((e: any) => [e.id, e.department || "Unassigned"]));
+        const clockEntries = filterTimesheetEntriesByDateRange(computeTimesheetEntries(clockEvents), startStr, endStr);
+        clockEntries.forEach((entry: any) => {
+          if (entry.clock_in) {
+            const dept = empDeptMap.get(entry.employee_id) || "Unassigned";
+            if (deptData[dept]) deptData[dept].clockDays.add(`${entry.employee_id}-${entry.date}`);
           }
         });
 
