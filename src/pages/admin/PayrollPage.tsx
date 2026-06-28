@@ -1,8 +1,8 @@
 import { useEffect, useState, useMemo } from "react";
 import { useBusiness } from "@/contexts/BusinessContext";
 import { useAuth } from "@/contexts/AuthContext";
-import { ausNow, ausStartOfDay, ausEndOfDay } from "@/lib/dateUtils";
-import { computeTimesheetEntries, filterApprovedEntries } from "@/lib/timesheetUtils";
+import { ausNow } from "@/lib/dateUtils";
+import { computeTimesheetEntries, filterApprovedEntries, filterTimesheetEntriesByDateRange, getTimesheetEventWindow } from "@/lib/timesheetUtils";
 import { format, startOfWeek, endOfWeek, addWeeks, subWeeks } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -152,8 +152,7 @@ export default function PayrollPage() {
     setLoading(true);
     const from = format(dateFrom, "yyyy-MM-dd");
     const to = format(dateTo, "yyyy-MM-dd");
-    const fromISO = ausStartOfDay(from);
-    const toISO = ausEndOfDay(to);
+    const { fromISO, toISO } = getTimesheetEventWindow(from, to);
 
     // Fetch all clock events (paginated), employees, and approved timesheets
     const fetchAllEvents = async () => {
@@ -193,7 +192,7 @@ export default function PayrollPage() {
     }
 
     // Use shared timesheet computation (same as Timesheets page)
-    const allTimesheetEntries = computeTimesheetEntries(events);
+    const allTimesheetEntries = filterTimesheetEntriesByDateRange(computeTimesheetEntries(events), from, to);
     const approvedEntries = filterApprovedEntries(allTimesheetEntries, approvedSet);
 
     // Aggregate per employee
