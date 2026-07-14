@@ -62,6 +62,7 @@ export default function PayDetailsPage() {
     setEditTarget(emp);
     setForm({
       pay_id: emp.pay_id || "",
+      abn: emp.abn ? fmtABN(emp.abn) : "",
       account_name: emp.account_name || "",
       bsb: emp.bsb || "",
       account_number: emp.account_number || "",
@@ -70,6 +71,11 @@ export default function PayDetailsPage() {
 
   const handleSave = async () => {
     if (!editTarget || saving) return;
+    const abnDigits = form.abn.replace(/\D/g, "");
+    if (abnDigits && abnDigits.length !== 11) {
+      toast({ title: "Validation Error", description: "ABN must be exactly 11 digits.", variant: "destructive" });
+      return;
+    }
     if (form.bsb && !/^\d{3}-?\d{3}$/.test(form.bsb.trim())) {
       toast({ title: "Validation Error", description: "BSB must be 6 digits (e.g. 123-456).", variant: "destructive" });
       return;
@@ -83,6 +89,7 @@ export default function PayDetailsPage() {
       try {
         const payload = {
           pay_id: form.pay_id.trim() || null,
+          abn: abnDigits || null,
           account_name: form.account_name.trim() || null,
           bsb: form.bsb.trim() || null,
           account_number: form.account_number.trim() || null,
@@ -100,6 +107,7 @@ export default function PayDetailsPage() {
       }
     });
   };
+
 
   const filtered = employees.filter(e =>
     e.name.toLowerCase().includes(search.toLowerCase()) ||
