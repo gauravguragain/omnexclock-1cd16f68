@@ -113,7 +113,7 @@ export default function InvoicesPage() {
     };
 
     const [{ data: employees }, events, { data: approvals }, { data: invoices }] = await Promise.all([
-      supabase.from("employees").select("id, name, abn, account_name, bsb, account_number, active")
+      supabase.from("employees").select("id, name, abn, pay_rate, account_name, bsb, account_number, active")
         .eq("business_id", business.id).eq("active", true),
       fetchAllEvents(),
       supabase.from("timesheet_approvals").select("employee_id, date, approved")
