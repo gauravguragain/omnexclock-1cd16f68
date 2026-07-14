@@ -33,8 +33,7 @@ export interface InvoiceData {
   };
 }
 
-const maskAccount = (acc: string | null) =>
-  !acc ? "—" : acc.length <= 4 ? acc : "****" + acc.slice(-4);
+const showAccount = (acc: string | null) => acc || "—";
 
 const fmtABN = (abn: string | null | undefined) => {
   if (!abn) return "";
