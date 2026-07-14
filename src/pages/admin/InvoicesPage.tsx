@@ -44,7 +44,7 @@ const BILL_TO_OVERRIDES: Record<string, { name: string; abn: string; address_lin
 };
 
 interface Employee {
-  id: string; name: string; abn: string | null;
+  id: string; name: string; abn: string | null; pay_rate: number;
   account_name: string | null; bsb: string | null; account_number: string | null;
 }
 
