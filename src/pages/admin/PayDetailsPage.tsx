@@ -200,6 +200,17 @@ export default function PayDetailsPage() {
               <Input value={form.pay_id} onChange={(e) => setForm({ ...form, pay_id: e.target.value })} placeholder="email@example.com or phone" maxLength={100} />
             </div>
             <div className="space-y-2">
+              <Label>ABN (11 digits)</Label>
+              <Input
+                value={form.abn}
+                onChange={(e) => setForm({ ...form, abn: e.target.value })}
+                onBlur={() => setForm({ ...form, abn: fmtABN(form.abn) })}
+                placeholder="12 345 678 901"
+                inputMode="numeric"
+                maxLength={14}
+              />
+            </div>
+            <div className="space-y-2">
               <Label>Account Name</Label>
               <Input value={form.account_name} onChange={(e) => setForm({ ...form, account_name: e.target.value })} placeholder="John Doe" maxLength={100} />
             </div>
