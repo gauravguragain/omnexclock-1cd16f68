@@ -136,6 +136,7 @@ export default function PayDetailsPage() {
                   <TableHead className="text-[11px] uppercase tracking-wider text-muted-foreground font-medium min-w-[140px]">Employee</TableHead>
                   <TableHead className="text-[11px] uppercase tracking-wider text-muted-foreground font-medium">Code</TableHead>
                   <TableHead className="text-[11px] uppercase tracking-wider text-muted-foreground font-medium">Pay ID</TableHead>
+                  <TableHead className="text-[11px] uppercase tracking-wider text-muted-foreground font-medium">ABN</TableHead>
                   <TableHead className="text-[11px] uppercase tracking-wider text-muted-foreground font-medium">Account Name</TableHead>
                   <TableHead className="text-[11px] uppercase tracking-wider text-muted-foreground font-medium">BSB</TableHead>
                   <TableHead className="text-[11px] uppercase tracking-wider text-muted-foreground font-medium">Account No.</TableHead>
