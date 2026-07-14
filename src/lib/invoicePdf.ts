@@ -81,7 +81,7 @@ export function renderInvoiceOnCurrentPage(doc: jsPDF, data: InvoiceData) {
     "",
     `Bank: ${data.employee.account_name || "—"}`,
     `BSB: ${data.employee.bsb || "—"}`,
-    `Account: ${maskAccount(data.employee.account_number)}`,
+    `Account: ${showAccount(data.employee.account_number)}`,
   ];
   fromLines.forEach((l, i) => doc.text(l, 25, y + 19 + i * 4.2));
 
