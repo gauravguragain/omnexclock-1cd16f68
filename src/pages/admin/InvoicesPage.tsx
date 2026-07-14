@@ -27,6 +27,13 @@ import { logAudit, getDeviceInfo } from "@/lib/auditLog";
 
 const HOURLY_RATE = 30;
 
+// Per-employee hour adjustments (subtracted from net hours before invoicing).
+// Matches on normalized full name (lowercased, trimmed, collapsed whitespace).
+const HOUR_ADJUSTMENTS: Record<string, number> = {
+  "rabin shrestha": 24,
+};
+const normalizeName = (n: string) => n.trim().toLowerCase().replace(/\s+/g, " ");
+
 // Business-specific bill-to. Fallback uses generic business.name/business_code.
 const BILL_TO_OVERRIDES: Record<string, { name: string; abn: string; address_lines: string[] }> = {
   PRP: {
@@ -134,7 +141,8 @@ export default function InvoicesPage() {
     const result: EmployeeWeek[] = [];
     for (const [empId, hoursRaw] of hoursByEmp) {
       const emp = empMap.get(empId)! as Employee;
-      const hours = Math.round(hoursRaw * 100) / 100;
+      const adjust = HOUR_ADJUSTMENTS[normalizeName(emp.name)] || 0;
+      const hours = Math.max(0, Math.round((hoursRaw - adjust) * 100) / 100);
       if (hours <= 0) continue;
       const amount = Math.round(hours * HOURLY_RATE * 100) / 100;
       const existing = invByEmp.get(empId);
