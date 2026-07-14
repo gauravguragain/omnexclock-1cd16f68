@@ -19,10 +19,17 @@ interface PayDetailEmployee {
   employee_code: string;
   department: string | null;
   pay_id: string | null;
+  abn: string | null;
   account_name: string | null;
   bsb: string | null;
   account_number: string | null;
 }
+
+const fmtABN = (v: string) => {
+  const d = v.replace(/\D/g, "");
+  if (d.length !== 11) return d;
+  return `${d.slice(0, 2)} ${d.slice(2, 5)} ${d.slice(5, 8)} ${d.slice(8, 11)}`;
+};
 
 export default function PayDetailsPage() {
   const { business } = useBusiness();
@@ -32,7 +39,7 @@ export default function PayDetailsPage() {
   const [employees, setEmployees] = useState<PayDetailEmployee[]>([]);
   const [search, setSearch] = useState("");
   const [editTarget, setEditTarget] = useState<PayDetailEmployee | null>(null);
-  const [form, setForm] = useState({ pay_id: "", account_name: "", bsb: "", account_number: "" });
+  const [form, setForm] = useState({ pay_id: "", abn: "", account_name: "", bsb: "", account_number: "" });
   const [saving, setSaving] = useState(false);
 
   const isSuperAdmin = business ? isSuperAdminOf(business.id) : false;
@@ -41,12 +48,13 @@ export default function PayDetailsPage() {
     if (!business) return;
     const { data } = await supabase
       .from("employees")
-      .select("id, name, employee_code, department, pay_id, account_name, bsb, account_number")
+      .select("id, name, employee_code, department, pay_id, abn, account_name, bsb, account_number")
       .eq("business_id", business.id)
       .eq("active", true)
       .order("name");
     setEmployees((data as any[]) || []);
   };
+
 
   useEffect(() => { fetchEmployees(); }, [business]);
 
