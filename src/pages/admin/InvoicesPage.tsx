@@ -44,7 +44,7 @@ const BILL_TO_OVERRIDES: Record<string, { name: string; abn: string; address_lin
 };
 
 interface Employee {
-  id: string; name: string; abn: string | null;
+  id: string; name: string; abn: string | null; pay_rate: number;
   account_name: string | null; bsb: string | null; account_number: string | null;
 }
 
@@ -113,7 +113,7 @@ export default function InvoicesPage() {
     };
 
     const [{ data: employees }, events, { data: approvals }, { data: invoices }] = await Promise.all([
-      supabase.from("employees").select("id, name, abn, account_name, bsb, account_number, active")
+      supabase.from("employees").select("id, name, abn, pay_rate, account_name, bsb, account_number, active")
         .eq("business_id", business.id).eq("active", true),
       fetchAllEvents(),
       supabase.from("timesheet_approvals").select("employee_id, date, approved")
@@ -141,6 +141,8 @@ export default function InvoicesPage() {
     const result: EmployeeWeek[] = [];
     for (const [empId, hoursRaw] of hoursByEmp) {
       const emp = empMap.get(empId)! as Employee;
+      // Skip employees without a pay rate configured (rate = 0).
+      if (!emp.pay_rate || Number(emp.pay_rate) <= 0) continue;
       const adjust = HOUR_ADJUSTMENTS[normalizeName(emp.name)] || 0;
       const hours = Math.max(0, Math.round((hoursRaw - adjust) * 100) / 100);
       if (hours <= 0) continue;
