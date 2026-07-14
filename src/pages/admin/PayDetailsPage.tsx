@@ -177,7 +177,7 @@ export default function PayDetailsPage() {
                 ))}
                 {filtered.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={8} className="text-center text-muted-foreground py-12">No employees found</TableCell>
+                    <TableCell colSpan={9} className="text-center text-muted-foreground py-12">No employees found</TableCell>
                   </TableRow>
                 )}
               </TableBody>
