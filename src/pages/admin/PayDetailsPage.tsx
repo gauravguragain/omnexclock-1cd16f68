@@ -19,10 +19,17 @@ interface PayDetailEmployee {
   employee_code: string;
   department: string | null;
   pay_id: string | null;
+  abn: string | null;
   account_name: string | null;
   bsb: string | null;
   account_number: string | null;
 }
+
+const fmtABN = (v: string) => {
+  const d = v.replace(/\D/g, "");
+  if (d.length !== 11) return d;
+  return `${d.slice(0, 2)} ${d.slice(2, 5)} ${d.slice(5, 8)} ${d.slice(8, 11)}`;
+};
 
 export default function PayDetailsPage() {
   const { business } = useBusiness();
@@ -32,7 +39,7 @@ export default function PayDetailsPage() {
   const [employees, setEmployees] = useState<PayDetailEmployee[]>([]);
   const [search, setSearch] = useState("");
   const [editTarget, setEditTarget] = useState<PayDetailEmployee | null>(null);
-  const [form, setForm] = useState({ pay_id: "", account_name: "", bsb: "", account_number: "" });
+  const [form, setForm] = useState({ pay_id: "", abn: "", account_name: "", bsb: "", account_number: "" });
   const [saving, setSaving] = useState(false);
 
   const isSuperAdmin = business ? isSuperAdminOf(business.id) : false;
@@ -41,12 +48,13 @@ export default function PayDetailsPage() {
     if (!business) return;
     const { data } = await supabase
       .from("employees")
-      .select("id, name, employee_code, department, pay_id, account_name, bsb, account_number")
+      .select("id, name, employee_code, department, pay_id, abn, account_name, bsb, account_number")
       .eq("business_id", business.id)
       .eq("active", true)
       .order("name");
     setEmployees((data as any[]) || []);
   };
+
 
   useEffect(() => { fetchEmployees(); }, [business]);
 
@@ -54,6 +62,7 @@ export default function PayDetailsPage() {
     setEditTarget(emp);
     setForm({
       pay_id: emp.pay_id || "",
+      abn: emp.abn ? fmtABN(emp.abn) : "",
       account_name: emp.account_name || "",
       bsb: emp.bsb || "",
       account_number: emp.account_number || "",
@@ -62,6 +71,11 @@ export default function PayDetailsPage() {
 
   const handleSave = async () => {
     if (!editTarget || saving) return;
+    const abnDigits = form.abn.replace(/\D/g, "");
+    if (abnDigits && abnDigits.length !== 11) {
+      toast({ title: "Validation Error", description: "ABN must be exactly 11 digits.", variant: "destructive" });
+      return;
+    }
     if (form.bsb && !/^\d{3}-?\d{3}$/.test(form.bsb.trim())) {
       toast({ title: "Validation Error", description: "BSB must be 6 digits (e.g. 123-456).", variant: "destructive" });
       return;
@@ -75,6 +89,7 @@ export default function PayDetailsPage() {
       try {
         const payload = {
           pay_id: form.pay_id.trim() || null,
+          abn: abnDigits || null,
           account_name: form.account_name.trim() || null,
           bsb: form.bsb.trim() || null,
           account_number: form.account_number.trim() || null,
@@ -92,6 +107,7 @@ export default function PayDetailsPage() {
       }
     });
   };
+
 
   const filtered = employees.filter(e =>
     e.name.toLowerCase().includes(search.toLowerCase()) ||
@@ -120,6 +136,7 @@ export default function PayDetailsPage() {
                   <TableHead className="text-[11px] uppercase tracking-wider text-muted-foreground font-medium min-w-[140px]">Employee</TableHead>
                   <TableHead className="text-[11px] uppercase tracking-wider text-muted-foreground font-medium">Code</TableHead>
                   <TableHead className="text-[11px] uppercase tracking-wider text-muted-foreground font-medium">Pay ID</TableHead>
+                  <TableHead className="text-[11px] uppercase tracking-wider text-muted-foreground font-medium">ABN</TableHead>
                   <TableHead className="text-[11px] uppercase tracking-wider text-muted-foreground font-medium">Account Name</TableHead>
                   <TableHead className="text-[11px] uppercase tracking-wider text-muted-foreground font-medium">BSB</TableHead>
                   <TableHead className="text-[11px] uppercase tracking-wider text-muted-foreground font-medium">Account No.</TableHead>
@@ -138,6 +155,7 @@ export default function PayDetailsPage() {
                     </TableCell>
                     <TableCell className="font-mono text-sm">{emp.employee_code}</TableCell>
                     <TableCell className="text-sm">{emp.pay_id || "—"}</TableCell>
+                    <TableCell className="text-sm font-mono">{emp.abn ? fmtABN(emp.abn) : "—"}</TableCell>
                     <TableCell className="text-sm">{emp.account_name || "—"}</TableCell>
                     <TableCell className="text-sm font-mono">{emp.bsb || "—"}</TableCell>
                     <TableCell className="text-sm font-mono">{emp.account_number ? `••••${emp.account_number.slice(-4)}` : "—"}</TableCell>
@@ -159,7 +177,7 @@ export default function PayDetailsPage() {
                 ))}
                 {filtered.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={8} className="text-center text-muted-foreground py-12">No employees found</TableCell>
+                    <TableCell colSpan={9} className="text-center text-muted-foreground py-12">No employees found</TableCell>
                   </TableRow>
                 )}
               </TableBody>
@@ -180,6 +198,17 @@ export default function PayDetailsPage() {
             <div className="space-y-2">
               <Label>Pay ID</Label>
               <Input value={form.pay_id} onChange={(e) => setForm({ ...form, pay_id: e.target.value })} placeholder="email@example.com or phone" maxLength={100} />
+            </div>
+            <div className="space-y-2">
+              <Label>ABN (11 digits)</Label>
+              <Input
+                value={form.abn}
+                onChange={(e) => setForm({ ...form, abn: e.target.value })}
+                onBlur={() => setForm({ ...form, abn: fmtABN(form.abn) })}
+                placeholder="12 345 678 901"
+                inputMode="numeric"
+                maxLength={14}
+              />
             </div>
             <div className="space-y-2">
               <Label>Account Name</Label>
