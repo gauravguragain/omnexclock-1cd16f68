@@ -980,6 +980,11 @@ export default function PortalPageV2() {
                 ))
               )}
             </TabsContent>
+
+            {/* PAY DETAILS TAB */}
+            <TabsContent value="pay" className="space-y-3 mt-4">
+              <PaymentDetailsSection employeeCode={portal.employeeCode} businessCode={bizCode} />
+            </TabsContent>
           </Tabs>
 
           {/* Forum Post Detail Dialog */}
