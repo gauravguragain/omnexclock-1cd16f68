@@ -29,8 +29,9 @@ import {
   ArrowLeft, Delete, CalendarRange, Clock, LogIn, LogOut, Coffee, User, FileText,
   MessageSquare, CalendarOff, Send, Plus, RefreshCw, CalendarIcon, Trash2, Pencil,
   History, CheckCircle2, XCircle, PartyPopper, ChevronDown, ChevronUp, Users,
-  Smartphone, Monitor, Tablet, Download,
+  Smartphone, Monitor, Tablet, Download, CreditCard,
 } from "lucide-react";
+import PaymentDetailsSection from "@/components/PaymentDetailsSection";
 
 /* ── Helpers ───────────────────────────────────────── */
 
@@ -710,7 +711,7 @@ export default function PortalPageV2() {
 
           {/* Tabs */}
           <Tabs defaultValue="today" className="w-full">
-            <TabsList className="w-full grid grid-cols-5 h-11">
+            <TabsList className="w-full grid grid-cols-6 h-11">
               <TabsTrigger value="today" className="gap-1 text-xs touch-active py-2.5">
                 <Clock className="h-3.5 w-3.5" /> <span className="hidden xs:inline">Today</span>
               </TabsTrigger>
@@ -725,6 +726,9 @@ export default function PortalPageV2() {
               </TabsTrigger>
               <TabsTrigger value="requests" className="gap-1 text-xs touch-active py-2.5" data-tour="portal-requests">
                 <CalendarOff className="h-3.5 w-3.5" /> <span className="hidden xs:inline">Requests</span>
+              </TabsTrigger>
+              <TabsTrigger value="pay" className="gap-1 text-xs touch-active py-2.5">
+                <CreditCard className="h-3.5 w-3.5" /> <span className="hidden xs:inline">Pay</span>
               </TabsTrigger>
             </TabsList>
 
@@ -975,6 +979,11 @@ export default function PortalPageV2() {
                   </Card>
                 ))
               )}
+            </TabsContent>
+
+            {/* PAY DETAILS TAB */}
+            <TabsContent value="pay" className="space-y-3 mt-4">
+              <PaymentDetailsSection employeeCode={portal.employeeCode} businessCode={bizCode} />
             </TabsContent>
           </Tabs>
 

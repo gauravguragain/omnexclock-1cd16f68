@@ -575,6 +575,7 @@ export type Database = {
       }
       employees: {
         Row: {
+          abn: string | null
           account_name: string | null
           account_number: string | null
           active: boolean
@@ -594,6 +595,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          abn?: string | null
           account_name?: string | null
           account_number?: string | null
           active?: boolean
@@ -613,6 +615,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          abn?: string | null
           account_name?: string | null
           account_number?: string | null
           active?: boolean
@@ -938,6 +941,104 @@ export type Database = {
             columns: ["item_id"]
             isOneToOne: false
             referencedRelation: "inventory_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      invoices: {
+        Row: {
+          account_name: string | null
+          account_number: string | null
+          amount: number
+          bsb: string | null
+          business_id: string
+          created_at: string
+          created_by: string | null
+          due_date: string
+          employee_abn: string | null
+          employee_id: string
+          employee_name: string
+          hourly_rate: number
+          id: string
+          invoice_code: string
+          invoice_number: number
+          issue_date: string
+          net_hours: number
+          updated_at: string
+          week_end: string
+          week_start: string
+        }
+        Insert: {
+          account_name?: string | null
+          account_number?: string | null
+          amount?: number
+          bsb?: string | null
+          business_id: string
+          created_at?: string
+          created_by?: string | null
+          due_date: string
+          employee_abn?: string | null
+          employee_id: string
+          employee_name: string
+          hourly_rate?: number
+          id?: string
+          invoice_code: string
+          invoice_number: number
+          issue_date: string
+          net_hours?: number
+          updated_at?: string
+          week_end: string
+          week_start: string
+        }
+        Update: {
+          account_name?: string | null
+          account_number?: string | null
+          amount?: number
+          bsb?: string | null
+          business_id?: string
+          created_at?: string
+          created_by?: string | null
+          due_date?: string
+          employee_abn?: string | null
+          employee_id?: string
+          employee_name?: string
+          hourly_rate?: number
+          id?: string
+          invoice_code?: string
+          invoice_number?: number
+          issue_date?: string
+          net_hours?: number
+          updated_at?: string
+          week_end?: string
+          week_start?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "invoices_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoices_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses_public"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoices_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoices_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees_public"
             referencedColumns: ["id"]
           },
         ]
@@ -1854,6 +1955,15 @@ export type Database = {
               title: string
             }[]
           }
+      get_my_payment_details: {
+        Args: { _business_code: string; _employee_code: string }
+        Returns: {
+          abn: string
+          account_name: string
+          account_number: string
+          bsb: string
+        }[]
+      }
       get_my_reactions:
         | {
             Args: { _employee_code: string; _post_id: string }
@@ -1914,6 +2024,10 @@ export type Database = {
           _notification_id: string
         }
         Returns: boolean
+      }
+      next_employee_invoice_number: {
+        Args: { _employee_id: string }
+        Returns: number
       }
       register_business: {
         Args: { _business_code: string; _business_name: string }
@@ -2017,6 +2131,17 @@ export type Database = {
             }
             Returns: boolean
           }
+      update_my_payment_details: {
+        Args: {
+          _abn: string
+          _account_name: string
+          _account_number: string
+          _bsb: string
+          _business_code: string
+          _employee_code: string
+        }
+        Returns: boolean
+      }
     }
     Enums: {
       app_role:

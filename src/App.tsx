@@ -51,6 +51,7 @@ const InventoryPage = React.lazy(() => import("./pages/admin/InventoryPage"));
 const ServiceMaintenancePage = React.lazy(() => import("./pages/admin/ServiceMaintenancePage"));
 
 const PayDetailsPage = React.lazy(() => import("./pages/admin/PayDetailsPage"));
+const InvoicesPage = React.lazy(() => import("./pages/admin/InvoicesPage"));
 const MasterDashboardPage = React.lazy(() => import("./pages/master/MasterDashboardPage"));
 const MasterBusinessesPage = React.lazy(() => import("./pages/master/MasterBusinessesPage"));
 const MasterUsersPage = React.lazy(() => import("./pages/master/MasterUsersPage"));
@@ -108,6 +109,7 @@ const App = () => (
                     <Route path="service" element={<ServiceMaintenancePage />} />
                     
                     <Route path="pay-details" element={<PayDetailsPage />} />
+                    <Route path="invoices" element={<InvoicesPage />} />
                   </Route>
 
                   {/* Master admin routes */}
