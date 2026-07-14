@@ -27,6 +27,13 @@ import { logAudit, getDeviceInfo } from "@/lib/auditLog";
 
 const HOURLY_RATE = 30;
 
+// Per-employee hour adjustments (subtracted from net hours before invoicing).
+// Matches on normalized full name (lowercased, trimmed, collapsed whitespace).
+const HOUR_ADJUSTMENTS: Record<string, number> = {
+  "rabin shrestha": 24,
+};
+const normalizeName = (n: string) => n.trim().toLowerCase().replace(/\s+/g, " ");
+
 // Business-specific bill-to. Fallback uses generic business.name/business_code.
 const BILL_TO_OVERRIDES: Record<string, { name: string; abn: string; address_lines: string[] }> = {
   PRP: {
