@@ -4,7 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Navigate, Outlet, Link, useLocation, useParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import {
-  Users, Clock, CalendarDays, DollarSign, BarChart3, Monitor, LogOut, Menu, X, Settings, FileText, UserCog, CalendarRange, MessageSquare, CalendarOff, Building2, Package, Wrench, MoreHorizontal, CreditCard
+  Users, Clock, CalendarDays, DollarSign, BarChart3, Monitor, LogOut, Menu, X, Settings, FileText, UserCog, CalendarRange, MessageSquare, CalendarOff, Building2, Package, Wrench, MoreHorizontal, CreditCard, Receipt
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useSessionGuard } from "@/hooks/useSessionGuard";
