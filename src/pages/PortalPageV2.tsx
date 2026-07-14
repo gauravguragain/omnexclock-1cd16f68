@@ -784,120 +784,132 @@ export default function PortalPageV2() {
               )}
             </TabsContent>
 
-            {/* TIMESHEETS TAB */}
+            {/* TIMESHEETS TAB — approved entries only, last 3 months */}
             <TabsContent value="timesheets" className="space-y-3 mt-4">
-              {portal.timesheets.length === 0 ? (
-                <Card>
-                  <CardContent className="p-8 text-center text-muted-foreground">
-                    <FileText className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                    <p>No timesheet entries found.</p>
-                  </CardContent>
-                </Card>
-              ) : (
-                (() => {
-                  const weekGroups: Record<string, TimesheetEntry[]> = {};
-                  for (const ts of portal.timesheets) {
-                    const key = getMondayStr(ts.work_date);
-                    if (!weekGroups[key]) weekGroups[key] = [];
-                    weekGroups[key].push(ts);
-                  }
-                  const sortedWeeks = Object.entries(weekGroups).sort(([a], [b]) => b.localeCompare(a));
-                  const todayMon = getMondayStr(ausToday());
+              {(() => {
+                const todayStr = ausToday();
+                const approvedOnly = portal.timesheets.filter((ts) => {
+                  return portal.timesheetApprovals.get(ts.work_date) === true;
+                });
 
-                  return sortedWeeks.map(([weekStart, weekEntries]) => {
-                    const ws = new Date(weekStart + "T00:00:00");
-                    const we = new Date(ws); we.setDate(we.getDate() + 6);
-                    const weekTotal = weekEntries.reduce((sum, t) => sum + (t.net_hours || 0), 0);
-                    const isCurrentWeek = weekStart === todayMon;
+                // 3-month cutoff
+                const cutoff = new Date();
+                cutoff.setMonth(cutoff.getMonth() - 3);
+                const cutoffStr = cutoff.toISOString().split("T")[0];
+                const inWindow = approvedOnly.filter((ts) => ts.work_date >= cutoffStr);
 
-                    return (
-                      <Collapsible key={weekStart} defaultOpen={isCurrentWeek}>
-                        <CollapsibleTrigger className="w-full">
-                          <Card className={isCurrentWeek ? "border-primary/30" : ""}>
-                            <CardContent className="p-3 flex items-center justify-between">
-                              <div className="flex items-center gap-2">
-                                <CalendarRange className="h-3.5 w-3.5 text-primary" />
-                                <span className="text-sm font-medium text-foreground">
-                                  {toAusFormatted(ws, { day: "numeric", month: "short" })} – {toAusFormatted(we, { day: "numeric", month: "short" })}
-                                </span>
-                                {isCurrentWeek && <Badge className="bg-primary/15 text-primary text-[10px] px-1.5 py-0">This Week</Badge>}
-                              </div>
-                              <div className="flex items-center gap-2">
-                                <Badge variant="outline" className="font-mono text-xs">{weekTotal.toFixed(2)}h</Badge>
-                                <ChevronDown className="h-4 w-4 text-muted-foreground transition-transform [[data-state=open]_&]:rotate-180" />
-                              </div>
-                            </CardContent>
-                          </Card>
-                        </CollapsibleTrigger>
-                        <CollapsibleContent className="space-y-2 mt-2">
-                          {weekEntries.map((ts) => {
-                            const d = new Date(ts.work_date + "T00:00:00");
-                            const dayName = toAusFormatted(d, { weekday: "short" });
-                            const dateLabel = toAusFormatted(d, { day: "numeric", month: "short" });
-                            const isActive = !!ts.clock_in && !ts.clock_out;
-                            const isApproved = isActive ? false : portal.timesheetApprovals.get(ts.work_date);
+                if (inWindow.length === 0) {
+                  return (
+                    <Card>
+                      <CardContent className="p-8 text-center text-muted-foreground">
+                        <FileText className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                        <p>No approved timesheets yet.</p>
+                        <p className="text-xs mt-1">Approved shifts from the last 3 months appear here.</p>
+                      </CardContent>
+                    </Card>
+                  );
+                }
 
-                            return (
-                              <Card key={ts.work_date} className={isActive ? "border-warning/40" : isApproved ? "border-success/30" : ""}>
-                                <CardContent className="p-3">
-                                  <div className="flex items-center justify-between mb-2">
-                                    <div className="flex items-center gap-2">
-                                      {isApproved === true ? <CheckCircle2 className="h-4 w-4 text-success" /> :
-                                       isApproved === false ? <XCircle className="h-4 w-4 text-muted-foreground" /> : null}
-                                      <span className="text-sm font-medium text-foreground">{dayName}</span>
-                                      <span className="text-xs text-muted-foreground">{dateLabel}</span>
-                                      {isActive && <Badge className="bg-warning/15 text-warning text-[10px] px-1.5 py-0">Active</Badge>}
-                                      {isApproved === true && <Badge className="bg-success/15 text-success text-[10px] px-1.5 py-0">Approved</Badge>}
-                                      {isApproved === false && <Badge variant="outline" className="text-muted-foreground text-[10px] px-1.5 py-0">Pending</Badge>}
-                                    </div>
-                                    <div className="flex items-center gap-2">
-                                      <Button variant="ghost" size="sm" onClick={() => openTsHistory(ts.work_date)} className="h-7 w-7 p-0 text-muted-foreground hover:text-primary">
-                                        <History className="h-3.5 w-3.5" />
-                                      </Button>
-                                      <span className="font-mono font-semibold text-foreground text-sm">{ts.net_hours.toFixed(2)}h</span>
-                                    </div>
-                                  </div>
-                                  <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
-                                    <div className="flex items-center gap-1.5">
-                                      <LogIn className="h-3 w-3 text-success" />
-                                      <span className="text-muted-foreground">In:</span>
-                                      <span className="text-foreground font-mono">{fmtTimestamp(ts.clock_in)}</span>
-                                    </div>
-                                    <div className="flex items-center gap-1.5">
-                                      <LogOut className="h-3 w-3 text-destructive" />
-                                      <span className="text-muted-foreground">Out:</span>
-                                      <span className="text-foreground font-mono">{fmtTimestamp(ts.clock_out)}</span>
-                                    </div>
-                                    {(ts.break_start || ts.break_end) && (
-                                      <>
-                                        <div className="flex items-center gap-1.5">
-                                          <Coffee className="h-3 w-3 text-warning" />
-                                          <span className="text-muted-foreground">Break:</span>
-                                          <span className="text-foreground font-mono">{fmtTimestamp(ts.break_start)}</span>
-                                        </div>
-                                        <div className="flex items-center gap-1.5">
-                                          <Clock className="h-3 w-3 text-primary" />
-                                          <span className="text-muted-foreground">Resume:</span>
-                                          <span className="text-foreground font-mono">{fmtTimestamp(ts.break_end)}</span>
-                                        </div>
-                                      </>
+                const weekGroups: Record<string, TimesheetEntry[]> = {};
+                for (const ts of inWindow) {
+                  const key = getMondayStr(ts.work_date);
+                  if (!weekGroups[key]) weekGroups[key] = [];
+                  weekGroups[key].push(ts);
+                }
+                const sortedWeeks = Object.entries(weekGroups).sort(([a], [b]) => b.localeCompare(a));
+                const todayMon = getMondayStr(ausToday());
+
+                return sortedWeeks.map(([weekStart, weekEntries]) => {
+                  const ws = new Date(weekStart + "T00:00:00");
+                  const we = new Date(ws); we.setDate(we.getDate() + 6);
+                  const weekTotal = weekEntries.reduce((sum, t) => sum + (t.net_hours || 0), 0);
+                  const isCurrentWeek = weekStart === todayMon;
+
+                  return (
+                    <Collapsible key={weekStart} defaultOpen={isCurrentWeek}>
+                      <CollapsibleTrigger className="w-full">
+                        <Card className={isCurrentWeek ? "border-primary/30" : ""}>
+                          <CardContent className="p-3 flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              <CalendarRange className="h-3.5 w-3.5 text-primary" />
+                              <span className="text-sm font-medium text-foreground">
+                                {toAusFormatted(ws, { day: "numeric", month: "short" })} – {toAusFormatted(we, { day: "numeric", month: "short" })}
+                              </span>
+                              {isCurrentWeek && <Badge className="bg-primary/15 text-primary text-[10px] px-1.5 py-0">This Week</Badge>}
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <Badge variant="outline" className="font-mono text-xs">{weekTotal.toFixed(2)}h</Badge>
+                              <ChevronDown className="h-4 w-4 text-muted-foreground transition-transform [[data-state=open]_&]:rotate-180" />
+                            </div>
+                          </CardContent>
+                        </Card>
+                      </CollapsibleTrigger>
+                      <CollapsibleContent className="space-y-2 mt-2">
+                        {weekEntries.map((ts) => {
+                          const d = new Date(ts.work_date + "T00:00:00");
+                          const dayName = toAusFormatted(d, { weekday: "short" });
+                          const dateLabel = toAusFormatted(d, { day: "numeric", month: "short" });
+
+                          return (
+                            <Card key={ts.work_date} className="border-success/30">
+                              <CardContent className="p-3">
+                                <div className="flex items-center justify-between mb-2">
+                                  <div className="flex items-center gap-2">
+                                    <CheckCircle2 className="h-4 w-4 text-success" />
+                                    <span className="text-sm font-medium text-foreground">{dayName}</span>
+                                    <span className="text-xs text-muted-foreground">{dateLabel}</span>
+                                    <Badge className="bg-success/15 text-success text-[10px] px-1.5 py-0">Approved</Badge>
+                                    {ts.crossed_midnight && (
+                                      <Badge className="bg-indigo-500/15 text-indigo-700 dark:text-indigo-300 text-[10px] px-1.5 py-0">+1d</Badge>
                                     )}
                                   </div>
-                                  {ts.break_minutes > 0 && (
-                                    <p className="text-[10px] text-muted-foreground mt-1.5">
-                                      {ts.break_minutes}m break · {ts.total_hours.toFixed(2)}h gross
-                                    </p>
+                                  <div className="flex items-center gap-2">
+                                    <Button variant="ghost" size="sm" onClick={() => openTsHistory(ts.work_date)} className="h-7 w-7 p-0 text-muted-foreground hover:text-primary">
+                                      <History className="h-3.5 w-3.5" />
+                                    </Button>
+                                    <span className="font-mono font-semibold text-foreground text-sm">{ts.net_hours.toFixed(2)}h</span>
+                                  </div>
+                                </div>
+                                <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
+                                  <div className="flex items-center gap-1.5">
+                                    <LogIn className="h-3 w-3 text-success" />
+                                    <span className="text-muted-foreground">In:</span>
+                                    <span className="text-foreground font-mono">{fmtTimestamp(ts.clock_in)}</span>
+                                  </div>
+                                  <div className="flex items-center gap-1.5">
+                                    <LogOut className="h-3 w-3 text-destructive" />
+                                    <span className="text-muted-foreground">Out:</span>
+                                    <span className="text-foreground font-mono">{fmtTimestamp(ts.clock_out)}</span>
+                                  </div>
+                                  {(ts.break_start || ts.break_end) && (
+                                    <>
+                                      <div className="flex items-center gap-1.5">
+                                        <Coffee className="h-3 w-3 text-warning" />
+                                        <span className="text-muted-foreground">Break:</span>
+                                        <span className="text-foreground font-mono">{fmtTimestamp(ts.break_start)}</span>
+                                      </div>
+                                      <div className="flex items-center gap-1.5">
+                                        <Clock className="h-3 w-3 text-primary" />
+                                        <span className="text-muted-foreground">Resume:</span>
+                                        <span className="text-foreground font-mono">{fmtTimestamp(ts.break_end)}</span>
+                                      </div>
+                                    </>
                                   )}
-                                </CardContent>
-                              </Card>
-                            );
-                          })}
-                        </CollapsibleContent>
-                      </Collapsible>
-                    );
-                  });
-                })()
-              )}
+                                </div>
+                                {ts.break_minutes > 0 && (
+                                  <p className="text-[10px] text-muted-foreground mt-1.5">
+                                    {ts.break_minutes}m break · {ts.total_hours.toFixed(2)}h gross
+                                  </p>
+                                )}
+                              </CardContent>
+                            </Card>
+                          );
+                        })}
+                      </CollapsibleContent>
+                    </Collapsible>
+                  );
+                });
+              })()}
             </TabsContent>
 
             {/* FORUM TAB */}
