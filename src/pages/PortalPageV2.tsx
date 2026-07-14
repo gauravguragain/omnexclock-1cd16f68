@@ -29,8 +29,9 @@ import {
   ArrowLeft, Delete, CalendarRange, Clock, LogIn, LogOut, Coffee, User, FileText,
   MessageSquare, CalendarOff, Send, Plus, RefreshCw, CalendarIcon, Trash2, Pencil,
   History, CheckCircle2, XCircle, PartyPopper, ChevronDown, ChevronUp, Users,
-  Smartphone, Monitor, Tablet, Download,
+  Smartphone, Monitor, Tablet, Download, CreditCard,
 } from "lucide-react";
+import PaymentDetailsSection from "@/components/PaymentDetailsSection";
 
 /* ── Helpers ───────────────────────────────────────── */
 
