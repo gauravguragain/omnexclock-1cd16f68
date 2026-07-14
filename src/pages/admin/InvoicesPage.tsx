@@ -263,33 +263,41 @@ export default function InvoicesPage() {
     doc.save(filename);
   };
 
+  const buildInvoiceDataFor = (row: EmployeeWeek): InvoiceData => {
+    const emp = row.employee;
+    const ex = row.existing;
+    return {
+      invoice_number: ex?.invoice_number ?? 0,
+      invoice_number_display: invoiceNumberDisplay(business!.business_code, weekEnd, ex?.invoice_number ?? 0),
+      invoice_code: ex?.invoice_code || row.invoice_code,
+      week_start: weekStart,
+      week_end: weekEnd,
+      issue_date: ex ? new Date(ex.issue_date + "T00:00:00") : issueDate,
+      due_date: ex ? new Date(ex.due_date + "T00:00:00") : dueDate,
+      net_hours: ex?.net_hours ?? row.net_hours,
+      hourly_rate: HOURLY_RATE,
+      amount: ex?.amount ?? row.amount,
+      employee: {
+        name: emp.name,
+        abn: ex?.employee_abn ?? emp.abn,
+        account_name: ex?.account_name ?? emp.account_name,
+        bsb: ex?.bsb ?? emp.bsb,
+        account_number: ex?.account_number ?? emp.account_number,
+      },
+      billTo: getBillTo(),
+    };
+  };
+
   const downloadCombined = () => {
     const generated = rows.filter((r) => r.existing);
     if (generated.length === 0) { toast.error("No generated invoices for this week."); return; }
-    let combined: jsPDF | null = null;
-    for (const row of generated) {
-      const doc = buildPdfFor(row, row.existing!.invoice_number, {
-        abn: row.existing!.employee_abn, account_name: row.existing!.account_name,
-        bsb: row.existing!.bsb, account_number: row.existing!.account_number,
-      });
-      if (!combined) { combined = doc; }
-      else {
-        const pages = doc.getNumberOfPages();
-        for (let i = 1; i <= pages; i++) {
-          combined.addPage("a4", "portrait");
-          const src = doc as any;
-          // Merge by re-rendering: jsPDF doesn't merge easily. Simpler: copy internal.pages
-          const srcPage = src.internal.pages[i];
-          const dstIdx = combined.getNumberOfPages();
-          (combined as any).internal.pages[dstIdx] = srcPage;
-        }
-      }
-    }
+    const list = generated.map((r) => buildInvoiceDataFor(r));
+    const combined = buildCombinedInvoicesPdf(list);
     const filename = buildExportFilename({
       businessCode: business?.business_code, businessName: business?.name,
       reportType: "Invoices-Combined", dateFrom: weekStart, dateTo: weekEnd, ext: "pdf",
     });
-    combined!.save(filename);
+    combined.save(filename);
   };
 
   const goPrev = () => setWeekStart(startOfWeek(subWeeks(weekStart, 1), { weekStartsOn: 1 }));
