@@ -822,24 +822,34 @@ export default function PortalPage() {
     };
   }, [authenticated, employeeCode, employeeInfo?.employee_id, urlBusinessCode]);
 
-  /* ── group shifts by week — only show current week ── */
+  /* ── group shifts by week — current + past 12 weeks + future ── */
   const shiftsByWeek = useMemo(() => {
     const todayStr = ausToday();
     const [y, m, d] = todayStr.split("-").map(Number);
     const todayDate = new Date(y, m - 1, d);
     const mondayDate = getMonday(todayDate);
-    const mondayStr = `${mondayDate.getFullYear()}-${String(mondayDate.getMonth() + 1).padStart(2, "0")}-${String(mondayDate.getDate()).padStart(2, "0")}`;
+    // Include last 12 weeks of history
+    const earliest = new Date(mondayDate);
+    earliest.setDate(earliest.getDate() - 12 * 7);
+    const earliestStr = `${earliest.getFullYear()}-${String(earliest.getMonth() + 1).padStart(2, "0")}-${String(earliest.getDate()).padStart(2, "0")}`;
 
     const weeks: Record<string, PortalShift[]> = {};
     for (const s of shifts) {
-      // Only include current week and future weeks
-      if (s.week_start_date < mondayStr) continue;
+      if (s.week_start_date < earliestStr) continue;
       const key = s.week_start_date;
       if (!weeks[key]) weeks[key] = [];
       weeks[key].push(s);
     }
-    return Object.entries(weeks).sort(([a], [b]) => a.localeCompare(b));
+    // Newest first so current + future weeks appear at top
+    return Object.entries(weeks).sort(([a], [b]) => b.localeCompare(a));
   }, [shifts]);
+
+  const currentWeekMondayStr = useMemo(() => {
+    const todayStr = ausToday();
+    const [y, m, d] = todayStr.split("-").map(Number);
+    const mon = getMonday(new Date(y, m - 1, d));
+    return `${mon.getFullYear()}-${String(mon.getMonth() + 1).padStart(2, "0")}-${String(mon.getDate()).padStart(2, "0")}`;
+  }, []);
 
   /* ── timesheet totals (removed overall — per-week only) ── */
 
