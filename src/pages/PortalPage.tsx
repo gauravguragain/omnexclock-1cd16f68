@@ -1260,9 +1260,7 @@ export default function PortalPage() {
                       </Collapsible>
                     );
                   });
-                })()}
-              </>
-            )}
+            })()}
           </TabsContent>
 
           {/* FORUM TAB */}
