@@ -141,6 +141,8 @@ export default function InvoicesPage() {
     const result: EmployeeWeek[] = [];
     for (const [empId, hoursRaw] of hoursByEmp) {
       const emp = empMap.get(empId)! as Employee;
+      // Skip employees without a pay rate configured (rate = 0).
+      if (!emp.pay_rate || Number(emp.pay_rate) <= 0) continue;
       const adjust = HOUR_ADJUSTMENTS[normalizeName(emp.name)] || 0;
       const hours = Math.max(0, Math.round((hoursRaw - adjust) * 100) / 100);
       if (hours <= 0) continue;
