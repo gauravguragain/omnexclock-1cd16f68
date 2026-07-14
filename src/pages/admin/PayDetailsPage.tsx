@@ -155,6 +155,7 @@ export default function PayDetailsPage() {
                     </TableCell>
                     <TableCell className="font-mono text-sm">{emp.employee_code}</TableCell>
                     <TableCell className="text-sm">{emp.pay_id || "—"}</TableCell>
+                    <TableCell className="text-sm font-mono">{emp.abn ? fmtABN(emp.abn) : "—"}</TableCell>
                     <TableCell className="text-sm">{emp.account_name || "—"}</TableCell>
                     <TableCell className="text-sm font-mono">{emp.bsb || "—"}</TableCell>
                     <TableCell className="text-sm font-mono">{emp.account_number ? `••••${emp.account_number.slice(-4)}` : "—"}</TableCell>
