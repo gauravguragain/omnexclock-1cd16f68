@@ -1033,8 +1033,8 @@ export default function PortalPage() {
             <TodayTab employeeCode={employeeCode} businessCode={urlBusinessCode?.toUpperCase() || null} shifts={shifts} employeeName={employeeInfo?.employee_name || ""} businessName={businessName} />
           </TabsContent>
 
-          {/* ROSTER TAB */}
-          <TabsContent value="roster" className="space-y-4 mt-4">
+          {/* ROSTER TAB — current, past 12 weeks, and upcoming */}
+          <TabsContent value="roster" className="space-y-3 mt-4">
             {shiftsByWeek.length === 0 ? (
               <Card>
                 <CardContent className="p-8 text-center text-muted-foreground">
@@ -1050,18 +1050,32 @@ export default function PortalPage() {
                 const weekTotal = weekShifts.reduce(
                   (sum, s) => sum + (s.hours_worked ?? calcNetHours(s.start_time, s.end_time, s.break_minutes)), 0
                 );
+                const isCurrent = weekStart === currentWeekMondayStr;
+                const isPast = weekStart < currentWeekMondayStr;
+                const sortedShifts = [...weekShifts].sort((a, b) => a.date.localeCompare(b.date));
+
                 return (
-                  <Card key={weekStart}>
-                    <CardHeader className="pb-2 px-4 pt-4">
-                      <div className="flex items-center justify-between">
-                        <CardTitle className="text-sm font-medium text-muted-foreground">
-                          {toAusFormatted(ws, { day: "numeric", month: "short" })} – {toAusFormatted(we, { day: "numeric", month: "short" })}
-                        </CardTitle>
-                        <Badge variant="outline" className="font-mono text-xs">{weekTotal.toFixed(2)}h</Badge>
-                      </div>
-                    </CardHeader>
-                    <CardContent className="px-4 pb-4 space-y-2">
-                      {weekShifts.map(shift => (
+                  <Collapsible key={weekStart} defaultOpen={isCurrent}>
+                    <CollapsibleTrigger className="w-full">
+                      <Card className={isCurrent ? "border-primary/30" : ""}>
+                        <CardContent className="p-3 flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <CalendarRange className="h-3.5 w-3.5 text-primary" />
+                            <span className="text-sm font-medium text-foreground">
+                              {toAusFormatted(ws, { day: "numeric", month: "short" })} – {toAusFormatted(we, { day: "numeric", month: "short" })}
+                            </span>
+                            {isCurrent && <Badge className="bg-primary/15 text-primary text-[10px] px-1.5 py-0">This Week</Badge>}
+                            {isPast && <Badge variant="outline" className="text-muted-foreground text-[10px] px-1.5 py-0">Past</Badge>}
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Badge variant="outline" className="font-mono text-xs">{weekTotal.toFixed(2)}h</Badge>
+                            <ChevronDown className="h-4 w-4 text-muted-foreground transition-transform [[data-state=open]_&]:rotate-180" />
+                          </div>
+                        </CardContent>
+                      </Card>
+                    </CollapsibleTrigger>
+                    <CollapsibleContent className="space-y-2 mt-2">
+                      {sortedShifts.map(shift => (
                         <div key={shift.id} className="flex items-center justify-between rounded-lg bg-secondary/50 px-3 py-2.5">
                           <div>
                             <p className="text-sm font-medium text-foreground">{shift.day_of_week}</p>
@@ -1080,8 +1094,8 @@ export default function PortalPage() {
                           </div>
                         </div>
                       ))}
-                    </CardContent>
-                  </Card>
+                    </CollapsibleContent>
+                  </Collapsible>
                 );
               })
             )}
