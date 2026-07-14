@@ -1147,13 +1147,6 @@ export default function PortalPage() {
                     const weekTotal = weekEntries.reduce((sum, t) => sum + (t.net_hours || 0), 0);
                     const todayMon = (() => { const td = new Date(todayStr + "T00:00:00"); const m = getMonday(td); return `${m.getFullYear()}-${String(m.getMonth() + 1).padStart(2, "0")}-${String(m.getDate()).padStart(2, "0")}`; })();
                     const isCurrentWeek = weekStart === todayMon;
-                    const ws = new Date(weekStart + "T00:00:00");
-                    const we = new Date(ws);
-                    we.setDate(we.getDate() + 6);
-                    const weekTotal = weekEntries.reduce((sum, t) => sum + (t.net_hours || 0), 0);
-                    const todayStr = ausToday();
-                    const todayMon = (() => { const td = new Date(todayStr + "T00:00:00"); const m = getMonday(td); return `${m.getFullYear()}-${String(m.getMonth() + 1).padStart(2, "0")}-${String(m.getDate()).padStart(2, "0")}`; })();
-                    const isCurrentWeek = weekStart === todayMon;
 
                     return (
                       <Collapsible key={weekStart} defaultOpen={isCurrentWeek}>
