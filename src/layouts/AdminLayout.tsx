@@ -76,6 +76,7 @@ export default function AdminLayout() {
     { path: `${basePath}/timesheets`, label: "Timesheets", icon: CalendarDays, tourId: "timesheets", access: "roster" },
     { path: `${basePath}/payroll`, label: "Payroll", icon: DollarSign, tourId: "payroll", access: "admin" },
     { path: `${basePath}/pay-details`, label: "Pay Details", icon: CreditCard, tourId: "pay-details", access: "super_admin_only" },
+    { path: `${basePath}/invoices`, label: "Invoices", icon: Receipt, tourId: "invoices", access: "super_admin_only" },
     { path: `${basePath}/requests`, label: "Requests", icon: CalendarOff, tourId: "requests", access: "admin" },
     { path: `${basePath}/forum`, label: "Forum", icon: MessageSquare, tourId: "forum", access: "admin" },
     { path: `${basePath}/inventory`, label: "Inventory", icon: Package, tourId: "inventory", access: "inventory" },
