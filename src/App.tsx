@@ -108,6 +108,7 @@ const App = () => (
                     <Route path="service" element={<ServiceMaintenancePage />} />
                     
                     <Route path="pay-details" element={<PayDetailsPage />} />
+                    <Route path="invoices" element={<InvoicesPage />} />
                   </Route>
 
                   {/* Master admin routes */}
