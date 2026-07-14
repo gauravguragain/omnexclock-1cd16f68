@@ -79,7 +79,7 @@ export function renderInvoiceOnCurrentPage(doc: jsPDF, data: InvoiceData) {
   const fromLines = [
     data.employee.abn ? `ABN ${fmtABN(data.employee.abn)}` : "ABN —",
     "",
-    `Bank: ${data.employee.account_name || "—"}`,
+    `Account name: ${data.employee.account_name || "—"}`,
     `BSB: ${data.employee.bsb || "—"}`,
     `Account: ${showAccount(data.employee.account_number)}`,
   ];
