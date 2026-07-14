@@ -10,8 +10,8 @@ const MUTED: [number, number, number] = [102, 102, 102];
 
 export interface InvoiceData {
   invoice_number: number;
-  invoice_number_display: string; // e.g. "PRP-2026-0007"
-  invoice_code: string; // e.g. MAM36.50
+  invoice_number_display: string;
+  invoice_code: string;
   week_start: Date;
   week_end: Date;
   issue_date: Date;
@@ -43,19 +43,16 @@ const fmtABN = (abn: string | null | undefined) => {
   return `${d.slice(0, 2)} ${d.slice(2, 5)} ${d.slice(5, 8)} ${d.slice(8, 11)}`;
 };
 
-export function buildInvoicePdf(data: InvoiceData): jsPDF {
-  const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+/** Renders one full invoice onto the current page of `doc`. */
+export function renderInvoiceOnCurrentPage(doc: jsPDF, data: InvoiceData) {
   const W = doc.internal.pageSize.getWidth();
-  const H = doc.internal.pageSize.getHeight();
 
-  // Header
   doc.setFillColor(...GOLD); doc.rect(20, 15, 4, 30, "F");
   doc.setFillColor(...DARK); doc.rect(24, 15, W - 44, 30, "F");
   doc.setTextColor(255, 255, 255);
   doc.setFont("helvetica", "bold"); doc.setFontSize(24);
   doc.text("TAX INVOICE", 32, 33);
 
-  // Meta
   let y = 55;
   doc.setTextColor(...MUTED); doc.setFont("helvetica", "bold"); doc.setFontSize(9);
   doc.text("INVOICE #", 20, y);
@@ -68,7 +65,6 @@ export function buildInvoicePdf(data: InvoiceData): jsPDF {
   doc.text(format(data.issue_date, "dd/MM/yyyy"), 130, y);
   doc.text(format(data.due_date, "dd/MM/yyyy"), 130, y + 6);
 
-  // Panels
   y = 70; const panelH = 40;
   doc.setFillColor(...LIGHT);
   doc.rect(20, y, 82, panelH, "F");
@@ -96,7 +92,6 @@ export function buildInvoicePdf(data: InvoiceData): jsPDF {
   const toLines = [`ABN ${fmtABN(data.billTo.abn)}`, ...data.billTo.address_lines];
   toLines.forEach((l, i) => doc.text(l, 113, y + 19 + i * 4.2));
 
-  // Table
   y = 118;
   autoTable(doc, {
     startY: y,
@@ -117,7 +112,6 @@ export function buildInvoicePdf(data: InvoiceData): jsPDF {
   });
   const finalY = (doc as any).lastAutoTable.finalY + 8;
 
-  // Totals
   doc.setFont("helvetica", "normal"); doc.setFontSize(10); doc.setTextColor(...MUTED);
   doc.text("Subtotal", 165, finalY, { align: "right" });
   doc.setTextColor(...TEXT);
@@ -133,7 +127,20 @@ export function buildInvoicePdf(data: InvoiceData): jsPDF {
   doc.setFont("helvetica", "bold"); doc.setFontSize(11); doc.setTextColor(...DARK);
   doc.text("TOTAL DUE (AUD)", 165, finalY + 16, { align: "right" });
   doc.text(`$${data.amount.toFixed(2)}`, W - 24, finalY + 16, { align: "right" });
+}
 
+export function buildInvoicePdf(data: InvoiceData): jsPDF {
+  const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+  renderInvoiceOnCurrentPage(doc, data);
+  return doc;
+}
+
+export function buildCombinedInvoicesPdf(list: InvoiceData[]): jsPDF {
+  const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+  list.forEach((data, idx) => {
+    if (idx > 0) doc.addPage("a4", "portrait");
+    renderInvoiceOnCurrentPage(doc, data);
+  });
   return doc;
 }
 
