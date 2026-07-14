@@ -822,24 +822,34 @@ export default function PortalPage() {
     };
   }, [authenticated, employeeCode, employeeInfo?.employee_id, urlBusinessCode]);
 
-  /* ── group shifts by week — only show current week ── */
+  /* ── group shifts by week — current + past 12 weeks + future ── */
   const shiftsByWeek = useMemo(() => {
     const todayStr = ausToday();
     const [y, m, d] = todayStr.split("-").map(Number);
     const todayDate = new Date(y, m - 1, d);
     const mondayDate = getMonday(todayDate);
-    const mondayStr = `${mondayDate.getFullYear()}-${String(mondayDate.getMonth() + 1).padStart(2, "0")}-${String(mondayDate.getDate()).padStart(2, "0")}`;
+    // Include last 12 weeks of history
+    const earliest = new Date(mondayDate);
+    earliest.setDate(earliest.getDate() - 12 * 7);
+    const earliestStr = `${earliest.getFullYear()}-${String(earliest.getMonth() + 1).padStart(2, "0")}-${String(earliest.getDate()).padStart(2, "0")}`;
 
     const weeks: Record<string, PortalShift[]> = {};
     for (const s of shifts) {
-      // Only include current week and future weeks
-      if (s.week_start_date < mondayStr) continue;
+      if (s.week_start_date < earliestStr) continue;
       const key = s.week_start_date;
       if (!weeks[key]) weeks[key] = [];
       weeks[key].push(s);
     }
-    return Object.entries(weeks).sort(([a], [b]) => a.localeCompare(b));
+    // Newest first so current + future weeks appear at top
+    return Object.entries(weeks).sort(([a], [b]) => b.localeCompare(a));
   }, [shifts]);
+
+  const currentWeekMondayStr = useMemo(() => {
+    const todayStr = ausToday();
+    const [y, m, d] = todayStr.split("-").map(Number);
+    const mon = getMonday(new Date(y, m - 1, d));
+    return `${mon.getFullYear()}-${String(mon.getMonth() + 1).padStart(2, "0")}-${String(mon.getDate()).padStart(2, "0")}`;
+  }, []);
 
   /* ── timesheet totals (removed overall — per-week only) ── */
 
@@ -1023,8 +1033,8 @@ export default function PortalPage() {
             <TodayTab employeeCode={employeeCode} businessCode={urlBusinessCode?.toUpperCase() || null} shifts={shifts} employeeName={employeeInfo?.employee_name || ""} businessName={businessName} />
           </TabsContent>
 
-          {/* ROSTER TAB */}
-          <TabsContent value="roster" className="space-y-4 mt-4">
+          {/* ROSTER TAB — current, past 12 weeks, and upcoming */}
+          <TabsContent value="roster" className="space-y-3 mt-4">
             {shiftsByWeek.length === 0 ? (
               <Card>
                 <CardContent className="p-8 text-center text-muted-foreground">
@@ -1040,18 +1050,32 @@ export default function PortalPage() {
                 const weekTotal = weekShifts.reduce(
                   (sum, s) => sum + (s.hours_worked ?? calcNetHours(s.start_time, s.end_time, s.break_minutes)), 0
                 );
+                const isCurrent = weekStart === currentWeekMondayStr;
+                const isPast = weekStart < currentWeekMondayStr;
+                const sortedShifts = [...weekShifts].sort((a, b) => a.date.localeCompare(b.date));
+
                 return (
-                  <Card key={weekStart}>
-                    <CardHeader className="pb-2 px-4 pt-4">
-                      <div className="flex items-center justify-between">
-                        <CardTitle className="text-sm font-medium text-muted-foreground">
-                          {toAusFormatted(ws, { day: "numeric", month: "short" })} – {toAusFormatted(we, { day: "numeric", month: "short" })}
-                        </CardTitle>
-                        <Badge variant="outline" className="font-mono text-xs">{weekTotal.toFixed(2)}h</Badge>
-                      </div>
-                    </CardHeader>
-                    <CardContent className="px-4 pb-4 space-y-2">
-                      {weekShifts.map(shift => (
+                  <Collapsible key={weekStart} defaultOpen={isCurrent}>
+                    <CollapsibleTrigger className="w-full">
+                      <Card className={isCurrent ? "border-primary/30" : ""}>
+                        <CardContent className="p-3 flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <CalendarRange className="h-3.5 w-3.5 text-primary" />
+                            <span className="text-sm font-medium text-foreground">
+                              {toAusFormatted(ws, { day: "numeric", month: "short" })} – {toAusFormatted(we, { day: "numeric", month: "short" })}
+                            </span>
+                            {isCurrent && <Badge className="bg-primary/15 text-primary text-[10px] px-1.5 py-0">This Week</Badge>}
+                            {isPast && <Badge variant="outline" className="text-muted-foreground text-[10px] px-1.5 py-0">Past</Badge>}
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Badge variant="outline" className="font-mono text-xs">{weekTotal.toFixed(2)}h</Badge>
+                            <ChevronDown className="h-4 w-4 text-muted-foreground transition-transform [[data-state=open]_&]:rotate-180" />
+                          </div>
+                        </CardContent>
+                      </Card>
+                    </CollapsibleTrigger>
+                    <CollapsibleContent className="space-y-2 mt-2">
+                      {sortedShifts.map(shift => (
                         <div key={shift.id} className="flex items-center justify-between rounded-lg bg-secondary/50 px-3 py-2.5">
                           <div>
                             <p className="text-sm font-medium text-foreground">{shift.day_of_week}</p>
@@ -1070,43 +1094,57 @@ export default function PortalPage() {
                           </div>
                         </div>
                       ))}
-                    </CardContent>
-                  </Card>
+                    </CollapsibleContent>
+                  </Collapsible>
                 );
               })
             )}
           </TabsContent>
 
-          {/* TIMESHEETS TAB */}
+          {/* TIMESHEETS TAB — approved entries only, last 12 weeks */}
           <TabsContent value="timesheets" className="space-y-3 mt-4">
-            {timesheets.length === 0 ? (
-              <Card>
-                <CardContent className="p-8 text-center text-muted-foreground">
-                  <FileText className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                  <p>No timesheet entries found.</p>
-                </CardContent>
-              </Card>
-            ) : (
-              <>
-                {/* Timesheets grouped by week */}
-                {(() => {
-                  // Group timesheets by week (Mon-Sun)
-                  const weekGroups: Record<string, TimesheetEntry[]> = {};
-                  for (const ts of timesheets) {
-                    const d = new Date(ts.work_date + "T00:00:00");
-                    const mon = getMonday(d);
-                    const key = `${mon.getFullYear()}-${String(mon.getMonth() + 1).padStart(2, "0")}-${String(mon.getDate()).padStart(2, "0")}`;
-                    if (!weekGroups[key]) weekGroups[key] = [];
-                    weekGroups[key].push(ts);
-                  }
-                  const sortedWeeks = Object.entries(weekGroups).sort(([a], [b]) => b.localeCompare(a));
+            {(() => {
+              // Only include approved days OR the current in-progress day
+              const todayStr = ausToday();
+              const approvedOrActive = timesheets.filter((ts) => {
+                const isActive = !!ts.clock_in && !ts.clock_out;
+                return timesheetApprovals.get(ts.work_date) === true || (isActive && ts.work_date === todayStr);
+              });
 
-                  return sortedWeeks.map(([weekStart, weekEntries]) => {
+              // 12-week cutoff
+              const cutoff = new Date();
+              cutoff.setDate(cutoff.getDate() - 12 * 7);
+              const cutoffStr = cutoff.toISOString().split("T")[0];
+              const inWindow = approvedOrActive.filter((ts) => ts.work_date >= cutoffStr);
+
+              if (inWindow.length === 0) {
+                return (
+                  <Card>
+                    <CardContent className="p-8 text-center text-muted-foreground">
+                      <FileText className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                      <p>No approved timesheets yet.</p>
+                      <p className="text-xs mt-1">Approved shifts appear here once your admin signs them off.</p>
+                    </CardContent>
+                  </Card>
+                );
+              }
+
+              // Group by Mon-Sun week
+              const weekGroups: Record<string, TimesheetEntry[]> = {};
+              for (const ts of inWindow) {
+                const d = new Date(ts.work_date + "T00:00:00");
+                const mon = getMonday(d);
+                const key = `${mon.getFullYear()}-${String(mon.getMonth() + 1).padStart(2, "0")}-${String(mon.getDate()).padStart(2, "0")}`;
+                if (!weekGroups[key]) weekGroups[key] = [];
+                weekGroups[key].push(ts);
+              }
+              const sortedWeeks = Object.entries(weekGroups).sort(([a], [b]) => b.localeCompare(a));
+
+              return sortedWeeks.map(([weekStart, weekEntries]) => {
                     const ws = new Date(weekStart + "T00:00:00");
                     const we = new Date(ws);
                     we.setDate(we.getDate() + 6);
                     const weekTotal = weekEntries.reduce((sum, t) => sum + (t.net_hours || 0), 0);
-                    const todayStr = ausToday();
                     const todayMon = (() => { const td = new Date(todayStr + "T00:00:00"); const m = getMonday(td); return `${m.getFullYear()}-${String(m.getMonth() + 1).padStart(2, "0")}-${String(m.getDate()).padStart(2, "0")}`; })();
                     const isCurrentWeek = weekStart === todayMon;
 
@@ -1215,9 +1253,7 @@ export default function PortalPage() {
                       </Collapsible>
                     );
                   });
-                })()}
-              </>
-            )}
+            })()}
           </TabsContent>
 
           {/* FORUM TAB */}
