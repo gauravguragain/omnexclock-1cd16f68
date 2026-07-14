@@ -21,7 +21,7 @@ import { CalendarIcon, ChevronLeft, ChevronRight, Download, FileText, RefreshCw,
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import jsPDF from "jspdf";
-import { buildInvoicePdf, InvoiceData } from "@/lib/invoicePdf";
+import { buildInvoicePdf, buildCombinedInvoicesPdf, InvoiceData } from "@/lib/invoicePdf";
 import { buildExportFilename } from "@/lib/exportNaming";
 import { logAudit, getDeviceInfo } from "@/lib/auditLog";
 
