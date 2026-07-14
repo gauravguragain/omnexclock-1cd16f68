@@ -1101,31 +1101,52 @@ export default function PortalPage() {
             )}
           </TabsContent>
 
-          {/* TIMESHEETS TAB */}
+          {/* TIMESHEETS TAB — approved entries only, last 12 weeks */}
           <TabsContent value="timesheets" className="space-y-3 mt-4">
-            {timesheets.length === 0 ? (
-              <Card>
-                <CardContent className="p-8 text-center text-muted-foreground">
-                  <FileText className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                  <p>No timesheet entries found.</p>
-                </CardContent>
-              </Card>
-            ) : (
-              <>
-                {/* Timesheets grouped by week */}
-                {(() => {
-                  // Group timesheets by week (Mon-Sun)
-                  const weekGroups: Record<string, TimesheetEntry[]> = {};
-                  for (const ts of timesheets) {
-                    const d = new Date(ts.work_date + "T00:00:00");
-                    const mon = getMonday(d);
-                    const key = `${mon.getFullYear()}-${String(mon.getMonth() + 1).padStart(2, "0")}-${String(mon.getDate()).padStart(2, "0")}`;
-                    if (!weekGroups[key]) weekGroups[key] = [];
-                    weekGroups[key].push(ts);
-                  }
-                  const sortedWeeks = Object.entries(weekGroups).sort(([a], [b]) => b.localeCompare(a));
+            {(() => {
+              // Only include approved days OR the current in-progress day
+              const todayStr = ausToday();
+              const approvedOrActive = timesheets.filter((ts) => {
+                const isActive = !!ts.clock_in && !ts.clock_out;
+                return timesheetApprovals.get(ts.work_date) === true || (isActive && ts.work_date === todayStr);
+              });
 
-                  return sortedWeeks.map(([weekStart, weekEntries]) => {
+              // 12-week cutoff
+              const cutoff = new Date();
+              cutoff.setDate(cutoff.getDate() - 12 * 7);
+              const cutoffStr = cutoff.toISOString().split("T")[0];
+              const inWindow = approvedOrActive.filter((ts) => ts.work_date >= cutoffStr);
+
+              if (inWindow.length === 0) {
+                return (
+                  <Card>
+                    <CardContent className="p-8 text-center text-muted-foreground">
+                      <FileText className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                      <p>No approved timesheets yet.</p>
+                      <p className="text-xs mt-1">Approved shifts appear here once your admin signs them off.</p>
+                    </CardContent>
+                  </Card>
+                );
+              }
+
+              // Group by Mon-Sun week
+              const weekGroups: Record<string, TimesheetEntry[]> = {};
+              for (const ts of inWindow) {
+                const d = new Date(ts.work_date + "T00:00:00");
+                const mon = getMonday(d);
+                const key = `${mon.getFullYear()}-${String(mon.getMonth() + 1).padStart(2, "0")}-${String(mon.getDate()).padStart(2, "0")}`;
+                if (!weekGroups[key]) weekGroups[key] = [];
+                weekGroups[key].push(ts);
+              }
+              const sortedWeeks = Object.entries(weekGroups).sort(([a], [b]) => b.localeCompare(a));
+
+              return sortedWeeks.map(([weekStart, weekEntries]) => {
+                    const ws = new Date(weekStart + "T00:00:00");
+                    const we = new Date(ws);
+                    we.setDate(we.getDate() + 6);
+                    const weekTotal = weekEntries.reduce((sum, t) => sum + (t.net_hours || 0), 0);
+                    const todayMon = (() => { const td = new Date(todayStr + "T00:00:00"); const m = getMonday(td); return `${m.getFullYear()}-${String(m.getMonth() + 1).padStart(2, "0")}-${String(m.getDate()).padStart(2, "0")}`; })();
+                    const isCurrentWeek = weekStart === todayMon;
                     const ws = new Date(weekStart + "T00:00:00");
                     const we = new Date(ws);
                     we.setDate(we.getDate() + 6);
