@@ -759,7 +759,7 @@ export default function PortalPageV2() {
                     <Card key={weekStart}>
                       <CardHeader className="pb-2 px-4 pt-4">
                         <div className="flex items-center justify-between">
-                          <CardTitle className="text-sm font-medium text-muted-foreground">
+                          <CardTitle className="text-sm font-semibold text-foreground">
                             {toAusFormatted(ws, { day: "numeric", month: "short" })} – {toAusFormatted(we, { day: "numeric", month: "short" })}
                           </CardTitle>
                           <Badge variant="outline" className="font-mono text-xs">{weekTotal.toFixed(2)}h</Badge>
@@ -767,13 +767,13 @@ export default function PortalPageV2() {
                       </CardHeader>
                       <CardContent className="px-4 pb-4 space-y-2">
                         {weekShifts.map(shift => (
-                          <div key={shift.id} className="flex items-center justify-between rounded-lg bg-secondary/50 px-3 py-2.5">
+                          <div key={shift.id} className="flex items-center justify-between rounded-lg bg-muted px-3 py-2.5">
                             <div>
-                              <p className="text-sm font-medium text-foreground">{shift.day_of_week}</p>
+                              <p className="text-sm font-semibold text-foreground">{shift.day_of_week}</p>
                               <p className="text-xs text-muted-foreground">{toAusFormatted(new Date(shift.date + "T00:00:00"), { day: "numeric", month: "short" })}</p>
                             </div>
                             <div className="text-right">
-                              <p className="text-sm font-medium text-foreground">{formatTime12(shift.start_time)} – {formatTime12(shift.end_time)}</p>
+                              <p className="text-sm font-semibold text-foreground">{formatTime12(shift.start_time)} – {formatTime12(shift.end_time)}</p>
                               <p className="text-xs text-muted-foreground">
                                 {(shift.hours_worked ?? calcNetHours(shift.start_time, shift.end_time, shift.break_minutes)).toFixed(2)}h
                                 {shift.break_minutes > 0 && ` · ${shift.break_minutes}m brk`}
