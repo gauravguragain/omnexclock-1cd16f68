@@ -328,6 +328,9 @@ export default function EmployeesPage() {
             <Button variant="ghost" size="icon" onClick={() => toggleActive(emp)} disabled={togglingIds.has(emp.id)} title={emp.active ? "Deactivate" : "Activate"} className="h-8 w-8">
               {emp.active ? <UserX className="h-3.5 w-3.5" /> : <UserCheck className="h-3.5 w-3.5" />}
             </Button>
+            <Button variant="ghost" size="icon" onClick={() => setDocsTarget(emp)} title="Documents" className="h-8 w-8">
+              <FileText className="h-3.5 w-3.5" />
+            </Button>
             {isSuperAdmin && (
               <Button variant="ghost" size="icon" onClick={() => setDeleteTarget(emp)} className="text-destructive hover:text-destructive hover:bg-destructive/10 h-8 w-8" title="Delete permanently">
                 <Trash2 className="h-3.5 w-3.5" />
