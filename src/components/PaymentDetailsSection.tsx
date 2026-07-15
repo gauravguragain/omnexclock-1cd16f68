@@ -110,7 +110,7 @@ export default function PaymentDetailsSection({ employeeCode, businessCode }: Pr
   const Row = ({ label, value }: { label: string; value: string }) => (
     <div className="flex items-start justify-between gap-3 py-1.5 border-b border-border/40 last:border-0">
       <span className="text-xs text-muted-foreground">{label}</span>
-      <span className="text-sm font-mono text-foreground text-right break-all">{value || "—"}</span>
+      <span className="text-sm font-mono font-semibold text-foreground text-right break-all">{value || "—"}</span>
     </div>
   );
 
