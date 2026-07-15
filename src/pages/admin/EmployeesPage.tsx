@@ -12,9 +12,10 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Pencil, UserX, UserCheck, Search, ChevronRight, ChevronLeft, Check, Trash2, ListFilter } from "lucide-react";
+import { Plus, Pencil, UserX, UserCheck, Search, ChevronRight, ChevronLeft, Check, Trash2, ListFilter, FileText } from "lucide-react";
 import type { Tables } from "@/integrations/supabase/types";
 import { logAudit } from "@/lib/auditLog";
+import EmployeeDocumentsPanel from "@/components/EmployeeDocumentsPanel";
 
 type Employee = Tables<"employees">;
 
