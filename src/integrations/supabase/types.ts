@@ -495,6 +495,92 @@ export type Database = {
           },
         ]
       }
+      employee_documents: {
+        Row: {
+          admin_note: string | null
+          business_id: string
+          category: string
+          created_at: string
+          custom_label: string | null
+          employee_id: string
+          expiry_date: string | null
+          file_name: string
+          file_path: string
+          file_size: number | null
+          id: string
+          mime_type: string | null
+          status: string
+          updated_at: string
+          verified_at: string | null
+          verified_by: string | null
+        }
+        Insert: {
+          admin_note?: string | null
+          business_id: string
+          category: string
+          created_at?: string
+          custom_label?: string | null
+          employee_id: string
+          expiry_date?: string | null
+          file_name: string
+          file_path: string
+          file_size?: number | null
+          id?: string
+          mime_type?: string | null
+          status?: string
+          updated_at?: string
+          verified_at?: string | null
+          verified_by?: string | null
+        }
+        Update: {
+          admin_note?: string | null
+          business_id?: string
+          category?: string
+          created_at?: string
+          custom_label?: string | null
+          employee_id?: string
+          expiry_date?: string | null
+          file_name?: string
+          file_path?: string
+          file_size?: number | null
+          id?: string
+          mime_type?: string | null
+          status?: string
+          updated_at?: string
+          verified_at?: string | null
+          verified_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "employee_documents_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employee_documents_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses_public"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employee_documents_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employee_documents_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees_public"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       employee_requests: {
         Row: {
           admin_note: string | null
@@ -1663,6 +1749,10 @@ export type Database = {
             }
             Returns: boolean
           }
+      admin_set_document_status: {
+        Args: { _doc_id: string; _note: string; _status: string }
+        Returns: boolean
+      }
       delete_employee: { Args: { _employee_id: string }; Returns: boolean }
       delete_employee_request:
         | {
@@ -1677,6 +1767,14 @@ export type Database = {
             }
             Returns: boolean
           }
+      delete_my_employee_document: {
+        Args: {
+          _business_code: string
+          _doc_id: string
+          _employee_code: string
+        }
+        Returns: string
+      }
       get_employee_business_id: {
         Args: { _employee_id: string }
         Returns: string
@@ -1978,6 +2076,23 @@ export type Database = {
               title: string
             }[]
           }
+      get_my_employee_documents: {
+        Args: { _business_code: string; _employee_code: string }
+        Returns: {
+          admin_note: string
+          category: string
+          created_at: string
+          custom_label: string
+          expiry_date: string
+          file_name: string
+          file_path: string
+          file_size: number
+          id: string
+          mime_type: string
+          status: string
+          verified_at: string
+        }[]
+      }
       get_my_payment_details: {
         Args: { _business_code: string; _employee_code: string }
         Returns: {
@@ -2015,6 +2130,20 @@ export type Database = {
           _user_id: string
         }
         Returns: boolean
+      }
+      insert_my_employee_document: {
+        Args: {
+          _business_code: string
+          _category: string
+          _custom_label: string
+          _employee_code: string
+          _expiry_date: string
+          _file_name: string
+          _file_path: string
+          _file_size: number
+          _mime_type: string
+        }
+        Returns: string
       }
       is_admin: { Args: never; Returns: boolean }
       is_admin_of_business: { Args: { _business_id: string }; Returns: boolean }

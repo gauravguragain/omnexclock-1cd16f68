@@ -12,9 +12,10 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Pencil, UserX, UserCheck, Search, ChevronRight, ChevronLeft, Check, Trash2, ListFilter } from "lucide-react";
+import { Plus, Pencil, UserX, UserCheck, Search, ChevronRight, ChevronLeft, Check, Trash2, ListFilter, FileText } from "lucide-react";
 import type { Tables } from "@/integrations/supabase/types";
 import { logAudit } from "@/lib/auditLog";
+import EmployeeDocumentsPanel from "@/components/EmployeeDocumentsPanel";
 
 type Employee = Tables<"employees">;
 
@@ -66,6 +67,7 @@ export default function EmployeesPage() {
   const [saving, setSaving] = useState(false);
   const [togglingIds, setTogglingIds] = useState<Set<string>>(new Set());
   const [deleteTarget, setDeleteTarget] = useState<Employee | null>(null);
+  const [docsTarget, setDocsTarget] = useState<Employee | null>(null);
   const [deleting, setDeleting] = useState(false);
   
 
@@ -325,6 +327,9 @@ export default function EmployeesPage() {
             </Button>
             <Button variant="ghost" size="icon" onClick={() => toggleActive(emp)} disabled={togglingIds.has(emp.id)} title={emp.active ? "Deactivate" : "Activate"} className="h-8 w-8">
               {emp.active ? <UserX className="h-3.5 w-3.5" /> : <UserCheck className="h-3.5 w-3.5" />}
+            </Button>
+            <Button variant="ghost" size="icon" onClick={() => setDocsTarget(emp)} title="Documents" className="h-8 w-8">
+              <FileText className="h-3.5 w-3.5" />
             </Button>
             {isSuperAdmin && (
               <Button variant="ghost" size="icon" onClick={() => setDeleteTarget(emp)} className="text-destructive hover:text-destructive hover:bg-destructive/10 h-8 w-8" title="Delete permanently">
@@ -616,6 +621,17 @@ export default function EmployeesPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <Dialog open={!!docsTarget} onOpenChange={(o) => { if (!o) setDocsTarget(null); }}>
+        <DialogContent className="sm:max-w-2xl max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Documents — {docsTarget?.name}</DialogTitle>
+          </DialogHeader>
+          {docsTarget && business && (
+            <EmployeeDocumentsPanel employeeId={docsTarget.id} businessId={business.id} />
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
