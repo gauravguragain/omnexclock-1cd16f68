@@ -1001,6 +1001,10 @@ export default function PortalPageV2() {
             <TabsContent value="pay" className="space-y-3 mt-4">
               <PaymentDetailsSection employeeCode={portal.employeeCode} businessCode={bizCode} />
             </TabsContent>
+
+            <TabsContent value="invoices" className="space-y-3 mt-4">
+              <EmployeeInvoicesSection employeeCode={portal.employeeCode} businessCode={bizCode} />
+            </TabsContent>
           </Tabs>
 
           {/* Forum Post Detail Dialog */}
