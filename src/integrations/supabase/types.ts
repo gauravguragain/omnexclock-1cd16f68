@@ -1745,6 +1745,29 @@ export type Database = {
           number_of_guests: number
         }[]
       }
+      get_employee_invoices: {
+        Args: { _business_code: string; _employee_code: string }
+        Returns: {
+          account_name: string
+          account_number: string
+          amount: number
+          bsb: string
+          business_code: string
+          business_name: string
+          created_at: string
+          due_date: string
+          employee_abn: string
+          employee_name: string
+          hourly_rate: number
+          id: string
+          invoice_code: string
+          invoice_number: number
+          issue_date: string
+          net_hours: number
+          week_end: string
+          week_start: string
+        }[]
+      }
       get_employee_notifications: {
         Args: { _business_code?: string; _employee_code: string }
         Returns: {
