@@ -621,6 +621,17 @@ export default function EmployeesPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <Dialog open={!!docsTarget} onOpenChange={(o) => { if (!o) setDocsTarget(null); }}>
+        <DialogContent className="sm:max-w-2xl max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Documents — {docsTarget?.name}</DialogTitle>
+          </DialogHeader>
+          {docsTarget && business && (
+            <EmployeeDocumentsPanel employeeId={docsTarget.id} businessId={business.id} />
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
