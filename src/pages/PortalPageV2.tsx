@@ -32,6 +32,7 @@ import {
   Smartphone, Monitor, Tablet, Download, CreditCard,
 } from "lucide-react";
 import PaymentDetailsSection from "@/components/PaymentDetailsSection";
+import EmployeeInvoicesSection from "@/components/EmployeeInvoicesSection";
 
 /* ── Helpers ───────────────────────────────────────── */
 
