@@ -67,6 +67,7 @@ export default function EmployeesPage() {
   const [saving, setSaving] = useState(false);
   const [togglingIds, setTogglingIds] = useState<Set<string>>(new Set());
   const [deleteTarget, setDeleteTarget] = useState<Employee | null>(null);
+  const [docsTarget, setDocsTarget] = useState<Employee | null>(null);
   const [deleting, setDeleting] = useState(false);
   
 
