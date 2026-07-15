@@ -137,7 +137,7 @@ export default function PaymentDetailsSection({ employeeCode, businessCode }: Pr
           {loading ? (
             <p className="text-xs text-muted-foreground">Loading…</p>
           ) : !editing ? (
-            <div className="rounded-lg bg-secondary/40 border border-border/60 p-3">
+            <div className="rounded-lg bg-muted border border-border p-3">
               <Row label="ABN" value={saved.abn ? fmtABN(saved.abn) : ""} />
               <Row label="Account Name" value={saved.account_name} />
               <Row label="BSB" value={saved.bsb} />
