@@ -110,7 +110,7 @@ export default function PaymentDetailsSection({ employeeCode, businessCode }: Pr
   const Row = ({ label, value }: { label: string; value: string }) => (
     <div className="flex items-start justify-between gap-3 py-1.5 border-b border-border/40 last:border-0">
       <span className="text-xs text-muted-foreground">{label}</span>
-      <span className="text-sm font-mono text-foreground text-right break-all">{value || "—"}</span>
+      <span className="text-sm font-mono font-semibold text-foreground text-right break-all">{value || "—"}</span>
     </div>
   );
 
@@ -137,7 +137,7 @@ export default function PaymentDetailsSection({ employeeCode, businessCode }: Pr
           {loading ? (
             <p className="text-xs text-muted-foreground">Loading…</p>
           ) : !editing ? (
-            <div className="rounded-lg bg-secondary/40 border border-border/60 p-3">
+            <div className="rounded-lg bg-muted border border-border p-3">
               <Row label="ABN" value={saved.abn ? fmtABN(saved.abn) : ""} />
               <Row label="Account Name" value={saved.account_name} />
               <Row label="BSB" value={saved.bsb} />
