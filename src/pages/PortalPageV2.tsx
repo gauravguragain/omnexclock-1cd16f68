@@ -33,6 +33,7 @@ import {
 } from "lucide-react";
 import PaymentDetailsSection from "@/components/PaymentDetailsSection";
 import EmployeeInvoicesSection from "@/components/EmployeeInvoicesSection";
+import DocumentsSection from "@/components/DocumentsSection";
 
 /* ── Helpers ───────────────────────────────────────── */
 
