@@ -187,7 +187,7 @@ export default function EmployeeTimesheetExport() {
         ];
         xlsxRows.push(subtotalRow);
         pdfSubtotalRowIndexes.push(pdfBody.length);
-        pdfBody.push(subtotalRow.map((cell) => ({ text: String(cell), styles: { fontStyle: "bold" } })));
+        pdfBody.push(subtotalRow.map(String));
       }
 
       if (kind === "xlsx") {
