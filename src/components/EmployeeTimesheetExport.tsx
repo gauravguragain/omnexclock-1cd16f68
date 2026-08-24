@@ -118,15 +118,6 @@ export default function EmployeeTimesheetExport() {
       }
 
       const emp = selectedEmployee;
-      const totals = entries.reduce(
-        (acc, e) => {
-          acc.total += e.total_hours;
-          acc.breaks += e.break_minutes;
-          acc.net += e.net_hours;
-          return acc;
-        },
-        { total: 0, breaks: 0, net: 0 },
-      );
 
       const fileName = buildExportFilename({
         businessCode: business?.business_code,
@@ -138,14 +129,66 @@ export default function EmployeeTimesheetExport() {
         ext: kind,
       });
 
-      const rows = entries.map((e) => [
-        format(new Date(`${e.date}T00:00:00`), "EEE dd MMM yyyy"),
+      // Group approved entries by week (Monday start) and build day rows + weekly subtotals
+      const weekStartsOn = 1;
+      const byWeek = new Map<string, typeof entries>();
+      for (const e of entries) {
+        const weekStart = format(startOfWeek(parseISO(e.date), { weekStartsOn }), "yyyy-MM-dd");
+        if (!byWeek.has(weekStart)) byWeek.set(weekStart, []);
+        byWeek.get(weekStart)!.push(e);
+      }
+      const sortedWeeks = Array.from(byWeek.keys()).sort();
+
+      const dayRow = (e: (typeof entries)[0]) => [
+        format(parseISO(e.date), "EEE dd MMM yyyy"),
         e.clock_in ? toAusTime12(e.clock_in) : "-",
         e.clock_out ? `${toAusTime12(e.clock_out)}${e.crossed_midnight ? " (+1d)" : ""}` : "-",
         String(e.break_minutes),
         e.total_hours.toFixed(2),
         e.net_hours.toFixed(2),
-      ]);
+      ];
+
+      let grandTotal = 0;
+      let grandBreaks = 0;
+      let grandNet = 0;
+      const xlsxRows: any[][] = [];
+      const pdfBody: (string | { text: string; styles: { fontStyle?: string } })[][] = [];
+      const pdfSubtotalRowIndexes: number[] = [];
+
+      for (const weekStart of sortedWeeks) {
+        const weekEntries = byWeek.get(weekStart)!;
+        for (const e of weekEntries) {
+          const row = dayRow(e);
+          xlsxRows.push(row);
+          pdfBody.push(row);
+        }
+
+        const weekTotal = weekEntries.reduce(
+          (acc, e) => {
+            acc.total += e.total_hours;
+            acc.breaks += e.break_minutes;
+            acc.net += e.net_hours;
+            return acc;
+          },
+          { total: 0, breaks: 0, net: 0 },
+        );
+        grandTotal += weekTotal.total;
+        grandBreaks += weekTotal.breaks;
+        grandNet += weekTotal.net;
+
+        const weekLabel = `Week total ${format(parseISO(weekStart), "dd MMM yyyy")}`;
+        const subtotalRow = [
+          weekLabel,
+          "",
+          "",
+          weekTotal.breaks.toFixed(0),
+          weekTotal.total.toFixed(2),
+          weekTotal.net.toFixed(2),
+        ];
+        xlsxRows.push(subtotalRow);
+        pdfSubtotalRowIndexes.push(pdfBody.length);
+        pdfBody.push(subtotalRow.map((cell) => ({ text: String(cell), styles: { fontStyle: "bold" } })));
+      }
 
       if (kind === "xlsx") {
         const sheet = XLSX.utils.aoa_to_sheet([
@@ -154,9 +197,9 @@ export default function EmployeeTimesheetExport() {
           ["Period", `${format(from, "dd/MM/yyyy")} - ${format(to, "dd/MM/yyyy")}`],
           [],
           ["Date", "Clock In", "Clock Out", "Break (min)", "Total Hours", "Net Hours"],
-          ...rows,
+          ...xlsxRows,
           [],
-          ["Totals", "", "", totals.breaks.toFixed(0), totals.total.toFixed(2), totals.net.toFixed(2)],
+          ["Totals", "", "", grandBreaks.toFixed(0), grandTotal.toFixed(2), grandNet.toFixed(2)],
         ]);
         const wb = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(wb, sheet, "Approved Timesheets");
@@ -180,11 +223,17 @@ export default function EmployeeTimesheetExport() {
         autoTable(doc, {
           startY: 55,
           head: [["Date", "Clock In", "Clock Out", "Break (min)", "Total Hrs", "Net Hrs"]],
-          body: rows,
-          foot: [["Totals", "", "", totals.breaks.toFixed(0), totals.total.toFixed(2), totals.net.toFixed(2)]],
+          body: pdfBody,
+          foot: [["Totals", "", "", grandBreaks.toFixed(0), grandTotal.toFixed(2), grandNet.toFixed(2)]],
           styles: { fontSize: 8, cellPadding: 2 },
           headStyles: { fillColor: [41, 98, 255], textColor: 255 },
           footStyles: { fillColor: [235, 235, 235], textColor: 20, fontStyle: "bold" },
+          didParseCell: (data) => {
+            if (data.row.section === "body" && pdfSubtotalRowIndexes.includes(data.row.index)) {
+              data.cell.styles.fontStyle = "bold";
+              data.cell.styles.fillColor = [245, 245, 245];
+            }
+          },
         });
         doc.save(fileName);
       }
