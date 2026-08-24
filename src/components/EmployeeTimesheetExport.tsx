@@ -160,7 +160,7 @@ export default function EmployeeTimesheetExport() {
         for (const e of weekEntries) {
           const row = dayRow(e);
           xlsxRows.push(row);
-          pdfBody.push(row);
+          pdfBody.push(row.map(String));
         }
 
         const weekTotal = weekEntries.reduce(
