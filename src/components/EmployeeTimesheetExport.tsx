@@ -152,7 +152,7 @@ export default function EmployeeTimesheetExport() {
       let grandBreaks = 0;
       let grandNet = 0;
       const xlsxRows: any[][] = [];
-      const pdfBody: (string | { text: string; styles: { fontStyle?: string } })[][] = [];
+      const pdfBody: string[][] = [];
       const pdfSubtotalRowIndexes: number[] = [];
 
       for (const weekStart of sortedWeeks) {
