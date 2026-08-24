@@ -321,6 +321,9 @@ export default function MyBusinessPage() {
       {/* Business Reports - Super Admin Only */}
       {isSuperAdminOf(business.id) && <MonthlyReportSection />}
 
+      {/* Individual employee approved timesheet export */}
+      {isSuperAdminOf(business.id) && <EmployeeTimesheetExport />}
+
       {/* Instruction Manual */}
       <Card>
         <CardHeader>
