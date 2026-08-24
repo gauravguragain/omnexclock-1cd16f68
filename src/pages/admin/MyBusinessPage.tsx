@@ -11,6 +11,7 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { Building2, Upload, Palette, Check, Loader2, BookOpen } from "lucide-react";
 import MonthlyReportSection from "@/components/MonthlyReportSection";
+import EmployeeTimesheetExport from "@/components/EmployeeTimesheetExport";
 import { logAudit } from "@/lib/auditLog";
 
 export default function MyBusinessPage() {
@@ -320,6 +321,9 @@ export default function MyBusinessPage() {
 
       {/* Business Reports - Super Admin Only */}
       {isSuperAdminOf(business.id) && <MonthlyReportSection />}
+
+      {/* Individual employee approved timesheet export */}
+      {isSuperAdminOf(business.id) && <EmployeeTimesheetExport />}
 
       {/* Instruction Manual */}
       <Card>
