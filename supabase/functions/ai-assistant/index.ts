@@ -175,6 +175,14 @@ serve(async (req) => {
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
+    // Require a signed-in caller with access to the requested business
+    const caller = await getCaller(req, supabase);
+    if (!caller) return jsonError("Unauthorized", 401, corsHeaders);
+    if (!hasBusinessRole(caller, businessId)) {
+      return jsonError("Forbidden", 403, corsHeaders);
+    }
+
+
     // Get business name for simple queries (lightweight lookup)
     const businessNameRes = await supabase.from("businesses").select("name").eq("id", businessId).single();
     const businessName = businessNameRes.data?.name || "Your Business";
