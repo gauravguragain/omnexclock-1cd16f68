@@ -176,7 +176,8 @@ export default function EmployeeTimesheetExport() {
         grandBreaks += weekTotal.breaks;
         grandNet += weekTotal.net;
 
-        const weekLabel = `Week total ${format(parseISO(weekStart), "dd MMM yyyy")}`;
+        const weekEnd = format(addDays(parseISO(weekStart), 6), "dd MMM yyyy");
+        const weekLabel = `Week total ${format(parseISO(weekStart), "dd MMM yyyy")} – ${weekEnd}`;
         const subtotalRow = [
           weekLabel,
           "",
