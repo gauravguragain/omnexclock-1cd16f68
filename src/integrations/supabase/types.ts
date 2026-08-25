@@ -1735,38 +1735,28 @@ export type Database = {
     Functions: {
       accept_invitation: { Args: { _token: string }; Returns: boolean }
       accept_pending_invitations_for_user: { Args: never; Returns: number }
-      add_forum_comment:
-        | {
-            Args: { _content: string; _employee_code: string; _post_id: string }
-            Returns: boolean
-          }
-        | {
-            Args: {
-              _business_code?: string
-              _content: string
-              _employee_code: string
-              _post_id: string
-            }
-            Returns: boolean
-          }
+      add_forum_comment: {
+        Args: {
+          _business_code?: string
+          _content: string
+          _employee_code: string
+          _post_id: string
+        }
+        Returns: boolean
+      }
       admin_set_document_status: {
         Args: { _doc_id: string; _note: string; _status: string }
         Returns: boolean
       }
       delete_employee: { Args: { _employee_id: string }; Returns: boolean }
-      delete_employee_request:
-        | {
-            Args: { _employee_code: string; _request_id: string }
-            Returns: boolean
-          }
-        | {
-            Args: {
-              _business_code?: string
-              _employee_code: string
-              _request_id: string
-            }
-            Returns: boolean
-          }
+      delete_employee_request: {
+        Args: {
+          _business_code?: string
+          _employee_code: string
+          _request_id: string
+        }
+        Returns: boolean
+      }
       delete_my_employee_document: {
         Args: {
           _business_code: string
@@ -1779,25 +1769,15 @@ export type Database = {
         Args: { _employee_id: string }
         Returns: string
       }
-      get_employee_clock_history:
-        | {
-            Args: { _employee_code: string }
-            Returns: {
-              event_timestamp: string
-              event_type: string
-              id: string
-              photo_url: string
-            }[]
-          }
-        | {
-            Args: { _business_code?: string; _employee_code: string }
-            Returns: {
-              event_timestamp: string
-              event_type: string
-              id: string
-              photo_url: string
-            }[]
-          }
+      get_employee_clock_history: {
+        Args: { _business_code?: string; _employee_code: string }
+        Returns: {
+          event_timestamp: string
+          event_type: string
+          id: string
+          photo_url: string
+        }[]
+      }
       get_employee_day_events: {
         Args: { _business_code?: string; _employee_code: string }
         Returns: {
@@ -1878,204 +1858,101 @@ export type Database = {
           type: string
         }[]
       }
-      get_employee_requests:
-        | {
-            Args: { _employee_code: string }
-            Returns: {
-              admin_note: string
-              created_at: string
-              end_date: string
-              end_time: string
-              id: string
-              is_recurring: boolean
-              reason: string
-              recurring_days: string[]
-              recurring_end_date: string
-              recurring_start_date: string
-              request_type: string
-              start_date: string
-              start_time: string
-              status: string
-            }[]
-          }
-        | {
-            Args: { _business_code?: string; _employee_code: string }
-            Returns: {
-              admin_note: string
-              created_at: string
-              end_date: string
-              end_time: string
-              id: string
-              is_recurring: boolean
-              reason: string
-              recurring_days: string[]
-              recurring_end_date: string
-              recurring_start_date: string
-              request_type: string
-              start_date: string
-              start_time: string
-              status: string
-            }[]
-          }
-      get_employee_shifts:
-        | {
-            Args: { _employee_code: string }
-            Returns: {
-              break_minutes: number
-              date: string
-              day_of_week: string
-              end_time: string
-              hours_worked: number
-              id: string
-              notes: string
-              start_time: string
-              week_start_date: string
-            }[]
-          }
-        | {
-            Args: { _business_code?: string; _employee_code: string }
-            Returns: {
-              break_minutes: number
-              date: string
-              day_of_week: string
-              end_time: string
-              hours_worked: number
-              id: string
-              notes: string
-              start_time: string
-              week_start_date: string
-            }[]
-          }
-      get_employee_status:
-        | {
-            Args: { _employee_code: string }
-            Returns: {
-              current_status: string
-              employee_id: string
-              employee_name: string
-              last_event_time: string
-            }[]
-          }
-        | {
-            Args: { _business_code?: string; _employee_code: string }
-            Returns: {
-              current_status: string
-              employee_id: string
-              employee_name: string
-              last_event_time: string
-            }[]
-          }
-      get_employee_timesheet_approvals:
-        | {
-            Args: { _employee_code: string }
-            Returns: {
-              approval_date: string
-              is_approved: boolean
-            }[]
-          }
-        | {
-            Args: { _business_code?: string; _employee_code: string }
-            Returns: {
-              approval_date: string
-              is_approved: boolean
-            }[]
-          }
-      get_employee_timesheet_history:
-        | {
-            Args: { _date: string; _employee_code: string }
-            Returns: {
-              log_action: string
-              log_details: Json
-              log_timestamp: string
-            }[]
-          }
-        | {
-            Args: {
-              _business_code?: string
-              _date: string
-              _employee_code: string
-            }
-            Returns: {
-              log_action: string
-              log_details: Json
-              log_timestamp: string
-            }[]
-          }
-      get_employee_timesheets:
-        | {
-            Args: { _employee_code: string }
-            Returns: {
-              break_end: string
-              break_minutes: number
-              break_start: string
-              clock_in: string
-              clock_out: string
-              crossed_midnight: boolean
-              net_hours: number
-              total_hours: number
-              work_date: string
-            }[]
-          }
-        | {
-            Args: { _business_code?: string; _employee_code: string }
-            Returns: {
-              break_end: string
-              break_minutes: number
-              break_start: string
-              clock_in: string
-              clock_out: string
-              crossed_midnight: boolean
-              net_hours: number
-              total_hours: number
-              work_date: string
-            }[]
-          }
-      get_forum_comments:
-        | {
-            Args: { _employee_code: string; _post_id: string }
-            Returns: {
-              content: string
-              created_at: string
-              employee_name: string
-              id: string
-            }[]
-          }
-        | {
-            Args: {
-              _business_code?: string
-              _employee_code: string
-              _post_id: string
-            }
-            Returns: {
-              content: string
-              created_at: string
-              employee_name: string
-              id: string
-            }[]
-          }
-      get_forum_posts:
-        | {
-            Args: { _employee_code: string }
-            Returns: {
-              comment_count: number
-              content: string
-              created_at: string
-              id: string
-              reaction_counts: Json
-              title: string
-            }[]
-          }
-        | {
-            Args: { _business_code?: string; _employee_code: string }
-            Returns: {
-              comment_count: number
-              content: string
-              created_at: string
-              id: string
-              reaction_counts: Json
-              title: string
-            }[]
-          }
+      get_employee_requests: {
+        Args: { _business_code?: string; _employee_code: string }
+        Returns: {
+          admin_note: string
+          created_at: string
+          end_date: string
+          end_time: string
+          id: string
+          is_recurring: boolean
+          reason: string
+          recurring_days: string[]
+          recurring_end_date: string
+          recurring_start_date: string
+          request_type: string
+          start_date: string
+          start_time: string
+          status: string
+        }[]
+      }
+      get_employee_shifts: {
+        Args: { _business_code?: string; _employee_code: string }
+        Returns: {
+          break_minutes: number
+          date: string
+          day_of_week: string
+          end_time: string
+          hours_worked: number
+          id: string
+          notes: string
+          start_time: string
+          week_start_date: string
+        }[]
+      }
+      get_employee_status: {
+        Args: { _business_code?: string; _employee_code: string }
+        Returns: {
+          current_status: string
+          employee_id: string
+          employee_name: string
+          last_event_time: string
+        }[]
+      }
+      get_employee_timesheet_approvals: {
+        Args: { _business_code?: string; _employee_code: string }
+        Returns: {
+          approval_date: string
+          is_approved: boolean
+        }[]
+      }
+      get_employee_timesheet_history: {
+        Args: { _business_code?: string; _date: string; _employee_code: string }
+        Returns: {
+          log_action: string
+          log_details: Json
+          log_timestamp: string
+        }[]
+      }
+      get_employee_timesheets: {
+        Args: { _business_code?: string; _employee_code: string }
+        Returns: {
+          break_end: string
+          break_minutes: number
+          break_start: string
+          clock_in: string
+          clock_out: string
+          crossed_midnight: boolean
+          net_hours: number
+          total_hours: number
+          work_date: string
+        }[]
+      }
+      get_forum_comments: {
+        Args: {
+          _business_code?: string
+          _employee_code: string
+          _post_id: string
+        }
+        Returns: {
+          content: string
+          created_at: string
+          employee_name: string
+          id: string
+        }[]
+      }
+      get_forum_posts: {
+        Args: { _business_code?: string; _employee_code: string }
+        Returns: {
+          comment_count: number
+          content: string
+          created_at: string
+          id: string
+          reaction_counts: Json
+          title: string
+        }[]
+      }
       get_my_employee_documents: {
         Args: { _business_code: string; _employee_code: string }
         Returns: {
@@ -2102,23 +1979,16 @@ export type Database = {
           bsb: string
         }[]
       }
-      get_my_reactions:
-        | {
-            Args: { _employee_code: string; _post_id: string }
-            Returns: {
-              reaction: string
-            }[]
-          }
-        | {
-            Args: {
-              _business_code?: string
-              _employee_code: string
-              _post_id: string
-            }
-            Returns: {
-              reaction: string
-            }[]
-          }
+      get_my_reactions: {
+        Args: {
+          _business_code?: string
+          _employee_code: string
+          _post_id: string
+        }
+        Returns: {
+          reaction: string
+        }[]
+      }
       get_roster_admin_departments: {
         Args: { _business_id: string }
         Returns: string[]
@@ -2185,58 +2055,32 @@ export type Database = {
         Args: { _business_code: string; _business_name: string }
         Returns: string
       }
-      submit_employee_request:
-        | {
-            Args: {
-              _employee_code: string
-              _end_date?: string
-              _end_time?: string
-              _is_recurring?: boolean
-              _reason?: string
-              _recurring_days?: string[]
-              _recurring_end_date?: string
-              _recurring_start_date?: string
-              _request_type: string
-              _start_date?: string
-              _start_time?: string
-            }
-            Returns: boolean
-          }
-        | {
-            Args: {
-              _business_code?: string
-              _employee_code: string
-              _end_date?: string
-              _end_time?: string
-              _is_recurring?: boolean
-              _reason?: string
-              _recurring_days?: string[]
-              _recurring_end_date?: string
-              _recurring_start_date?: string
-              _request_type: string
-              _start_date?: string
-              _start_time?: string
-            }
-            Returns: boolean
-          }
-      toggle_forum_reaction:
-        | {
-            Args: {
-              _employee_code: string
-              _post_id: string
-              _reaction: string
-            }
-            Returns: boolean
-          }
-        | {
-            Args: {
-              _business_code?: string
-              _employee_code: string
-              _post_id: string
-              _reaction: string
-            }
-            Returns: boolean
-          }
+      submit_employee_request: {
+        Args: {
+          _business_code?: string
+          _employee_code: string
+          _end_date?: string
+          _end_time?: string
+          _is_recurring?: boolean
+          _reason?: string
+          _recurring_days?: string[]
+          _recurring_end_date?: string
+          _recurring_start_date?: string
+          _request_type: string
+          _start_date?: string
+          _start_time?: string
+        }
+        Returns: boolean
+      }
+      toggle_forum_reaction: {
+        Args: {
+          _business_code?: string
+          _employee_code: string
+          _post_id: string
+          _reaction: string
+        }
+        Returns: boolean
+      }
       update_delivery_status: {
         Args: {
           _business_code?: string
@@ -2247,42 +2091,24 @@ export type Database = {
         }
         Returns: boolean
       }
-      update_employee_request:
-        | {
-            Args: {
-              _employee_code: string
-              _end_date?: string
-              _end_time?: string
-              _is_recurring?: boolean
-              _reason?: string
-              _recurring_days?: string[]
-              _recurring_end_date?: string
-              _recurring_start_date?: string
-              _request_id: string
-              _request_type: string
-              _start_date?: string
-              _start_time?: string
-            }
-            Returns: boolean
-          }
-        | {
-            Args: {
-              _business_code?: string
-              _employee_code: string
-              _end_date?: string
-              _end_time?: string
-              _is_recurring?: boolean
-              _reason?: string
-              _recurring_days?: string[]
-              _recurring_end_date?: string
-              _recurring_start_date?: string
-              _request_id: string
-              _request_type: string
-              _start_date?: string
-              _start_time?: string
-            }
-            Returns: boolean
-          }
+      update_employee_request: {
+        Args: {
+          _business_code?: string
+          _employee_code: string
+          _end_date?: string
+          _end_time?: string
+          _is_recurring?: boolean
+          _reason?: string
+          _recurring_days?: string[]
+          _recurring_end_date?: string
+          _recurring_start_date?: string
+          _request_id: string
+          _request_type: string
+          _start_date?: string
+          _start_time?: string
+        }
+        Returns: boolean
+      }
       update_my_payment_details: {
         Args: {
           _abn: string
