@@ -306,6 +306,7 @@ export default function AdminLayout() {
             )}
           </div>
           <div className="ml-auto flex items-center gap-1.5 lg:gap-2 flex-shrink-0">
+            <ForceRefreshButton className="h-8 w-8" />
             <NotificationBell
               notifications={notifications}
               unreadCount={unreadCount}
