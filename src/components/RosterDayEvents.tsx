@@ -215,12 +215,8 @@ export default function RosterDayEvents({ weekDates, fmtDate }: Props) {
       setEvents(prev => prev.map(e => e.id === eventId ? { ...e, runsheet_url: filePath } : e));
       toast({ title: "Runsheet uploaded, extracting data..." });
       await logAudit("runsheet_upload", { event_id: eventId, filename: file.name });
-      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-      const publicPdfUrl = `${supabaseUrl}/storage/v1/object/public/event-runsheets/${filePath
-        .split("/")
-        .map((segment) => encodeURIComponent(segment))
-        .join("/")}`;
-      extractRunsheetData(eventId, publicPdfUrl);
+      const { data: signed } = await supabase.storage.from("event-runsheets").createSignedUrl(filePath, 600);
+      if (signed?.signedUrl) extractRunsheetData(eventId, signed.signedUrl);
     }
     setUploading(null);
   };
@@ -247,11 +243,8 @@ export default function RosterDayEvents({ weekDates, fmtDate }: Props) {
       setSectionUploading(false);
       return;
     }
-    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-    const publicPdfUrl = `${supabaseUrl}/storage/v1/object/public/event-runsheets/${filePath
-      .split("/")
-      .map((segment) => encodeURIComponent(segment))
-      .join("/")}`;
+    const { data: signed } = await supabase.storage.from("event-runsheets").createSignedUrl(filePath, 600);
+    const publicPdfUrl = signed?.signedUrl ?? "";
     setSectionUploading(false);
     setSectionExtracting(true);
 
