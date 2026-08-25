@@ -596,7 +596,9 @@ export default function AIAssistantPage() {
       })
       .replace(/\n/g, '<br />');
 
-    return <div className="prose-sm max-w-none leading-relaxed" dangerouslySetInnerHTML={{ __html: html }} />;
+    const safeHtml = DOMPurify.sanitize(html, { USE_PROFILES: { html: true } });
+    return <div className="prose-sm max-w-none leading-relaxed" dangerouslySetInnerHTML={{ __html: safeHtml }} />;
+
   };
 
   const renderMessage = (content: string) => {
