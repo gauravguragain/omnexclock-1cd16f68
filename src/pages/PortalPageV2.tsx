@@ -7,6 +7,7 @@ import { usePortalData, PortalShift, TimesheetEntry } from "@/hooks/usePortalDat
 import { useEmployeeNotifications } from "@/hooks/useNotifications";
 import { useToast } from "@/hooks/use-toast";
 import NotificationBell from "@/components/NotificationBell";
+import ForceRefreshButton from "@/components/ForceRefreshButton";
 import WalkthroughTour from "@/components/WalkthroughTour";
 import { portalTourSteps } from "@/components/tourSteps";
 import { Button } from "@/components/ui/button";
@@ -673,6 +674,7 @@ export default function PortalPageV2() {
             </div>
           </div>
           <div className="flex items-center gap-2">
+            <ForceRefreshButton className="h-8 w-8" />
             <PortalNotifications employeeCode={portal.employeeCode} businessCode={bizCode} />
             <Button variant="outline" size="sm" onClick={portal.logout}>
               <LogOut className="mr-1.5 h-3.5 w-3.5" /> Exit

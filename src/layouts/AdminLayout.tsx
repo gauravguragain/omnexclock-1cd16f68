@@ -12,6 +12,7 @@ import { supabase } from "@/integrations/supabase/client";
 import WalkthroughTour from "@/components/WalkthroughTour";
 import { adminTourSteps } from "@/components/tourSteps";
 import NotificationBell from "@/components/NotificationBell";
+import ForceRefreshButton from "@/components/ForceRefreshButton";
 import { useAdminNotifications } from "@/hooks/useNotifications";
 import { Switch } from "@/components/ui/switch";
 import {
@@ -306,6 +307,7 @@ export default function AdminLayout() {
             )}
           </div>
           <div className="ml-auto flex items-center gap-1.5 lg:gap-2 flex-shrink-0">
+            <ForceRefreshButton className="h-8 w-8" />
             <NotificationBell
               notifications={notifications}
               unreadCount={unreadCount}

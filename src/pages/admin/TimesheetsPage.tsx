@@ -975,6 +975,20 @@ export default function TimesheetsPage() {
           <TimeDropdownPicker value={editForm.break_end} onChange={(v) => setEditForm({ ...editForm, break_end: v })} />
         </div>
       </div>
+      <div className="flex items-center justify-between rounded-md border border-border bg-muted/40 px-3 py-2">
+        <div>
+          <p className="text-sm font-medium text-foreground">No break taken</p>
+          <p className="text-xs text-muted-foreground">Clears break times and records 0 minutes of break.</p>
+        </div>
+        <Button
+          type="button"
+          size="sm"
+          variant={!editForm.break_start && !editForm.break_end ? "default" : "outline"}
+          onClick={() => setEditForm({ ...editForm, break_start: "", break_end: "" })}
+        >
+          No break
+        </Button>
+      </div>
       <div className="space-y-2">
         <Label>Reason for change <span className="text-destructive">*</span></Label>
         <textarea
