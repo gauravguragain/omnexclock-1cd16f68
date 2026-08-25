@@ -32,15 +32,6 @@ serve(async (req) => {
       });
     }
 
-    // Check admin or master role
-    const { data: isAdmin } = await supabase.rpc("has_role", { _user_id: caller.id, _role: "admin" });
-    const { data: isMaster } = await supabase.rpc("has_role", { _user_id: caller.id, _role: "master" });
-    if (!isAdmin && !isMaster) {
-      return new Response(JSON.stringify({ error: "Forbidden" }), {
-        status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
     const { user_id } = await req.json();
     if (!user_id || typeof user_id !== "string") {
       return new Response(JSON.stringify({ error: "Missing user_id" }), {
@@ -54,6 +45,38 @@ serve(async (req) => {
         status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
+
+    // Authorisation: platform masters may delete anyone; otherwise the caller must be a
+    // super_admin/admin of EVERY business the target user belongs to, and the target may
+    // not be a platform master.
+    const [{ data: callerRoles }, { data: targetRoles }] = await Promise.all([
+      supabase.from("user_roles").select("role, business_id").eq("user_id", caller.id),
+      supabase.from("user_roles").select("role, business_id").eq("user_id", user_id),
+    ]);
+
+    const isMaster = (callerRoles ?? []).some((r) => r.role === "master");
+    if (!isMaster) {
+      const targetIsMaster = (targetRoles ?? []).some((r) => r.role === "master");
+      const adminBusinessIds = new Set(
+        (callerRoles ?? [])
+          .filter((r) => ["admin", "super_admin"].includes(r.role) && r.business_id)
+          .map((r) => r.business_id as string),
+      );
+      const targetBusinessIds = (targetRoles ?? [])
+        .map((r) => r.business_id)
+        .filter((b): b is string => !!b);
+
+      const sameTenant =
+        targetBusinessIds.length > 0 &&
+        targetBusinessIds.every((b) => adminBusinessIds.has(b));
+
+      if (targetIsMaster || !sameTenant) {
+        return new Response(JSON.stringify({ error: "Forbidden" }), {
+          status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+    }
+
 
     // Delete user roles first
     await supabase.from("user_roles").delete().eq("user_id", user_id);
