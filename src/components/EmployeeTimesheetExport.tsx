@@ -8,7 +8,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { CalendarIcon, Download, FileSpreadsheet, FileText, Loader2, UserCheck } from "lucide-react";
 import type { DateRange } from "react-day-picker";
-import { format, startOfWeek, subWeeks, endOfWeek, parseISO } from "date-fns";
+import { format, startOfWeek, subWeeks, endOfWeek, parseISO, addDays } from "date-fns";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import * as XLSX from "xlsx";
@@ -176,7 +176,8 @@ export default function EmployeeTimesheetExport() {
         grandBreaks += weekTotal.breaks;
         grandNet += weekTotal.net;
 
-        const weekLabel = `Week total ${format(parseISO(weekStart), "dd MMM yyyy")}`;
+        const weekEnd = format(addDays(parseISO(weekStart), 6), "dd MMM yyyy");
+        const weekLabel = `Week total ${format(parseISO(weekStart), "dd MMM yyyy")} – ${weekEnd}`;
         const subtotalRow = [
           weekLabel,
           "",
