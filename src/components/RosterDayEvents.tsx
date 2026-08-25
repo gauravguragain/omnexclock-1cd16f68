@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { openRunsheet } from "@/lib/runsheet";
 import { useBusiness } from "@/contexts/BusinessContext";
 import { useActionLock } from "@/contexts/ActionLockContext";
 import { useAuth } from "@/contexts/AuthContext";
@@ -401,28 +402,9 @@ export default function RosterDayEvents({ weekDates, fmtDate }: Props) {
     });
   };
 
-  const viewPdf = (urlOrPath: string) => {
-    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-    const storagePathMatch = urlOrPath.match(/\/storage\/v1\/object\/(?:public\/|sign\/)?event-runsheets\/([^?#]+)/);
-
-    // Normalize any stored storage URL to plain object path
-    const rawPath = storagePathMatch ? decodeURIComponent(storagePathMatch[1]) : urlOrPath;
-
-    // Truly external URL (not our runsheet storage)
-    if (rawPath.startsWith("http") && !storagePathMatch) {
-      window.open(rawPath, "_blank", "noopener,noreferrer");
-      return;
-    }
-
-    const normalizedPath = rawPath.split("?")[0].trim();
-    const encodedPath = normalizedPath
-      .split("/")
-      .map((segment) => encodeURIComponent(segment))
-      .join("/");
-
-    // event-runsheets bucket is public; avoid signed URL endpoint to prevent 404 on filenames with spaces/parentheses
-    const url = `${supabaseUrl}/storage/v1/object/public/event-runsheets/${encodedPath}`;
-    window.open(url, "_blank", "noopener,noreferrer");
+  const viewPdf = async (urlOrPath: string) => {
+    const err = await openRunsheet(urlOrPath);
+    if (err) toast({ title: "Error", description: err, variant: "destructive" });
   };
 
   const getEquipmentBadges = (ev: DayEvent) => {
