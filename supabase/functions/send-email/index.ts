@@ -44,7 +44,19 @@ serve(async (req) => {
       throw new Error("RESEND_API_KEY is not configured");
     }
 
+    // Only signed-in admin-level users may send email through this endpoint
+    const admin = serviceClient();
+    const caller = await getCaller(req, admin);
+    if (!caller) return jsonError("Unauthorized", 401, corsHeaders);
+    const canSend =
+      caller.isMaster ||
+      caller.roles.some((r) =>
+        ["admin", "super_admin", "roster_admin"].includes(r.role)
+      );
+    if (!canSend) return jsonError("Forbidden", 403, corsHeaders);
+
     const body: EmailRequest = await req.json();
+
 
     let emailPayload: Record<string, unknown>;
 
