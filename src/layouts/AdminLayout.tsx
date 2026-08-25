@@ -12,6 +12,7 @@ import { supabase } from "@/integrations/supabase/client";
 import WalkthroughTour from "@/components/WalkthroughTour";
 import { adminTourSteps } from "@/components/tourSteps";
 import NotificationBell from "@/components/NotificationBell";
+import ForceRefreshButton from "@/components/ForceRefreshButton";
 import { useAdminNotifications } from "@/hooks/useNotifications";
 import { Switch } from "@/components/ui/switch";
 import {
