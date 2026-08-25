@@ -17,6 +17,14 @@ serve(async (req) => {
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
+    // Only signed-in admins / roster admins of this business may run a forecast
+    const caller = await getCaller(req, supabase);
+    if (!caller) return jsonError("Unauthorized", 401, corsHeaders);
+    if (!hasBusinessRole(caller, business_id, ["admin", "super_admin", "roster_admin"])) {
+      return jsonError("Forbidden", 403, corsHeaders);
+    }
+
+
     // 1. Get events for this week (Mon-Sun)
     const weekStart = new Date(week_start_date + "T00:00:00");
     const weekEnd = new Date(weekStart);
