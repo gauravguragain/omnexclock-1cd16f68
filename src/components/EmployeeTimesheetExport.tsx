@@ -8,7 +8,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { CalendarIcon, Download, FileSpreadsheet, FileText, Loader2, UserCheck } from "lucide-react";
 import type { DateRange } from "react-day-picker";
-import { format, startOfWeek, subWeeks, endOfWeek, parseISO } from "date-fns";
+import { format, startOfWeek, subWeeks, endOfWeek, parseISO, addDays } from "date-fns";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import * as XLSX from "xlsx";
