@@ -570,9 +570,14 @@ export default function AIAssistantPage() {
     toast.success("History cleared");
   };
 
-  // Markdown rendering
+  // Markdown rendering (input is escaped first, output sanitized before injection)
   const renderMarkdown = (text: string) => {
-    let html = text
+    const escaped = text
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;");
+    let html = escaped
+
       .replace(/```(\w*)\n([\s\S]*?)```/g, '<pre class="bg-muted/50 rounded-lg p-3 my-2 overflow-x-auto text-xs font-mono"><code>$2</code></pre>')
       .replace(/`([^`]+)`/g, '<code class="bg-muted/50 px-1.5 py-0.5 rounded text-xs font-mono">$1</code>')
       .replace(/\*\*(.+?)\*\*/g, '<strong class="font-semibold">$1</strong>')
