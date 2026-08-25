@@ -1,3 +1,4 @@
+import DOMPurify from "dompurify";
 import { useState, useRef, useEffect, useCallback, lazy, Suspense } from "react";
 import { useBusiness } from "@/contexts/BusinessContext";
 import { Button } from "@/components/ui/button";
