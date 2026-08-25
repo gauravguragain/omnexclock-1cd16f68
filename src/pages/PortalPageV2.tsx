@@ -6,6 +6,8 @@ import { useActionLock } from "@/contexts/ActionLockContext";
 import { usePortalData, PortalShift, TimesheetEntry } from "@/hooks/usePortalData";
 import { useEmployeeNotifications } from "@/hooks/useNotifications";
 import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
+import { openRunsheet } from "@/lib/runsheet";
 import NotificationBell from "@/components/NotificationBell";
 import ForceRefreshButton from "@/components/ForceRefreshButton";
 import WalkthroughTour from "@/components/WalkthroughTour";
@@ -299,7 +301,7 @@ function TodayTab({ employeeCode, businessCode, shifts }: {
                         {dayLabel} {isToday && <span className="text-primary">(Today)</span>}
                       </p>
                       <div className="space-y-2">
-                        {sortedEvents.map((ev: any) => <EventCard key={ev.id} ev={ev} />)}
+                        {sortedEvents.map((ev: any) => <EventCard key={ev.id} ev={ev} employeeCode={employeeCode} businessCode={businessCode} />)}
                       </div>
                     </div>
                   );
@@ -327,7 +329,7 @@ function TodayTab({ employeeCode, businessCode, shifts }: {
                   if (!a.event_time) return 1;
                   if (!b.event_time) return -1;
                   return a.event_time.localeCompare(b.event_time);
-                }).map((ev: any) => <EventCard key={ev.id} ev={ev} />)}
+                }).map((ev: any) => <EventCard key={ev.id} ev={ev} employeeCode={employeeCode} businessCode={businessCode} />)}
               </div>
             )}
           </CardContent>
