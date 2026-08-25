@@ -7,6 +7,7 @@ import { usePortalData, PortalShift, TimesheetEntry } from "@/hooks/usePortalDat
 import { useEmployeeNotifications } from "@/hooks/useNotifications";
 import { useToast } from "@/hooks/use-toast";
 import NotificationBell from "@/components/NotificationBell";
+import ForceRefreshButton from "@/components/ForceRefreshButton";
 import WalkthroughTour from "@/components/WalkthroughTour";
 import { portalTourSteps } from "@/components/tourSteps";
 import { Button } from "@/components/ui/button";
