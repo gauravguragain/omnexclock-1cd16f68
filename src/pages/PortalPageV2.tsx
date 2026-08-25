@@ -673,6 +673,7 @@ export default function PortalPageV2() {
             </div>
           </div>
           <div className="flex items-center gap-2">
+            <ForceRefreshButton className="h-8 w-8" />
             <PortalNotifications employeeCode={portal.employeeCode} businessCode={bizCode} />
             <Button variant="outline" size="sm" onClick={portal.logout}>
               <LogOut className="mr-1.5 h-3.5 w-3.5" /> Exit
