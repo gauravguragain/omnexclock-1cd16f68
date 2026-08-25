@@ -6,6 +6,8 @@ import { useActionLock } from "@/contexts/ActionLockContext";
 import { usePortalData, PortalShift, TimesheetEntry } from "@/hooks/usePortalData";
 import { useEmployeeNotifications } from "@/hooks/useNotifications";
 import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
+import { openRunsheet } from "@/lib/runsheet";
 import NotificationBell from "@/components/NotificationBell";
 import ForceRefreshButton from "@/components/ForceRefreshButton";
 import WalkthroughTour from "@/components/WalkthroughTour";
@@ -92,7 +94,7 @@ function PortalNotifications({ employeeCode, businessCode }: { employeeCode: str
 
 /* ── Event Card ───────────────────────────────────── */
 
-function EventCard({ ev }: { ev: any }) {
+function EventCard({ ev, employeeCode, businessCode }: { ev: any; employeeCode?: string | null; businessCode?: string | null }) {
   const [expanded, setExpanded] = useState(false);
   const totalGuests = (ev.adult_guests || 0) + (ev.kids_guests || 0);
   const activeBadges = [
@@ -104,18 +106,11 @@ function EventCard({ ev }: { ev: any }) {
     ev.live_stall && "🍳 Live Stall",
   ].filter(Boolean) as string[];
 
-  const viewPdf = (urlOrPath: string) => {
-    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-    const storagePathMatch = urlOrPath.match(/\/storage\/v1\/object\/(?:public\/|sign\/)?event-runsheets\/([^?#]+)/);
-    const rawPath = storagePathMatch ? decodeURIComponent(storagePathMatch[1]) : urlOrPath;
-    if (rawPath.startsWith("http") && !storagePathMatch) {
-      window.open(rawPath, "_blank", "noopener,noreferrer");
-      return;
-    }
-    const normalizedPath = rawPath.split("?")[0].trim();
-    const encodedPath = normalizedPath.split("/").map((s) => encodeURIComponent(s)).join("/");
-    window.open(`${supabaseUrl}/storage/v1/object/public/event-runsheets/${encodedPath}`, "_blank", "noopener,noreferrer");
+  const viewPdf = async (urlOrPath: string) => {
+    const err = await openRunsheet(urlOrPath, { employeeCode, businessCode });
+    if (err) toast.error(err);
   };
+
 
   const detailRow = (label: string, value: string | null | undefined) => {
     if (!value) return null;
@@ -306,7 +301,7 @@ function TodayTab({ employeeCode, businessCode, shifts }: {
                         {dayLabel} {isToday && <span className="text-primary">(Today)</span>}
                       </p>
                       <div className="space-y-2">
-                        {sortedEvents.map((ev: any) => <EventCard key={ev.id} ev={ev} />)}
+                        {sortedEvents.map((ev: any) => <EventCard key={ev.id} ev={ev} employeeCode={employeeCode} businessCode={businessCode} />)}
                       </div>
                     </div>
                   );
@@ -334,7 +329,7 @@ function TodayTab({ employeeCode, businessCode, shifts }: {
                   if (!a.event_time) return 1;
                   if (!b.event_time) return -1;
                   return a.event_time.localeCompare(b.event_time);
-                }).map((ev: any) => <EventCard key={ev.id} ev={ev} />)}
+                }).map((ev: any) => <EventCard key={ev.id} ev={ev} employeeCode={employeeCode} businessCode={businessCode} />)}
               </div>
             )}
           </CardContent>
