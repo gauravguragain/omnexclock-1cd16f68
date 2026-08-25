@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
 /**
  * Clears service workers + caches and hard-reloads the app.
@@ -35,11 +34,12 @@ export default function ForceRefreshButton({ className }: { className?: string }
     window.location.replace(url.toString());
   };
 
-  const btn = (
+  return (
     <Button
       variant="ghost"
       size="icon"
       aria-label="Force refresh"
+      title="Force refresh"
       onClick={handleRefresh}
       disabled={busy}
       className={className}
@@ -48,10 +48,4 @@ export default function ForceRefreshButton({ className }: { className?: string }
     </Button>
   );
 
-  return (
-    <Tooltip>
-      <TooltipTrigger asChild>{btn}</TooltipTrigger>
-      <TooltipContent>Force refresh</TooltipContent>
-    </Tooltip>
-  );
 }
