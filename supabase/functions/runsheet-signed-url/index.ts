@@ -52,7 +52,16 @@ Deno.serve(async (req) => {
     const { data, error } = await admin.storage
       .from("event-runsheets")
       .createSignedUrl(file_path, 300);
-    if (error || !data) return json({ error: "Unable to open runsheet" }, 500);
+    if (error || !data) {
+      const msg = String(error?.message ?? "");
+      if (/not found|NoSuchKey|not_found|does not exist/i.test(msg)) {
+        return json(
+          { error: "This runsheet file no longer exists in storage. Please remove it and re-upload the PDF." },
+          404,
+        );
+      }
+      return json({ error: "Unable to open runsheet" }, 500);
+    }
     return json({ url: data.signedUrl });
   } catch (_e) {
     return json({ error: "Unable to open runsheet" }, 500);
