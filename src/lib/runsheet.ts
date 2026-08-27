@@ -31,7 +31,17 @@ export async function openRunsheet(
     },
   });
 
-  if (error || !data?.url) return "Unable to open runsheet";
+  if (error || !data?.url) {
+    // Surface the edge function's error message when available
+    try {
+      const ctx = (error as { context?: Response } | null)?.context;
+      if (ctx) {
+        const body = await ctx.json();
+        if (body?.error) return String(body.error);
+      }
+    } catch { /* fall through to generic message */ }
+    return "Unable to open runsheet";
+  }
   window.open(data.url as string, "_blank", "noopener,noreferrer");
   return null;
 }

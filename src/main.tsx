@@ -2,7 +2,7 @@ import { createRoot } from "react-dom/client";
 import App from "./App.tsx";
 import "./index.css";
 
-const GLOBAL_SYNC_VERSION = "2026-08-24-portal-timesheet-sync-v1";
+const GLOBAL_SYNC_VERSION = "2026-08-27-runsheet-signed-url-v1";
 const GLOBAL_SYNC_KEY = "omnex_global_sync_version";
 
 const runOneTimeGlobalSyncRefresh = async () => {
