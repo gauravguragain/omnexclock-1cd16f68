@@ -284,10 +284,24 @@ export default function RosterDayEvents({ weekDates, fmtDate }: Props) {
         return;
       }
 
-      // Move the file to the proper path
+      // Move the file to the proper path. Never update the database to a path
+      // that was not successfully created in storage.
       const properPath = `${business.id}/${inserted.id}/${Date.now()}_${file.name}`;
-      await supabase.storage.from("event-runsheets").copy(filePath, properPath);
-      await supabase.from("roster_day_events").update({ runsheet_url: properPath }).eq("id", inserted.id);
+      const { error: copyError } = await supabase.storage.from("event-runsheets").copy(filePath, properPath);
+      if (copyError) {
+        await supabase.from("roster_day_events").delete().eq("id", inserted.id);
+        throw new Error(`Unable to save the uploaded PDF: ${copyError.message}`);
+      }
+      const { error: pathUpdateError } = await supabase
+        .from("roster_day_events")
+        .update({ runsheet_url: properPath })
+        .eq("id", inserted.id);
+      if (pathUpdateError) {
+        await supabase.storage.from("event-runsheets").remove([properPath]);
+        await supabase.from("roster_day_events").delete().eq("id", inserted.id);
+        throw new Error(`Unable to link the uploaded PDF: ${pathUpdateError.message}`);
+      }
+      await supabase.storage.from("event-runsheets").remove([filePath]);
 
       // Apply extracted data
       const updates: Partial<DayEvent> = {};
