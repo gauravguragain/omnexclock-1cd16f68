@@ -210,6 +210,7 @@ export default function RosterDayEvents({ weekDates, fmtDate }: Props) {
     // Store the file path (not a temporary signed URL)
     const { error: updateError } = await supabase.from("roster_day_events").update({ runsheet_url: filePath, updated_at: new Date().toISOString() }).eq("id", eventId);
     if (updateError) {
+      await supabase.storage.from("event-runsheets").remove([filePath]);
       toast({ title: "Error saving URL", description: updateError.message, variant: "destructive" });
     } else {
       setEvents(prev => prev.map(e => e.id === eventId ? { ...e, runsheet_url: filePath } : e));

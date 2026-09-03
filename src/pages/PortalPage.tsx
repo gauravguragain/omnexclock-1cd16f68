@@ -115,6 +115,7 @@ function PortalNotifications({ employeeCode, businessCode }: { employeeCode: str
 /* ── Event Card (reusable) ────────────────────────────────── */
 function EventCard({ ev }: { ev: any }) {
   const [expanded, setExpanded] = useState(false);
+  const { toast } = useToast();
 
   const totalGuests = (ev.adult_guests || 0) + (ev.kids_guests || 0);
   const activeBadges = [
@@ -131,7 +132,7 @@ function EventCard({ ev }: { ev: any }) {
       employeeCode: localStorage.getItem("omnexclock_portal_employee_code"),
       businessCode: localStorage.getItem("omnexclock_portal_business_code"),
     });
-    if (err) console.error(err);
+    if (err) toast({ title: "Unable to open runsheet", description: err, variant: "destructive" });
   };
 
   const detailRow = (label: string, value: string | null | undefined) => {
