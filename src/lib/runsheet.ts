@@ -23,6 +23,14 @@ export async function openRunsheet(
 
   const filePath = rawPath.split("?")[0].trim();
 
+  // Open synchronously from the click event. Mobile Safari and other browsers
+  // otherwise block window.open after the signed-URL request has completed.
+  const pdfWindow = window.open("", "_blank");
+  if (pdfWindow) {
+    pdfWindow.document.title = "Opening runsheet…";
+    pdfWindow.document.body.textContent = "Opening runsheet PDF…";
+  }
+
   const { data, error } = await supabase.functions.invoke("runsheet-signed-url", {
     body: {
       file_path: filePath,
@@ -32,6 +40,7 @@ export async function openRunsheet(
   });
 
   if (error || !data?.url) {
+    pdfWindow?.close();
     // Surface the edge function's error message when available
     try {
       const ctx = (error as { context?: Response } | null)?.context;
@@ -42,6 +51,13 @@ export async function openRunsheet(
     } catch { /* fall through to generic message */ }
     return "Unable to open runsheet";
   }
-  window.open(data.url as string, "_blank", "noopener,noreferrer");
+
+  if (pdfWindow) {
+    pdfWindow.opener = null;
+    pdfWindow.location.replace(String(data.url));
+  } else {
+    // Fallback for browsers configured to block all new tabs.
+    window.location.assign(String(data.url));
+  }
   return null;
 }
