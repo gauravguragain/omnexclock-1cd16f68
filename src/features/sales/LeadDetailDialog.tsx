@@ -2,8 +2,8 @@ import { FormEvent, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client"; import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button"; import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"; import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input"; import { Label } from "@/components/ui/label"; import { Textarea } from "@/components/ui/textarea"; import { Badge } from "@/components/ui/badge"; import { Checkbox } from "@/components/ui/checkbox";
-import { Bot, CalendarPlus, Download, Loader2, Mail, Phone, Plus } from "lucide-react"; import { toast } from "sonner"; import { format } from "date-fns";
-import venueBanner from "@/assets/regal-venue-banner.jpg"; import type { CrmInspection, CrmInteraction, CrmLead, CrmOption, CrmTask } from "./types"; import { prettyCrmValue } from "./types"; import { buildBookingConfirmationPdf } from "@/lib/bookingConfirmationPdf";
+import { ArrowRight, Bot, CalendarPlus, Clock, Download, Mail, Phone, Plus } from "lucide-react"; import { toast } from "sonner"; import { format } from "date-fns";
+import venueBanner from "@/assets/regal-venue-banner.jpg"; import type { CrmInspection, CrmInteraction, CrmLead, CrmOption, CrmTask } from "./types"; import { CRM_STAGE_VALUES, prettyCrmValue } from "./types"; import { buildBookingConfirmationPdf } from "@/lib/bookingConfirmationPdf";
 
 export default function LeadDetailDialog({ lead, open, onOpenChange, options, interactions, inspections, tasks, menuItems, booking, businessName, onSaved }:{ lead:CrmLead|null; open:boolean; onOpenChange:(v:boolean)=>void; options:CrmOption[]; interactions:CrmInteraction[]; inspections:CrmInspection[]; tasks:CrmTask[]; menuItems:any[]; booking:any; businessName:string; onSaved:()=>void }) {
   const { user } = useAuth(); const [busy,setBusy]=useState(false); const [ai,setAi]=useState<any>(null); const [selectedMenu,setSelectedMenu]=useState<string[]>([]);
