@@ -167,7 +167,8 @@ export function buildRunsheetPdf(data: RunsheetPdfData) {
   }
 
   // Close-out
-  let closeY = Math.max(leftY, rightY) + 12;
+  const sameColumnPage = doc.getCurrentPageInfo().pageNumber === startPage;
+  let closeY = (sameColumnPage ? Math.max(leftY, rightY) : leftY) + 12;
   if (closeY > 262) { doc.addPage(); closeY = 40; }
   doc.setFont("helvetica", "normal"); doc.setFontSize(9); doc.setTextColor(...MUTED);
   doc.text("END DAY 1 OF 1", 105, closeY, { align: "center" });
