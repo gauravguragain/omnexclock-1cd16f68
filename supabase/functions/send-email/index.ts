@@ -130,7 +130,7 @@ serve(async (req) => {
               <strong>⚠️ Disclaimer:</strong> The shift and break times stated in this roster are indicative and may vary according to the operational needs of the business and at the discretion of management. You may be required to start earlier, finish later, or take breaks at different times depending on business demands. Please check with your manager if you have any concerns.
             </p>
           </div>
-          <p style="color:#6b7280;font-size:13px;margin-top:16px;">This is an automated notification from Pro Regal Pavilion. Please contact your manager if you have questions.</p>
+          <p style="color:#6b7280;font-size:13px;margin-top:16px;">This is an automated notification from Regal Clock. Please contact your manager if you have questions.</p>
         </div>
       `;
 
@@ -194,7 +194,7 @@ serve(async (req) => {
         html: `
           <div style="font-family:'Segoe UI',Arial,sans-serif;max-width:900px;margin:0 auto;color:#1a1a1a;background:#ffffff;">
             <div style="text-align:center;padding:30px 20px 16px;background:linear-gradient(135deg,#1a1a1a 0%,#2d2d2d 100%);border-radius:12px 12px 0 0;">
-              <h1 style="color:#ac845d;font-size:24px;margin:0;letter-spacing:1px;">Pro Regal Pavilion</h1>
+              <h1 style="color:#ac845d;font-size:24px;margin:0;letter-spacing:1px;">Regal Clock</h1>
               <p style="color:#a0a0a0;font-size:11px;margin:6px 0 0;text-transform:uppercase;letter-spacing:2px;">Report</p>
             </div>
             <div style="padding:24px 20px;">
@@ -203,7 +203,7 @@ serve(async (req) => {
               ${tableHtml}
             </div>
             <div style="text-align:center;padding:16px 20px;background:#f8f9fa;border-radius:0 0 12px 12px;">
-              <p style="color:#999;font-size:11px;margin:0;">This is an automated report from <strong>Pro Regal Pavilion</strong>.</p>
+              <p style="color:#999;font-size:11px;margin:0;">This is an automated report from <strong>Regal Clock</strong>.</p>
             </div>
           </div>
         `,
@@ -226,7 +226,7 @@ serve(async (req) => {
         <div style="font-family:'Segoe UI',Arial,sans-serif;max-width:600px;margin:0 auto;color:#1a1a1a;background:#ffffff;">
           <!-- Header -->
           <div style="text-align:center;padding:40px 20px 20px;background:linear-gradient(135deg,#1a1a1a 0%,#2d2d2d 100%);border-radius:12px 12px 0 0;">
-            <h1 style="color:#ac845d;font-size:28px;margin:0;letter-spacing:1px;">Pro Regal Pavilion</h1>
+            <h1 style="color:#ac845d;font-size:28px;margin:0;letter-spacing:1px;">Regal Clock</h1>
             <p style="color:#a0a0a0;font-size:12px;margin:6px 0 0;text-transform:uppercase;letter-spacing:2px;">Time & Workforce Management</p>
           </div>
           
@@ -337,7 +337,7 @@ serve(async (req) => {
           <!-- Footer -->
           <div style="text-align:center;padding:20px 30px;background:#f8f9fa;border-radius:0 0 12px 12px;">
             <p style="color:#999;font-size:11px;margin:0;">
-              This is an automated welcome email from <strong>Pro Regal Pavilion</strong>.<br/>
+              This is an automated welcome email from <strong>Regal Clock</strong>.<br/>
               If you received this in error, please contact your manager.
             </p>
           </div>
@@ -345,7 +345,7 @@ serve(async (req) => {
       `;
 
       emailPayload = {
-        from: `${body.businessName || "Pro Regal Pavilion"} <noreply@omnexventures.com>`,
+        from: `${body.businessName || "Regal Clock"} <noreply@omnexventures.com>`,
         to: [body.to],
         subject: `Welcome to ${body.businessName || "the team"}, ${body.employeeName}! 🎉 — Your Induction Packet`,
         html,
@@ -359,7 +359,7 @@ serve(async (req) => {
         <div style="font-family:'Segoe UI',Arial,sans-serif;max-width:600px;margin:0 auto;color:#1a1a1a;background:#ffffff;">
           <!-- Header -->
           <div style="text-align:center;padding:30px 20px 16px;background:linear-gradient(135deg,#1a1a1a 0%,#2d2d2d 100%);border-radius:12px 12px 0 0;">
-            <h1 style="color:#ac845d;font-size:24px;margin:0;letter-spacing:1px;">Pro Regal Pavilion</h1>
+            <h1 style="color:#ac845d;font-size:24px;margin:0;letter-spacing:1px;">Regal Clock</h1>
             <p style="color:#a0a0a0;font-size:11px;margin:6px 0 0;text-transform:uppercase;letter-spacing:2px;">Roster Report</p>
           </div>
           
@@ -391,14 +391,14 @@ serve(async (req) => {
           <!-- Footer -->
           <div style="text-align:center;padding:16px 30px;background:#f8f9fa;border-radius:0 0 12px 12px;">
             <p style="color:#999;font-size:11px;margin:0;">
-              This is an automated email from <strong>Pro Regal Pavilion</strong>.
+              This is an automated email from <strong>Regal Clock</strong>.
             </p>
           </div>
         </div>
       `;
 
       emailPayload = {
-        from: `${body.businessName || "Pro Regal Pavilion"} <noreply@omnexventures.com>`,
+        from: `${body.businessName || "Regal Clock"} <noreply@omnexventures.com>`,
         to: [body.to],
         subject: `Roster — ${body.weekLabel}`,
         html,
@@ -418,7 +418,7 @@ serve(async (req) => {
       const html = `
         <div style="font-family:'Segoe UI',Arial,sans-serif;max-width:600px;margin:0 auto;color:#1a1a1a;background:#ffffff;">
           <div style="text-align:center;padding:30px 20px 16px;background:linear-gradient(135deg,#1a1a1a 0%,#2d2d2d 100%);border-radius:12px 12px 0 0;">
-            <h1 style="color:#ac845d;font-size:24px;margin:0;letter-spacing:1px;">${body.businessName || "Pro Regal Pavilion"}</h1>
+            <h1 style="color:#ac845d;font-size:24px;margin:0;letter-spacing:1px;">${body.businessName || "Regal Clock"}</h1>
             <p style="color:#a0a0a0;font-size:11px;margin:6px 0 0;text-transform:uppercase;letter-spacing:2px;">Report</p>
           </div>
           <div style="padding:24px 30px;">
@@ -434,13 +434,13 @@ serve(async (req) => {
             </div>
           </div>
           <div style="text-align:center;padding:16px 30px;background:#f8f9fa;border-radius:0 0 12px 12px;">
-            <p style="color:#999;font-size:11px;margin:0;">This is an automated report from <strong>Pro Regal Pavilion</strong>.</p>
+            <p style="color:#999;font-size:11px;margin:0;">This is an automated report from <strong>Regal Clock</strong>.</p>
           </div>
         </div>
       `;
 
       emailPayload = {
-        from: `${body.businessName || "Pro Regal Pavilion"} <noreply@omnexventures.com>`,
+        from: `${body.businessName || "Regal Clock"} <noreply@omnexventures.com>`,
         to: [body.to],
         subject: body.subject,
         html,

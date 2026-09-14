@@ -1,8 +1,8 @@
 {
   "id": "/omnexclock-main",
-  "name": "Pro Regal Pavilion",
-  "short_name": "Pro Regal Pavilion",
-  "description": "Pro Regal Pavilion workforce and employee management",
+  "name": "Regal Clock",
+  "short_name": "Regal Clock",
+  "description": "Regal Clock workforce and employee management",
   "theme_color": "#12100f",
   "background_color": "#12100f",
   "display": "standalone",

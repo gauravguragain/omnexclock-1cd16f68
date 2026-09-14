@@ -42,12 +42,12 @@ const Index = () => {
           <div className="relative inline-block">
             <img
               src="/regal-logo.png"
-              alt="Pro Regal Pavilion"
+              alt="Regal Clock"
               className="h-24 w-24 lg:h-20 lg:w-20 mx-auto rounded-2xl object-cover shadow-xl shadow-primary/10 pulse-ring"
             />
           </div>
           <div className="space-y-1">
-            <h1 className="text-3xl font-bold text-foreground tracking-tight">Pro Regal Pavilion</h1>
+            <h1 className="text-3xl font-bold text-foreground tracking-tight">Regal Clock</h1>
             <p className="text-muted-foreground text-sm font-medium tracking-wide">Time & Workforce Management</p>
           </div>
         </div>

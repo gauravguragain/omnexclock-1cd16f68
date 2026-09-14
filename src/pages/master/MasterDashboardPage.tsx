@@ -104,7 +104,7 @@ export default function MasterDashboardPage() {
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-foreground">Master Dashboard</h1>
-        <p className="text-muted-foreground">Platform overview for Pro Regal Pavilion</p>
+        <p className="text-muted-foreground">Regal Clock platform overview</p>
       </div>
 
       {/* Key metrics */}

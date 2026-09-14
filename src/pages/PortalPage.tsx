@@ -1624,7 +1624,7 @@ export default function PortalPage() {
               Install Employee Portal
             </DialogTitle>
             <p className="text-sm text-muted-foreground">
-              Add Pro Regal Pavilion to your home screen for quick access — works like a native app.
+              Add Regal Clock to your home screen for quick access — works like a native app.
             </p>
           </DialogHeader>
 
@@ -1709,7 +1709,7 @@ export default function PortalPage() {
                   <ol className="text-xs text-muted-foreground space-y-2 list-decimal pl-4">
                     <li>Open <span className="font-mono text-primary">Google Chrome</span> or <span className="font-mono text-primary">Microsoft Edge</span></li>
                     <li>Navigate to <span className="font-mono text-primary break-all">the Employee Portal</span></li>
-                    <li>Click the <span className="font-semibold text-foreground">install icon</span> (⊕) in the address bar, or click the three-dot menu → <span className="font-semibold text-foreground">"Install Pro Regal Pavilion"</span></li>
+                    <li>Click the <span className="font-semibold text-foreground">install icon</span> (⊕) in the address bar, or click the three-dot menu → <span className="font-semibold text-foreground">"Install Regal Clock"</span></li>
                     <li>Click <span className="font-semibold text-foreground">"Install"</span> in the prompt</li>
                     <li>The app will open in its own window and appear in your Start menu / Dock</li>
                   </ol>

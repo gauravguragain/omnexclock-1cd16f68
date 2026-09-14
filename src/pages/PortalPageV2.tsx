@@ -1253,7 +1253,7 @@ export default function PortalPageV2() {
             <DialogTitle className="flex items-center gap-2">
               <Download className="h-5 w-5 text-primary" /> Install Employee Portal
             </DialogTitle>
-            <p className="text-sm text-muted-foreground">Add Pro Regal Pavilion to your home screen for quick access — works like a native app.</p>
+            <p className="text-sm text-muted-foreground">Add Regal Clock to your home screen for quick access — works like a native app.</p>
           </DialogHeader>
           <div className="space-y-4">
             <div className="rounded-lg bg-secondary/50 border border-border/60 p-3 space-y-1.5">

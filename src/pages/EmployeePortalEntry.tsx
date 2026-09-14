@@ -139,7 +139,7 @@ export default function EmployeePortalEntry() {
       <div className="absolute bottom-1/3 -right-24 w-60 h-60 rounded-full bg-primary/[0.025] blur-[80px] float" style={{ animationDelay: '2s' }} />
 
       <div className="text-center space-y-4 mb-10 animate-fade-in">
-        <img src="/regal-logo.png" alt="Pro Regal Pavilion" className="h-20 w-20 mx-auto rounded-2xl object-cover shadow-xl shadow-primary/10 pulse-ring" />
+        <img src="/regal-logo.png" alt="Regal Clock" className="h-20 w-20 mx-auto rounded-2xl object-cover shadow-xl shadow-primary/10 pulse-ring" />
         <div className="space-y-1">
           <h1 className="text-2xl font-bold text-foreground tracking-tight">Employee Portal</h1>
           <p className="text-muted-foreground text-sm">Enter your business code to access your portal</p>
