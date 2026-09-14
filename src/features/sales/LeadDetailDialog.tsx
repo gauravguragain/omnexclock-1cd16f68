@@ -83,16 +83,34 @@ export default function LeadDetailDialog({ lead, open, onOpenChange, options, in
           <p className="mt-3 text-sm text-primary">{item.price_per_head?`$${Number(item.price_per_head).toFixed(2)} per guest`:`$${Number(item.flat_price||0).toFixed(2)} flat`}</p>
           <p className="text-xs text-muted-foreground">Line total ${lineTotal(Number(item.price_per_head||0),Number(item.flat_price||0)).toFixed(2)}</p>
         </button>})}</div>
-      </section>):<p className="text-sm text-muted-foreground">No menu packages yet. Add your own item on the right.</p>}
+      </section>):<p className="text-sm text-muted-foreground">No menu packages in the catalogue yet. Add a package selection below.</p>}
 
       <section className="rounded-lg border border-dashed border-border p-4">
-        <h3 className="font-serif text-lg">Add a custom item</h3>
-        <p className="text-xs text-muted-foreground">For bespoke dishes, stalls or extras that are not in the catalogue.</p>
+        <h3 className="font-serif text-lg">Package selection</h3>
+        <p className="text-xs text-muted-foreground">Name the package the client has chosen and the amount per guest — the total is worked out for you.</p>
         <div className="mt-3 grid gap-2 sm:grid-cols-[2fr_1fr_1fr_auto]">
-          <Input value={draft.name} onChange={e=>setDraft({...draft,name:e.target.value})} placeholder="Item name"/>
-          <Input value={draft.pricePerHead} onChange={e=>setDraft({...draft,pricePerHead:e.target.value})} type="number" min="0" step="0.01" placeholder="$ / guest"/>
-          <Input value={draft.flatPrice} onChange={e=>setDraft({...draft,flatPrice:e.target.value})} type="number" min="0" step="0.01" placeholder="$ flat"/>
-          <Button type="button" variant="secondary" onClick={()=>{if(!draft.name.trim()){toast.error("Give the item a name");return;}setCustomItems(v=>[...v,{key:`${Date.now()}`,name:draft.name.trim(),pricePerHead:Number(draft.pricePerHead||0),flatPrice:Number(draft.flatPrice||0)}]);setDraft({name:"",pricePerHead:"",flatPrice:""});}}><Plus className="h-4 w-4"/></Button>
+          <Input value={draft.name} onChange={e=>setDraft({...draft,name:e.target.value})} placeholder="Package selection e.g. Indian Tier 1"/>
+          <Input value={draft.pricePerHead} onChange={e=>setDraft({...draft,pricePerHead:e.target.value})} type="number" min="0" step="0.01" placeholder="Amount per guest"/>
+          <Input value={draft.flatPrice} onChange={e=>setDraft({...draft,flatPrice:e.target.value})} type="number" min="0" step="0.01" placeholder="$ flat (optional)"/>
+          <Button type="button" variant="secondary" onClick={()=>{if(!draft.name.trim()){toast.error("Name the package first");return;}setCustomItems(v=>[...v,{key:`${Date.now()}`,name:draft.name.trim(),pricePerHead:Number(draft.pricePerHead||0),flatPrice:Number(draft.flatPrice||0)}]);setDraft({name:"",pricePerHead:"",flatPrice:""});}}><Plus className="h-4 w-4"/></Button>
+        </div>
+        {draft.pricePerHead&&<p className="mt-2 text-xs text-muted-foreground">${Number(draft.pricePerHead||0).toFixed(2)} × {guests} guests = ${(Number(draft.pricePerHead||0)*guests+Number(draft.flatPrice||0)).toFixed(2)}</p>}
+      </section>
+
+      <section className="space-y-4 rounded-lg border border-border p-4">
+        <div><h3 className="font-serif text-lg">Dishes on the menu</h3><p className="text-xs text-muted-foreground">List the individual dishes by course. These print on the runsheet exactly as entered.</p></div>
+        <div className="grid gap-4 sm:grid-cols-2">
+          {DISH_COURSES.map(course=><div key={course} className="space-y-2">
+            <p className="text-sm font-semibold">{course}</p>
+            <div className="space-y-1">
+              {dishes.filter(d=>d.course===course).map(d=><div key={d.key} className="flex items-center justify-between gap-2 rounded-md bg-muted/40 px-2 py-1 text-sm"><span>{d.name}</span><button type="button" title="Remove dish" onClick={()=>setDishes(v=>v.filter(x=>x.key!==d.key))}><X className="h-3.5 w-3.5 text-muted-foreground hover:text-destructive"/></button></div>)}
+              {!dishes.some(d=>d.course===course)&&<p className="text-xs text-muted-foreground">No dishes yet.</p>}
+            </div>
+            <div className="flex gap-2">
+              <Input value={dishDraft[course]||""} placeholder="Add a dish" onChange={e=>setDishDraft(v=>({...v,[course]:e.target.value}))} onKeyDown={e=>{if(e.key==="Enter"){e.preventDefault();const name=(dishDraft[course]||"").trim();if(!name)return;setDishes(v=>[...v,{key:`${course}-${Date.now()}`,course,name}]);setDishDraft(v=>({...v,[course]:""}));}}}/>
+              <Button type="button" variant="secondary" size="icon" onClick={()=>{const name=(dishDraft[course]||"").trim();if(!name)return;setDishes(v=>[...v,{key:`${course}-${Date.now()}`,course,name}]);setDishDraft(v=>({...v,[course]:""}));}}><Plus className="h-4 w-4"/></Button>
+            </div>
+          </div>)}
         </div>
       </section>
     </div>
@@ -100,14 +118,22 @@ export default function LeadDetailDialog({ lead, open, onOpenChange, options, in
     <aside className="space-y-4 self-start rounded-lg border border-border bg-muted/30 p-4 lg:sticky lg:top-4">
       <div><Label>Guests for pricing</Label><Input type="number" min="1" value={guests} onChange={e=>setGuestOverride(Number(e.target.value)||1)}/></div>
       <div className="space-y-2">
-        <p className="text-sm font-semibold">Selected items</p>
+        <p className="text-sm font-semibold">Package selections</p>
         {!chosenItems.length&&!customItems.length&&<p className="text-sm text-muted-foreground">Nothing selected yet.</p>}
         {chosenItems.map(i=><div key={i.id} className="flex items-start justify-between gap-2 border-b border-border pb-2 text-sm"><span>{i.name}</span><span className="flex items-center gap-2 whitespace-nowrap"><span>${lineTotal(Number(i.price_per_head||0),Number(i.flat_price||0)).toFixed(2)}</span><button type="button" title="Remove item" onClick={()=>setSelectedMenu(v=>v.filter(id=>id!==i.id))}><X className="h-3.5 w-3.5 text-muted-foreground hover:text-destructive"/></button></span></div>)}
-        {customItems.map(i=><div key={i.key} className="flex items-start justify-between gap-2 border-b border-border pb-2 text-sm"><span>{i.name}<Badge variant="outline" className="ml-2 text-[10px]">Custom</Badge></span><span className="flex items-center gap-2 whitespace-nowrap"><span>${lineTotal(i.pricePerHead,i.flatPrice).toFixed(2)}</span><button type="button" title="Remove item" onClick={()=>setCustomItems(v=>v.filter(c=>c.key!==i.key))}><X className="h-3.5 w-3.5 text-muted-foreground hover:text-destructive"/></button></span></div>)}
+        {customItems.map(i=><div key={i.key} className="flex items-start justify-between gap-2 border-b border-border pb-2 text-sm"><span>{i.name}{i.pricePerHead?<span className="ml-2 text-xs text-muted-foreground">${i.pricePerHead.toFixed(2)} × {guests}</span>:null}</span><span className="flex items-center gap-2 whitespace-nowrap"><span>${lineTotal(i.pricePerHead,i.flatPrice).toFixed(2)}</span><button type="button" title="Remove item" onClick={()=>setCustomItems(v=>v.filter(c=>c.key!==i.key))}><X className="h-3.5 w-3.5 text-muted-foreground hover:text-destructive"/></button></span></div>)}
       </div>
-      <div><Label>Beverage package</Label><OptionSelect name="beverage" options={beverageOptions} emptyLabel="Not selected"/></div>
-      <div><Label>Dietary requirements</Label><Textarea name="dietary" rows={2}/></div>
-      <div><Label>Allergies</Label><Textarea name="allergies" rows={2} className="border-destructive/40"/></div>
+      <div><Label>Beverage package</Label><OptionSelect name="beverage" options={beverageOptions} defaultValue={extras.beverage} emptyLabel="Not selected"/></div>
+      <div className="space-y-2 rounded-md border border-border bg-background/60 p-3">
+        <label className="flex items-center gap-2 text-sm font-medium"><Checkbox checked={corkage.enabled} onCheckedChange={c=>setCorkage(v=>({...v,enabled:!!c}))}/> Host is bringing their own drinks (corkage)</label>
+        {corkage.enabled&&<div className="grid gap-2 sm:grid-cols-2">
+          <div><Label className="text-xs">Corkage per guest</Label><Input type="number" min="0" step="0.01" value={corkage.perHead} onChange={e=>setCorkage(v=>({...v,perHead:e.target.value}))}/></div>
+          <div><Label className="text-xs">Flat corkage fee</Label><Input type="number" min="0" step="0.01" value={corkage.flat} onChange={e=>setCorkage(v=>({...v,flat:e.target.value}))}/></div>
+        </div>}
+        {corkage.enabled&&<p className="text-xs text-muted-foreground">Corkage adds ${corkageTotal.toFixed(2)} to the total.</p>}
+      </div>
+      <div><Label>Dietary requirements</Label><Textarea rows={2} value={extras.dietary} onChange={e=>setExtras(v=>({...v,dietary:e.target.value}))}/></div>
+      <div><Label>Allergies</Label><Textarea rows={2} className="border-destructive/40" value={extras.allergies} onChange={e=>setExtras(v=>({...v,allergies:e.target.value}))}/></div>
       <div className="border-t border-border pt-3"><p className="text-xs uppercase text-muted-foreground">Estimated total</p><p className="font-serif text-3xl">${total.toFixed(2)}</p><p className="text-xs text-muted-foreground">${(total/Math.max(guests,1)).toFixed(2)} per guest · {guests} guests</p></div>
       <Button className="w-full">Save menu selection</Button>
     </aside>
