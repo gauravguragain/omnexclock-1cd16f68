@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { UserCheck, UserX, Shield, ShieldOff, Search, Eye, EyeOff, CalendarRange, X, Mail, Plus, Crown, Loader2 } from "lucide-react";
+import { UserCheck, UserX, Shield, ShieldOff, Search, Eye, EyeOff, CalendarRange, X, Mail, Plus, Crown, Loader2, BriefcaseBusiness } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -24,6 +24,7 @@ interface UserProfile {
   has_admin_role: boolean;
   has_viewer_role: boolean;
   has_roster_admin_role: boolean;
+  has_sales_manager_role: boolean;
   roster_admin_departments: string[];
 }
 
@@ -50,7 +51,8 @@ export default function UsersPage() {
   // Role assignment dialog state
   const [roleDialogOpen, setRoleDialogOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<UserProfile | null>(null);
-  const [selectedRole, setSelectedRole] = useState<"super_admin" | "admin" | "viewer" | "roster_admin">("admin");
+  type ManagedRole = "super_admin" | "admin" | "viewer" | "roster_admin" | "sales_marketing_manager";
+  const [selectedRole, setSelectedRole] = useState<ManagedRole>("admin");
   const [selectedDepartments, setSelectedDepartments] = useState<string[]>([]);
   const [availableDepartments, setAvailableDepartments] = useState<string[]>([]);
   const [roleSaving, setRoleSaving] = useState(false);
@@ -58,7 +60,7 @@ export default function UsersPage() {
   // Invite dialog state
   const [inviteDialogOpen, setInviteDialogOpen] = useState(false);
   const [inviteEmail, setInviteEmail] = useState("");
-  const [inviteRole, setInviteRole] = useState<"super_admin" | "admin" | "viewer" | "roster_admin">("admin");
+  const [inviteRole, setInviteRole] = useState<ManagedRole>("admin");
   const [inviteDepartments, setInviteDepartments] = useState<string[]>([]);
   const [inviteSending, setInviteSending] = useState(false);
 
@@ -84,6 +86,7 @@ export default function UsersPage() {
     const superAdminUserIds = new Set(roles.filter(r => r.role === "super_admin").map(r => r.user_id));
     const adminUserIds = new Set(roles.filter(r => r.role === "admin").map(r => r.user_id));
     const viewerUserIds = new Set(roles.filter(r => r.role === "viewer").map(r => r.user_id));
+    const salesManagerUserIds = new Set(roles.filter(r => r.role === "sales_marketing_manager").map(r => r.user_id));
     const rosterAdminMap = new Map<string, string[]>();
     roles.filter(r => r.role === "roster_admin").forEach(r => {
       rosterAdminMap.set(r.user_id, (r as any).departments || []);
@@ -108,6 +111,7 @@ export default function UsersPage() {
         has_admin_role: adminUserIds.has(p.id),
         has_viewer_role: viewerUserIds.has(p.id),
         has_roster_admin_role: rosterAdminMap.has(p.id),
+        has_sales_manager_role: salesManagerUserIds.has(p.id),
         roster_admin_departments: rosterAdminMap.get(p.id) || [],
       }))
     );
@@ -198,6 +202,8 @@ export default function UsersPage() {
       setSelectedDepartments(user.roster_admin_departments);
     } else if (user.has_viewer_role) {
       setSelectedRole("viewer");
+    } else if (user.has_sales_manager_role) {
+      setSelectedRole("sales_marketing_manager");
     } else {
       setSelectedRole("viewer");
     }
@@ -247,6 +253,7 @@ export default function UsersPage() {
         admin: "Admin",
         viewer: "View Only",
         roster_admin: "Roster Admin",
+        sales_marketing_manager: "Sales & Marketing Manager",
       };
       toast({ title: "Role updated", description: `${selectedUser.email} is now ${roleLabels[selectedRole]}.` });
       setRoleDialogOpen(false);
@@ -336,6 +343,7 @@ export default function UsersPage() {
         )}
       </div>
     );
+    if (user.has_sales_manager_role) return <Badge className="bg-primary/15 text-primary">Sales & Marketing Manager</Badge>;
     if (user.has_viewer_role) return <Badge variant="outline" className="text-primary border-primary/30">View Only</Badge>;
     return <Badge variant="secondary">No Role</Badge>;
   };
@@ -355,7 +363,7 @@ export default function UsersPage() {
     onToggleDept,
   }: {
     value: string;
-    onChange: (v: "super_admin" | "admin" | "viewer" | "roster_admin") => void;
+    onChange: (v: ManagedRole) => void;
     departments: string[];
     onToggleDept: (d: string) => void;
   }) => (
@@ -433,6 +441,24 @@ export default function UsersPage() {
         </div>
         <p className="text-xs text-muted-foreground mt-1">
           Can view, edit, publish rosters and manage timesheets — restricted to assigned departments only.
+        </p>
+      </button>
+
+      <button
+        type="button"
+        onClick={() => onChange("sales_marketing_manager")}
+        className={`w-full text-left rounded-lg border p-3 transition-all ${
+          value === "sales_marketing_manager"
+            ? "border-primary bg-primary/5 ring-1 ring-primary/30"
+            : "border-border hover:border-muted-foreground/30"
+        }`}
+      >
+        <div className="flex items-center gap-2">
+          <BriefcaseBusiness className="h-4 w-4 text-primary" />
+          <span className="font-semibold text-sm text-foreground">Sales & Marketing Manager</span>
+        </div>
+        <p className="text-xs text-muted-foreground mt-1">
+          Full access to leads, inspections, menus, bookings, tasks, and the shared sales pipeline.
         </p>
       </button>
 
@@ -535,7 +561,7 @@ export default function UsersPage() {
                       <TableCell className="text-sm">{inv.email}</TableCell>
                       <TableCell>
                         <Badge variant="outline" className="text-xs">
-                          {inv.role === "super_admin" ? "Super Admin" : inv.role === "roster_admin" ? "Roster Admin" : inv.role === "admin" ? "Admin" : "Viewer"}
+                          {inv.role === "super_admin" ? "Super Admin" : inv.role === "roster_admin" ? "Roster Admin" : inv.role === "sales_marketing_manager" ? "Sales & Marketing Manager" : inv.role === "admin" ? "Admin" : "Viewer"}
                         </Badge>
                         {inv.departments && inv.departments.length > 0 && (
                           <div className="flex flex-wrap gap-0.5 mt-1">
