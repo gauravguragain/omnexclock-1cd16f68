@@ -37,6 +37,8 @@ export default function SalesMarketingPage(){
   </div>;
 }
 
+const MENU_CATEGORY_LABELS:Record<string,string>={nepali_express:"Nepali Express",nepali_catering:"Nepali Catering Packages",indian_catering:"Indian Catering Packages",live_stall:"Live Stall",beverage:"Beverage",addon:"Add-on",custom:"Custom"};
+
 function SettingsPanel({businessId,businessCode,options,settings,menuItems,canConfigure,refresh}:{businessId:string;businessCode:string;options:any[];settings:any;menuItems:any[];canConfigure:boolean;refresh:()=>void}){
   const saveSettings=async(values:any)=>{const{error}=await supabase.from("crm_settings").update(values).eq("business_id",businessId);if(error)toast.error(error.message);else{toast.success("Settings saved");refresh();}};
   const addOption=async(e:FormEvent<HTMLFormElement>)=>{e.preventDefault();const f=new FormData(e.currentTarget);const label=String(f.get("label"));const value=label.toLowerCase().replace(/[^a-z0-9]+/g,"_").replace(/^_|_$/g,"");const{error}=await supabase.from("crm_options").insert({business_id:businessId,option_type:f.get("type") as string,label,value,sort_order:options.filter(o=>o.option_type===f.get("type")).length});if(error)toast.error(error.message);else{(e.target as HTMLFormElement).reset();refresh();}};
