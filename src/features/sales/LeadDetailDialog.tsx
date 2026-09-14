@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input"; import { Label } from "@/componen
 import { ArrowRight, Bot, CalendarPlus, Check, Clock, Download, Mail, Phone, Plus, X } from "lucide-react"; import { toast } from "sonner"; import { format } from "date-fns";
 import venueBanner from "@/assets/regal-venue-banner.jpg"; import OptionSelect from "./OptionSelect"; import DateField from "./DateField"; import { TimeDropdownPicker } from "@/components/TimeDropdownPicker";
 const INTERACTION_TYPES=[{value:"phone_call",label:"Phone call"},{value:"email",label:"Email"},{value:"in_person",label:"In person"},{value:"message",label:"Message"}];
+export const COURSE_CATEGORY:Record<string,string>={"Entrees (Veg)":"entrees_veg","Entrees (Non-veg)":"entrees_nonveg","Veg Mains":"veg_mains","Non-veg Mains":"nonveg_mains","Sides":"sides","Dessert":"dessert","Kids Menu":"kids_menu"};
 export const DISH_COURSES=["Entrees (Veg)","Entrees (Non-veg)","Veg Mains","Non-veg Mains","Sides","Dessert","Kids Menu"];
 import type { CrmInspection, CrmInteraction, CrmLead, CrmOption, CrmTask } from "./types"; import { CRM_STAGE_VALUES, prettyCrmValue } from "./types"; import { buildBookingConfirmationPdf } from "@/lib/bookingConfirmationPdf"; import RunsheetTab from "./RunsheetTab";
 
@@ -26,7 +27,9 @@ export default function LeadDetailDialog({ lead, open, onOpenChange, options, in
   const corkageTotal=corkage.enabled?Number(corkage.flat||0)+Number(corkage.perHead||0)*guests:0;
   const stallTotal=useMemo(()=>stallsRequired?liveStalls.reduce((sum,i)=>sum+lineTotal(i.pricePerHead,i.flatPrice),0):0,[liveStalls,stallsRequired,guests]);
   const total=useMemo(()=>chosenItems.reduce((sum,i)=>sum+lineTotal(Number(i.price_per_head||0),Number(i.flat_price||0)),0)+customItems.reduce((sum,i)=>sum+lineTotal(i.pricePerHead,i.flatPrice),0)+corkageTotal+stallTotal,[chosenItems,customItems,guests,corkageTotal,stallTotal]);
-  const groupedMenu=useMemo(()=>{const map=new Map<string,any[]>();menuItems.forEach(i=>{const key=i.category||"Other";map.set(key,[...(map.get(key)||[]),i]);});return Array.from(map.entries());},[menuItems]);
+  const catalogueByCourse=useMemo(()=>Object.fromEntries(DISH_COURSES.map(course=>[course,menuItems.filter(i=>i.category===COURSE_CATEGORY[course]&&i.active!==false)])) as Record<string,any[]>,[menuItems]);
+  const dishCategories=new Set(Object.values(COURSE_CATEGORY));
+  const groupedMenu=useMemo(()=>{const map=new Map<string,any[]>();menuItems.filter(i=>!dishCategories.has(i.category)).forEach(i=>{const key=i.category||"Other";map.set(key,[...(map.get(key)||[]),i]);});return Array.from(map.entries());},[menuItems]);
   useEffect(()=>{if(!lead?.id||!open)return;let cancelled=false;(async()=>{
     const{data:sel}=await supabase.from("crm_menu_selections").select("*").eq("lead_id",lead.id).maybeSingle();
     if(cancelled||!sel)return;const s:any=sel;
