@@ -8,10 +8,11 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
 import { TimeDropdownPicker } from "@/components/TimeDropdownPicker";
-import { Download, Plus, Save, Sparkles, X } from "lucide-react";
+import { CheckCircle2, Circle, Download, Plus, Save, Send, Sparkles, X } from "lucide-react";
 import { toast } from "sonner";
-import { format } from "date-fns";
+import { format, subDays } from "date-fns";
 import type { CrmLead, CrmOption } from "./types";
 import { prettyCrmValue } from "./types";
 import { buildRunsheetPdf, type RunsheetScheduleLine } from "@/lib/runsheetPdf";
@@ -42,13 +43,13 @@ export default function RunsheetTab({ lead, booking, options, onSaved }: {
   const { business } = useBusiness();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [runsheetId, setRunsheetId] = useState<string | null>(null);
+  const [runsheet, setRunsheet] = useState<any>(null);
   const [menu, setMenu] = useState<{ selection: any; items: any[]; catalogue: Record<string, string> }>({ selection: null, items: [], catalogue: {} });
 
   const [form, setForm] = useState({
     event_order_number: "", booking_reference: "", sales_person: "", event_coordinator: "",
     onsite_contact_name: "", onsite_contact_phone: "", adult_guests: "", kids_guests: "",
-    access_time: "", setup_notes: "", special_requests: "",
+    access_time: "", setup_notes: "", special_requests: "", distributed_to: "", ops_notes: "", client_notes: "",
   });
   const [setupItems, setSetupItems] = useState<string[]>([]);
   const [extraSetupItems, setExtraSetupItems] = useState<string[]>([]);
@@ -83,8 +84,8 @@ export default function RunsheetTab({ lead, booking, options, onSaved }: {
     setMenu({ selection: selectionRes.data, items, catalogue });
 
     const row: any = runsheetRes.data;
+    setRunsheet(row || null);
     if (row) {
-      setRunsheetId(row.id);
       setForm({
         event_order_number: row.event_order_number || "", booking_reference: row.booking_reference || "",
         sales_person: row.sales_person || "", event_coordinator: row.event_coordinator || "",
@@ -92,19 +93,21 @@ export default function RunsheetTab({ lead, booking, options, onSaved }: {
         adult_guests: row.adult_guests != null ? String(row.adult_guests) : "",
         kids_guests: row.kids_guests != null ? String(row.kids_guests) : "",
         access_time: row.access_time || "", setup_notes: row.setup_notes || "", special_requests: row.special_requests || "",
+        distributed_to: row.distributed_to || "", ops_notes: row.ops_notes || "", client_notes: row.client_notes || "",
       });
       setSetupItems(row.setup_items || []);
       setSchedule(((row.service_schedule || []) as RunsheetScheduleLine[]).map((line, index) => ({ ...line, key: `s${index}` })));
     } else {
-      setRunsheetId(null);
       setForm((prev) => ({
         ...prev,
         adult_guests: String(booking?.guest_count || lead.estimated_guest_count || ""),
-        booking_reference: prev.booking_reference || lead.id.slice(0, 10).toUpperCase(),
+        booking_reference: lead.id.slice(0, 10).toUpperCase(),
+        onsite_contact_name: lead.full_name, onsite_contact_phone: lead.phone || "",
+        client_notes: menu.selection?.dietary_requirements || "",
       }));
     }
     setLoading(false);
-  }, [lead.id, lead.business_id, lead.estimated_guest_count, booking?.guest_count]);
+  }, [lead.id, lead.business_id, lead.full_name, lead.phone, lead.estimated_guest_count, booking?.guest_count]);
 
   useEffect(() => { void load(); }, [load]);
 
@@ -120,18 +123,54 @@ export default function RunsheetTab({ lead, booking, options, onSaved }: {
   const startTime = String(booking?.start_time || "17:30").slice(0, 5);
   const endTime = minutesToTime(timeToMinutes(startTime) + Number(booking?.duration_minutes || 300));
 
-  const prefillSchedule = () => {
+  const suggestSchedule = useCallback(() => {
     const start = timeToMinutes(startTime);
-    const suggestions: { label: string; offset: number }[] = [
-      { label: courseOptions[0] || "Live stall", offset: 30 },
-      { label: courseOptions[1] || "Entrees", offset: 45 },
-      { label: courseOptions[2] || "Kids menu", offset: 60 },
-      { label: courseOptions[3] || "Mains", offset: 150 },
-      { label: courseOptions[4] || "Dessert", offset: 240 },
+    const hasStall = menu.items.some((i: any) => (menu.catalogue[i.menu_item_id] || "").includes("stall"));
+    const hasKids = Number(form.kids_guests || 0) > 0;
+    const plan: { label: string; offset: number; detail?: string }[] = [
+      { label: "Guest arrival and beverages", offset: 0, detail: menu.selection?.beverage_package ? prettyCrmValue(menu.selection.beverage_package) : "" },
+      ...(hasStall ? [{ label: courseOptions.find((c) => c.toLowerCase().includes("stall")) || "Live stall", offset: 30 }] : []),
+      { label: courseOptions.find((c) => c.toLowerCase().includes("entree")) || "Entrees", offset: 45 },
+      ...(hasKids ? [{ label: courseOptions.find((c) => c.toLowerCase().includes("kids")) || "Kids menu", offset: 60, detail: `${form.kids_guests} kids` }] : []),
+      { label: "Speeches", offset: 105 },
+      { label: courseOptions.find((c) => c.toLowerCase().includes("main")) || "Mains", offset: 150 },
+      { label: "Cake cutting", offset: 210 },
+      { label: courseOptions.find((c) => c.toLowerCase().includes("dessert")) || "Dessert", offset: 225 },
+      { label: "Carriages / pack down", offset: timeToMinutes(endTime) - start },
     ];
-    setSchedule(suggestions.map((s, index) => ({ key: `p${index}`, time: minutesToTime(start + s.offset), label: s.label, detail: "" })));
-    toast.success("Timings suggested — adjust as needed");
+    setSchedule(plan.map((line, index) => ({ key: `p${index}`, time: minutesToTime(start + line.offset), label: line.label, detail: line.detail || "" })));
+  }, [startTime, endTime, courseOptions, menu, form.kids_guests]);
+
+  const buildFromBooking = () => {
+    if (!booking) { toast.error("Prepare the booking on the Confirmation tab first"); return; }
+    setForm((prev) => ({
+      ...prev,
+      adult_guests: prev.adult_guests || String(Math.max(0, Number(booking.guest_count || 0) - Number(prev.kids_guests || 0))),
+      booking_reference: prev.booking_reference || lead.id.slice(0, 10).toUpperCase(),
+      onsite_contact_name: prev.onsite_contact_name || lead.full_name,
+      onsite_contact_phone: prev.onsite_contact_phone || lead.phone || "",
+      access_time: prev.access_time || minutesToTime(Math.max(0, timeToMinutes(startTime) - 180)),
+      client_notes: prev.client_notes || [menu.selection?.dietary_requirements, menu.selection?.allergies ? `Allergies: ${menu.selection.allergies}` : ""].filter(Boolean).join(" · "),
+    }));
+    if (!schedule.length) suggestSchedule();
+    toast.success("Runsheet built from the booking and menu");
   };
+
+  const checklist = useMemo(() => ([
+    { label: "Booking date, time and venue set", done: Boolean(booking?.event_date), hint: "Confirmation tab" },
+    { label: "Guest numbers split into adults and kids", done: Number(form.adult_guests || 0) > 0 },
+    { label: "Menu selection saved", done: menu.items.length > 0, hint: "Menu tab" },
+    { label: "Beverage package chosen", done: Boolean(menu.selection?.beverage_package), hint: "Menu tab" },
+    { label: "Event coordinator assigned", done: Boolean(form.event_coordinator.trim()) },
+    { label: "Onsite contact on the day", done: Boolean(form.onsite_contact_name.trim() && form.onsite_contact_phone.trim()) },
+    { label: "Service schedule built", done: schedule.length > 0 },
+    { label: "Setup and styling ticked off", done: setupItems.length > 0 },
+    { label: "Vendor access time agreed", done: Boolean(form.access_time) },
+    { label: "Deposit received", done: ["deposit_received", "runsheet_sent", "full_payment_received"].includes(lead.status) },
+  ]), [booking, form, menu, schedule, setupItems, lead.status]);
+
+  const completed = checklist.filter((c) => c.done).length;
+  const readyToSend = completed === checklist.length;
 
   const addSetupOption = async () => {
     const label = newSetupItem.trim();
@@ -147,8 +186,7 @@ export default function RunsheetTab({ lead, booking, options, onSaved }: {
     toast.success(error ? "Added to this runsheet" : "Added to your setup list");
   };
 
-  const save = async () => {
-    setSaving(true);
+  const persist = async (extra: Record<string, any> = {}) => {
     const payload: any = {
       business_id: lead.business_id, lead_id: lead.id, booking_id: booking?.id || null,
       event_order_number: form.event_order_number || null, booking_reference: form.booking_reference || null,
@@ -158,66 +196,145 @@ export default function RunsheetTab({ lead, booking, options, onSaved }: {
       kids_guests: form.kids_guests ? Number(form.kids_guests) : null,
       access_time: form.access_time || null, setup_items: setupItems, setup_notes: form.setup_notes || null,
       service_schedule: schedule.map(({ time, label, detail }) => ({ time, label, detail })),
-      special_requests: form.special_requests || null, updated_by: user?.id,
+      special_requests: form.special_requests || null, distributed_to: form.distributed_to || null,
+      ops_notes: form.ops_notes || null, client_notes: form.client_notes || null,
+      updated_by: user?.id, ...extra,
     };
-    if (!runsheetId) payload.created_by = user?.id;
-    const { data, error } = await supabase.from("crm_runsheets").upsert(payload, { onConflict: "lead_id" }).select("id").single();
+    if (!runsheet) payload.created_by = user?.id;
+    const { data, error } = await supabase.from("crm_runsheets").upsert(payload, { onConflict: "lead_id" }).select("*").single();
+    if (error) { toast.error(error.message); return null; }
+    setRunsheet(data);
+    return data;
+  };
+
+  const save = async () => {
+    setSaving(true);
+    const bumped = runsheet?.status === "sent" ? { revision: Number(runsheet.revision || 1) + 1, status: "revised" } : {};
+    const saved = await persist(bumped);
     setSaving(false);
-    if (error) { toast.error(error.message); return; }
-    setRunsheetId(data.id);
-    toast.success("Runsheet saved");
+    if (!saved) return;
+    toast.success(bumped.revision ? `Saved as revision ${bumped.revision}` : "Runsheet saved");
     onSaved();
   };
 
+  const buildPdf = (revision: number) => buildRunsheetPdf({
+    businessName: business?.name || "",
+    businessPhone: business?.phone, businessEmail: business?.email,
+    eventTitle: `${prettyCrmValue(lead.event_type)} — ${lead.full_name}`,
+    eventDateLabel: booking?.event_date ? format(new Date(`${booking.event_date}T00:00:00`), "EEEE, d MMMM yyyy") : "Date to be confirmed",
+    startTime: prettyTime(startTime), endTime: prettyTime(endTime),
+    venueSpace: prettyCrmValue(booking?.venue_space || lead.venue_space || "—"),
+    adultGuests: Number(form.adult_guests || 0), kidsGuests: Number(form.kids_guests || 0),
+    clientName: lead.full_name, clientPhone: lead.phone,
+    salesPerson: form.sales_person, eventCoordinator: form.event_coordinator,
+    onsiteContactName: form.onsite_contact_name, onsiteContactPhone: form.onsite_contact_phone,
+    eventOrderNumber: form.event_order_number ? `${form.event_order_number} · v${revision}` : `v${revision}`,
+    bookingReference: form.booking_reference,
+    schedule: schedule.map(({ time, label, detail }) => ({ time: prettyTime(time), label, detail })),
+    menuByCategory,
+    beveragePackage: menu.selection?.beverage_package ? prettyCrmValue(menu.selection.beverage_package) : null,
+    dietaryRequirements: menu.selection?.dietary_requirements, allergies: menu.selection?.allergies,
+    specialRequests: [form.special_requests, form.client_notes].filter(Boolean).join(" · "),
+    setupItems, setupNotes: [form.setup_notes, form.ops_notes].filter(Boolean).join("\n"),
+    accessTime: form.access_time ? prettyTime(form.access_time) : null,
+  });
+
+  const fileName = (revision: number) => `Runsheet-v${revision}-${lead.full_name.replace(/\s+/g, "-")}-${booking?.event_date || "draft"}.pdf`;
+
   const download = () => {
-    const doc = buildRunsheetPdf({
-      businessName: business?.name || "",
-      businessPhone: business?.phone, businessEmail: business?.email,
-      eventTitle: `${prettyCrmValue(lead.event_type)} — ${lead.full_name}`,
-      eventDateLabel: booking?.event_date ? format(new Date(`${booking.event_date}T00:00:00`), "EEEE, d MMMM yyyy") : "Date to be confirmed",
-      startTime: prettyTime(startTime), endTime: prettyTime(endTime),
-      venueSpace: prettyCrmValue(booking?.venue_space || lead.venue_space || "—"),
-      adultGuests: Number(form.adult_guests || 0), kidsGuests: Number(form.kids_guests || 0),
-      clientName: lead.full_name, clientPhone: lead.phone,
-      salesPerson: form.sales_person, eventCoordinator: form.event_coordinator,
-      onsiteContactName: form.onsite_contact_name, onsiteContactPhone: form.onsite_contact_phone,
-      eventOrderNumber: form.event_order_number, bookingReference: form.booking_reference,
-      schedule: schedule.map(({ time, label, detail }) => ({ time: prettyTime(time), label, detail })),
-      menuByCategory,
-      beveragePackage: menu.selection?.beverage_package ? prettyCrmValue(menu.selection.beverage_package) : null,
-      dietaryRequirements: menu.selection?.dietary_requirements, allergies: menu.selection?.allergies,
-      specialRequests: form.special_requests,
-      setupItems, setupNotes: form.setup_notes, accessTime: form.access_time ? prettyTime(form.access_time) : null,
-    });
-    doc.save(`Runsheet-${lead.full_name.replace(/\s+/g, "-")}-${booking?.event_date || "draft"}.pdf`);
+    const revision = Number(runsheet?.revision || 1);
+    buildPdf(revision).save(fileName(revision));
   };
 
-  const markSent = async () => {
-    await supabase.from("crm_runsheets").update({ status: "sent", sent_at: new Date().toISOString() } as any).eq("lead_id", lead.id);
-    await supabase.from("crm_leads").update({ status: "runsheet_sent" }).eq("id", lead.id);
-    toast.success("Marked as runsheet sent");
+  const issueRunsheet = async () => {
+    setSaving(true);
+    const revision = Number(runsheet?.revision || 1);
+    const saved = await persist({ status: "sent", sent_at: new Date().toISOString(), generated_at: new Date().toISOString(), revision });
+    if (!saved) { setSaving(false); return; }
+
+    buildPdf(revision).save(fileName(revision));
+
+    const audience = form.distributed_to || "the operations team";
+    await supabase.from("crm_interactions").insert({
+      business_id: lead.business_id, lead_id: lead.id, interaction_type: "note",
+      occurred_at: new Date().toISOString(),
+      notes: `Runsheet v${revision} issued to ${audience}.`,
+      logged_by: user?.id,
+    } as any);
+
+    if (booking?.event_date) {
+      await supabase.from("crm_tasks").insert({
+        business_id: lead.business_id, lead_id: lead.id, booking_id: booking.id,
+        title: `Operations brief — ${lead.full_name} (${prettyCrmValue(lead.event_type)})`,
+        description: `Walk the floor and kitchen through runsheet v${revision}.`,
+        task_type: "follow_up", priority: "high",
+        due_at: subDays(new Date(`${booking.event_date}T09:00:00`), 1).toISOString(),
+        created_by: user?.id,
+      } as any);
+      await supabase.from("crm_tasks").insert({
+        business_id: lead.business_id, lead_id: lead.id,
+        title: `Final numbers and payment check — ${lead.full_name}`,
+        description: "Confirm final guest numbers and collect the outstanding balance.",
+        task_type: "follow_up", priority: "high",
+        due_at: subDays(new Date(`${booking.event_date}T09:00:00`), 7).toISOString(),
+        created_by: user?.id,
+      } as any);
+    }
+
+    if (["deposit_received", "menu_selected", "invoice_sent", "inspected", "contacted", "new", "inspection_booked"].includes(lead.status)) {
+      await supabase.from("crm_leads").update({ status: "runsheet_sent", last_contact_at: new Date().toISOString() }).eq("id", lead.id);
+    }
+
+    setSaving(false);
+    toast.success(`Runsheet v${revision} issued — follow-up tasks created`);
     onSaved();
   };
 
   if (loading) return <p className="py-8 text-sm text-muted-foreground">Loading runsheet…</p>;
 
   const set = (key: keyof typeof form) => (event: { target: { value: string } }) => setForm((prev) => ({ ...prev, [key]: event.target.value }));
+  const revision = Number(runsheet?.revision || 1);
 
   return (
     <div className="space-y-6">
       <div className="rounded-lg border border-border bg-muted/30 p-4">
-        <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
-            <p className="font-serif text-lg">{prettyCrmValue(lead.event_type)} · {booking?.event_date ? format(new Date(`${booking.event_date}T00:00:00`), "EEE d MMM yyyy") : "No booking date yet"}</p>
+            <div className="flex flex-wrap items-center gap-2">
+              <p className="font-serif text-lg">{prettyCrmValue(lead.event_type)} · {booking?.event_date ? format(new Date(`${booking.event_date}T00:00:00`), "EEE d MMM yyyy") : "No booking date yet"}</p>
+              <Badge variant={runsheet?.status === "sent" ? "default" : "outline"}>{runsheet ? `${prettyCrmValue(runsheet.status)} · v${revision}` : "Not started"}</Badge>
+            </div>
             <p className="text-sm text-muted-foreground">{prettyTime(startTime)} – {prettyTime(endTime)} · {prettyCrmValue(booking?.venue_space || lead.venue_space || "Venue to confirm")}</p>
+            {runsheet?.sent_at && <p className="text-xs text-muted-foreground">Last issued {format(new Date(runsheet.sent_at), "d MMM yyyy h:mm a")}{runsheet.distributed_to ? ` to ${runsheet.distributed_to}` : ""}</p>}
           </div>
           <div className="flex flex-wrap gap-2">
-            <Button size="sm" onClick={save} disabled={saving}><Save className="mr-2 h-4 w-4" />Save runsheet</Button>
-            <Button size="sm" variant="outline" onClick={download}><Download className="mr-2 h-4 w-4" />Download BEO</Button>
-            <Button size="sm" variant="secondary" onClick={markSent} disabled={!runsheetId}>Mark as sent</Button>
+            <Button size="sm" variant="outline" onClick={buildFromBooking}><Sparkles className="mr-2 h-4 w-4" />Build from booking</Button>
+            <Button size="sm" onClick={save} disabled={saving}><Save className="mr-2 h-4 w-4" />Save</Button>
+            <Button size="sm" variant="outline" onClick={download}><Download className="mr-2 h-4 w-4" />Preview PDF</Button>
+            <Button size="sm" variant="secondary" onClick={issueRunsheet} disabled={saving || !readyToSend} title={readyToSend ? "" : "Complete the checklist first"}>
+              <Send className="mr-2 h-4 w-4" />{runsheet?.status === "sent" ? "Re-issue" : "Issue runsheet"}
+            </Button>
           </div>
         </div>
-        {!booking && <p className="mt-3 text-xs text-muted-foreground">Prepare the booking on the Confirmation tab so the date, time and venue flow through to the runsheet.</p>}
+        <div className="mt-4 grid gap-3 lg:grid-cols-[1fr_1.2fr]">
+          <div>
+            <div className="flex items-center justify-between text-xs text-muted-foreground"><span>Event pack readiness</span><span>{completed}/{checklist.length}</span></div>
+            <Progress value={(completed / checklist.length) * 100} className="mt-1.5 h-2" />
+            <div className="mt-2 space-y-1">
+              {checklist.map((item) => (
+                <p key={item.label} className={`flex items-center gap-2 text-xs ${item.done ? "text-muted-foreground" : "text-foreground"}`}>
+                  {item.done ? <CheckCircle2 className="h-3.5 w-3.5 text-primary" /> : <Circle className="h-3.5 w-3.5" />}
+                  {item.label}{!item.done && item.hint ? <span className="text-muted-foreground">— {item.hint}</span> : null}
+                </p>
+              ))}
+            </div>
+          </div>
+          <div className="space-y-2 rounded-md border border-dashed border-border p-3 text-sm">
+            <p className="font-medium">How this runs</p>
+            <p className="text-muted-foreground text-xs">Enquiry → inspection → menu → invoice → deposit → <strong>runsheet issued</strong> → final numbers → event day. Issuing the runsheet files a copy against the client, moves them to Runsheet Sent, and creates two reminders: final numbers a week out, and an operations brief the day before.</p>
+            <div className="space-y-1.5"><Label>Issue to</Label><Input value={form.distributed_to} onChange={set("distributed_to")} placeholder="Kitchen, floor team, AV" /></div>
+          </div>
+        </div>
       </div>
 
       <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
@@ -234,7 +351,7 @@ export default function RunsheetTab({ lead, booking, options, onSaved }: {
       <section className="space-y-3 rounded-lg border border-border p-4">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div><h3 className="font-serif text-lg">Service schedule</h3><p className="text-xs text-muted-foreground">What happens when, for the kitchen and floor team.</p></div>
-          <Button type="button" size="sm" variant="outline" onClick={prefillSchedule}><Sparkles className="mr-2 h-4 w-4" />Suggest timings</Button>
+          <Button type="button" size="sm" variant="outline" onClick={() => { suggestSchedule(); toast.success("Timings suggested — adjust as needed"); }}><Sparkles className="mr-2 h-4 w-4" />Suggest timings</Button>
         </div>
         <div className="space-y-2">
           {schedule.map((row, index) => (
@@ -276,6 +393,7 @@ export default function RunsheetTab({ lead, booking, options, onSaved }: {
           </div>
           <div className="space-y-1.5"><Label>Decor / vendor access time</Label><TimeDropdownPicker value={form.access_time || "10:00"} onChange={(value) => setForm((prev) => ({ ...prev, access_time: value }))} /></div>
           <div className="space-y-1.5"><Label>Setup notes</Label><Textarea rows={3} value={form.setup_notes} onChange={set("setup_notes")} placeholder="8 chairs per table, gift table on stage…" /></div>
+          <div className="space-y-1.5"><Label>Notes for the team only</Label><Textarea rows={2} value={form.ops_notes} onChange={set("ops_notes")} placeholder="Kitchen and floor reminders" /></div>
         </div>
 
         <div className="space-y-3 rounded-lg border border-border p-4">
@@ -288,6 +406,7 @@ export default function RunsheetTab({ lead, booking, options, onSaved }: {
           )) : <p className="text-sm text-muted-foreground">Save a menu selection on the Menu tab and it will appear here.</p>}
           {menu.selection?.beverage_package && <p className="text-sm"><Badge variant="outline">Beverages</Badge> {prettyCrmValue(menu.selection.beverage_package)}</p>}
           {menu.selection?.allergies && <p className="text-sm text-destructive">Allergies: {menu.selection.allergies}</p>}
+          <div className="space-y-1.5"><Label>Agreed with the client</Label><Textarea rows={2} value={form.client_notes} onChange={set("client_notes")} placeholder="What you promised during calls and the inspection" /></div>
           <div className="space-y-1.5"><Label>Special requests</Label><Textarea rows={3} value={form.special_requests} onChange={set("special_requests")} placeholder="Host has requested tea…" /></div>
         </div>
       </section>

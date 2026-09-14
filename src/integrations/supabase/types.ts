@@ -1310,15 +1310,20 @@ export type Database = {
           booking_id: string | null
           booking_reference: string | null
           business_id: string
+          client_notes: string | null
           created_at: string
           created_by: string | null
+          distributed_to: string | null
           event_coordinator: string | null
           event_order_number: string | null
+          generated_at: string | null
           id: string
           kids_guests: number | null
           lead_id: string
           onsite_contact_name: string | null
           onsite_contact_phone: string | null
+          ops_notes: string | null
+          revision: number
           sales_person: string | null
           sent_at: string | null
           service_schedule: Json
@@ -1335,15 +1340,20 @@ export type Database = {
           booking_id?: string | null
           booking_reference?: string | null
           business_id: string
+          client_notes?: string | null
           created_at?: string
           created_by?: string | null
+          distributed_to?: string | null
           event_coordinator?: string | null
           event_order_number?: string | null
+          generated_at?: string | null
           id?: string
           kids_guests?: number | null
           lead_id: string
           onsite_contact_name?: string | null
           onsite_contact_phone?: string | null
+          ops_notes?: string | null
+          revision?: number
           sales_person?: string | null
           sent_at?: string | null
           service_schedule?: Json
@@ -1360,15 +1370,20 @@ export type Database = {
           booking_id?: string | null
           booking_reference?: string | null
           business_id?: string
+          client_notes?: string | null
           created_at?: string
           created_by?: string | null
+          distributed_to?: string | null
           event_coordinator?: string | null
           event_order_number?: string | null
+          generated_at?: string | null
           id?: string
           kids_guests?: number | null
           lead_id?: string
           onsite_contact_name?: string | null
           onsite_contact_phone?: string | null
+          ops_notes?: string | null
+          revision?: number
           sales_person?: string | null
           sent_at?: string | null
           service_schedule?: Json
