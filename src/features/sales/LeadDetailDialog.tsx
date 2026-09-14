@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client"; import { useAuth } fr
 import { Button } from "@/components/ui/button"; import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"; import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input"; import { Label } from "@/components/ui/label"; import { Textarea } from "@/components/ui/textarea"; import { Badge } from "@/components/ui/badge"; import { Checkbox } from "@/components/ui/checkbox";
 import { ArrowRight, Bot, CalendarPlus, Check, Clock, Download, Mail, Phone, Plus, X } from "lucide-react"; import { toast } from "sonner"; import { format } from "date-fns";
-import venueBanner from "@/assets/regal-venue-banner.jpg"; import OptionSelect from "./OptionSelect"; import DateField from "./DateField"; import TimeDropdownPicker from "@/components/TimeDropdownPicker";
+import venueBanner from "@/assets/regal-venue-banner.jpg"; import OptionSelect from "./OptionSelect"; import DateField from "./DateField"; import { TimeDropdownPicker } from "@/components/TimeDropdownPicker";
 const INTERACTION_TYPES=[{value:"phone_call",label:"Phone call"},{value:"email",label:"Email"},{value:"in_person",label:"In person"},{value:"message",label:"Message"}];
 import type { CrmInspection, CrmInteraction, CrmLead, CrmOption, CrmTask } from "./types"; import { CRM_STAGE_VALUES, prettyCrmValue } from "./types"; import { buildBookingConfirmationPdf } from "@/lib/bookingConfirmationPdf";
 
