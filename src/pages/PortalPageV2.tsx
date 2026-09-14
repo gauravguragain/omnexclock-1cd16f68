@@ -628,7 +628,7 @@ export default function PortalPageV2() {
           <Button variant="outline" size="sm" className="gap-1.5 touch-active" onClick={() => { localStorage.removeItem("omnexclock_portal_business_code"); window.location.href = "/portal"; }}>
             <RefreshCw className="h-3.5 w-3.5" /> Change Business
           </Button>
-          <p className="text-xs text-muted-foreground">© 2024 Omnex Ventures Pty. Ltd.</p>
+          <p className="text-xs text-muted-foreground">© 2024 Pro Regal Pavilion Pty Ltd</p>
         </div>
       </div>
     );
@@ -644,7 +644,7 @@ export default function PortalPageV2() {
             {businessLogo ? (
               <img src={businessLogo} alt={businessName} className="h-8 w-8 rounded-lg object-cover" />
             ) : (
-              <img src="/omnex-logo.jpg" alt="Logo" className="h-8 w-8 rounded-full object-cover" />
+              <img src="/regal-logo.png" alt="Logo" className="h-8 w-8 rounded-full object-cover" />
             )}
             <div>
               <button className="flex items-center gap-2 hover:opacity-80 transition-opacity" onClick={() => setAccessInfoOpen(true)}>
@@ -1253,12 +1253,12 @@ export default function PortalPageV2() {
             <DialogTitle className="flex items-center gap-2">
               <Download className="h-5 w-5 text-primary" /> Install Employee Portal
             </DialogTitle>
-            <p className="text-sm text-muted-foreground">Add OmnexClock to your home screen for quick access — works like a native app.</p>
+            <p className="text-sm text-muted-foreground">Add Pro Regal Pavilion to your home screen for quick access — works like a native app.</p>
           </DialogHeader>
           <div className="space-y-4">
             <div className="rounded-lg bg-secondary/50 border border-border/60 p-3 space-y-1.5">
               <p className="text-xs font-medium text-foreground">Portal URL</p>
-              <p className="font-mono text-xs text-primary break-all select-all">https://omnexclock.lovable.app/portal</p>
+              <p className="font-mono text-xs text-primary break-all select-all">the Employee Portal</p>
               <p className="text-[10px] text-muted-foreground">Business Code: <span className="font-mono font-bold text-foreground">{urlBusinessCode?.toUpperCase() || "—"}</span></p>
             </div>
             <div className="space-y-2">
@@ -1279,7 +1279,7 @@ export default function PortalPageV2() {
                   <p className="text-sm font-semibold text-foreground">iPhone — Safari</p>
                   <ol className="text-xs text-muted-foreground space-y-2 list-decimal pl-4">
                     <li>Open <span className="font-mono text-primary">Safari</span> (this must be Safari, not Chrome)</li>
-                    <li>Navigate to <span className="font-mono text-primary break-all">https://omnexclock.lovable.app/portal</span></li>
+                    <li>Navigate to <span className="font-mono text-primary break-all">the Employee Portal</span></li>
                     <li>Tap the <span className="font-semibold text-foreground">Share</span> button (square with an arrow pointing up)</li>
                     <li>Scroll down and tap <span className="font-semibold text-foreground">"Add to Home Screen"</span></li>
                     <li>Tap <span className="font-semibold text-foreground">"Add"</span> in the top-right corner</li>
@@ -1292,7 +1292,7 @@ export default function PortalPageV2() {
                   <p className="text-sm font-semibold text-foreground">Android — Chrome</p>
                   <ol className="text-xs text-muted-foreground space-y-2 list-decimal pl-4">
                     <li>Open <span className="font-mono text-primary">Google Chrome</span></li>
-                    <li>Navigate to <span className="font-mono text-primary break-all">https://omnexclock.lovable.app/portal</span></li>
+                    <li>Navigate to <span className="font-mono text-primary break-all">the Employee Portal</span></li>
                     <li>Tap the <span className="font-semibold text-foreground">three-dot menu</span> (⋮)</li>
                     <li>Tap <span className="font-semibold text-foreground">"Add to Home screen"</span> or <span className="font-semibold text-foreground">"Install app"</span></li>
                     <li>Confirm by tapping <span className="font-semibold text-foreground">"Install"</span></li>
@@ -1304,7 +1304,7 @@ export default function PortalPageV2() {
                   <p className="text-sm font-semibold text-foreground">iPad — Safari</p>
                   <ol className="text-xs text-muted-foreground space-y-2 list-decimal pl-4">
                     <li>Open <span className="font-mono text-primary">Safari</span> on your iPad</li>
-                    <li>Navigate to <span className="font-mono text-primary break-all">https://omnexclock.lovable.app/portal</span></li>
+                    <li>Navigate to <span className="font-mono text-primary break-all">the Employee Portal</span></li>
                     <li>Tap the <span className="font-semibold text-foreground">Share</span> button</li>
                     <li>Tap <span className="font-semibold text-foreground">"Add to Home Screen"</span></li>
                     <li>Tap <span className="font-semibold text-foreground">"Add"</span></li>
@@ -1316,7 +1316,7 @@ export default function PortalPageV2() {
                   <p className="text-sm font-semibold text-foreground">Desktop — Chrome / Edge</p>
                   <ol className="text-xs text-muted-foreground space-y-2 list-decimal pl-4">
                     <li>Open <span className="font-mono text-primary">Chrome</span> or <span className="font-mono text-primary">Edge</span></li>
-                    <li>Navigate to <span className="font-mono text-primary break-all">https://omnexclock.lovable.app/portal</span></li>
+                    <li>Navigate to <span className="font-mono text-primary break-all">the Employee Portal</span></li>
                     <li>Click the <span className="font-semibold text-foreground">install icon</span> (⊕) in the address bar</li>
                     <li>Click <span className="font-semibold text-foreground">"Install"</span></li>
                   </ol>
@@ -1329,7 +1329,7 @@ export default function PortalPageV2() {
       </Dialog>
 
       <footer className="text-center py-6">
-        <p className="text-xs text-muted-foreground">© {new Date().getFullYear()} Omnex Ventures Pty. Ltd. All rights reserved.</p>
+        <p className="text-xs text-muted-foreground">© {new Date().getFullYear()} Pro Regal Pavilion Pty Ltd All rights reserved.</p>
       </footer>
 
       <WalkthroughTour steps={portalTourSteps} storageKey={`portal-tour-seen-${urlBusinessCode}`} />

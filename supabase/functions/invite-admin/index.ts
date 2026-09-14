@@ -123,21 +123,21 @@ serve(async (req) => {
     const html = `
       <div style="font-family:'Segoe UI',Arial,sans-serif;max-width:600px;margin:0 auto;color:#1a1a1a;">
         <div style="text-align:center;padding:30px 0 20px;">
-          <h1 style="color:#c9a227;font-size:24px;margin:0;">OmnexClock</h1>
+          <h1 style="color:#ac845d;font-size:24px;margin:0;">Pro Regal Pavilion</h1>
           <p style="color:#666;font-size:13px;margin:4px 0 0;">Time & Workforce Management</p>
         </div>
         
         <div style="background:#f8f9fa;border-radius:12px;padding:30px;margin:16px 0;">
           <h2 style="margin:0 0 8px;font-size:20px;color:#1a1a1a;">You've Been Invited!</h2>
           <p style="color:#555;line-height:1.6;">
-            You have been invited to join <strong>${business.name}</strong> as a <strong>${roleLabel}</strong> on OmnexClock.
+            You have been invited to join <strong>${business.name}</strong> as a <strong>${roleLabel}</strong> on Pro Regal Pavilion.
           </p>
           ${departments && departments.length > 0 ? `
             <p style="color:#555;font-size:13px;">Assigned departments: <strong>${departments.join(", ")}</strong></p>
           ` : ""}
           
           <div style="text-align:center;margin:24px 0;">
-            <a href="${signupUrl}" style="display:inline-block;background:#c9a227;color:#000;text-decoration:none;padding:14px 32px;border-radius:8px;font-weight:bold;font-size:14px;">
+            <a href="${signupUrl}" style="display:inline-block;background:#ac845d;color:#000;text-decoration:none;padding:14px 32px;border-radius:8px;font-weight:bold;font-size:14px;">
               Create Your Account
             </a>
           </div>
@@ -152,14 +152,14 @@ serve(async (req) => {
           <p style="color:#555;font-size:13px;line-height:1.5;margin:0 0 12px;">
             We've prepared a comprehensive guide to help you get started with your ${roleLabel} responsibilities.
           </p>
-          <a href="${guideUrl}" style="color:#c9a227;font-weight:600;font-size:13px;text-decoration:underline;">
+          <a href="${guideUrl}" style="color:#ac845d;font-weight:600;font-size:13px;text-decoration:underline;">
             View Your Induction Guide →
           </a>
         </div>
         
         <div style="background:#f0f4f8;border-radius:8px;padding:16px;margin:16px 0;text-align:center;">
           <p style="color:#555;font-size:13px;margin:0 0 8px;">Looking for the <strong>Employee Portal</strong>?</p>
-          <a href="${portalUrl}" style="color:#c9a227;font-weight:600;font-size:13px;text-decoration:underline;">
+          <a href="${portalUrl}" style="color:#ac845d;font-weight:600;font-size:13px;text-decoration:underline;">
             Access Employee Portal →
           </a>
         </div>
@@ -177,7 +177,7 @@ serve(async (req) => {
         Authorization: `Bearer ${RESEND_API_KEY}`,
       },
       body: JSON.stringify({
-        from: "OmnexClock <noreply@omnexventures.com>",
+        from: "Pro Regal Pavilion <noreply@omnexventures.com>",
         to: [email],
         subject: `You're invited to ${business.name} as ${roleLabel}`,
         html,

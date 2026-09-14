@@ -143,7 +143,7 @@ export default function ResetPasswordPage() {
             {isMasterReset ? <Crown className="h-9 w-9 text-primary" /> : <Clock className="h-9 w-9 text-primary" />}
           </div>
           <div className="space-y-1">
-            <h1 className="text-2xl font-bold text-foreground tracking-tight">{isMasterReset ? "Master Admin" : "OmnexClock"}</h1>
+            <h1 className="text-2xl font-bold text-foreground tracking-tight">{isMasterReset ? "Master Admin" : "Pro Regal Pavilion"}</h1>
             <p className="text-muted-foreground text-sm">Password Recovery</p>
           </div>
         </div>
@@ -302,7 +302,7 @@ export default function ResetPasswordPage() {
         </Card>
 
         <p className="text-center text-[11px] text-muted-foreground/40 tracking-wide">
-          © {new Date().getFullYear()} Omnex Ventures Pty. Ltd. All rights reserved.
+          © {new Date().getFullYear()} Pro Regal Pavilion Pty Ltd All rights reserved.
         </p>
       </div>
     </div>

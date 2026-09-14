@@ -130,7 +130,7 @@ serve(async (req) => {
               <strong>⚠️ Disclaimer:</strong> The shift and break times stated in this roster are indicative and may vary according to the operational needs of the business and at the discretion of management. You may be required to start earlier, finish later, or take breaks at different times depending on business demands. Please check with your manager if you have any concerns.
             </p>
           </div>
-          <p style="color:#6b7280;font-size:13px;margin-top:16px;">This is an automated notification from Omnex Ventures. Please contact your manager if you have questions.</p>
+          <p style="color:#6b7280;font-size:13px;margin-top:16px;">This is an automated notification from Pro Regal Pavilion. Please contact your manager if you have questions.</p>
         </div>
       `;
 
@@ -166,7 +166,7 @@ serve(async (req) => {
         const headers = parseRow(csvLines[0]);
         tableHtml += `<table style="width:100%;border-collapse:collapse;margin:16px 0;font-size:12px;">
           <thead><tr style="background:#1a1a1a;">
-          ${headers.map(h => `<th style="padding:8px 10px;border:1px solid #333;color:#c9a227;text-align:left;font-size:11px;">${h}</th>`).join("")}
+          ${headers.map(h => `<th style="padding:8px 10px;border:1px solid #333;color:#ac845d;text-align:left;font-size:11px;">${h}</th>`).join("")}
           </tr></thead><tbody>`;
         for (let i = 1; i < csvLines.length; i++) {
           const cols = parseRow(csvLines[i]);
@@ -176,7 +176,7 @@ serve(async (req) => {
             tableHtml += `<tr><td colspan="${headers.length}" style="padding:4px;border:none;"></td></tr>`;
           } else if (isTotalRow) {
             tableHtml += `<tr style="background:#fef9e7;">
-              ${cols.map(c => `<td style="padding:8px 10px;border:1px solid #e5e7eb;color:#c9a227;font-weight:700;font-size:12px;">${c}</td>`).join("")}
+              ${cols.map(c => `<td style="padding:8px 10px;border:1px solid #e5e7eb;color:#ac845d;font-weight:700;font-size:12px;">${c}</td>`).join("")}
             </tr>`;
           } else {
             tableHtml += `<tr style="background:${i % 2 === 0 ? '#f9fafb' : '#ffffff'};">
@@ -194,7 +194,7 @@ serve(async (req) => {
         html: `
           <div style="font-family:'Segoe UI',Arial,sans-serif;max-width:900px;margin:0 auto;color:#1a1a1a;background:#ffffff;">
             <div style="text-align:center;padding:30px 20px 16px;background:linear-gradient(135deg,#1a1a1a 0%,#2d2d2d 100%);border-radius:12px 12px 0 0;">
-              <h1 style="color:#c9a227;font-size:24px;margin:0;letter-spacing:1px;">OmnexClock</h1>
+              <h1 style="color:#ac845d;font-size:24px;margin:0;letter-spacing:1px;">Pro Regal Pavilion</h1>
               <p style="color:#a0a0a0;font-size:11px;margin:6px 0 0;text-transform:uppercase;letter-spacing:2px;">Report</p>
             </div>
             <div style="padding:24px 20px;">
@@ -203,7 +203,7 @@ serve(async (req) => {
               ${tableHtml}
             </div>
             <div style="text-align:center;padding:16px 20px;background:#f8f9fa;border-radius:0 0 12px 12px;">
-              <p style="color:#999;font-size:11px;margin:0;">This is an automated report from <strong>Omnex Ventures</strong>.</p>
+              <p style="color:#999;font-size:11px;margin:0;">This is an automated report from <strong>Pro Regal Pavilion</strong>.</p>
             </div>
           </div>
         `,
@@ -226,12 +226,12 @@ serve(async (req) => {
         <div style="font-family:'Segoe UI',Arial,sans-serif;max-width:600px;margin:0 auto;color:#1a1a1a;background:#ffffff;">
           <!-- Header -->
           <div style="text-align:center;padding:40px 20px 20px;background:linear-gradient(135deg,#1a1a1a 0%,#2d2d2d 100%);border-radius:12px 12px 0 0;">
-            <h1 style="color:#c9a227;font-size:28px;margin:0;letter-spacing:1px;">OmnexClock</h1>
+            <h1 style="color:#ac845d;font-size:28px;margin:0;letter-spacing:1px;">Pro Regal Pavilion</h1>
             <p style="color:#a0a0a0;font-size:12px;margin:6px 0 0;text-transform:uppercase;letter-spacing:2px;">Time & Workforce Management</p>
           </div>
           
           <!-- Welcome Banner -->
-          <div style="background:#fef9e7;padding:24px 30px;border-left:4px solid #c9a227;">
+          <div style="background:#fef9e7;padding:24px 30px;border-left:4px solid #ac845d;">
             <h2 style="margin:0 0 8px;font-size:22px;color:#1a1a1a;">Welcome to the Team, ${body.employeeName}! 🎉</h2>
             <p style="color:#555;font-size:14px;margin:0;line-height:1.6;">
               We're thrilled to have you join <strong>${body.businessName || "our team"}</strong>. This packet contains everything you need to get started.
@@ -240,7 +240,7 @@ serve(async (req) => {
           
           <!-- Your Details Card -->
           <div style="padding:24px 30px;">
-            <h3 style="color:#1a1a1a;font-size:16px;margin:0 0 16px;border-bottom:2px solid #c9a227;padding-bottom:8px;">📋 Your Details</h3>
+            <h3 style="color:#1a1a1a;font-size:16px;margin:0 0 16px;border-bottom:2px solid #ac845d;padding-bottom:8px;">📋 Your Details</h3>
             <table style="width:100%;font-size:14px;border-collapse:collapse;">
               <tr>
                 <td style="padding:10px 12px;background:#f8f9fa;border-radius:6px 0 0 0;font-weight:600;color:#555;width:40%;">Full Name</td>
@@ -256,36 +256,36 @@ serve(async (req) => {
               </tr>
               <tr>
                 <td style="padding:10px 12px;font-weight:600;color:#555;">Employee Code</td>
-                <td style="padding:10px 12px;"><span style="font-family:monospace;font-size:18px;font-weight:bold;color:#c9a227;background:#1a1a1a;padding:4px 12px;border-radius:4px;letter-spacing:3px;">${body.employeeCode || "—"}</span></td>
+                <td style="padding:10px 12px;"><span style="font-family:monospace;font-size:18px;font-weight:bold;color:#ac845d;background:#1a1a1a;padding:4px 12px;border-radius:4px;letter-spacing:3px;">${body.employeeCode || "—"}</span></td>
               </tr>
             </table>
           </div>
           
           <!-- Getting Started -->
           <div style="padding:0 30px 24px;">
-            <h3 style="color:#1a1a1a;font-size:16px;margin:0 0 16px;border-bottom:2px solid #c9a227;padding-bottom:8px;">🚀 Getting Started</h3>
+            <h3 style="color:#1a1a1a;font-size:16px;margin:0 0 16px;border-bottom:2px solid #ac845d;padding-bottom:8px;">🚀 Getting Started</h3>
             
             <!-- Step 1 -->
             <div style="display:flex;margin-bottom:16px;">
-              <div style="flex-shrink:0;width:32px;height:32px;background:#c9a227;color:#000;border-radius:50%;text-align:center;line-height:32px;font-weight:bold;font-size:14px;margin-right:12px;">1</div>
+              <div style="flex-shrink:0;width:32px;height:32px;background:#ac845d;color:#000;border-radius:50%;text-align:center;line-height:32px;font-weight:bold;font-size:14px;margin-right:12px;">1</div>
               <div>
                 <p style="margin:0;font-weight:600;font-size:14px;color:#1a1a1a;">Access the Employee Portal</p>
-                <p style="margin:4px 0 0;font-size:13px;color:#666;line-height:1.5;">Visit <a href="${portalUrl}" style="color:#c9a227;text-decoration:underline;">${portalUrl}</a> and enter your Business Code: <strong>${body.businessCode || ""}</strong></p>
+                <p style="margin:4px 0 0;font-size:13px;color:#666;line-height:1.5;">Visit <a href="${portalUrl}" style="color:#ac845d;text-decoration:underline;">${portalUrl}</a> and enter your Business Code: <strong>${body.businessCode || ""}</strong></p>
               </div>
             </div>
             
             <!-- Step 2 -->
             <div style="display:flex;margin-bottom:16px;">
-              <div style="flex-shrink:0;width:32px;height:32px;background:#c9a227;color:#000;border-radius:50%;text-align:center;line-height:32px;font-weight:bold;font-size:14px;margin-right:12px;">2</div>
+              <div style="flex-shrink:0;width:32px;height:32px;background:#ac845d;color:#000;border-radius:50%;text-align:center;line-height:32px;font-weight:bold;font-size:14px;margin-right:12px;">2</div>
               <div>
                 <p style="margin:0;font-weight:600;font-size:14px;color:#1a1a1a;">Log In With Your Employee Code</p>
-                <p style="margin:4px 0 0;font-size:13px;color:#666;line-height:1.5;">Use your 4-digit employee code <strong style="font-family:monospace;color:#c9a227;">${body.employeeCode || "—"}</strong> to access your shifts, timesheets, and more.</p>
+                <p style="margin:4px 0 0;font-size:13px;color:#666;line-height:1.5;">Use your 4-digit employee code <strong style="font-family:monospace;color:#ac845d;">${body.employeeCode || "—"}</strong> to access your shifts, timesheets, and more.</p>
               </div>
             </div>
             
             <!-- Step 3 -->
             <div style="display:flex;margin-bottom:0;">
-              <div style="flex-shrink:0;width:32px;height:32px;background:#c9a227;color:#000;border-radius:50%;text-align:center;line-height:32px;font-weight:bold;font-size:14px;margin-right:12px;">3</div>
+              <div style="flex-shrink:0;width:32px;height:32px;background:#ac845d;color:#000;border-radius:50%;text-align:center;line-height:32px;font-weight:bold;font-size:14px;margin-right:12px;">3</div>
               <div>
                 <p style="margin:0;font-weight:600;font-size:14px;color:#1a1a1a;">Explore Your Portal</p>
                 <p style="margin:4px 0 0;font-size:13px;color:#666;line-height:1.5;">Once logged in, you can view your upcoming shifts, check your timesheets, submit leave requests, and stay connected via the team forum.</p>
@@ -295,7 +295,7 @@ serve(async (req) => {
           
           <!-- What You Can Do -->
           <div style="padding:0 30px 24px;">
-            <h3 style="color:#1a1a1a;font-size:16px;margin:0 0 16px;border-bottom:2px solid #c9a227;padding-bottom:8px;">📱 What You Can Do on the Portal</h3>
+            <h3 style="color:#1a1a1a;font-size:16px;margin:0 0 16px;border-bottom:2px solid #ac845d;padding-bottom:8px;">📱 What You Can Do on the Portal</h3>
             <div style="display:grid;gap:8px;">
               <div style="padding:10px 14px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:6px;font-size:13px;">
                 📅 <strong>Today's Overview</strong> — See today's shift and event setup details at a glance
@@ -320,7 +320,7 @@ serve(async (req) => {
           
           <!-- CTA Button -->
           <div style="text-align:center;padding:0 30px 30px;">
-            <a href="${portalUrl}" style="display:inline-block;background:#c9a227;color:#000;text-decoration:none;padding:14px 40px;border-radius:8px;font-weight:bold;font-size:15px;letter-spacing:0.5px;">
+            <a href="${portalUrl}" style="display:inline-block;background:#ac845d;color:#000;text-decoration:none;padding:14px 40px;border-radius:8px;font-weight:bold;font-size:15px;letter-spacing:0.5px;">
               Go to Employee Portal →
             </a>
           </div>
@@ -337,7 +337,7 @@ serve(async (req) => {
           <!-- Footer -->
           <div style="text-align:center;padding:20px 30px;background:#f8f9fa;border-radius:0 0 12px 12px;">
             <p style="color:#999;font-size:11px;margin:0;">
-              This is an automated welcome email from <strong>Omnex Ventures</strong>.<br/>
+              This is an automated welcome email from <strong>Pro Regal Pavilion</strong>.<br/>
               If you received this in error, please contact your manager.
             </p>
           </div>
@@ -345,7 +345,7 @@ serve(async (req) => {
       `;
 
       emailPayload = {
-        from: `${body.businessName || "OmnexClock"} <noreply@omnexventures.com>`,
+        from: `${body.businessName || "Pro Regal Pavilion"} <noreply@omnexventures.com>`,
         to: [body.to],
         subject: `Welcome to ${body.businessName || "the team"}, ${body.employeeName}! 🎉 — Your Induction Packet`,
         html,
@@ -359,7 +359,7 @@ serve(async (req) => {
         <div style="font-family:'Segoe UI',Arial,sans-serif;max-width:600px;margin:0 auto;color:#1a1a1a;background:#ffffff;">
           <!-- Header -->
           <div style="text-align:center;padding:30px 20px 16px;background:linear-gradient(135deg,#1a1a1a 0%,#2d2d2d 100%);border-radius:12px 12px 0 0;">
-            <h1 style="color:#c9a227;font-size:24px;margin:0;letter-spacing:1px;">OmnexClock</h1>
+            <h1 style="color:#ac845d;font-size:24px;margin:0;letter-spacing:1px;">Pro Regal Pavilion</h1>
             <p style="color:#a0a0a0;font-size:11px;margin:6px 0 0;text-transform:uppercase;letter-spacing:2px;">Roster Report</p>
           </div>
           
@@ -391,14 +391,14 @@ serve(async (req) => {
           <!-- Footer -->
           <div style="text-align:center;padding:16px 30px;background:#f8f9fa;border-radius:0 0 12px 12px;">
             <p style="color:#999;font-size:11px;margin:0;">
-              This is an automated email from <strong>Omnex Ventures</strong>.
+              This is an automated email from <strong>Pro Regal Pavilion</strong>.
             </p>
           </div>
         </div>
       `;
 
       emailPayload = {
-        from: `${body.businessName || "OmnexClock"} <noreply@omnexventures.com>`,
+        from: `${body.businessName || "Pro Regal Pavilion"} <noreply@omnexventures.com>`,
         to: [body.to],
         subject: `Roster — ${body.weekLabel}`,
         html,
@@ -418,7 +418,7 @@ serve(async (req) => {
       const html = `
         <div style="font-family:'Segoe UI',Arial,sans-serif;max-width:600px;margin:0 auto;color:#1a1a1a;background:#ffffff;">
           <div style="text-align:center;padding:30px 20px 16px;background:linear-gradient(135deg,#1a1a1a 0%,#2d2d2d 100%);border-radius:12px 12px 0 0;">
-            <h1 style="color:#c9a227;font-size:24px;margin:0;letter-spacing:1px;">${body.businessName || "OmnexClock"}</h1>
+            <h1 style="color:#ac845d;font-size:24px;margin:0;letter-spacing:1px;">${body.businessName || "Pro Regal Pavilion"}</h1>
             <p style="color:#a0a0a0;font-size:11px;margin:6px 0 0;text-transform:uppercase;letter-spacing:2px;">Report</p>
           </div>
           <div style="padding:24px 30px;">
@@ -434,13 +434,13 @@ serve(async (req) => {
             </div>
           </div>
           <div style="text-align:center;padding:16px 30px;background:#f8f9fa;border-radius:0 0 12px 12px;">
-            <p style="color:#999;font-size:11px;margin:0;">This is an automated report from <strong>Omnex Ventures</strong>.</p>
+            <p style="color:#999;font-size:11px;margin:0;">This is an automated report from <strong>Pro Regal Pavilion</strong>.</p>
           </div>
         </div>
       `;
 
       emailPayload = {
-        from: `${body.businessName || "OmnexClock"} <noreply@omnexventures.com>`,
+        from: `${body.businessName || "Pro Regal Pavilion"} <noreply@omnexventures.com>`,
         to: [body.to],
         subject: body.subject,
         html,

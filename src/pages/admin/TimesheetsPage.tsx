@@ -835,7 +835,7 @@ export default function TimesheetsPage() {
         doc.rect(0, pageH - 10, pageW, 10, "F");
         doc.setFontSize(7);
         doc.setTextColor(160, 160, 160);
-        doc.text(`${business?.name || "OmnexClock"} — Timesheet Report`, 14, pageH - 4);
+        doc.text(`${business?.name || "Pro Regal Pavilion"} — Timesheet Report`, 14, pageH - 4);
         doc.text(`Page ${doc.getCurrentPageInfo().pageNumber}`, pageW - 14, pageH - 4, { align: "right" });
       },
     });
