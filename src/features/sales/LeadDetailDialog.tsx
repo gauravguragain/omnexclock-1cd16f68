@@ -118,6 +118,27 @@ export default function LeadDetailDialog({ lead, open, onOpenChange, options, in
           </div>)}
         </div>
       </section>
+
+      <section className="space-y-3 rounded-lg border border-border p-4">
+        <label className="flex items-center gap-2 text-sm font-medium"><Checkbox checked={stallsRequired} onCheckedChange={c=>setStallsRequired(!!c)}/> Live stalls required</label>
+        {stallsRequired&&<>
+          <p className="text-xs text-muted-foreground">Choose the stall and how it is charged — per person or a flat rate.</p>
+          <div className="space-y-1">
+            {liveStalls.map(stall=><div key={stall.key} className="flex items-center justify-between gap-2 rounded-md bg-muted/40 px-2 py-1 text-sm">
+              <span>{stall.name}<span className="ml-2 text-xs text-muted-foreground">{stall.pricePerHead?`$${stall.pricePerHead.toFixed(2)} per guest`:""}{stall.pricePerHead&&stall.flatPrice?" + ":""}{stall.flatPrice?`$${stall.flatPrice.toFixed(2)} flat`:""}{!stall.pricePerHead&&!stall.flatPrice?"No extra charge":""}</span></span>
+              <span className="flex items-center gap-2 whitespace-nowrap"><span>${lineTotal(stall.pricePerHead,stall.flatPrice).toFixed(2)}</span><button type="button" title="Remove stall" onClick={()=>setLiveStalls(v=>v.filter(x=>x.key!==stall.key))}><X className="h-3.5 w-3.5 text-muted-foreground hover:text-destructive"/></button></span>
+            </div>)}
+            {!liveStalls.length&&<p className="text-xs text-muted-foreground">No stalls added yet.</p>}
+          </div>
+          <div className="grid gap-2 sm:grid-cols-[2fr_1fr_1fr_auto]">
+            <OptionSelect name="live_stall_draft" options={liveStallOptions} defaultValue={stallDraft.name} emptyLabel="Choose a live stall" otherLabel="Other (type your own)" otherPlaceholder="Stall name"/>
+            <Input value={stallDraft.pricePerHead} onChange={e=>setStallDraft({...stallDraft,pricePerHead:e.target.value})} type="number" min="0" step="0.01" placeholder="$ per person"/>
+            <Input value={stallDraft.flatPrice} onChange={e=>setStallDraft({...stallDraft,flatPrice:e.target.value})} type="number" min="0" step="0.01" placeholder="$ flat rate"/>
+            <Button type="button" variant="secondary" onClick={()=>{const field=document.querySelector('input[name="live_stall_draft"]') as HTMLInputElement|null;const name=(field?.value||"").trim();if(!name){toast.error("Choose or type a live stall");return;}setLiveStalls(v=>[...v,{key:`stall-${Date.now()}`,name,pricePerHead:Number(stallDraft.pricePerHead||0),flatPrice:Number(stallDraft.flatPrice||0)}]);setStallDraft({name:"",pricePerHead:"",flatPrice:""});}}><Plus className="h-4 w-4"/></Button>
+          </div>
+          {stallTotal>0&&<p className="text-xs text-muted-foreground">Live stalls add ${stallTotal.toFixed(2)} to the total.</p>}
+        </>}
+      </section>
     </div>
 
     <aside className="space-y-4 self-start rounded-lg border border-border bg-muted/30 p-4 lg:sticky lg:top-4">
