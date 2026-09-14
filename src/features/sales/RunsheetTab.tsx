@@ -113,12 +113,28 @@ export default function RunsheetTab({ lead, booking, options, onSaved }: {
 
   const menuByCategory = useMemo(() => {
     const groups = new Map<string, string[]>();
-    menu.items.forEach((item: any) => {
-      const category = item.menu_item_id ? prettyCrmValue(menu.catalogue[item.menu_item_id] || "other") : "Custom items";
+    menu.items.filter((item: any) => item.course !== "package").forEach((item: any) => {
+      const category = item.course || (item.menu_item_id ? prettyCrmValue(menu.catalogue[item.menu_item_id] || "other") : "Menu items");
       groups.set(category, [...(groups.get(category) || []), item.item_name]);
     });
-    return Array.from(groups.entries()).map(([category, items]) => ({ category, items }));
+    const order = ["Entrees (Veg)", "Entrees (Non-veg)", "Veg Mains", "Non-veg Mains", "Sides", "Dessert", "Kids Menu"];
+    return Array.from(groups.entries())
+      .sort((a, b) => (order.indexOf(a[0]) + 1 || 99) - (order.indexOf(b[0]) + 1 || 99))
+      .map(([category, items]) => ({ category, items }));
   }, [menu]);
+  const packageName = useMemo(() => {
+    const packages = menu.items.filter((item: any) => item.course === "package").map((item: any) => item.item_name);
+    return menu.selection?.package_name || packages.join(", ") || null;
+  }, [menu]);
+  const corkageNote = useMemo(() => {
+    const selection: any = menu.selection;
+    if (!selection?.corkage_enabled) return null;
+    const parts = [
+      selection.corkage_per_head ? `$${Number(selection.corkage_per_head).toFixed(2)} per guest` : "",
+      selection.corkage_flat ? `$${Number(selection.corkage_flat).toFixed(2)} flat` : "",
+    ].filter(Boolean);
+    return `Host bringing own drinks${parts.length ? ` — ${parts.join(" + ")}` : ""}`;
+  }, [menu.selection]);
 
   const startTime = String(booking?.start_time || "17:30").slice(0, 5);
   const endTime = minutesToTime(timeToMinutes(startTime) + Number(booking?.duration_minutes || 300));
