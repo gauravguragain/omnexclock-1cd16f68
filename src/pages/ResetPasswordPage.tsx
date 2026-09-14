@@ -143,7 +143,7 @@ export default function ResetPasswordPage() {
             {isMasterReset ? <Crown className="h-9 w-9 text-primary" /> : <Clock className="h-9 w-9 text-primary" />}
           </div>
           <div className="space-y-1">
-            <h1 className="text-2xl font-bold text-foreground tracking-tight">{isMasterReset ? "Master Admin" : "Pro Regal Pavilion"}</h1>
+            <h1 className="text-2xl font-bold text-foreground tracking-tight">{isMasterReset ? "Master Admin" : "Regal Clock"}</h1>
             <p className="text-muted-foreground text-sm">Password Recovery</p>
           </div>
         </div>

@@ -142,7 +142,7 @@ export default function KioskPage() {
 
     return () => {
       observer.disconnect();
-      document.title = "Pro Regal Pavilion";
+      document.title = "Regal Clock";
     };
   }, [urlBusinessCode]);
 

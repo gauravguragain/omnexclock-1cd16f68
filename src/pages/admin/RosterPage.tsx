@@ -258,7 +258,7 @@ export default function RosterPage() {
     doc.setTextColor(201, 162, 39);
     doc.setFontSize(16);
     doc.setFont("helvetica", "bold");
-    doc.text("Pro Regal Pavilion", 14, 14);
+    doc.text("Regal Clock", 14, 14);
     doc.setTextColor(160, 160, 160);
     doc.setFontSize(9);
     doc.setFont("helvetica", "normal");

@@ -211,7 +211,7 @@ export default function AdminLayout() {
             </div>
           )}
           <div className="min-w-0 flex-1">
-            <h1 className="text-sm font-semibold text-primary truncate leading-tight">{business?.name || "Pro Regal Pavilion"}</h1>
+            <h1 className="text-sm font-semibold text-primary truncate leading-tight">{business?.name || "Regal Clock"}</h1>
             <p className="text-[10px] text-muted-foreground/60 font-medium tracking-wide uppercase">Admin Panel</p>
           </div>
           <Button variant="ghost" size="icon" className="lg:hidden ml-auto shrink-0 h-8 w-8" onClick={() => setSidebarOpen(false)}>
