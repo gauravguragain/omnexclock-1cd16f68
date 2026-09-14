@@ -102,6 +102,7 @@ export function buildRunsheetPdf(data: RunsheetPdfData) {
   summaryRow();
 
   // Two columns: menu / agenda detail on the left, setup on the right
+  const startPage = doc.getNumberOfPages();
   let leftY = y;
   let rightY = y;
   const lineHeight = 5;
@@ -109,10 +110,30 @@ export function buildRunsheetPdf(data: RunsheetPdfData) {
   const writeLines = (text: string, x: number, width: number, startY: number, bold = false) => {
     doc.setFont("helvetica", bold ? "bold" : "normal"); doc.setFontSize(9);
     const lines = doc.splitTextToSize(text, width);
-    if (startY + lines.length * lineHeight > 272) { doc.addPage(); startY = 24; }
+    if (startY + lines.length * lineHeight > 272) {
+      const current = doc.getCurrentPageInfo().pageNumber;
+      if (current < doc.getNumberOfPages()) doc.setPage(current + 1); else doc.addPage();
+      startY = 24;
+    }
     doc.text(lines, x, startY);
     return startY + lines.length * lineHeight;
   };
+
+  // Right column
+  rightY = writeLines("Setup & Additional Information", colRightX, colRightWidth, rightY, true);
+  rightY += 2;
+  rightY = writeLines(`\u2022  ${data.eventTitle}`, colRightX, colRightWidth, rightY);
+  data.setupItems.forEach((item) => {
+    rightY = writeLines(`- ${item}`, colRightX + 5, colRightWidth - 5, rightY);
+  });
+  if (data.setupNotes) {
+    data.setupNotes.split("\n").filter(Boolean).forEach((note) => {
+      rightY = writeLines(`- ${note}`, colRightX + 5, colRightWidth - 5, rightY);
+    });
+  }
+  if (data.accessTime) rightY = writeLines(`\u2022  Decor access required at ${data.accessTime}`, colRightX, colRightWidth, rightY + 2);
+
+  doc.setPage(startPage);
 
   // Left column
   const packageHeading = `${data.packageName || "Menu"} (${timeRange})`;
@@ -144,20 +165,6 @@ export function buildRunsheetPdf(data: RunsheetPdfData) {
     leftY = writeLines(`*  ALLERGIES: ${data.allergies}`, colLeftX, colLeftWidth, leftY + 1.5, true);
     doc.setTextColor(...INK);
   }
-
-  // Right column
-  rightY = writeLines("Setup & Additional Information", colRightX, colRightWidth, rightY, true);
-  rightY += 2;
-  rightY = writeLines(`\u2022  ${data.eventTitle}`, colRightX, colRightWidth, rightY);
-  data.setupItems.forEach((item) => {
-    rightY = writeLines(`- ${item}`, colRightX + 5, colRightWidth - 5, rightY);
-  });
-  if (data.setupNotes) {
-    data.setupNotes.split("\n").filter(Boolean).forEach((note) => {
-      rightY = writeLines(`- ${note}`, colRightX + 5, colRightWidth - 5, rightY);
-    });
-  }
-  if (data.accessTime) rightY = writeLines(`\u2022  Decor access required at ${data.accessTime}`, colRightX, colRightWidth, rightY + 2);
 
   // Close-out
   let closeY = Math.max(leftY, rightY) + 12;
