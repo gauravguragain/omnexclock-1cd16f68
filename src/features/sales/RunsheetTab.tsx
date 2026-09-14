@@ -113,7 +113,7 @@ export default function RunsheetTab({ lead, booking, options, onSaved }: {
 
   const menuByCategory = useMemo(() => {
     const groups = new Map<string, string[]>();
-    menu.items.filter((item: any) => item.course !== "package").forEach((item: any) => {
+    menu.items.filter((item: any) => item.course !== "package" && item.course !== "live_stall").forEach((item: any) => {
       const category = item.course || (item.menu_item_id ? prettyCrmValue(menu.catalogue[item.menu_item_id] || "other") : "Menu items");
       groups.set(category, [...(groups.get(category) || []), item.item_name]);
     });
@@ -125,6 +125,17 @@ export default function RunsheetTab({ lead, booking, options, onSaved }: {
   const packageName = useMemo(() => {
     const packages = menu.items.filter((item: any) => item.course === "package").map((item: any) => item.item_name);
     return menu.selection?.package_name || packages.join(", ") || null;
+  }, [menu]);
+  const liveStallNote = useMemo(() => {
+    const stalls = menu.items.filter((item: any) => item.course === "live_stall");
+    if (!stalls.length) return null;
+    return stalls.map((stall: any) => {
+      const parts = [
+        stall.price_per_head ? `$${Number(stall.price_per_head).toFixed(2)} per guest` : "",
+        stall.flat_price ? `$${Number(stall.flat_price).toFixed(2)} flat` : "",
+      ].filter(Boolean);
+      return `${stall.item_name}${parts.length ? ` (${parts.join(" + ")})` : ""}`;
+    }).join(", ");
   }, [menu]);
   const corkageNote = useMemo(() => {
     const selection: any = menu.selection;
@@ -248,7 +259,7 @@ export default function RunsheetTab({ lead, booking, options, onSaved }: {
     eventOrderNumber: form.event_order_number ? `${form.event_order_number} · v${revision}` : `v${revision}`,
     bookingReference: form.booking_reference,
     schedule: schedule.map(({ time, label, detail }) => ({ time: prettyTime(time), label, detail })),
-    menuByCategory, packageName, corkageNote,
+    menuByCategory, packageName, corkageNote, liveStallNote,
     kidsMenuNote: Number(form.kids_guests || 0) > 0 ? menuByCategory.find((g) => g.category === "Kids Menu")?.items.join(", ") || `${form.kids_guests} kids` : null,
     beveragePackage: menu.selection?.beverage_package ? prettyCrmValue(menu.selection.beverage_package) : null,
     dietaryRequirements: menu.selection?.dietary_requirements, allergies: menu.selection?.allergies,

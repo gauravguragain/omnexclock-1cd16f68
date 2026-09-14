@@ -27,6 +27,7 @@ export type RunsheetPdfData = {
   menuByCategory: { category: string; items: string[] }[];
   beveragePackage?: string | null;
   corkageNote?: string | null;
+  liveStallNote?: string | null;
   kidsMenuNote?: string | null;
   dietaryRequirements?: string | null;
   allergies?: string | null;
@@ -157,6 +158,7 @@ export function buildRunsheetPdf(data: RunsheetPdfData) {
 
   if (data.kidsMenuNote) leftY = writeLines(`\u2022  Kids Menu- ${data.kidsMenuNote}`, colLeftX, colLeftWidth, leftY + 3);
   if (data.beveragePackage) leftY = writeLines(`\u2022  Beverages- ${data.beveragePackage}`, colLeftX, colLeftWidth, leftY + 1.5);
+  if (data.liveStallNote) leftY = writeLines(`\u2022  Live Stalls- ${data.liveStallNote}`, colLeftX, colLeftWidth, leftY + 1.5);
   if (data.corkageNote) leftY = writeLines(`\u2022  Corkage- ${data.corkageNote}`, colLeftX, colLeftWidth, leftY + 1.5);
   if (data.specialRequests) leftY = writeLines(`*  ${data.specialRequests}`, colLeftX, colLeftWidth, leftY + 3);
   if (data.dietaryRequirements) leftY = writeLines(`*  Dietary: ${data.dietaryRequirements}`, colLeftX, colLeftWidth, leftY + 1.5);
