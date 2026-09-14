@@ -1303,6 +1303,113 @@ export type Database = {
           },
         ]
       }
+      crm_runsheets: {
+        Row: {
+          access_time: string | null
+          adult_guests: number | null
+          booking_id: string | null
+          booking_reference: string | null
+          business_id: string
+          created_at: string
+          created_by: string | null
+          event_coordinator: string | null
+          event_order_number: string | null
+          id: string
+          kids_guests: number | null
+          lead_id: string
+          onsite_contact_name: string | null
+          onsite_contact_phone: string | null
+          sales_person: string | null
+          sent_at: string | null
+          service_schedule: Json
+          setup_items: string[]
+          setup_notes: string | null
+          special_requests: string | null
+          status: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          access_time?: string | null
+          adult_guests?: number | null
+          booking_id?: string | null
+          booking_reference?: string | null
+          business_id: string
+          created_at?: string
+          created_by?: string | null
+          event_coordinator?: string | null
+          event_order_number?: string | null
+          id?: string
+          kids_guests?: number | null
+          lead_id: string
+          onsite_contact_name?: string | null
+          onsite_contact_phone?: string | null
+          sales_person?: string | null
+          sent_at?: string | null
+          service_schedule?: Json
+          setup_items?: string[]
+          setup_notes?: string | null
+          special_requests?: string | null
+          status?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          access_time?: string | null
+          adult_guests?: number | null
+          booking_id?: string | null
+          booking_reference?: string | null
+          business_id?: string
+          created_at?: string
+          created_by?: string | null
+          event_coordinator?: string | null
+          event_order_number?: string | null
+          id?: string
+          kids_guests?: number | null
+          lead_id?: string
+          onsite_contact_name?: string | null
+          onsite_contact_phone?: string | null
+          sales_person?: string | null
+          sent_at?: string | null
+          service_schedule?: Json
+          setup_items?: string[]
+          setup_notes?: string | null
+          special_requests?: string | null
+          status?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_runsheets_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "crm_bookings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_runsheets_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_runsheets_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses_public"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_runsheets_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: true
+            referencedRelation: "crm_leads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       crm_settings: {
         Row: {
           assignment_mode: string
