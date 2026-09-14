@@ -131,7 +131,7 @@ export default function LeadDetailDialog({ lead, open, onOpenChange, options, in
             {!liveStalls.length&&<p className="text-xs text-muted-foreground">No stalls added yet.</p>}
           </div>
           <div className="grid gap-2 sm:grid-cols-[2fr_1fr_1fr_auto]">
-            <OptionSelect name="live_stall_draft" options={liveStallOptions} defaultValue={stallDraft.name} emptyLabel="Choose a live stall" otherLabel="Other (type your own)" otherPlaceholder="Stall name"/>
+            <OptionSelect key={`stall-${liveStalls.length}`} name="live_stall_draft" options={liveStallOptions} defaultValue={stallDraft.name} emptyLabel="Choose a live stall" otherLabel="Other (type your own)" otherPlaceholder="Stall name"/>
             <Input value={stallDraft.pricePerHead} onChange={e=>setStallDraft({...stallDraft,pricePerHead:e.target.value})} type="number" min="0" step="0.01" placeholder="$ per person"/>
             <Input value={stallDraft.flatPrice} onChange={e=>setStallDraft({...stallDraft,flatPrice:e.target.value})} type="number" min="0" step="0.01" placeholder="$ flat rate"/>
             <Button type="button" variant="secondary" onClick={()=>{const field=document.querySelector('input[name="live_stall_draft"]') as HTMLInputElement|null;const name=(field?.value||"").trim();if(!name){toast.error("Choose or type a live stall");return;}setLiveStalls(v=>[...v,{key:`stall-${Date.now()}`,name,pricePerHead:Number(stallDraft.pricePerHead||0),flatPrice:Number(stallDraft.flatPrice||0)}]);setStallDraft({name:"",pricePerHead:"",flatPrice:""});}}><Plus className="h-4 w-4"/></Button>
