@@ -5,9 +5,9 @@
 - [x] Seed configurable Pro Regal lists and defaults
 - [x] Add Sales & Marketing Manager invitation/access support
 - [x] Build CRM navigation and responsive workspace
-- [ ] Build lead list, duplicate checks, Kanban, detail workflow, CSV export
-- [ ] Build inspections calendar/conflict warnings, tasks, menu pricing, booking confirmations
-- [ ] Build dashboard analytics, settings, templates, and optional Calendly controls
+- [x] Build lead list, duplicate checks, Kanban, detail workflow, CSV export
+- [x] Build inspections calendar/conflict warnings, tasks, menu pricing, booking confirmations
+- [x] Build dashboard analytics, settings, templates, and optional Calendly controls
 - [x] Add public enquiry and secure confirmation flows
-- [ ] Add AI note extraction and CRM email/PDF automation
+- [x] Add AI note extraction and CRM email/PDF automation
 - [ ] Verify database security, build, and desktop/mobile workflows
