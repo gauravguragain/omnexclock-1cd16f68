@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button"; import { Dialog, DialogContent,
 import { Input } from "@/components/ui/input"; import { Label } from "@/components/ui/label"; import { Checkbox } from "@/components/ui/checkbox";
 import { AlertTriangle, Loader2 } from "lucide-react"; import { toast } from "sonner";
 import type { CrmLead, CrmOption } from "./types";
+import OptionSelect from "./OptionSelect";
 
 export default function LeadFormDialog({ open, onOpenChange, businessId, options, lead, leads, onSaved }: { open: boolean; onOpenChange: (open:boolean)=>void; businessId:string; options:CrmOption[]; lead?:CrmLead|null; leads:CrmLead[]; onSaved:()=>void }) {
   const { user } = useAuth(); const [saving, setSaving] = useState(false); const [email, setEmail] = useState(""); const [phone, setPhone] = useState("");
