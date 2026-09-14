@@ -21,8 +21,21 @@ export default function LeadDetailDialog({ lead, open, onOpenChange, options, in
   const guests=guestOverride??Number(lead?.estimated_guest_count||1);
   const chosenItems=useMemo(()=>menuItems.filter(i=>selectedMenu.includes(i.id)),[menuItems,selectedMenu]);
   const lineTotal=(pph:number,flat:number)=>Number(flat||0)+Number(pph||0)*guests;
-  const total=useMemo(()=>chosenItems.reduce((sum,i)=>sum+lineTotal(Number(i.price_per_head||0),Number(i.flat_price||0)),0)+customItems.reduce((sum,i)=>sum+lineTotal(i.pricePerHead,i.flatPrice),0),[chosenItems,customItems,guests]);
+  const corkageTotal=corkage.enabled?Number(corkage.flat||0)+Number(corkage.perHead||0)*guests:0;
+  const total=useMemo(()=>chosenItems.reduce((sum,i)=>sum+lineTotal(Number(i.price_per_head||0),Number(i.flat_price||0)),0)+customItems.reduce((sum,i)=>sum+lineTotal(i.pricePerHead,i.flatPrice),0)+corkageTotal,[chosenItems,customItems,guests,corkageTotal]);
   const groupedMenu=useMemo(()=>{const map=new Map<string,any[]>();menuItems.forEach(i=>{const key=i.category||"Other";map.set(key,[...(map.get(key)||[]),i]);});return Array.from(map.entries());},[menuItems]);
+  useEffect(()=>{if(!lead?.id||!open)return;let cancelled=false;(async()=>{
+    const{data:sel}=await supabase.from("crm_menu_selections").select("*").eq("lead_id",lead.id).maybeSingle();
+    if(cancelled||!sel)return;const s:any=sel;
+    if(s.guest_count)setGuestOverride(Number(s.guest_count));
+    setCorkage({enabled:!!s.corkage_enabled,perHead:s.corkage_per_head!=null?String(s.corkage_per_head):"",flat:s.corkage_flat!=null?String(s.corkage_flat):""});
+    setExtras({dietary:s.dietary_requirements||"",allergies:s.allergies||"",beverage:s.beverage_package||""});
+    const{data:items}=await supabase.from("crm_menu_selection_items").select("*").eq("selection_id",s.id);
+    if(cancelled)return;const rows:any[]=items||[];
+    setSelectedMenu(rows.filter(i=>i.menu_item_id).map(i=>i.menu_item_id));
+    setCustomItems(rows.filter(i=>!i.menu_item_id&&i.course==="package").map((i,n)=>({key:`l${n}`,name:i.item_name,pricePerHead:Number(i.price_per_head||0),flatPrice:Number(i.flat_price||0)})));
+    setDishes(rows.filter(i=>!i.menu_item_id&&i.course&&i.course!=="package").map((i,n)=>({key:`d${n}`,course:i.course,name:i.item_name})));
+  })();return()=>{cancelled=true;};},[lead?.id,open]);
   if(!lead)return null;
   const addInteraction=async(e:FormEvent<HTMLFormElement>)=>{e.preventDefault();setBusy(true);const f=new FormData(e.currentTarget);const notes=String(f.get("notes"));const {error}=await supabase.from("crm_interactions").insert({business_id:lead.business_id,lead_id:lead.id,interaction_type:String(f.get("type")),notes,duration_minutes:f.get("duration")?Number(f.get("duration")):null,follow_up_required:f.get("follow_up")==="on",follow_up_at:followDate?`${followDate}T${followTime}`:null,shareable_feedback:f.get("shareable")==="on",logged_by:user?.id} as any);setBusy(false);if(error)toast.error(error.message);else{toast.success("Interaction logged");(e.target as HTMLFormElement).reset();setFollowDate("");onSaved();}};
   const analyse=async(notes:string)=>{if(notes.trim().length<10){toast.error("Add more notes first");return;}setBusy(true);const{data,error}=await supabase.functions.invoke("crm-ai-notes",{body:{businessId:lead.business_id,notes}});setBusy(false);if(error)toast.error("Could not analyse notes");else setAi(data);};
