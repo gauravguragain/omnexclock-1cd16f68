@@ -6,7 +6,7 @@ import { useCrmData } from "@/features/sales/useCrmData"; import LeadFormDialog 
 
 const money=(n:number)=>new Intl.NumberFormat("en-AU",{style:"currency",currency:"AUD",maximumFractionDigits:0}).format(n);
 export default function SalesMarketingPage(){
-  const {business,leads,options,inspections,tasks,interactions,settings,bookings,menuItems,loading,refresh}=useCrmData(); const {isAdminOf,isSuperAdminOf}=useAuth();
+  const {business,leads,options,inspections,tasks,interactions,settings,bookings,menuItems,runsheets,loading,refresh}=useCrmData(); const {isAdminOf,isSuperAdminOf}=useAuth();
   const [search,setSearch]=useState(""); const [stageFilter,setStageFilter]=useState("all"); const [leadOpen,setLeadOpen]=useState(false); const [editing,setEditing]=useState<CrmLead|null>(null); const [detail,setDetail]=useState<CrmLead|null>(null); const [dragged,setDragged]=useState<string|null>(null);
   const filtered=useMemo(()=>leads.filter(l=>(stageFilter==="all"||l.status===stageFilter)&&`${l.full_name} ${l.email||""} ${l.phone||""} ${l.company||""}`.toLowerCase().includes(search.toLowerCase())),[leads,search,stageFilter]);
   const staleDays=settings?.stale_days||5; const isStale=(lead:CrmLead)=>lead.status!=='full_payment_received'&&!isAfter(new Date(lead.last_contact_at||lead.created_at),subDays(new Date(),staleDays));
