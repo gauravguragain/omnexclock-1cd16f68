@@ -31,4 +31,4 @@ export type CrmInteraction = {
 
 export const CRM_STAGE_VALUES = ["new", "contacted", "inspection_booked", "inspected", "menu_selected", "quoted", "confirmed", "lost"];
 
-export const prettyCrmValue = (value: string) => value.replaceAll("_", " ").replace(/\b\w/g, (c) => c.toUpperCase());
+export const prettyCrmValue = (value: string) => value.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());

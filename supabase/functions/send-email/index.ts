@@ -52,7 +52,7 @@ serve(async (req) => {
     const canSend =
       caller.isMaster ||
       caller.roles.some((r) =>
-        ["admin", "super_admin", "roster_admin"].includes(r.role)
+        ["admin", "super_admin", "roster_admin", "sales_marketing_manager"].includes(r.role)
       );
     if (!canSend) return jsonError("Forbidden", 403, corsHeaders);
 
