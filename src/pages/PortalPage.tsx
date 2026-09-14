@@ -1632,7 +1632,7 @@ export default function PortalPage() {
             {/* Portal URL */}
             <div className="rounded-lg bg-secondary/50 border border-border/60 p-3 space-y-1.5">
               <p className="text-xs font-medium text-foreground">Portal URL</p>
-              <p className="font-mono text-xs text-primary break-all select-all">https://omnexclock.lovable.app/portal</p>
+              <p className="font-mono text-xs text-primary break-all select-all">the Employee Portal</p>
               <p className="text-[10px] text-muted-foreground">
                 Business Code: <span className="font-mono font-bold text-foreground">{urlBusinessCode?.toUpperCase() || "—"}</span>
               </p>
@@ -1669,7 +1669,7 @@ export default function PortalPage() {
                   <p className="text-sm font-semibold text-foreground">iPhone — Safari</p>
                   <ol className="text-xs text-muted-foreground space-y-2 list-decimal pl-4">
                     <li>Open <span className="font-mono text-primary">Safari</span> (this must be Safari, not Chrome)</li>
-                    <li>Navigate to <span className="font-mono text-primary break-all">https://omnexclock.lovable.app/portal</span></li>
+                    <li>Navigate to <span className="font-mono text-primary break-all">the Employee Portal</span></li>
                     <li>Tap the <span className="font-semibold text-foreground">Share</span> button (square with an arrow pointing up) at the bottom of the screen</li>
                     <li>Scroll down and tap <span className="font-semibold text-foreground">"Add to Home Screen"</span></li>
                     <li>Tap <span className="font-semibold text-foreground">"Add"</span> in the top-right corner</li>
@@ -1682,7 +1682,7 @@ export default function PortalPage() {
                   <p className="text-sm font-semibold text-foreground">Android — Chrome</p>
                   <ol className="text-xs text-muted-foreground space-y-2 list-decimal pl-4">
                     <li>Open <span className="font-mono text-primary">Google Chrome</span></li>
-                    <li>Navigate to <span className="font-mono text-primary break-all">https://omnexclock.lovable.app/portal</span></li>
+                    <li>Navigate to <span className="font-mono text-primary break-all">the Employee Portal</span></li>
                     <li>Tap the <span className="font-semibold text-foreground">three-dot menu</span> (⋮) in the top-right corner</li>
                     <li>Tap <span className="font-semibold text-foreground">"Add to Home screen"</span> or <span className="font-semibold text-foreground">"Install app"</span></li>
                     <li>Confirm by tapping <span className="font-semibold text-foreground">"Add"</span> or <span className="font-semibold text-foreground">"Install"</span></li>
@@ -1695,7 +1695,7 @@ export default function PortalPage() {
                   <p className="text-sm font-semibold text-foreground">iPad — Safari</p>
                   <ol className="text-xs text-muted-foreground space-y-2 list-decimal pl-4">
                     <li>Open <span className="font-mono text-primary">Safari</span> on your iPad</li>
-                    <li>Navigate to <span className="font-mono text-primary break-all">https://omnexclock.lovable.app/portal</span></li>
+                    <li>Navigate to <span className="font-mono text-primary break-all">the Employee Portal</span></li>
                     <li>Tap the <span className="font-semibold text-foreground">Share</span> button (square with arrow) — it may be in the top-right or bottom bar depending on your iPad layout</li>
                     <li>Tap <span className="font-semibold text-foreground">"Add to Home Screen"</span></li>
                     <li>Tap <span className="font-semibold text-foreground">"Add"</span> to confirm</li>
@@ -1708,7 +1708,7 @@ export default function PortalPage() {
                   <p className="text-sm font-semibold text-foreground">Desktop — Chrome / Edge</p>
                   <ol className="text-xs text-muted-foreground space-y-2 list-decimal pl-4">
                     <li>Open <span className="font-mono text-primary">Google Chrome</span> or <span className="font-mono text-primary">Microsoft Edge</span></li>
-                    <li>Navigate to <span className="font-mono text-primary break-all">https://omnexclock.lovable.app/portal</span></li>
+                    <li>Navigate to <span className="font-mono text-primary break-all">the Employee Portal</span></li>
                     <li>Click the <span className="font-semibold text-foreground">install icon</span> (⊕) in the address bar, or click the three-dot menu → <span className="font-semibold text-foreground">"Install Pro Regal Pavilion"</span></li>
                     <li>Click <span className="font-semibold text-foreground">"Install"</span> in the prompt</li>
                     <li>The app will open in its own window and appear in your Start menu / Dock</li>

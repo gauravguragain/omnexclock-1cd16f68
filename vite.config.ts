@@ -18,7 +18,7 @@ export default defineConfig(({ mode }) => ({
     mode === "development" && componentTagger(),
     VitePWA({
       registerType: "autoUpdate",
-      includeAssets: ["favicon.ico", "logo.jpeg", "omnex-logo.jpg", "pwa-icon-192.png", "pwa-icon-512.png"],
+      includeAssets: ["favicon.png", "regal-logo.png", "pwa-icon-192.png", "pwa-icon-512.png"],
       workbox: {
         navigateFallbackDenylist: [/^\/~oauth/, /^\/t\//, /^\/b\/[^/]+\/kiosk/],
         globPatterns: ["**/*.{js,css,html,ico,png,jpg,jpeg,svg,woff2}"],

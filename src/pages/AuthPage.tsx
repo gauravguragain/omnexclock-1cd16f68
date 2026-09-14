@@ -161,7 +161,7 @@ export default function AuthPage() {
               )}
               <div className="space-y-2">
                 <Label htmlFor="email">Email</Label>
-                <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder={isMasterLogin ? "master@omnexclock.com" : "admin@business.com"} required className="h-11" />
+                <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder={isMasterLogin ? "master@regalpavilion.com.au" : "admin@business.com"} required className="h-11" />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="password">Password</Label>
