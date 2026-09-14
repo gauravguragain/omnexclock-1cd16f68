@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input"; import { Label } from "@/componen
 import { ArrowRight, Bot, CalendarPlus, Check, Clock, Download, Mail, Phone, Plus, X } from "lucide-react"; import { toast } from "sonner"; import { format } from "date-fns";
 import venueBanner from "@/assets/regal-venue-banner.jpg"; import OptionSelect from "./OptionSelect"; import DateField from "./DateField"; import { TimeDropdownPicker } from "@/components/TimeDropdownPicker";
 const INTERACTION_TYPES=[{value:"phone_call",label:"Phone call"},{value:"email",label:"Email"},{value:"in_person",label:"In person"},{value:"message",label:"Message"}];
+export const DISH_COURSES=["Entrees (Veg)","Entrees (Non-veg)","Veg Mains","Non-veg Mains","Sides","Dessert","Kids Menu"];
 import type { CrmInspection, CrmInteraction, CrmLead, CrmOption, CrmTask } from "./types"; import { CRM_STAGE_VALUES, prettyCrmValue } from "./types"; import { buildBookingConfirmationPdf } from "@/lib/bookingConfirmationPdf"; import RunsheetTab from "./RunsheetTab";
 
 export default function LeadDetailDialog({ lead, open, onOpenChange, options, interactions, inspections, tasks, menuItems, booking, businessName, onSaved }:{ lead:CrmLead|null; open:boolean; onOpenChange:(v:boolean)=>void; options:CrmOption[]; interactions:CrmInteraction[]; inspections:CrmInspection[]; tasks:CrmTask[]; menuItems:any[]; booking:any; businessName:string; onSaved:()=>void }) {
