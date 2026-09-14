@@ -101,6 +101,7 @@ serve(async (req) => {
       admin: "Admin",
       viewer: "Viewer",
       roster_admin: "Roster Admin",
+      sales_marketing_manager: "Sales & Marketing Manager",
     };
     const roleLabel = roleLabels[role] || role;
 
@@ -114,6 +115,7 @@ serve(async (req) => {
       admin: "/induction-guide-admin.html",
       viewer: "/induction-guide-viewer.html",
       roster_admin: "/induction-guide-roster-admin.html",
+      sales_marketing_manager: "/induction-guide-admin.html",
     };
     const guideUrl = `${publishedUrl}${inductionGuides[role] || "/induction-guide.html"}`;
     const signupUrl = `${publishedUrl}/auth?invite=${token}`;

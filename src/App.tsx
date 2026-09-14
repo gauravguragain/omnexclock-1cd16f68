@@ -52,6 +52,9 @@ const ServiceMaintenancePage = React.lazy(() => import("./pages/admin/ServiceMai
 
 const PayDetailsPage = React.lazy(() => import("./pages/admin/PayDetailsPage"));
 const InvoicesPage = React.lazy(() => import("./pages/admin/InvoicesPage"));
+const SalesMarketingPage = React.lazy(() => import("./pages/admin/SalesMarketingPage"));
+const PublicEnquiryPage = React.lazy(() => import("./pages/PublicEnquiryPage"));
+const BookingConfirmationPage = React.lazy(() => import("./pages/BookingConfirmationPage"));
 const MasterDashboardPage = React.lazy(() => import("./pages/master/MasterDashboardPage"));
 const MasterBusinessesPage = React.lazy(() => import("./pages/master/MasterBusinessesPage"));
 const MasterUsersPage = React.lazy(() => import("./pages/master/MasterUsersPage"));
@@ -93,6 +96,8 @@ const App = () => (
                   {/* Unique obfuscated kiosk URL — harder to guess */}
                   <Route path="/t/:businessCode/ck" element={<KioskPage />} />
                   <Route path="/b/:businessCode/portal" element={<PortalPage />} />
+                  <Route path="/b/:businessCode/enquire" element={<PublicEnquiryPage />} />
+                  <Route path="/booking/confirm/:token" element={<BookingConfirmationPage />} />
                   <Route path="/b/:businessCode/admin" element={<AdminLayout />}>
                     <Route index element={<DashboardPage />} />
                     <Route path="employees" element={<EmployeesPage />} />
@@ -110,6 +115,7 @@ const App = () => (
                     
                     <Route path="pay-details" element={<PayDetailsPage />} />
                     <Route path="invoices" element={<InvoicesPage />} />
+                    <Route path="sales/*" element={<SalesMarketingPage />} />
                   </Route>
 
                   {/* Master admin routes */}

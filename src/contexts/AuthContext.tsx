@@ -5,7 +5,7 @@ import type { User } from "@supabase/supabase-js";
 
 interface UserBusinessRole {
   business_id: string | null;
-  role: "admin" | "viewer" | "user" | "master" | "roster_admin" | "super_admin";
+  role: "admin" | "viewer" | "user" | "master" | "roster_admin" | "super_admin" | "sales_marketing_manager";
   departments?: string[] | null;
 }
 
@@ -23,6 +23,7 @@ interface AuthContextType {
   isViewerOf: (businessId: string) => boolean;
   /** Check if user is roster admin of a specific business */
   isRosterAdminOf: (businessId: string) => boolean;
+  isSalesManagerOf: (businessId: string) => boolean;
   /** Get roster admin departments for a specific business */
   getRosterAdminDepartments: (businessId: string) => string[];
   /** Check if user has any access (admin, super_admin, viewer, or roster_admin) to a business */
@@ -109,13 +110,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return businessRoles.some(r => r.business_id === businessId && r.role === "roster_admin");
   }, [businessRoles]);
 
+  const isSalesManagerOf = useCallback((businessId: string) => {
+    return businessRoles.some(r => r.business_id === businessId && r.role === "sales_marketing_manager");
+  }, [businessRoles]);
+
   const getRosterAdminDepartments = useCallback((businessId: string): string[] => {
     const role = businessRoles.find(r => r.business_id === businessId && r.role === "roster_admin");
     return role?.departments || [];
   }, [businessRoles]);
 
   const hasAccessTo = useCallback((businessId: string) => {
-    return businessRoles.some(r => r.business_id === businessId && (r.role === "admin" || r.role === "super_admin" || r.role === "viewer" || r.role === "roster_admin"));
+    return businessRoles.some(r => r.business_id === businessId && (r.role === "admin" || r.role === "super_admin" || r.role === "viewer" || r.role === "roster_admin" || r.role === "sales_marketing_manager"));
   }, [businessRoles]);
 
   // Global checks
@@ -151,7 +156,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   return (
     <AuthContext.Provider value={{
       user, isApproved, loading, businessRoles,
-      isAdminOf, isSuperAdminOf, isViewerOf, isRosterAdminOf, getRosterAdminDepartments,
+      isAdminOf, isSuperAdminOf, isViewerOf, isRosterAdminOf, isSalesManagerOf, getRosterAdminDepartments,
       hasAccessTo, isMaster,
       isAdmin, isViewer,
       signIn, signUp, signOut,

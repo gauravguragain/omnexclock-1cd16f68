@@ -4,7 +4,7 @@
 
 import { createClient, SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-export type BusinessRole = "admin" | "super_admin" | "roster_admin" | "viewer" | "master";
+export type BusinessRole = "admin" | "super_admin" | "roster_admin" | "viewer" | "master" | "sales_marketing_manager";
 
 export interface AuthedCaller {
   userId: string;
@@ -43,7 +43,7 @@ export async function getCaller(
 export function hasBusinessRole(
   caller: AuthedCaller,
   businessId: string | null | undefined,
-  allowed: BusinessRole[] = ["admin", "super_admin", "roster_admin", "viewer"],
+  allowed: BusinessRole[] = ["admin", "super_admin", "roster_admin", "viewer", "sales_marketing_manager"],
 ): boolean {
   if (caller.isMaster) return true;
   if (!businessId) return false;

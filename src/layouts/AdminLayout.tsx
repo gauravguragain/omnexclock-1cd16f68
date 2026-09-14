@@ -4,7 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Navigate, Outlet, Link, useLocation, useParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import {
-  Users, Clock, CalendarDays, DollarSign, BarChart3, Monitor, LogOut, Menu, X, Settings, FileText, UserCog, CalendarRange, MessageSquare, CalendarOff, Building2, Package, Wrench, MoreHorizontal, CreditCard, Receipt
+  Users, Clock, CalendarDays, DollarSign, BarChart3, Monitor, LogOut, Menu, X, Settings, FileText, UserCog, CalendarRange, MessageSquare, CalendarOff, Building2, Package, Wrench, MoreHorizontal, CreditCard, Receipt, BriefcaseBusiness
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useSessionGuard } from "@/hooks/useSessionGuard";
@@ -20,7 +20,7 @@ import {
 } from "@/components/ui/sheet";
 
 export default function AdminLayout() {
-  const { user, isAdminOf, isSuperAdminOf, isViewerOf, isRosterAdminOf, getRosterAdminDepartments, hasAccessTo, isApproved, loading, signOut } = useAuth();
+  const { user, isAdminOf, isSuperAdminOf, isViewerOf, isRosterAdminOf, isSalesManagerOf, getRosterAdminDepartments, hasAccessTo, isApproved, loading, signOut } = useAuth();
   const { business, businesses, setBusiness } = useBusiness();
   const location = useLocation();
   const { businessCode } = useParams();
@@ -64,6 +64,7 @@ export default function AdminLayout() {
   const isSuperAdmin = isSuperAdminOf(currentBusinessId);
   const isViewer = isViewerOf(currentBusinessId);
   const isRosterAdmin = isRosterAdminOf(currentBusinessId);
+  const isSalesManager = isSalesManagerOf(currentBusinessId);
   const hasAccess = hasAccessTo(currentBusinessId);
   const rosterDepts = getRosterAdminDepartments(currentBusinessId);
 
@@ -82,6 +83,7 @@ export default function AdminLayout() {
     { path: `${basePath}/forum`, label: "Forum", icon: MessageSquare, tourId: "forum", access: "admin" },
     { path: `${basePath}/inventory`, label: "Inventory", icon: Package, tourId: "inventory", access: "inventory" },
     { path: `${basePath}/service`, label: "Service", icon: Wrench, tourId: "service", access: "admin" },
+    { path: `${basePath}/sales`, label: "Sales & Marketing", icon: BriefcaseBusiness, tourId: "sales", access: "sales" },
     { path: `${basePath}/users`, label: "User Management", icon: UserCog, tourId: "users", access: "super_admin_only" },
     
     { path: `${basePath}/my-business`, label: "My Business", icon: Building2, tourId: "my-business", access: "admin" },
@@ -98,6 +100,7 @@ export default function AdminLayout() {
       return isSuperAdmin;
     }
     if (isAdmin || isSuperAdmin) return true;
+    if (isSalesManager) return item.access === "sales";
     if (isRosterAdmin && !isAdmin && !isSuperAdmin && !isViewer) {
       if (item.access === "roster") return true;
       if (item.access === "inventory" && isRosterAdminFOH) return true;
@@ -193,6 +196,8 @@ export default function AdminLayout() {
     ? { label: "View Only", variant: "outline" as const, className: "text-primary border-primary/30 text-[10px] font-medium" }
     : isAdmin
     ? { label: "Admin", variant: "outline" as const, className: "text-primary border-primary/30 text-[10px] font-medium" }
+    : isSalesManager
+    ? { label: "Sales & Marketing", variant: "outline" as const, className: "text-primary border-primary/30 text-[10px] font-medium" }
     : null;
 
   const isMoreActive = bottomNavOverflow.some(item => location.pathname === item.path);
