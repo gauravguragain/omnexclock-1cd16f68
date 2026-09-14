@@ -43,7 +43,7 @@ const MUTED: [number, number, number] = [105, 105, 105];
 export function buildRunsheetPdf(data: RunsheetPdfData) {
   const doc = new jsPDF();
   const left = 14;
-  const right = 196;
+  const right = 194;
   const colGap = 6;
   const colLeftX = left + 4;
   const colRightX = 112;
@@ -107,8 +107,9 @@ export function buildRunsheetPdf(data: RunsheetPdfData) {
   const lineHeight = 5;
 
   const writeLines = (text: string, x: number, width: number, startY: number, bold = false) => {
-    doc.setFont("helvetica", bold ? "bold" : "normal"); doc.setFontSize(9); doc.setTextColor(...INK);
+    doc.setFont("helvetica", bold ? "bold" : "normal"); doc.setFontSize(9);
     const lines = doc.splitTextToSize(text, width);
+    if (startY + lines.length * lineHeight > 272) { doc.addPage(); startY = 24; }
     doc.text(lines, x, startY);
     return startY + lines.length * lineHeight;
   };
@@ -120,16 +121,16 @@ export function buildRunsheetPdf(data: RunsheetPdfData) {
   leftY += 1;
 
   data.menuByCategory.forEach((group) => {
-    leftY = writeLines(`\u25E6  ${group.category}`, colLeftX + 5, colLeftWidth - 5, leftY + 1.5, true);
+    leftY = writeLines(`o  ${group.category}`, colLeftX + 5, colLeftWidth - 5, leftY + 1.5, true);
     group.items.forEach((item) => {
-      leftY = writeLines(`\u25AA  ${item}`, colLeftX + 12, colLeftWidth - 12, leftY);
+      leftY = writeLines(`-  ${item}`, colLeftX + 12, colLeftWidth - 12, leftY);
     });
   });
 
   if (data.schedule.length) {
-    leftY = writeLines("\u25E6  Service timings", colLeftX + 5, colLeftWidth - 5, leftY + 3, true);
+    leftY = writeLines("o  Service timings", colLeftX + 5, colLeftWidth - 5, leftY + 3, true);
     data.schedule.forEach((line) => {
-      leftY = writeLines(`\u25AA  ${line.time} — ${line.label}${line.detail ? ` (${line.detail})` : ""}`, colLeftX + 12, colLeftWidth - 12, leftY);
+      leftY = writeLines(`-  ${line.time} — ${line.label}${line.detail ? ` (${line.detail})` : ""}`, colLeftX + 12, colLeftWidth - 12, leftY);
     });
   }
 
