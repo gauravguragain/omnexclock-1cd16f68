@@ -1,1 +1,4 @@
 project_id = "fhotpjcgoyuqyhttawef"
+
+[functions.crm-calendar-feed]
+verify_jwt = false
