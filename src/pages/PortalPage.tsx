@@ -915,7 +915,7 @@ export default function PortalPage() {
           >
             <RefreshCw className="h-3.5 w-3.5" /> Change Business
           </Button>
-          <p className="text-xs text-muted-foreground">© 2024 Omnex Ventures Pty. Ltd.</p>
+          <p className="text-xs text-muted-foreground">© 2024 Pro Regal Pavilion Pty Ltd</p>
         </div>
       </div>
     );
@@ -931,7 +931,7 @@ export default function PortalPage() {
             {businessLogo ? (
               <img src={businessLogo} alt={businessName} className="h-8 w-8 rounded-lg object-cover" />
             ) : (
-              <img src="/omnex-logo.jpg" alt="Logo" className="h-8 w-8 rounded-full object-cover" />
+              <img src="/regal-logo.png" alt="Logo" className="h-8 w-8 rounded-full object-cover" />
             )}
             <div>
               <button
@@ -1624,7 +1624,7 @@ export default function PortalPage() {
               Install Employee Portal
             </DialogTitle>
             <p className="text-sm text-muted-foreground">
-              Add OmnexClock to your home screen for quick access — works like a native app.
+              Add Pro Regal Pavilion to your home screen for quick access — works like a native app.
             </p>
           </DialogHeader>
 
@@ -1709,7 +1709,7 @@ export default function PortalPage() {
                   <ol className="text-xs text-muted-foreground space-y-2 list-decimal pl-4">
                     <li>Open <span className="font-mono text-primary">Google Chrome</span> or <span className="font-mono text-primary">Microsoft Edge</span></li>
                     <li>Navigate to <span className="font-mono text-primary break-all">https://omnexclock.lovable.app/portal</span></li>
-                    <li>Click the <span className="font-semibold text-foreground">install icon</span> (⊕) in the address bar, or click the three-dot menu → <span className="font-semibold text-foreground">"Install OmnexClock"</span></li>
+                    <li>Click the <span className="font-semibold text-foreground">install icon</span> (⊕) in the address bar, or click the three-dot menu → <span className="font-semibold text-foreground">"Install Pro Regal Pavilion"</span></li>
                     <li>Click <span className="font-semibold text-foreground">"Install"</span> in the prompt</li>
                     <li>The app will open in its own window and appear in your Start menu / Dock</li>
                   </ol>
@@ -1725,7 +1725,7 @@ export default function PortalPage() {
       </Dialog>
 
       <footer className="text-center py-6">
-        <p className="text-xs text-muted-foreground">© {new Date().getFullYear()} Omnex Ventures Pty. Ltd. All rights reserved.</p>
+        <p className="text-xs text-muted-foreground">© {new Date().getFullYear()} Pro Regal Pavilion Pty Ltd All rights reserved.</p>
       </footer>
 
       {/* First-time employee walkthrough */}

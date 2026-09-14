@@ -40,18 +40,18 @@ interface BusinessContextType {
 }
 
 const defaultTheme: BusinessTheme = {
-  primary: "43 72% 52%",
+  primary: "30 33% 52%",
   background: "0 0% 0%",
   foreground: "0 0% 96%",
   card: "0 0% 4%",
-  accent: "43 72% 52%",
+  accent: "30 33% 52%",
   muted: "0 0% 10%",
   border: "0 0% 16%",
 };
 
 const BusinessContext = createContext<BusinessContextType | undefined>(undefined);
 
-/** Parse an HSL string like "43 72% 52%" into {h, s, l} */
+/** Parse an HSL string like "30 33% 52%" into {h, s, l} */
 function parseHSL(hsl: string): { h: number; s: number; l: number } {
   const parts = hsl.replace(/%/g, "").split(/\s+/).map(Number);
   return { h: parts[0] || 0, s: parts[1] || 0, l: parts[2] || 0 };

@@ -13,7 +13,7 @@
     --popover: 0 0% 100%;
     --popover-foreground: 0 0% 9%;
 
-    --primary: 43 72% 52%;
+    --primary: 30 33% 52%;
     --primary-foreground: 0 0% 100%;
 
     --secondary: 0 0% 95%;
@@ -22,7 +22,7 @@
     --muted: 0 0% 94%;
     --muted-foreground: 0 0% 40%;
 
-    --accent: 43 72% 52%;
+    --accent: 30 33% 52%;
     --accent-foreground: 0 0% 9%;
 
     --destructive: 0 84% 60%;
@@ -30,22 +30,22 @@
 
     --border: 0 0% 88%;
     --input: 0 0% 88%;
-    --ring: 43 72% 52%;
+    --ring: 30 33% 52%;
 
     --radius: 0.625rem;
 
     --sidebar-background: 0 0% 97%;
     --sidebar-foreground: 0 0% 9%;
-    --sidebar-primary: 43 72% 52%;
+    --sidebar-primary: 30 33% 52%;
     --sidebar-primary-foreground: 0 0% 100%;
     --sidebar-accent: 0 0% 93%;
     --sidebar-accent-foreground: 0 0% 9%;
     --sidebar-border: 0 0% 88%;
-    --sidebar-ring: 43 72% 52%;
+    --sidebar-ring: 30 33% 52%;
 
-    --gold: 43 72% 52%;
-    --gold-light: 46 80% 60%;
-    --gold-dark: 40 65% 42%;
+    --gold: 30 33% 52%;
+    --gold-light: 43 100% 45%;
+    --gold-dark: 29 32% 43%;
     --surface: 0 0% 97%;
     --surface-elevated: 0 0% 94%;
 
@@ -65,7 +65,7 @@
     --popover: 0 0% 4%;
     --popover-foreground: 0 0% 96%;
 
-    --primary: 43 72% 52%;
+    --primary: 30 33% 52%;
     --primary-foreground: 0 0% 0%;
 
     --secondary: 0 0% 10%;
@@ -74,7 +74,7 @@
     --muted: 0 0% 10%;
     --muted-foreground: 0 0% 64%;
 
-    --accent: 43 72% 52%;
+    --accent: 30 33% 52%;
     --accent-foreground: 0 0% 0%;
 
     --destructive: 0 84% 60%;
@@ -82,16 +82,16 @@
 
     --border: 0 0% 16%;
     --input: 0 0% 16%;
-    --ring: 43 72% 52%;
+    --ring: 30 33% 52%;
 
     --sidebar-background: 0 0% 3%;
     --sidebar-foreground: 0 0% 96%;
-    --sidebar-primary: 43 72% 52%;
+    --sidebar-primary: 30 33% 52%;
     --sidebar-primary-foreground: 0 0% 0%;
     --sidebar-accent: 0 0% 8%;
     --sidebar-accent-foreground: 0 0% 96%;
     --sidebar-border: 0 0% 12%;
-    --sidebar-ring: 43 72% 52%;
+    --sidebar-ring: 30 33% 52%;
 
     --surface: 0 0% 5%;
     --surface-elevated: 0 0% 8%;
@@ -113,7 +113,7 @@
 
   body {
     @apply bg-background text-foreground antialiased;
-    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', 'Inter', system-ui, sans-serif;
+    font-family: 'Barlow', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     /* Prevent pull-to-refresh and overscroll */
@@ -175,22 +175,22 @@
 
 @layer utilities {
   .gold-gradient {
-    background: linear-gradient(135deg, hsl(43 72% 52%), hsl(46 80% 60%));
+    background: linear-gradient(135deg, hsl(30 33% 52%), hsl(43 100% 45%));
   }
 
   .gold-text {
-    background: linear-gradient(135deg, hsl(43 72% 52%), hsl(46 80% 60%));
+    background: linear-gradient(135deg, hsl(30 33% 52%), hsl(43 100% 45%));
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
   }
 
   .gold-border {
-    border-color: hsl(43 72% 52% / 0.3);
+    border-color: hsl(30 33% 52% / 0.3);
   }
 
   .gold-glow {
-    box-shadow: 0 0 20px hsl(43 72% 52% / 0.12), 0 0 40px hsl(43 72% 52% / 0.04);
+    box-shadow: 0 0 20px hsl(30 33% 52% / 0.12), 0 0 40px hsl(30 33% 52% / 0.04);
   }
 
   /* Creative AI ambient glow */
@@ -202,7 +202,7 @@
     position: absolute;
     inset: -1px;
     border-radius: inherit;
-    background: linear-gradient(135deg, hsl(43 72% 52% / 0.12), hsl(280 67% 55% / 0.06), hsl(217 91% 60% / 0.08));
+    background: linear-gradient(135deg, hsl(30 33% 52% / 0.12), hsl(280 67% 55% / 0.06), hsl(217 91% 60% / 0.08));
     z-index: -1;
     filter: blur(16px);
     opacity: 0;
@@ -217,7 +217,7 @@
     background: linear-gradient(
       110deg,
       transparent 25%,
-      hsl(43 72% 52% / 0.05) 37%,
+      hsl(30 33% 52% / 0.05) 37%,
       transparent 63%
     );
     background-size: 200% 100%;

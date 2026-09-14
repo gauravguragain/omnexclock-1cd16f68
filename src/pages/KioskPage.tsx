@@ -142,7 +142,7 @@ export default function KioskPage() {
 
     return () => {
       observer.disconnect();
-      document.title = "OmnexClock";
+      document.title = "Pro Regal Pavilion";
     };
   }, [urlBusinessCode]);
 
@@ -689,7 +689,7 @@ export default function KioskPage() {
           Admin Login
         </Button>
         <p className="text-[11px] text-muted-foreground/60">
-          © {new Date().getFullYear()} Omnex Ventures Pty. Ltd. All rights reserved.
+          © {new Date().getFullYear()} Pro Regal Pavilion Pty Ltd All rights reserved.
         </p>
       </div>
     </div>

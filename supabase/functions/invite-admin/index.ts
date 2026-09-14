@@ -123,14 +123,14 @@ serve(async (req) => {
     const html = `
       <div style="font-family:'Segoe UI',Arial,sans-serif;max-width:600px;margin:0 auto;color:#1a1a1a;">
         <div style="text-align:center;padding:30px 0 20px;">
-          <h1 style="color:#c9a227;font-size:24px;margin:0;">OmnexClock</h1>
+          <h1 style="color:#c9a227;font-size:24px;margin:0;">Pro Regal Pavilion</h1>
           <p style="color:#666;font-size:13px;margin:4px 0 0;">Time & Workforce Management</p>
         </div>
         
         <div style="background:#f8f9fa;border-radius:12px;padding:30px;margin:16px 0;">
           <h2 style="margin:0 0 8px;font-size:20px;color:#1a1a1a;">You've Been Invited!</h2>
           <p style="color:#555;line-height:1.6;">
-            You have been invited to join <strong>${business.name}</strong> as a <strong>${roleLabel}</strong> on OmnexClock.
+            You have been invited to join <strong>${business.name}</strong> as a <strong>${roleLabel}</strong> on Pro Regal Pavilion.
           </p>
           ${departments && departments.length > 0 ? `
             <p style="color:#555;font-size:13px;">Assigned departments: <strong>${departments.join(", ")}</strong></p>
@@ -177,7 +177,7 @@ serve(async (req) => {
         Authorization: `Bearer ${RESEND_API_KEY}`,
       },
       body: JSON.stringify({
-        from: "OmnexClock <noreply@omnexventures.com>",
+        from: "Pro Regal Pavilion <noreply@omnexventures.com>",
         to: [email],
         subject: `You're invited to ${business.name} as ${roleLabel}`,
         html,

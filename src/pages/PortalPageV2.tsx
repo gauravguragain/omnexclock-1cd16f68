@@ -628,7 +628,7 @@ export default function PortalPageV2() {
           <Button variant="outline" size="sm" className="gap-1.5 touch-active" onClick={() => { localStorage.removeItem("omnexclock_portal_business_code"); window.location.href = "/portal"; }}>
             <RefreshCw className="h-3.5 w-3.5" /> Change Business
           </Button>
-          <p className="text-xs text-muted-foreground">© 2024 Omnex Ventures Pty. Ltd.</p>
+          <p className="text-xs text-muted-foreground">© 2024 Pro Regal Pavilion Pty Ltd</p>
         </div>
       </div>
     );
@@ -644,7 +644,7 @@ export default function PortalPageV2() {
             {businessLogo ? (
               <img src={businessLogo} alt={businessName} className="h-8 w-8 rounded-lg object-cover" />
             ) : (
-              <img src="/omnex-logo.jpg" alt="Logo" className="h-8 w-8 rounded-full object-cover" />
+              <img src="/regal-logo.png" alt="Logo" className="h-8 w-8 rounded-full object-cover" />
             )}
             <div>
               <button className="flex items-center gap-2 hover:opacity-80 transition-opacity" onClick={() => setAccessInfoOpen(true)}>
@@ -1253,7 +1253,7 @@ export default function PortalPageV2() {
             <DialogTitle className="flex items-center gap-2">
               <Download className="h-5 w-5 text-primary" /> Install Employee Portal
             </DialogTitle>
-            <p className="text-sm text-muted-foreground">Add OmnexClock to your home screen for quick access — works like a native app.</p>
+            <p className="text-sm text-muted-foreground">Add Pro Regal Pavilion to your home screen for quick access — works like a native app.</p>
           </DialogHeader>
           <div className="space-y-4">
             <div className="rounded-lg bg-secondary/50 border border-border/60 p-3 space-y-1.5">
@@ -1329,7 +1329,7 @@ export default function PortalPageV2() {
       </Dialog>
 
       <footer className="text-center py-6">
-        <p className="text-xs text-muted-foreground">© {new Date().getFullYear()} Omnex Ventures Pty. Ltd. All rights reserved.</p>
+        <p className="text-xs text-muted-foreground">© {new Date().getFullYear()} Pro Regal Pavilion Pty Ltd All rights reserved.</p>
       </footer>
 
       <WalkthroughTour steps={portalTourSteps} storageKey={`portal-tour-seen-${urlBusinessCode}`} />

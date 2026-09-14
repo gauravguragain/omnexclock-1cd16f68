@@ -43,12 +43,12 @@ serve(async (req) => {
 
     let sentCount = 0;
     for (const task of tasks || []) {
-      const businessName = (task as any).businesses?.name || "OmnexClock";
+      const businessName = (task as any).businesses?.name || "Pro Regal Pavilion";
 
       const html = `
         <div style="font-family:'Segoe UI',Arial,sans-serif;max-width:600px;margin:0 auto;color:#1a1a1a;background:#ffffff;">
           <div style="text-align:center;padding:30px 20px 16px;background:linear-gradient(135deg,#1a1a1a 0%,#2d2d2d 100%);border-radius:12px 12px 0 0;">
-            <h1 style="color:#c9a227;font-size:24px;margin:0;">OmnexClock</h1>
+            <h1 style="color:#c9a227;font-size:24px;margin:0;">Pro Regal Pavilion</h1>
             <p style="color:#a0a0a0;font-size:11px;margin:6px 0 0;text-transform:uppercase;letter-spacing:2px;">Service Reminder</p>
           </div>
           <div style="padding:24px 30px;">

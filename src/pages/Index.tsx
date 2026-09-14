@@ -41,13 +41,13 @@ const Index = () => {
         <div className="text-center space-y-3 mb-10 relative animate-fade-in">
           <div className="relative inline-block">
             <img
-              src="/omnex-logo.jpg"
-              alt="OmnexClock"
+              src="/regal-logo.png"
+              alt="Pro Regal Pavilion"
               className="h-24 w-24 lg:h-20 lg:w-20 mx-auto rounded-2xl object-cover shadow-xl shadow-primary/10 pulse-ring"
             />
           </div>
           <div className="space-y-1">
-            <h1 className="text-3xl font-bold text-foreground tracking-tight">OmnexClock</h1>
+            <h1 className="text-3xl font-bold text-foreground tracking-tight">Pro Regal Pavilion</h1>
             <p className="text-muted-foreground text-sm font-medium tracking-wide">Time & Workforce Management</p>
           </div>
         </div>
@@ -100,7 +100,7 @@ const Index = () => {
 
       {/* Footer */}
       <p className="py-4 text-center text-[11px] text-muted-foreground/40 tracking-wide pb-[calc(env(safe-area-inset-bottom,0px)+1rem)]">
-        © {new Date().getFullYear()} Omnex Ventures Pty. Ltd. All rights reserved.
+        © {new Date().getFullYear()} Pro Regal Pavilion Pty Ltd All rights reserved.
       </p>
     </div>
   );
