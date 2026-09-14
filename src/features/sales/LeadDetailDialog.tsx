@@ -5,10 +5,13 @@ import { Input } from "@/components/ui/input"; import { Label } from "@/componen
 import { ArrowRight, Bot, CalendarPlus, Check, Clock, Download, Mail, Phone, Plus, X } from "lucide-react"; import { toast } from "sonner"; import { format } from "date-fns";
 import venueBanner from "@/assets/regal-venue-banner.jpg"; import OptionSelect from "./OptionSelect"; import DateField from "./DateField"; import { TimeDropdownPicker } from "@/components/TimeDropdownPicker";
 const INTERACTION_TYPES=[{value:"phone_call",label:"Phone call"},{value:"email",label:"Email"},{value:"in_person",label:"In person"},{value:"message",label:"Message"}];
+export const DISH_COURSES=["Entrees (Veg)","Entrees (Non-veg)","Veg Mains","Non-veg Mains","Sides","Dessert","Kids Menu"];
 import type { CrmInspection, CrmInteraction, CrmLead, CrmOption, CrmTask } from "./types"; import { CRM_STAGE_VALUES, prettyCrmValue } from "./types"; import { buildBookingConfirmationPdf } from "@/lib/bookingConfirmationPdf"; import RunsheetTab from "./RunsheetTab";
 
 export default function LeadDetailDialog({ lead, open, onOpenChange, options, interactions, inspections, tasks, menuItems, booking, businessName, onSaved }:{ lead:CrmLead|null; open:boolean; onOpenChange:(v:boolean)=>void; options:CrmOption[]; interactions:CrmInteraction[]; inspections:CrmInspection[]; tasks:CrmTask[]; menuItems:any[]; booking:any; businessName:string; onSaved:()=>void }) {
   const { user } = useAuth(); const [busy,setBusy]=useState(false); const [ai,setAi]=useState<any>(null); const [selectedMenu,setSelectedMenu]=useState<string[]>([]); const [customItems,setCustomItems]=useState<{key:string;name:string;pricePerHead:number;flatPrice:number}[]>([]); const [guestOverride,setGuestOverride]=useState<number|null>(null); const [draft,setDraft]=useState({name:"",pricePerHead:"",flatPrice:""});
+  const [dishes,setDishes]=useState<{key:string;course:string;name:string}[]>([]); const [dishDraft,setDishDraft]=useState<Record<string,string>>({});
+  const [corkage,setCorkage]=useState({enabled:false,perHead:"",flat:""}); const [extras,setExtras]=useState({dietary:"",allergies:"",beverage:""});
   const [insDate,setInsDate]=useState(""); const [insStart,setInsStart]=useState("10:00"); const [insEnd,setInsEnd]=useState("11:00"); const [followDate,setFollowDate]=useState(""); const [followTime,setFollowTime]=useState("09:00"); const [bookStart,setBookStart]=useState(String(booking?.start_time||"18:00").slice(0,5)); const [bookEnd,setBookEnd]=useState("23:00"); const [durationHours,setDurationHours]=useState<number|string>(booking?.duration_minutes?Number(booking.duration_minutes)/60:5);
   const timeToMin=(t:string)=>{const[h,m]=t.split(":").map(Number);return h*60+m;};
   const minToTime=(m:number)=>{const hh=Math.floor(m/60)%24;const mm=m%60;return `${String(hh).padStart(2,"0")}:${String(mm).padStart(2,"0")}`;};
@@ -19,13 +22,26 @@ export default function LeadDetailDialog({ lead, open, onOpenChange, options, in
   const guests=guestOverride??Number(lead?.estimated_guest_count||1);
   const chosenItems=useMemo(()=>menuItems.filter(i=>selectedMenu.includes(i.id)),[menuItems,selectedMenu]);
   const lineTotal=(pph:number,flat:number)=>Number(flat||0)+Number(pph||0)*guests;
-  const total=useMemo(()=>chosenItems.reduce((sum,i)=>sum+lineTotal(Number(i.price_per_head||0),Number(i.flat_price||0)),0)+customItems.reduce((sum,i)=>sum+lineTotal(i.pricePerHead,i.flatPrice),0),[chosenItems,customItems,guests]);
+  const corkageTotal=corkage.enabled?Number(corkage.flat||0)+Number(corkage.perHead||0)*guests:0;
+  const total=useMemo(()=>chosenItems.reduce((sum,i)=>sum+lineTotal(Number(i.price_per_head||0),Number(i.flat_price||0)),0)+customItems.reduce((sum,i)=>sum+lineTotal(i.pricePerHead,i.flatPrice),0)+corkageTotal,[chosenItems,customItems,guests,corkageTotal]);
   const groupedMenu=useMemo(()=>{const map=new Map<string,any[]>();menuItems.forEach(i=>{const key=i.category||"Other";map.set(key,[...(map.get(key)||[]),i]);});return Array.from(map.entries());},[menuItems]);
+  useEffect(()=>{if(!lead?.id||!open)return;let cancelled=false;(async()=>{
+    const{data:sel}=await supabase.from("crm_menu_selections").select("*").eq("lead_id",lead.id).maybeSingle();
+    if(cancelled||!sel)return;const s:any=sel;
+    if(s.guest_count)setGuestOverride(Number(s.guest_count));
+    setCorkage({enabled:!!s.corkage_enabled,perHead:s.corkage_per_head!=null?String(s.corkage_per_head):"",flat:s.corkage_flat!=null?String(s.corkage_flat):""});
+    setExtras({dietary:s.dietary_requirements||"",allergies:s.allergies||"",beverage:s.beverage_package||""});
+    const{data:items}=await supabase.from("crm_menu_selection_items").select("*").eq("selection_id",s.id);
+    if(cancelled)return;const rows:any[]=items||[];
+    setSelectedMenu(rows.filter(i=>i.menu_item_id).map(i=>i.menu_item_id));
+    setCustomItems(rows.filter(i=>!i.menu_item_id&&i.course==="package").map((i,n)=>({key:`l${n}`,name:i.item_name,pricePerHead:Number(i.price_per_head||0),flatPrice:Number(i.flat_price||0)})));
+    setDishes(rows.filter(i=>!i.menu_item_id&&i.course&&i.course!=="package").map((i,n)=>({key:`d${n}`,course:i.course,name:i.item_name})));
+  })();return()=>{cancelled=true;};},[lead?.id,open]);
   if(!lead)return null;
   const addInteraction=async(e:FormEvent<HTMLFormElement>)=>{e.preventDefault();setBusy(true);const f=new FormData(e.currentTarget);const notes=String(f.get("notes"));const {error}=await supabase.from("crm_interactions").insert({business_id:lead.business_id,lead_id:lead.id,interaction_type:String(f.get("type")),notes,duration_minutes:f.get("duration")?Number(f.get("duration")):null,follow_up_required:f.get("follow_up")==="on",follow_up_at:followDate?`${followDate}T${followTime}`:null,shareable_feedback:f.get("shareable")==="on",logged_by:user?.id} as any);setBusy(false);if(error)toast.error(error.message);else{toast.success("Interaction logged");(e.target as HTMLFormElement).reset();setFollowDate("");onSaved();}};
   const analyse=async(notes:string)=>{if(notes.trim().length<10){toast.error("Add more notes first");return;}setBusy(true);const{data,error}=await supabase.functions.invoke("crm-ai-notes",{body:{businessId:lead.business_id,notes}});setBusy(false);if(error)toast.error("Could not analyse notes");else setAi(data);};
   const addInspection=async(e:FormEvent<HTMLFormElement>)=>{e.preventDefault();const f=new FormData(e.currentTarget);if(!insDate){toast.error("Pick an inspection date");return;}if(insEnd<=insStart){toast.error("End time must be after the start time");return;}const start=`${insDate}T${insStart}`;const end=`${insDate}T${insEnd}`;const venue=String(f.get("venue_space"));const conflict=inspections.find(i=>i.venue_space===venue&&i.status!=="cancelled"&&i.starts_at&&i.ends_at&&start<i.ends_at&&end>i.starts_at);if(conflict&&!confirm("This overlaps another inspection in the same venue. Save anyway?"))return;const{error}=await supabase.from("crm_inspections").insert({business_id:lead.business_id,lead_id:lead.id,starts_at:start,ends_at:end,status:"confirmed",venue_space:venue,pre_notes:f.get("notes")?String(f.get("notes")):null,assigned_to:user?.id,created_by:user?.id} as any);if(error)toast.error(error.message);else{await supabase.from("crm_leads").update({status:"inspection_booked"}).eq("id",lead.id);toast.success("Inspection booked");onSaved();}};
-  const saveMenu=async(e:FormEvent<HTMLFormElement>)=>{e.preventDefault();const f=new FormData(e.currentTarget);const{data:selection,error}=await supabase.from("crm_menu_selections").upsert({business_id:lead.business_id,lead_id:lead.id,guest_count:guests,dietary_requirements:f.get("dietary")?String(f.get("dietary")):null,allergies:f.get("allergies")?String(f.get("allergies")):null,beverage_package:f.get("beverage")?String(f.get("beverage")):null,total_estimate:total,updated_by:user?.id} as any,{onConflict:"lead_id"}).select("id").single();if(error||!selection){toast.error(error?.message||"Could not save menu");return;}await supabase.from("crm_menu_selection_items").delete().eq("selection_id",selection.id);const rows=[...chosenItems.map(i=>({business_id:lead.business_id,selection_id:selection.id,menu_item_id:i.id,item_name:i.name,price_per_head:i.price_per_head,flat_price:i.flat_price})),...customItems.map(i=>({business_id:lead.business_id,selection_id:selection.id,menu_item_id:null,item_name:i.name,price_per_head:i.pricePerHead||null,flat_price:i.flatPrice||null}))];if(rows.length)await supabase.from("crm_menu_selection_items").insert(rows as any);await supabase.from("crm_leads").update({status:"menu_selected",estimated_value:total}).eq("id",lead.id);toast.success("Menu selection saved");onSaved();};
+  const saveMenu=async(e:FormEvent<HTMLFormElement>)=>{e.preventDefault();const f=new FormData(e.currentTarget);const{data:selection,error}=await supabase.from("crm_menu_selections").upsert({business_id:lead.business_id,lead_id:lead.id,guest_count:guests,dietary_requirements:extras.dietary||null,allergies:extras.allergies||null,beverage_package:f.get("beverage")?String(f.get("beverage")):null,package_name:customItems[0]?.name||chosenItems[0]?.name||null,package_price_per_head:customItems[0]?.pricePerHead||chosenItems[0]?.price_per_head||null,corkage_enabled:corkage.enabled,corkage_per_head:corkage.enabled&&corkage.perHead?Number(corkage.perHead):null,corkage_flat:corkage.enabled&&corkage.flat?Number(corkage.flat):null,total_estimate:total,updated_by:user?.id} as any,{onConflict:"lead_id"}).select("id").single();if(error||!selection){toast.error(error?.message||"Could not save menu");return;}await supabase.from("crm_menu_selection_items").delete().eq("selection_id",selection.id);const rows=[...chosenItems.map(i=>({business_id:lead.business_id,selection_id:selection.id,menu_item_id:i.id,item_name:i.name,price_per_head:i.price_per_head,flat_price:i.flat_price,course:"package"})),...customItems.map(i=>({business_id:lead.business_id,selection_id:selection.id,menu_item_id:null,item_name:i.name,price_per_head:i.pricePerHead||null,flat_price:i.flatPrice||null,course:"package"})),...dishes.map(d=>({business_id:lead.business_id,selection_id:selection.id,menu_item_id:null,item_name:d.name,course:d.course}))];if(rows.length)await supabase.from("crm_menu_selection_items").insert(rows as any);await supabase.from("crm_leads").update({status:"menu_selected",estimated_value:total}).eq("id",lead.id);toast.success("Menu selection saved");onSaved();};
   const createBooking=async(e:FormEvent<HTMLFormElement>)=>{e.preventDefault();const f=new FormData(e.currentTarget);const hours=Number(f.get("duration"));const durationMinutes=Math.round(hours*60);const{error}=await supabase.from("crm_bookings").upsert({business_id:lead.business_id,lead_id:lead.id,event_date:String(f.get("event_date")),start_time:String(f.get("start_time")),duration_minutes:durationMinutes,guest_count:Number(f.get("guests")),venue_space:String(f.get("venue")),total_amount:Number(f.get("total")),deposit_amount:Number(f.get("deposit")),deposit_due_date:f.get("deposit_due")?String(f.get("deposit_due")):null,balance_due_date:f.get("balance_due")?String(f.get("balance_due")):null,created_by:user?.id,updated_by:user?.id} as any,{onConflict:"lead_id"});if(error)toast.error(error.message);else{toast.success("Booking prepared");onSaved();}};
   const downloadPdf=()=>{if(!booking)return;buildBookingConfirmationPdf({businessName,clientName:lead.full_name,eventType:prettyCrmValue(lead.event_type),eventDate:booking.event_date,eventTime:booking.start_time,durationMinutes:booking.duration_minutes,venueSpace:booking.venue_space,guestCount:booking.guest_count,menuSummary:[...chosenItems.map(i=>i.name),...customItems.map(i=>i.name)],totalAmount:Number(booking.total_amount),depositAmount:Number(booking.deposit_amount),depositDueDate:booking.deposit_due_date,balanceDueDate:booking.balance_due_date}).save(`${lead.full_name.replace(/\s+/g,"-")}-booking.pdf`);};
   const setStage=async(status:string)=>{const{error}=await supabase.from("crm_leads").update({status,last_contact_at:new Date().toISOString()}).eq("id",lead.id);if(error)toast.error(error.message);else{toast.success(`Moved to ${prettyCrmValue(status)}`);onSaved();}};
@@ -68,16 +84,34 @@ export default function LeadDetailDialog({ lead, open, onOpenChange, options, in
           <p className="mt-3 text-sm text-primary">{item.price_per_head?`$${Number(item.price_per_head).toFixed(2)} per guest`:`$${Number(item.flat_price||0).toFixed(2)} flat`}</p>
           <p className="text-xs text-muted-foreground">Line total ${lineTotal(Number(item.price_per_head||0),Number(item.flat_price||0)).toFixed(2)}</p>
         </button>})}</div>
-      </section>):<p className="text-sm text-muted-foreground">No menu packages yet. Add your own item on the right.</p>}
+      </section>):<p className="text-sm text-muted-foreground">No menu packages in the catalogue yet. Add a package selection below.</p>}
 
       <section className="rounded-lg border border-dashed border-border p-4">
-        <h3 className="font-serif text-lg">Add a custom item</h3>
-        <p className="text-xs text-muted-foreground">For bespoke dishes, stalls or extras that are not in the catalogue.</p>
+        <h3 className="font-serif text-lg">Package selection</h3>
+        <p className="text-xs text-muted-foreground">Name the package the client has chosen and the amount per guest — the total is worked out for you.</p>
         <div className="mt-3 grid gap-2 sm:grid-cols-[2fr_1fr_1fr_auto]">
-          <Input value={draft.name} onChange={e=>setDraft({...draft,name:e.target.value})} placeholder="Item name"/>
-          <Input value={draft.pricePerHead} onChange={e=>setDraft({...draft,pricePerHead:e.target.value})} type="number" min="0" step="0.01" placeholder="$ / guest"/>
-          <Input value={draft.flatPrice} onChange={e=>setDraft({...draft,flatPrice:e.target.value})} type="number" min="0" step="0.01" placeholder="$ flat"/>
-          <Button type="button" variant="secondary" onClick={()=>{if(!draft.name.trim()){toast.error("Give the item a name");return;}setCustomItems(v=>[...v,{key:`${Date.now()}`,name:draft.name.trim(),pricePerHead:Number(draft.pricePerHead||0),flatPrice:Number(draft.flatPrice||0)}]);setDraft({name:"",pricePerHead:"",flatPrice:""});}}><Plus className="h-4 w-4"/></Button>
+          <Input value={draft.name} onChange={e=>setDraft({...draft,name:e.target.value})} placeholder="Package selection e.g. Indian Tier 1"/>
+          <Input value={draft.pricePerHead} onChange={e=>setDraft({...draft,pricePerHead:e.target.value})} type="number" min="0" step="0.01" placeholder="Amount per guest"/>
+          <Input value={draft.flatPrice} onChange={e=>setDraft({...draft,flatPrice:e.target.value})} type="number" min="0" step="0.01" placeholder="$ flat (optional)"/>
+          <Button type="button" variant="secondary" onClick={()=>{if(!draft.name.trim()){toast.error("Name the package first");return;}setCustomItems(v=>[...v,{key:`${Date.now()}`,name:draft.name.trim(),pricePerHead:Number(draft.pricePerHead||0),flatPrice:Number(draft.flatPrice||0)}]);setDraft({name:"",pricePerHead:"",flatPrice:""});}}><Plus className="h-4 w-4"/></Button>
+        </div>
+        {draft.pricePerHead&&<p className="mt-2 text-xs text-muted-foreground">${Number(draft.pricePerHead||0).toFixed(2)} × {guests} guests = ${(Number(draft.pricePerHead||0)*guests+Number(draft.flatPrice||0)).toFixed(2)}</p>}
+      </section>
+
+      <section className="space-y-4 rounded-lg border border-border p-4">
+        <div><h3 className="font-serif text-lg">Dishes on the menu</h3><p className="text-xs text-muted-foreground">List the individual dishes by course. These print on the runsheet exactly as entered.</p></div>
+        <div className="grid gap-4 sm:grid-cols-2">
+          {DISH_COURSES.map(course=><div key={course} className="space-y-2">
+            <p className="text-sm font-semibold">{course}</p>
+            <div className="space-y-1">
+              {dishes.filter(d=>d.course===course).map(d=><div key={d.key} className="flex items-center justify-between gap-2 rounded-md bg-muted/40 px-2 py-1 text-sm"><span>{d.name}</span><button type="button" title="Remove dish" onClick={()=>setDishes(v=>v.filter(x=>x.key!==d.key))}><X className="h-3.5 w-3.5 text-muted-foreground hover:text-destructive"/></button></div>)}
+              {!dishes.some(d=>d.course===course)&&<p className="text-xs text-muted-foreground">No dishes yet.</p>}
+            </div>
+            <div className="flex gap-2">
+              <Input value={dishDraft[course]||""} placeholder="Add a dish" onChange={e=>setDishDraft(v=>({...v,[course]:e.target.value}))} onKeyDown={e=>{if(e.key==="Enter"){e.preventDefault();const name=(dishDraft[course]||"").trim();if(!name)return;setDishes(v=>[...v,{key:`${course}-${Date.now()}`,course,name}]);setDishDraft(v=>({...v,[course]:""}));}}}/>
+              <Button type="button" variant="secondary" size="icon" onClick={()=>{const name=(dishDraft[course]||"").trim();if(!name)return;setDishes(v=>[...v,{key:`${course}-${Date.now()}`,course,name}]);setDishDraft(v=>({...v,[course]:""}));}}><Plus className="h-4 w-4"/></Button>
+            </div>
+          </div>)}
         </div>
       </section>
     </div>
@@ -85,14 +119,22 @@ export default function LeadDetailDialog({ lead, open, onOpenChange, options, in
     <aside className="space-y-4 self-start rounded-lg border border-border bg-muted/30 p-4 lg:sticky lg:top-4">
       <div><Label>Guests for pricing</Label><Input type="number" min="1" value={guests} onChange={e=>setGuestOverride(Number(e.target.value)||1)}/></div>
       <div className="space-y-2">
-        <p className="text-sm font-semibold">Selected items</p>
+        <p className="text-sm font-semibold">Package selections</p>
         {!chosenItems.length&&!customItems.length&&<p className="text-sm text-muted-foreground">Nothing selected yet.</p>}
         {chosenItems.map(i=><div key={i.id} className="flex items-start justify-between gap-2 border-b border-border pb-2 text-sm"><span>{i.name}</span><span className="flex items-center gap-2 whitespace-nowrap"><span>${lineTotal(Number(i.price_per_head||0),Number(i.flat_price||0)).toFixed(2)}</span><button type="button" title="Remove item" onClick={()=>setSelectedMenu(v=>v.filter(id=>id!==i.id))}><X className="h-3.5 w-3.5 text-muted-foreground hover:text-destructive"/></button></span></div>)}
-        {customItems.map(i=><div key={i.key} className="flex items-start justify-between gap-2 border-b border-border pb-2 text-sm"><span>{i.name}<Badge variant="outline" className="ml-2 text-[10px]">Custom</Badge></span><span className="flex items-center gap-2 whitespace-nowrap"><span>${lineTotal(i.pricePerHead,i.flatPrice).toFixed(2)}</span><button type="button" title="Remove item" onClick={()=>setCustomItems(v=>v.filter(c=>c.key!==i.key))}><X className="h-3.5 w-3.5 text-muted-foreground hover:text-destructive"/></button></span></div>)}
+        {customItems.map(i=><div key={i.key} className="flex items-start justify-between gap-2 border-b border-border pb-2 text-sm"><span>{i.name}{i.pricePerHead?<span className="ml-2 text-xs text-muted-foreground">${i.pricePerHead.toFixed(2)} × {guests}</span>:null}</span><span className="flex items-center gap-2 whitespace-nowrap"><span>${lineTotal(i.pricePerHead,i.flatPrice).toFixed(2)}</span><button type="button" title="Remove item" onClick={()=>setCustomItems(v=>v.filter(c=>c.key!==i.key))}><X className="h-3.5 w-3.5 text-muted-foreground hover:text-destructive"/></button></span></div>)}
       </div>
-      <div><Label>Beverage package</Label><OptionSelect name="beverage" options={beverageOptions} emptyLabel="Not selected"/></div>
-      <div><Label>Dietary requirements</Label><Textarea name="dietary" rows={2}/></div>
-      <div><Label>Allergies</Label><Textarea name="allergies" rows={2} className="border-destructive/40"/></div>
+      <div><Label>Beverage package</Label><OptionSelect name="beverage" options={beverageOptions} defaultValue={extras.beverage} emptyLabel="Not selected"/></div>
+      <div className="space-y-2 rounded-md border border-border bg-background/60 p-3">
+        <label className="flex items-center gap-2 text-sm font-medium"><Checkbox checked={corkage.enabled} onCheckedChange={c=>setCorkage(v=>({...v,enabled:!!c}))}/> Host is bringing their own drinks (corkage)</label>
+        {corkage.enabled&&<div className="grid gap-2 sm:grid-cols-2">
+          <div><Label className="text-xs">Corkage per guest</Label><Input type="number" min="0" step="0.01" value={corkage.perHead} onChange={e=>setCorkage(v=>({...v,perHead:e.target.value}))}/></div>
+          <div><Label className="text-xs">Flat corkage fee</Label><Input type="number" min="0" step="0.01" value={corkage.flat} onChange={e=>setCorkage(v=>({...v,flat:e.target.value}))}/></div>
+        </div>}
+        {corkage.enabled&&<p className="text-xs text-muted-foreground">Corkage adds ${corkageTotal.toFixed(2)} to the total.</p>}
+      </div>
+      <div><Label>Dietary requirements</Label><Textarea rows={2} value={extras.dietary} onChange={e=>setExtras(v=>({...v,dietary:e.target.value}))}/></div>
+      <div><Label>Allergies</Label><Textarea rows={2} className="border-destructive/40" value={extras.allergies} onChange={e=>setExtras(v=>({...v,allergies:e.target.value}))}/></div>
       <div className="border-t border-border pt-3"><p className="text-xs uppercase text-muted-foreground">Estimated total</p><p className="font-serif text-3xl">${total.toFixed(2)}</p><p className="text-xs text-muted-foreground">${(total/Math.max(guests,1)).toFixed(2)} per guest · {guests} guests</p></div>
       <Button className="w-full">Save menu selection</Button>
     </aside>
