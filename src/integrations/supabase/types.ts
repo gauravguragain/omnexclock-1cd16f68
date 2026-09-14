@@ -495,6 +495,1126 @@ export type Database = {
           },
         ]
       }
+      crm_bookings: {
+        Row: {
+          balance_due_date: string | null
+          business_id: string
+          confirmation_sent_at: string | null
+          confirmed_at: string | null
+          created_at: string
+          created_by: string | null
+          deposit_amount: number
+          deposit_due_date: string | null
+          deposit_paid: boolean
+          duration_minutes: number
+          event_date: string
+          guest_count: number
+          id: string
+          lead_id: string
+          menu_selection_id: string | null
+          roster_event_id: string | null
+          start_time: string
+          status: string
+          total_amount: number
+          updated_at: string
+          updated_by: string | null
+          venue_space: string
+        }
+        Insert: {
+          balance_due_date?: string | null
+          business_id: string
+          confirmation_sent_at?: string | null
+          confirmed_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          deposit_amount?: number
+          deposit_due_date?: string | null
+          deposit_paid?: boolean
+          duration_minutes: number
+          event_date: string
+          guest_count: number
+          id?: string
+          lead_id: string
+          menu_selection_id?: string | null
+          roster_event_id?: string | null
+          start_time: string
+          status?: string
+          total_amount?: number
+          updated_at?: string
+          updated_by?: string | null
+          venue_space: string
+        }
+        Update: {
+          balance_due_date?: string | null
+          business_id?: string
+          confirmation_sent_at?: string | null
+          confirmed_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          deposit_amount?: number
+          deposit_due_date?: string | null
+          deposit_paid?: boolean
+          duration_minutes?: number
+          event_date?: string
+          guest_count?: number
+          id?: string
+          lead_id?: string
+          menu_selection_id?: string | null
+          roster_event_id?: string | null
+          start_time?: string
+          status?: string
+          total_amount?: number
+          updated_at?: string
+          updated_by?: string | null
+          venue_space?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_bookings_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_bookings_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses_public"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_bookings_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: true
+            referencedRelation: "crm_leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_bookings_menu_selection_id_fkey"
+            columns: ["menu_selection_id"]
+            isOneToOne: false
+            referencedRelation: "crm_menu_selections"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_bookings_roster_event_id_fkey"
+            columns: ["roster_event_id"]
+            isOneToOne: false
+            referencedRelation: "roster_day_events"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      crm_calendly_connections: {
+        Row: {
+          business_id: string
+          calendly_organization_uri: string | null
+          calendly_user_uri: string | null
+          connected_by: string
+          created_at: string
+          enabled: boolean
+          id: string
+          last_error: string | null
+          last_sync_at: string | null
+          status: string
+          updated_at: string
+          webhook_subscription_uri: string | null
+        }
+        Insert: {
+          business_id: string
+          calendly_organization_uri?: string | null
+          calendly_user_uri?: string | null
+          connected_by: string
+          created_at?: string
+          enabled?: boolean
+          id?: string
+          last_error?: string | null
+          last_sync_at?: string | null
+          status?: string
+          updated_at?: string
+          webhook_subscription_uri?: string | null
+        }
+        Update: {
+          business_id?: string
+          calendly_organization_uri?: string | null
+          calendly_user_uri?: string | null
+          connected_by?: string
+          created_at?: string
+          enabled?: boolean
+          id?: string
+          last_error?: string | null
+          last_sync_at?: string | null
+          status?: string
+          updated_at?: string
+          webhook_subscription_uri?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_calendly_connections_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_calendly_connections_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses_public"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      crm_calendly_mappings: {
+        Row: {
+          active: boolean
+          business_id: string
+          calendly_event_type_name: string
+          calendly_event_type_uri: string
+          created_at: string
+          crm_event_type: string | null
+          id: string
+          updated_at: string
+          venue_space: string | null
+        }
+        Insert: {
+          active?: boolean
+          business_id: string
+          calendly_event_type_name: string
+          calendly_event_type_uri: string
+          created_at?: string
+          crm_event_type?: string | null
+          id?: string
+          updated_at?: string
+          venue_space?: string | null
+        }
+        Update: {
+          active?: boolean
+          business_id?: string
+          calendly_event_type_name?: string
+          calendly_event_type_uri?: string
+          created_at?: string
+          crm_event_type?: string | null
+          id?: string
+          updated_at?: string
+          venue_space?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_calendly_mappings_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_calendly_mappings_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses_public"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      crm_confirmation_tokens: {
+        Row: {
+          booking_id: string
+          business_id: string
+          created_at: string
+          expires_at: string
+          id: string
+          token_hash: string
+          used_at: string | null
+        }
+        Insert: {
+          booking_id: string
+          business_id: string
+          created_at?: string
+          expires_at: string
+          id?: string
+          token_hash: string
+          used_at?: string | null
+        }
+        Update: {
+          booking_id?: string
+          business_id?: string
+          created_at?: string
+          expires_at?: string
+          id?: string
+          token_hash?: string
+          used_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_confirmation_tokens_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "crm_bookings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_confirmation_tokens_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_confirmation_tokens_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses_public"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      crm_inspections: {
+        Row: {
+          assigned_to: string | null
+          business_id: string
+          calendly_event_uri: string | null
+          calendly_invitee_uri: string | null
+          calendly_source: boolean
+          created_at: string
+          created_by: string | null
+          ends_at: string | null
+          id: string
+          lead_id: string
+          post_notes: string | null
+          pre_notes: string | null
+          proposed_at: string | null
+          reminder_hours: number[]
+          starts_at: string | null
+          status: string
+          superseded_by: string | null
+          updated_at: string
+          updated_by: string | null
+          venue_space: string
+        }
+        Insert: {
+          assigned_to?: string | null
+          business_id: string
+          calendly_event_uri?: string | null
+          calendly_invitee_uri?: string | null
+          calendly_source?: boolean
+          created_at?: string
+          created_by?: string | null
+          ends_at?: string | null
+          id?: string
+          lead_id: string
+          post_notes?: string | null
+          pre_notes?: string | null
+          proposed_at?: string | null
+          reminder_hours?: number[]
+          starts_at?: string | null
+          status?: string
+          superseded_by?: string | null
+          updated_at?: string
+          updated_by?: string | null
+          venue_space: string
+        }
+        Update: {
+          assigned_to?: string | null
+          business_id?: string
+          calendly_event_uri?: string | null
+          calendly_invitee_uri?: string | null
+          calendly_source?: boolean
+          created_at?: string
+          created_by?: string | null
+          ends_at?: string | null
+          id?: string
+          lead_id?: string
+          post_notes?: string | null
+          pre_notes?: string | null
+          proposed_at?: string | null
+          reminder_hours?: number[]
+          starts_at?: string | null
+          status?: string
+          superseded_by?: string | null
+          updated_at?: string
+          updated_by?: string | null
+          venue_space?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_inspections_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_inspections_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses_public"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_inspections_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "crm_leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_inspections_superseded_by_fkey"
+            columns: ["superseded_by"]
+            isOneToOne: false
+            referencedRelation: "crm_inspections"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      crm_interactions: {
+        Row: {
+          ai_summary: Json | null
+          business_id: string
+          created_at: string
+          duration_minutes: number | null
+          follow_up_at: string | null
+          follow_up_required: boolean
+          id: string
+          interaction_type: string
+          lead_id: string
+          logged_by: string | null
+          notes: string
+          occurred_at: string
+          shareable_feedback: boolean
+          updated_at: string
+        }
+        Insert: {
+          ai_summary?: Json | null
+          business_id: string
+          created_at?: string
+          duration_minutes?: number | null
+          follow_up_at?: string | null
+          follow_up_required?: boolean
+          id?: string
+          interaction_type: string
+          lead_id: string
+          logged_by?: string | null
+          notes: string
+          occurred_at?: string
+          shareable_feedback?: boolean
+          updated_at?: string
+        }
+        Update: {
+          ai_summary?: Json | null
+          business_id?: string
+          created_at?: string
+          duration_minutes?: number | null
+          follow_up_at?: string | null
+          follow_up_required?: boolean
+          id?: string
+          interaction_type?: string
+          lead_id?: string
+          logged_by?: string | null
+          notes?: string
+          occurred_at?: string
+          shareable_feedback?: boolean
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_interactions_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_interactions_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses_public"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_interactions_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "crm_leads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      crm_leads: {
+        Row: {
+          assigned_to: string | null
+          budget_max: number | null
+          budget_min: number | null
+          business_id: string
+          calendly_source: boolean
+          company: string | null
+          created_at: string
+          created_by: string | null
+          email: string | null
+          estimated_guest_count: number | null
+          estimated_value: number
+          event_type: string
+          flexible_date: boolean
+          full_name: string
+          id: string
+          last_contact_at: string | null
+          lost_reason: string | null
+          normalized_email: string | null
+          normalized_phone: string | null
+          phone: string | null
+          preferred_dates: string[]
+          source: string
+          status: string
+          tags: string[]
+          updated_at: string
+          updated_by: string | null
+          venue_space: string | null
+        }
+        Insert: {
+          assigned_to?: string | null
+          budget_max?: number | null
+          budget_min?: number | null
+          business_id: string
+          calendly_source?: boolean
+          company?: string | null
+          created_at?: string
+          created_by?: string | null
+          email?: string | null
+          estimated_guest_count?: number | null
+          estimated_value?: number
+          event_type: string
+          flexible_date?: boolean
+          full_name: string
+          id?: string
+          last_contact_at?: string | null
+          lost_reason?: string | null
+          normalized_email?: string | null
+          normalized_phone?: string | null
+          phone?: string | null
+          preferred_dates?: string[]
+          source: string
+          status?: string
+          tags?: string[]
+          updated_at?: string
+          updated_by?: string | null
+          venue_space?: string | null
+        }
+        Update: {
+          assigned_to?: string | null
+          budget_max?: number | null
+          budget_min?: number | null
+          business_id?: string
+          calendly_source?: boolean
+          company?: string | null
+          created_at?: string
+          created_by?: string | null
+          email?: string | null
+          estimated_guest_count?: number | null
+          estimated_value?: number
+          event_type?: string
+          flexible_date?: boolean
+          full_name?: string
+          id?: string
+          last_contact_at?: string | null
+          lost_reason?: string | null
+          normalized_email?: string | null
+          normalized_phone?: string | null
+          phone?: string | null
+          preferred_dates?: string[]
+          source?: string
+          status?: string
+          tags?: string[]
+          updated_at?: string
+          updated_by?: string | null
+          venue_space?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_leads_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_leads_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses_public"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      crm_menu_items: {
+        Row: {
+          active: boolean
+          business_id: string
+          category: string
+          created_at: string
+          created_by: string | null
+          description: string | null
+          dietary_tags: string[]
+          flat_price: number | null
+          id: string
+          name: string
+          price_per_head: number | null
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          business_id: string
+          category: string
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          dietary_tags?: string[]
+          flat_price?: number | null
+          id?: string
+          name: string
+          price_per_head?: number | null
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          business_id?: string
+          category?: string
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          dietary_tags?: string[]
+          flat_price?: number | null
+          id?: string
+          name?: string
+          price_per_head?: number | null
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_menu_items_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_menu_items_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses_public"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      crm_menu_selection_items: {
+        Row: {
+          business_id: string
+          created_at: string
+          flat_price: number | null
+          id: string
+          item_name: string
+          menu_item_id: string | null
+          notes: string | null
+          price_per_head: number | null
+          quantity: number
+          selection_id: string
+        }
+        Insert: {
+          business_id: string
+          created_at?: string
+          flat_price?: number | null
+          id?: string
+          item_name: string
+          menu_item_id?: string | null
+          notes?: string | null
+          price_per_head?: number | null
+          quantity?: number
+          selection_id: string
+        }
+        Update: {
+          business_id?: string
+          created_at?: string
+          flat_price?: number | null
+          id?: string
+          item_name?: string
+          menu_item_id?: string | null
+          notes?: string | null
+          price_per_head?: number | null
+          quantity?: number
+          selection_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_menu_selection_items_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_menu_selection_items_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses_public"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_menu_selection_items_menu_item_id_fkey"
+            columns: ["menu_item_id"]
+            isOneToOne: false
+            referencedRelation: "crm_menu_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_menu_selection_items_selection_id_fkey"
+            columns: ["selection_id"]
+            isOneToOne: false
+            referencedRelation: "crm_menu_selections"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      crm_menu_selections: {
+        Row: {
+          allergies: string | null
+          beverage_package: string | null
+          business_id: string
+          created_at: string
+          created_by: string | null
+          dietary_requirements: string | null
+          guest_count: number
+          id: string
+          lead_id: string
+          total_estimate: number
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          allergies?: string | null
+          beverage_package?: string | null
+          business_id: string
+          created_at?: string
+          created_by?: string | null
+          dietary_requirements?: string | null
+          guest_count?: number
+          id?: string
+          lead_id: string
+          total_estimate?: number
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          allergies?: string | null
+          beverage_package?: string | null
+          business_id?: string
+          created_at?: string
+          created_by?: string | null
+          dietary_requirements?: string | null
+          guest_count?: number
+          id?: string
+          lead_id?: string
+          total_estimate?: number
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_menu_selections_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_menu_selections_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses_public"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_menu_selections_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: true
+            referencedRelation: "crm_leads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      crm_options: {
+        Row: {
+          active: boolean
+          business_id: string
+          created_at: string
+          created_by: string | null
+          description: string | null
+          id: string
+          image_url: string | null
+          label: string
+          option_type: string
+          sort_order: number
+          updated_at: string
+          value: string
+        }
+        Insert: {
+          active?: boolean
+          business_id: string
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          image_url?: string | null
+          label: string
+          option_type: string
+          sort_order?: number
+          updated_at?: string
+          value: string
+        }
+        Update: {
+          active?: boolean
+          business_id?: string
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          image_url?: string | null
+          label?: string
+          option_type?: string
+          sort_order?: number
+          updated_at?: string
+          value?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_options_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_options_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses_public"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      crm_settings: {
+        Row: {
+          assignment_mode: string
+          business_id: string
+          calendly_enabled: boolean
+          confirmation_terms: string | null
+          created_at: string
+          created_by: string | null
+          fixed_assignee_id: string | null
+          id: string
+          inspection_day_end: string
+          inspection_day_start: string
+          reminder_hours: number[]
+          stale_days: number
+          updated_at: string
+        }
+        Insert: {
+          assignment_mode?: string
+          business_id: string
+          calendly_enabled?: boolean
+          confirmation_terms?: string | null
+          created_at?: string
+          created_by?: string | null
+          fixed_assignee_id?: string | null
+          id?: string
+          inspection_day_end?: string
+          inspection_day_start?: string
+          reminder_hours?: number[]
+          stale_days?: number
+          updated_at?: string
+        }
+        Update: {
+          assignment_mode?: string
+          business_id?: string
+          calendly_enabled?: boolean
+          confirmation_terms?: string | null
+          created_at?: string
+          created_by?: string | null
+          fixed_assignee_id?: string | null
+          id?: string
+          inspection_day_end?: string
+          inspection_day_start?: string
+          reminder_hours?: number[]
+          stale_days?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_settings_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: true
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_settings_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: true
+            referencedRelation: "businesses_public"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      crm_tasks: {
+        Row: {
+          assigned_to: string | null
+          automated: boolean
+          booking_id: string | null
+          business_id: string
+          completed_at: string | null
+          created_at: string
+          created_by: string | null
+          description: string | null
+          due_at: string
+          id: string
+          lead_id: string | null
+          priority: string
+          status: string
+          task_type: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          assigned_to?: string | null
+          automated?: boolean
+          booking_id?: string | null
+          business_id: string
+          completed_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          due_at: string
+          id?: string
+          lead_id?: string | null
+          priority?: string
+          status?: string
+          task_type?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          assigned_to?: string | null
+          automated?: boolean
+          booking_id?: string | null
+          business_id?: string
+          completed_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          due_at?: string
+          id?: string
+          lead_id?: string | null
+          priority?: string
+          status?: string
+          task_type?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_tasks_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "crm_bookings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_tasks_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_tasks_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses_public"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_tasks_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "crm_leads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      crm_templates: {
+        Row: {
+          active: boolean
+          body: string
+          business_id: string
+          channel: string
+          created_at: string
+          created_by: string | null
+          id: string
+          name: string
+          subject: string | null
+          template_type: string
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          body: string
+          business_id: string
+          channel?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          name: string
+          subject?: string | null
+          template_type: string
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          body?: string
+          business_id?: string
+          channel?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          name?: string
+          subject?: string | null
+          template_type?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_templates_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_templates_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses_public"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      crm_timeline_events: {
+        Row: {
+          actor_id: string | null
+          business_id: string
+          created_at: string
+          details: Json
+          event_type: string
+          id: string
+          lead_id: string
+          title: string
+        }
+        Insert: {
+          actor_id?: string | null
+          business_id: string
+          created_at?: string
+          details?: Json
+          event_type: string
+          id?: string
+          lead_id: string
+          title: string
+        }
+        Update: {
+          actor_id?: string | null
+          business_id?: string
+          created_at?: string
+          details?: Json
+          event_type?: string
+          id?: string
+          lead_id?: string
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_timeline_events_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_timeline_events_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses_public"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_timeline_events_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "crm_leads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      crm_webhook_receipts: {
+        Row: {
+          business_id: string | null
+          error: string | null
+          event_type: string
+          external_id: string
+          id: string
+          payload: Json
+          processed_at: string | null
+          provider: string
+          received_at: string
+        }
+        Insert: {
+          business_id?: string | null
+          error?: string | null
+          event_type: string
+          external_id: string
+          id?: string
+          payload?: Json
+          processed_at?: string | null
+          provider: string
+          received_at?: string
+        }
+        Update: {
+          business_id?: string | null
+          error?: string | null
+          event_type?: string
+          external_id?: string
+          id?: string
+          payload?: Json
+          processed_at?: string | null
+          provider?: string
+          received_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_webhook_receipts_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_webhook_receipts_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses_public"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       employee_documents: {
         Row: {
           admin_note: string | null
@@ -1748,6 +2868,7 @@ export type Database = {
         Args: { _doc_id: string; _note: string; _status: string }
         Returns: boolean
       }
+      can_access_crm: { Args: { _business_id: string }; Returns: boolean }
       delete_employee: { Args: { _employee_id: string }; Returns: boolean }
       delete_employee_request: {
         Args: {
@@ -2023,6 +3144,10 @@ export type Database = {
         Args: { _business_id: string }
         Returns: boolean
       }
+      is_sales_marketing_manager_of_business: {
+        Args: { _business_id: string }
+        Returns: boolean
+      }
       is_super_admin_of_business: {
         Args: { _business_id: string }
         Returns: boolean
@@ -2129,6 +3254,7 @@ export type Database = {
         | "master"
         | "roster_admin"
         | "super_admin"
+        | "sales_marketing_manager"
       clock_event_type: "clock_in" | "clock_out" | "break_start" | "break_end"
     }
     CompositeTypes: {
@@ -2264,6 +3390,7 @@ export const Constants = {
         "master",
         "roster_admin",
         "super_admin",
+        "sales_marketing_manager",
       ],
       clock_event_type: ["clock_in", "clock_out", "break_start", "break_end"],
     },
