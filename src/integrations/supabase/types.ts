@@ -1111,6 +1111,7 @@ export type Database = {
       crm_menu_selection_items: {
         Row: {
           business_id: string
+          course: string | null
           created_at: string
           flat_price: number | null
           id: string
@@ -1123,6 +1124,7 @@ export type Database = {
         }
         Insert: {
           business_id: string
+          course?: string | null
           created_at?: string
           flat_price?: number | null
           id?: string
@@ -1135,6 +1137,7 @@ export type Database = {
         }
         Update: {
           business_id?: string
+          course?: string | null
           created_at?: string
           flat_price?: number | null
           id?: string
@@ -1181,12 +1184,17 @@ export type Database = {
           allergies: string | null
           beverage_package: string | null
           business_id: string
+          corkage_enabled: boolean
+          corkage_flat: number | null
+          corkage_per_head: number | null
           created_at: string
           created_by: string | null
           dietary_requirements: string | null
           guest_count: number
           id: string
           lead_id: string
+          package_name: string | null
+          package_price_per_head: number | null
           total_estimate: number
           updated_at: string
           updated_by: string | null
@@ -1195,12 +1203,17 @@ export type Database = {
           allergies?: string | null
           beverage_package?: string | null
           business_id: string
+          corkage_enabled?: boolean
+          corkage_flat?: number | null
+          corkage_per_head?: number | null
           created_at?: string
           created_by?: string | null
           dietary_requirements?: string | null
           guest_count?: number
           id?: string
           lead_id: string
+          package_name?: string | null
+          package_price_per_head?: number | null
           total_estimate?: number
           updated_at?: string
           updated_by?: string | null
@@ -1209,12 +1222,17 @@ export type Database = {
           allergies?: string | null
           beverage_package?: string | null
           business_id?: string
+          corkage_enabled?: boolean
+          corkage_flat?: number | null
+          corkage_per_head?: number | null
           created_at?: string
           created_by?: string | null
           dietary_requirements?: string | null
           guest_count?: number
           id?: string
           lead_id?: string
+          package_name?: string | null
+          package_price_per_head?: number | null
           total_estimate?: number
           updated_at?: string
           updated_by?: string | null
