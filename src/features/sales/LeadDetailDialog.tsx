@@ -103,7 +103,7 @@ export default function LeadDetailDialog({ lead, open, onOpenChange, options, in
       </section>
 
       <section className="space-y-4 rounded-lg border border-border p-4">
-        <div><h3 className="font-serif text-lg">Dishes on the menu</h3><p className="text-xs text-muted-foreground">List the individual dishes by course. These print on the runsheet exactly as entered.</p></div>
+        <div><h3 className="font-serif text-lg">Dishes on the menu</h3><p className="text-xs text-muted-foreground">Pick dishes from your saved list for each course, or type one in. These print on the runsheet exactly as entered.</p></div>
         <div className="grid gap-4 sm:grid-cols-2">
           {DISH_COURSES.map(course=><div key={course} className="space-y-2">
             <p className="text-sm font-semibold">{course}</p>
@@ -111,8 +111,12 @@ export default function LeadDetailDialog({ lead, open, onOpenChange, options, in
               {dishes.filter(d=>d.course===course).map(d=><div key={d.key} className="flex items-center justify-between gap-2 rounded-md bg-muted/40 px-2 py-1 text-sm"><span>{d.name}</span><button type="button" title="Remove dish" onClick={()=>setDishes(v=>v.filter(x=>x.key!==d.key))}><X className="h-3.5 w-3.5 text-muted-foreground hover:text-destructive"/></button></div>)}
               {!dishes.some(d=>d.course===course)&&<p className="text-xs text-muted-foreground">No dishes yet.</p>}
             </div>
+            <select value="" className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm" onChange={e=>{const name=e.target.value;if(!name)return;if(!dishes.some(d=>d.course===course&&d.name===name))setDishes(v=>[...v,{key:`${course}-${Date.now()}`,course,name}]);}}>
+              <option value="">{catalogueByCourse[course]?.length?"Choose a saved dish":"No saved dishes for this course"}</option>
+              {(catalogueByCourse[course]||[]).map((item:any)=><option key={item.id} value={item.name}>{item.name}</option>)}
+            </select>
             <div className="flex gap-2">
-              <Input value={dishDraft[course]||""} placeholder="Add a dish" onChange={e=>setDishDraft(v=>({...v,[course]:e.target.value}))} onKeyDown={e=>{if(e.key==="Enter"){e.preventDefault();const name=(dishDraft[course]||"").trim();if(!name)return;setDishes(v=>[...v,{key:`${course}-${Date.now()}`,course,name}]);setDishDraft(v=>({...v,[course]:""}));}}}/>
+              <Input value={dishDraft[course]||""} placeholder="Or type a dish" onChange={e=>setDishDraft(v=>({...v,[course]:e.target.value}))} onKeyDown={e=>{if(e.key==="Enter"){e.preventDefault();const name=(dishDraft[course]||"").trim();if(!name)return;setDishes(v=>[...v,{key:`${course}-${Date.now()}`,course,name}]);setDishDraft(v=>({...v,[course]:""}));}}}/>
               <Button type="button" variant="secondary" size="icon" onClick={()=>{const name=(dishDraft[course]||"").trim();if(!name)return;setDishes(v=>[...v,{key:`${course}-${Date.now()}`,course,name}]);setDishDraft(v=>({...v,[course]:""}));}}><Plus className="h-4 w-4"/></Button>
             </div>
           </div>)}
