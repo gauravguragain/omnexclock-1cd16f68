@@ -19,12 +19,13 @@ export default function LeadDetailDialog({ lead, open, onOpenChange, options, in
   useEffect(()=>{if(booking?.start_time)setBookStart(String(booking.start_time).slice(0,5));},[booking?.start_time]);
   useEffect(()=>{if(booking?.duration_minutes)setDurationHours(Number(booking.duration_minutes)/60);},[booking?.duration_minutes]);
   useEffect(()=>{const endMin=timeToMin(bookStart)+Number(durationHours||0)*60;setBookEnd(minToTime(endMin));},[bookStart,durationHours]);
-  const venueOptions=options.filter(o=>o.option_type==="venue_space"&&o.active); const beverageOptions=options.filter(o=>o.option_type==="beverage_package"&&o.active); const leadInteractions=interactions.filter(i=>i.lead_id===lead?.id); const leadInspections=inspections.filter(i=>i.lead_id===lead?.id); const leadTasks=tasks.filter(i=>i.lead_id===lead?.id);
+  const venueOptions=options.filter(o=>o.option_type==="venue_space"&&o.active); const beverageOptions=options.filter(o=>o.option_type==="beverage_package"&&o.active); const liveStallOptions=options.filter(o=>o.option_type==="live_stall"&&o.active); const leadInteractions=interactions.filter(i=>i.lead_id===lead?.id); const leadInspections=inspections.filter(i=>i.lead_id===lead?.id); const leadTasks=tasks.filter(i=>i.lead_id===lead?.id);
   const guests=guestOverride??Number(lead?.estimated_guest_count||1);
   const chosenItems=useMemo(()=>menuItems.filter(i=>selectedMenu.includes(i.id)),[menuItems,selectedMenu]);
   const lineTotal=(pph:number,flat:number)=>Number(flat||0)+Number(pph||0)*guests;
   const corkageTotal=corkage.enabled?Number(corkage.flat||0)+Number(corkage.perHead||0)*guests:0;
-  const total=useMemo(()=>chosenItems.reduce((sum,i)=>sum+lineTotal(Number(i.price_per_head||0),Number(i.flat_price||0)),0)+customItems.reduce((sum,i)=>sum+lineTotal(i.pricePerHead,i.flatPrice),0)+corkageTotal,[chosenItems,customItems,guests,corkageTotal]);
+  const stallTotal=useMemo(()=>stallsRequired?liveStalls.reduce((sum,i)=>sum+lineTotal(i.pricePerHead,i.flatPrice),0):0,[liveStalls,stallsRequired,guests]);
+  const total=useMemo(()=>chosenItems.reduce((sum,i)=>sum+lineTotal(Number(i.price_per_head||0),Number(i.flat_price||0)),0)+customItems.reduce((sum,i)=>sum+lineTotal(i.pricePerHead,i.flatPrice),0)+corkageTotal+stallTotal,[chosenItems,customItems,guests,corkageTotal,stallTotal]);
   const groupedMenu=useMemo(()=>{const map=new Map<string,any[]>();menuItems.forEach(i=>{const key=i.category||"Other";map.set(key,[...(map.get(key)||[]),i]);});return Array.from(map.entries());},[menuItems]);
   useEffect(()=>{if(!lead?.id||!open)return;let cancelled=false;(async()=>{
     const{data:sel}=await supabase.from("crm_menu_selections").select("*").eq("lead_id",lead.id).maybeSingle();
@@ -36,7 +37,9 @@ export default function LeadDetailDialog({ lead, open, onOpenChange, options, in
     if(cancelled)return;const rows:any[]=items||[];
     setSelectedMenu(rows.filter(i=>i.menu_item_id).map(i=>i.menu_item_id));
     setCustomItems(rows.filter(i=>!i.menu_item_id&&i.course==="package").map((i,n)=>({key:`l${n}`,name:i.item_name,pricePerHead:Number(i.price_per_head||0),flatPrice:Number(i.flat_price||0)})));
-    setDishes(rows.filter(i=>!i.menu_item_id&&i.course&&i.course!=="package").map((i,n)=>({key:`d${n}`,course:i.course,name:i.item_name})));
+    const stalls=rows.filter(i=>i.course==="live_stall").map((i,n)=>({key:`v${n}`,name:i.item_name,pricePerHead:Number(i.price_per_head||0),flatPrice:Number(i.flat_price||0)}));
+    setLiveStalls(stalls); setStallsRequired(stalls.length>0);
+    setDishes(rows.filter(i=>!i.menu_item_id&&i.course&&i.course!=="package"&&i.course!=="live_stall").map((i,n)=>({key:`d${n}`,course:i.course,name:i.item_name})));
   })();return()=>{cancelled=true;};},[lead?.id,open]);
   if(!lead)return null;
   const addInteraction=async(e:FormEvent<HTMLFormElement>)=>{e.preventDefault();setBusy(true);const f=new FormData(e.currentTarget);const notes=String(f.get("notes"));const {error}=await supabase.from("crm_interactions").insert({business_id:lead.business_id,lead_id:lead.id,interaction_type:String(f.get("type")),notes,duration_minutes:f.get("duration")?Number(f.get("duration")):null,follow_up_required:f.get("follow_up")==="on",follow_up_at:followDate?`${followDate}T${followTime}`:null,shareable_feedback:f.get("shareable")==="on",logged_by:user?.id} as any);setBusy(false);if(error)toast.error(error.message);else{toast.success("Interaction logged");(e.target as HTMLFormElement).reset();setFollowDate("");onSaved();}};
