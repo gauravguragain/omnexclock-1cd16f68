@@ -23,9 +23,10 @@ export function buildBookingConfirmationPdf(data: BookingPdfData) {
   doc.text(data.clientName, 18, y); y += 10;
   doc.setDrawColor(...gold); doc.line(18, y, 192, y); y += 12;
   doc.setFont("helvetica", "normal"); doc.setFontSize(10);
+  const durationHours = data.durationMinutes ? (data.durationMinutes / 60).toFixed(1).replace(/\.0$/, "") : "—";
   const rows = [
     ["Event", data.eventType], ["Date", data.eventDate], ["Time", data.eventTime],
-    ["Duration", `${data.durationMinutes} minutes`], ["Venue", data.venueSpace], ["Guests", String(data.guestCount)],
+    ["Duration", `${durationHours} hours`], ["Venue", data.venueSpace], ["Guests", String(data.guestCount)],
   ];
   rows.forEach(([label, value]) => { doc.setFont("helvetica", "bold"); doc.text(label, 18, y); doc.setFont("helvetica", "normal"); doc.text(value, 65, y); y += 8; });
   y += 6; doc.setFont("times", "bold"); doc.setFontSize(15); doc.text("Menu & catering", 18, y); y += 9;
