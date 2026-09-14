@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { CalendarDays, ClipboardList, Copy, Download, MapPin, PartyPopper } from "lucide-react";
 import { format, isSameDay, startOfDay } from "date-fns";
 import { toast } from "sonner";
+import { prettyCrmValue } from "./types";
 import type { CrmInspection, CrmLead, CrmTask } from "./types";
 
 type AgendaEntry = { id: string; kind: "inspection" | "event" | "task"; start: Date; end: Date; title: string; detail: string; place: string };
@@ -24,11 +25,11 @@ export default function CalendarTab({ businessId, businessName, leads, inspectio
     const list: AgendaEntry[] = [];
     inspections.filter((i) => i.status !== "cancelled" && (i.starts_at || i.proposed_at)).forEach((i) => {
       const start = new Date((i.starts_at || i.proposed_at) as string);
-      list.push({ id: `i-${i.id}`, kind: "inspection", start, end: i.ends_at ? new Date(i.ends_at) : new Date(start.getTime() + 3600000), title: `Site inspection — ${nameOf(i.lead_id)}`, detail: i.pre_notes || "Venue walkthrough", place: i.venue_space || businessName });
+      list.push({ id: `i-${i.id}`, kind: "inspection", start, end: i.ends_at ? new Date(i.ends_at) : new Date(start.getTime() + 3600000), title: `Site inspection — ${nameOf(i.lead_id)}`, detail: i.pre_notes || "Venue walkthrough", place: i.venue_space?prettyCrmValue(i.venue_space):businessName });
     });
     bookings.forEach((b: any) => {
       const start = new Date(`${b.event_date}T${String(b.start_time || "17:30").slice(0, 5)}`);
-      list.push({ id: `b-${b.id}`, kind: "event", start, end: new Date(start.getTime() + Number(b.duration_minutes || 300) * 60000), title: `Event — ${nameOf(b.lead_id)}`, detail: `${b.guest_count || 0} guests`, place: b.venue_space || businessName });
+      list.push({ id: `b-${b.id}`, kind: "event", start, end: new Date(start.getTime() + Number(b.duration_minutes || 300) * 60000), title: `Event — ${nameOf(b.lead_id)}`, detail: `${b.guest_count || 0} guests`, place: b.venue_space?prettyCrmValue(b.venue_space):businessName });
     });
     tasks.filter((t) => t.status === "open").forEach((t) => {
       const start = new Date(t.due_at);

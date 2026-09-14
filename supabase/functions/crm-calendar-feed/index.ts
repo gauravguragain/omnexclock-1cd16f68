@@ -9,6 +9,7 @@ const pad = (n: number) => String(n).padStart(2, "0");
 const toUtc = (date: Date) =>
   `${date.getUTCFullYear()}${pad(date.getUTCMonth() + 1)}${pad(date.getUTCDate())}T${pad(date.getUTCHours())}${pad(date.getUTCMinutes())}${pad(date.getUTCSeconds())}Z`;
 const esc = (text: string) => String(text || "").replace(/\\/g, "\\\\").replace(/\n/g, "\\n").replace(/,/g, "\\,").replace(/;/g, "\\;");
+const pretty = (text: string) => String(text || "").replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
 const fold = (line: string) => line.match(/.{1,73}/g)?.join("\r\n ") ?? line;
 
 Deno.serve(async (req) => {
@@ -69,7 +70,7 @@ Deno.serve(async (req) => {
         end,
         `Site inspection — ${lead?.full_name || "Client"}`,
         [lead?.phone, lead?.email, row.pre_notes].filter(Boolean).join(" · "),
-        row.venue_space || business.name,
+        pretty(row.venue_space) || business.name,
       );
     });
 
@@ -83,7 +84,7 @@ Deno.serve(async (req) => {
         end,
         `Event — ${lead?.full_name || "Client"} (${row.guest_count || 0} guests)`,
         [lead?.phone, lead?.email, `Status: ${row.status}`].filter(Boolean).join(" · "),
-        row.venue_space || business.name,
+        pretty(row.venue_space) || business.name,
       );
     });
 
