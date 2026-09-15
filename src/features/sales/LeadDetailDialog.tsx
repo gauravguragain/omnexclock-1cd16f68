@@ -7,7 +7,7 @@ import venueBanner from "@/assets/regal-venue-banner.jpg"; import OptionSelect f
 const INTERACTION_TYPES=[{value:"phone_call",label:"Phone call"},{value:"email",label:"Email"},{value:"in_person",label:"In person"},{value:"message",label:"Message"}];
 export const COURSE_CATEGORY:Record<string,string>={"Entrees (Veg)":"entrees_veg","Entrees (Non-veg)":"entrees_nonveg","Veg Mains":"veg_mains","Non-veg Mains":"nonveg_mains","Sides":"sides","Dessert":"dessert","Kids Menu":"kids_menu"};
 export const DISH_COURSES=["Entrees (Veg)","Entrees (Non-veg)","Veg Mains","Non-veg Mains","Sides","Dessert","Kids Menu"];
-import type { CrmInspection, CrmInteraction, CrmLead, CrmOption, CrmTask } from "./types"; import { CRM_STAGE_VALUES, prettyCrmValue } from "./types"; import { buildBookingConfirmationPdf } from "@/lib/bookingConfirmationPdf"; import RunsheetTab from "./RunsheetTab";
+import type { CrmInspection, CrmInteraction, CrmLead, CrmOption, CrmTask } from "./types"; import { CRM_LEAD_STATUSES, prettyCrmValue } from "./types"; import { buildBookingConfirmationPdf } from "@/lib/bookingConfirmationPdf"; import RunsheetTab from "./RunsheetTab";
 
 export default function LeadDetailDialog({ lead, open, onOpenChange, options, interactions, inspections, tasks, menuItems, booking, businessName, onSaved }:{ lead:CrmLead|null; open:boolean; onOpenChange:(v:boolean)=>void; options:CrmOption[]; interactions:CrmInteraction[]; inspections:CrmInspection[]; tasks:CrmTask[]; menuItems:any[]; booking:any; businessName:string; onSaved:()=>void }) {
   const { user } = useAuth(); const [busy,setBusy]=useState(false); const [ai,setAi]=useState<any>(null); const [selectedMenu,setSelectedMenu]=useState<string[]>([]); const [customItems,setCustomItems]=useState<{key:string;name:string;pricePerHead:number;flatPrice:number}[]>([]); const [guestOverride,setGuestOverride]=useState<number|null>(null); const [draft,setDraft]=useState({name:"",pricePerHead:"",flatPrice:""});
@@ -72,7 +72,7 @@ export default function LeadDetailDialog({ lead, open, onOpenChange, options, in
       <Button size="sm" variant="outline" disabled={!lead.email} asChild={!!lead.email}>{lead.email?<a href={`mailto:${lead.email}`}><Mail className="mr-2 h-4 w-4"/>Email</a>:<span><Mail className="mr-2 h-4 w-4"/>Email</span>}</Button>
       <Button size="sm" variant="outline" disabled={busy} onClick={()=>quickLog("phone_call")}><Phone className="mr-2 h-4 w-4"/>Log call</Button>
       <Button size="sm" variant="outline" onClick={()=>quickTask(`Follow up with ${lead.full_name}`,2)}><Clock className="mr-2 h-4 w-4"/>Remind me in 2 days</Button>
-      <select value={lead.status} onChange={e=>setStage(e.target.value)} className="h-9 rounded-md border border-input bg-background px-3 text-sm">{CRM_STAGE_VALUES.map(s=><option key={s} value={s}>{prettyCrmValue(s)}</option>)}</select>
+      <select value={lead.status} onChange={e=>setStage(e.target.value)} className="h-9 rounded-md border border-input bg-background px-3 text-sm">{CRM_LEAD_STATUSES.map(s=><option key={s} value={s}>{prettyCrmValue(s)}</option>)}</select>
     </div>
     {nextStep&&<div className="mt-3 flex flex-wrap items-center gap-3 rounded-md border border-primary/30 bg-primary/5 px-3 py-2 text-sm"><ArrowRight className="h-4 w-4 text-primary"/><span>Next step: {nextStep.label}</span>{nextStep.action&&<Button size="sm" variant="secondary" onClick={nextStep.action}>Done</Button>}</div>}
   </div>
