@@ -26,7 +26,10 @@ export default function LeadDetailDialog({ lead, open, onOpenChange, options, in
   const lineTotal=(pph:number,flat:number)=>Number(flat||0)+Number(pph||0)*guests;
   const corkageTotal=corkage.enabled?Number(corkage.flat||0)+Number(corkage.perHead||0)*guests:0;
   const stallTotal=useMemo(()=>stallsRequired?liveStalls.reduce((sum,i)=>sum+lineTotal(i.pricePerHead,i.flatPrice),0):0,[liveStalls,stallsRequired,guests]);
-  const total=useMemo(()=>chosenItems.reduce((sum,i)=>sum+lineTotal(Number(i.price_per_head||0),Number(i.flat_price||0)),0)+customItems.reduce((sum,i)=>sum+lineTotal(i.pricePerHead,i.flatPrice),0)+corkageTotal+stallTotal,[chosenItems,customItems,guests,corkageTotal,stallTotal]);
+  const packageTotal=useMemo(()=>chosenItems.reduce((sum,i)=>sum+lineTotal(Number(i.price_per_head||0),Number(i.flat_price||0)),0)+customItems.reduce((sum,i)=>sum+lineTotal(i.pricePerHead,i.flatPrice),0),[chosenItems,customItems,guests]);
+  const draftTotal=useMemo(()=>(Number(draft.pricePerHead||0)||Number(draft.flatPrice||0))?lineTotal(Number(draft.pricePerHead||0),Number(draft.flatPrice||0)):0,[draft,guests]);
+  const draftStallTotal=useMemo(()=>stallsRequired&&(Number(stallDraft.pricePerHead||0)||Number(stallDraft.flatPrice||0))?lineTotal(Number(stallDraft.pricePerHead||0),Number(stallDraft.flatPrice||0)):0,[stallDraft,stallsRequired,guests]);
+  const total=packageTotal+stallTotal+corkageTotal;
   const catalogueByCourse=useMemo(()=>Object.fromEntries(DISH_COURSES.map(course=>[course,menuItems.filter(i=>i.category===COURSE_CATEGORY[course]&&i.active!==false)])) as Record<string,any[]>,[menuItems]);
   const dishCategories=new Set(Object.values(COURSE_CATEGORY));
   const groupedMenu=useMemo(()=>{const map=new Map<string,any[]>();menuItems.filter(i=>!dishCategories.has(i.category)).forEach(i=>{const key=i.category||"Other";map.set(key,[...(map.get(key)||[]),i]);});return Array.from(map.entries());},[menuItems]);
