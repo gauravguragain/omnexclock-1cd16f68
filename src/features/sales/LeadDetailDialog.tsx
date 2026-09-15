@@ -171,6 +171,12 @@ export default function LeadDetailDialog({ lead, open, onOpenChange, options, in
       </div>
       <div><Label>Dietary requirements</Label><Textarea rows={2} value={extras.dietary} onChange={e=>setExtras(v=>({...v,dietary:e.target.value}))}/></div>
       <div><Label>Allergies</Label><Textarea rows={2} className="border-destructive/40" value={extras.allergies} onChange={e=>setExtras(v=>({...v,allergies:e.target.value}))}/></div>
+      <div className="space-y-1 border-t border-border pt-3 text-sm">
+        <div className="flex justify-between"><span className="text-muted-foreground">Menu packages</span><span>${packageTotal.toFixed(2)}</span></div>
+        <div className="flex justify-between"><span className="text-muted-foreground">Live stalls</span><span>${stallTotal.toFixed(2)}</span></div>
+        <div className="flex justify-between"><span className="text-muted-foreground">Corkage</span><span>${corkageTotal.toFixed(2)}</span></div>
+      </div>
+      {(draftTotal>0||draftStallTotal>0)&&<p className="rounded-md bg-destructive/10 p-2 text-xs text-destructive">Not counted yet: {draftTotal>0?`package $${draftTotal.toFixed(2)}`:""}{draftTotal>0&&draftStallTotal>0?" and ":""}{draftStallTotal>0?`live stall $${draftStallTotal.toFixed(2)}`:""}. Press + to add it to the total.</p>}
       <div className="border-t border-border pt-3"><p className="text-xs uppercase text-muted-foreground">Estimated total</p><p className="font-serif text-3xl">${total.toFixed(2)}</p><p className="text-xs text-muted-foreground">${(total/Math.max(guests,1)).toFixed(2)} per guest · {guests} guests</p></div>
       <Button className="w-full">Save menu selection</Button>
     </aside>
