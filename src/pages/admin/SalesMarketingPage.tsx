@@ -1,6 +1,6 @@
 import { FormEvent, useMemo, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext"; import { Button } from "@/components/ui/button"; import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"; import { Badge } from "@/components/ui/badge"; import { Input } from "@/components/ui/input"; import { Label } from "@/components/ui/label"; import { Switch } from "@/components/ui/switch"; import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { AlertTriangle, X, CalendarDays, Check, ChevronRight, ClipboardList, Download, ExternalLink, LayoutDashboard, ListFilter, Mail, Phone, Plus, Search, Settings, Users } from "lucide-react";
+import { AlertTriangle, X, CalendarDays, Check, ChevronRight, ClipboardList, Download, ExternalLink, LayoutDashboard, ListFilter, Mail, Pencil, Phone, Plus, Search, Settings, Users } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client"; import { toast } from "sonner"; import { format, isAfter, startOfDay, subDays } from "date-fns";
 import CalendarTab from "@/features/sales/CalendarTab"; import { useCrmData } from "@/features/sales/useCrmData"; import LeadFormDialog from "@/features/sales/LeadFormDialog"; import LeadDetailDialog from "@/features/sales/LeadDetailDialog"; import type { CrmLead } from "@/features/sales/types"; import { CRM_LEAD_STATUSES, CRM_COLD_STATUS, prettyCrmValue } from "@/features/sales/types";
 
