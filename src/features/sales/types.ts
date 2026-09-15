@@ -31,4 +31,8 @@ export type CrmInteraction = {
 
 export const CRM_STAGE_VALUES = ["new", "contacted", "inspection_booked", "inspected", "menu_selected", "invoice_sent", "deposit_received", "runsheet_sent", "full_payment_received"];
 
+/** Cold leads are parked, not part of the forward pipeline. */
+export const CRM_COLD_STATUS = "cold";
+export const CRM_LEAD_STATUSES = [...CRM_STAGE_VALUES, CRM_COLD_STATUS];
+
 export const prettyCrmValue = (value: string) => value.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());

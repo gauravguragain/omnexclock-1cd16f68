@@ -64,6 +64,13 @@
       "when": 1789392567997,
       "tag": "0008_crm_menu_courses_and_corkage",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1789449600211,
+      "tag": "0009_allow_dish_menu_categories",
+      "breakpoints": true
     }
   ]
 }
