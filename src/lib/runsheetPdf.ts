@@ -6,6 +6,7 @@ export type RunsheetPdfData = {
   businessName: string;
   businessPhone?: string | null;
   businessEmail?: string | null;
+  logoUrl?: string | null;
   eventTitle: string;
   eventTypeLabel?: string | null;
   eventDateLabel: string;
@@ -37,155 +38,257 @@ export type RunsheetPdfData = {
   accessTime?: string | null;
 };
 
-const INK: [number, number, number] = [20, 20, 20];
-const MUTED: [number, number, number] = [105, 105, 105];
+type PdfLine = { text: string; level: 0 | 1 | 2; bold?: boolean; color?: "alert" };
 
-/** Banquet Event Order laid out to match the venue's existing event order sheet. */
-export function buildRunsheetPdf(data: RunsheetPdfData) {
-  const doc = new jsPDF();
-  const left = 14;
-  const right = 194;
-  const colGap = 6;
-  const colLeftX = left + 4;
-  const colRightX = 112;
-  const colLeftWidth = colRightX - colLeftX - colGap;
-  const colRightWidth = right - colRightX;
+const PAGE_WIDTH = 210;
+const PAGE_HEIGHT = 297;
+const LEFT = 10;
+const RIGHT = 200;
+const CONTENT_WIDTH = RIGHT - LEFT;
+const DETAIL_TOP = 91;
+const DETAIL_BOTTOM = 242;
+const COLUMN_DIVIDER = 107;
+const INK: [number, number, number] = [14, 14, 14];
+const MUTED: [number, number, number] = [82, 82, 82];
+const LIGHT_GREY: [number, number, number] = [207, 207, 207];
+
+const normalize = (value?: string | null) => value?.trim() || "";
+
+async function imageAsDataUrl(url?: string | null) {
+  if (!url) return null;
+  try {
+    const response = await fetch(url);
+    if (!response.ok) return null;
+    const blob = await response.blob();
+    return await new Promise<string | null>((resolve) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(typeof reader.result === "string" ? reader.result : null);
+      reader.onerror = () => resolve(null);
+      reader.readAsDataURL(blob);
+    });
+  } catch {
+    return null;
+  }
+}
+
+/** Pro Regal Pavilion banquet event order, matched to the venue's supplied BEO. */
+export async function buildRunsheetPdf(data: RunsheetPdfData) {
+  const doc = new jsPDF({ unit: "mm", format: "a4", orientation: "portrait" });
+  const logoData = await imageAsDataUrl(data.logoUrl);
   const timeRange = `${data.startTime} - ${data.endTime}`;
+  const eventHeading = `${data.eventTypeLabel || data.eventTitle} Event Order`;
+  const totalGuests = data.adultGuests + data.kidsGuests;
+  let detailStartPage = 1;
 
-  // Title block
-  doc.setFont("helvetica", "bold"); doc.setFontSize(15); doc.setTextColor(...INK);
-  doc.text(`${data.eventTypeLabel || data.eventTitle} Event Order`, left, 18);
-  doc.setFont("helvetica", "normal"); doc.setFontSize(11);
-  doc.text(data.eventDateLabel, left, 25);
-  doc.setFontSize(9); doc.setTextColor(...MUTED);
-  doc.text([data.businessName, [data.businessPhone, data.businessEmail].filter(Boolean).join(", ")].filter(Boolean).join(" - "), left, 31);
-
-  // Contact / reference block
-  let y = 42;
-  doc.setTextColor(...INK); doc.setFontSize(9);
-  const rowLabels: [string, string][] = [
-    ["Sales Person:", data.salesPerson || "—"],
-    ["Event Coordinator:", data.eventCoordinator || "—"],
-    ["Client:", `${data.clientName}${data.clientPhone ? ` (${data.clientPhone})` : ""}`],
-    ["Onsite Contact:", `${data.onsiteContactName || ""}${data.onsiteContactPhone ? ` (${data.onsiteContactPhone})` : " ()"}`.trim()],
-  ];
-  rowLabels.forEach(([label, value], index) => {
-    doc.setFont("helvetica", "bold"); doc.text(label, left, y + index * 5.5);
-    doc.setFont("helvetica", "normal"); doc.text(value, left + 40, y + index * 5.5);
-  });
-  doc.setFont("helvetica", "bold");
-  if (data.eventOrderNumber) doc.text(`Event Order: ${data.eventOrderNumber}`, right, y, { align: "right" });
-  if (data.bookingReference) doc.text(`Booking Reference: ${data.bookingReference}`, right, y + 5.5, { align: "right" });
-  y += rowLabels.length * 5.5 + 8;
-
-  const band = (title: string) => {
-    doc.setFillColor(240, 238, 234); doc.rect(left, y - 5, right - left, 8, "F");
-    doc.setFont("helvetica", "bold"); doc.setFontSize(9.5); doc.setTextColor(...INK);
-    doc.text(title, left + 3, y);
-    doc.text("Day 1 of 1", right - 3, y, { align: "right" });
-    y += 9;
-    doc.setFont("helvetica", "normal"); doc.setFontSize(9);
-  };
-
-  const summaryRow = () => {
-    doc.setFont("helvetica", "normal"); doc.setFontSize(9); doc.setTextColor(...INK);
-    doc.text(timeRange, left + 6, y);
-    doc.text(data.eventTitle, left + 46, y);
-    doc.text(`Attendees: ${data.adultGuests + data.kidsGuests}`, 128, y);
-    doc.text(data.venueSpace, right, y, { align: "right" });
-    doc.text(`Kids: ${data.kidsGuests}`, 128, y + 5);
-    y += 13;
-  };
-
-  band(`Event Summary - ${data.eventDateLabel}`);
-  summaryRow();
-  band(`Agenda - ${data.eventDateLabel}`);
-  summaryRow();
-
-  // Two columns: menu / agenda detail on the left, setup on the right
-  const startPage = doc.getNumberOfPages();
-  let leftY = y;
-  let rightY = y;
-  const lineHeight = 5;
-
-  const writeLines = (text: string, x: number, width: number, startY: number, bold = false) => {
-    doc.setFont("helvetica", bold ? "bold" : "normal"); doc.setFontSize(9);
-    const lines = doc.splitTextToSize(text, width);
-    if (startY + lines.length * lineHeight > 272) {
-      const current = doc.getCurrentPageInfo().pageNumber;
-      if (current < doc.getNumberOfPages()) doc.setPage(current + 1); else doc.addPage();
-      startY = 24;
-    }
-    doc.text(lines, x, startY);
-    return startY + lines.length * lineHeight;
-  };
-
-  // Right column
-  rightY = writeLines("Setup & Additional Information", colRightX, colRightWidth, rightY, true);
-  rightY += 2;
-  rightY = writeLines(`\u2022  ${data.eventTitle}`, colRightX, colRightWidth, rightY);
-  data.setupItems.forEach((item) => {
-    rightY = writeLines(`- ${item}`, colRightX + 5, colRightWidth - 5, rightY);
-  });
-  if (data.setupNotes) {
-    data.setupNotes.split("\n").filter(Boolean).forEach((note) => {
-      rightY = writeLines(`- ${note}`, colRightX + 5, colRightWidth - 5, rightY);
-    });
-  }
-  if (data.accessTime) rightY = writeLines(`\u2022  Decor access required at ${data.accessTime}`, colRightX, colRightWidth, rightY + 2);
-
-  doc.setPage(startPage);
-
-  // Left column
-  const packageHeading = `${data.packageName || "Menu"} (${timeRange})`;
-  leftY = writeLines(`\u2022  ${packageHeading}`, colLeftX, colLeftWidth, leftY, true);
-  leftY = writeLines("Items", colLeftX + 5, colLeftWidth - 5, leftY + 1);
-  leftY += 1;
-
-  data.menuByCategory.forEach((group) => {
-    leftY = writeLines(`o  ${group.category}`, colLeftX + 5, colLeftWidth - 5, leftY + 1.5, true);
-    group.items.forEach((item) => {
-      leftY = writeLines(`-  ${item}`, colLeftX + 12, colLeftWidth - 12, leftY);
-    });
-  });
-
-  if (data.schedule.length) {
-    leftY = writeLines("o  Service timings", colLeftX + 5, colLeftWidth - 5, leftY + 3, true);
-    data.schedule.forEach((line) => {
-      leftY = writeLines(`-  ${line.time} — ${line.label}${line.detail ? ` (${line.detail})` : ""}`, colLeftX + 12, colLeftWidth - 12, leftY);
-    });
-  }
-
-  if (data.kidsMenuNote) leftY = writeLines(`\u2022  Kids Menu- ${data.kidsMenuNote}`, colLeftX, colLeftWidth, leftY + 3);
-  if (data.beveragePackage) leftY = writeLines(`\u2022  Beverages- ${data.beveragePackage}`, colLeftX, colLeftWidth, leftY + 1.5);
-  if (data.liveStallNote) leftY = writeLines(`\u2022  Live Stalls- ${data.liveStallNote}`, colLeftX, colLeftWidth, leftY + 1.5);
-  if (data.corkageNote) leftY = writeLines(`\u2022  Corkage- ${data.corkageNote}`, colLeftX, colLeftWidth, leftY + 1.5);
-  if (data.specialRequests) leftY = writeLines(`*  ${data.specialRequests}`, colLeftX, colLeftWidth, leftY + 3);
-  if (data.dietaryRequirements) leftY = writeLines(`*  Dietary: ${data.dietaryRequirements}`, colLeftX, colLeftWidth, leftY + 1.5);
-  if (data.allergies) {
-    doc.setTextColor(170, 40, 40);
-    leftY = writeLines(`*  ALLERGIES: ${data.allergies}`, colLeftX, colLeftWidth, leftY + 1.5, true);
+  const text = (value: string, x: number, y: number, size = 8, bold = false) => {
+    doc.setFont("helvetica", bold ? "bold" : "normal");
+    doc.setFontSize(size);
     doc.setTextColor(...INK);
-  }
+    doc.text(value, x, y);
+  };
 
-  // Close-out
-  const sameColumnPage = doc.getCurrentPageInfo().pageNumber === startPage;
-  let closeY = (sameColumnPage ? Math.max(leftY, rightY) : leftY) + 12;
-  if (closeY > 262) { doc.addPage(); closeY = 40; }
-  doc.setFont("helvetica", "normal"); doc.setFontSize(9); doc.setTextColor(...MUTED);
-  doc.text("END DAY 1 OF 1", 105, closeY, { align: "center" });
+  const drawTitleBlock = () => {
+    text(eventHeading, LEFT, 13, 16, true);
+    text(data.eventDateLabel, LEFT, 19, 10.5, true);
+    doc.setTextColor(...MUTED);
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(7.2);
+    doc.text(
+      [data.businessName, [data.businessPhone, data.businessEmail].filter(Boolean).join(", ")]
+        .filter(Boolean)
+        .join(" - "),
+      LEFT,
+      24,
+    );
+
+    if (logoData) {
+      const format = logoData.startsWith("data:image/jpeg") ? "JPEG" : "PNG";
+      doc.addImage(logoData, format, 166, 9, 27, 18, undefined, "FAST");
+    }
+
+    const contacts: [string, string][] = [
+      ["Sales Person:", normalize(data.salesPerson) || "—"],
+      ["Event Coordinator:", normalize(data.eventCoordinator) || "—"],
+      ["Client:", `${data.clientName}${data.clientPhone ? ` (${data.clientPhone})` : ""}`],
+      ["Onsite Contact:", `${normalize(data.onsiteContactName)}${data.onsiteContactPhone ? ` (${data.onsiteContactPhone})` : " ()"}`.trim()],
+    ];
+    contacts.forEach(([label, value], index) => {
+      const rowY = 34 + index * 4.3;
+      text(label, LEFT, rowY, 7.2);
+      text(value, 47, rowY, 7.2);
+    });
+
+    doc.setDrawColor(202, 202, 202);
+    doc.setLineWidth(0.25);
+    doc.line(110, 31, 110, 49);
+    if (data.eventOrderNumber) text(`Event Order: ${data.eventOrderNumber}`, RIGHT - 2, 35, 7.2);
+    if (data.eventOrderNumber) doc.text(`Event Order: ${data.eventOrderNumber}`, RIGHT - 2, 35, { align: "right" });
+    if (data.bookingReference) {
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(7.2);
+      doc.text(`Booking Reference: ${data.bookingReference}`, RIGHT - 2, 39.5, { align: "right" });
+    }
+  };
+
+  const drawBand = (title: string, y: number) => {
+    doc.setFillColor(7, 7, 7);
+    doc.rect(LEFT, y, CONTENT_WIDTH, 7, "F");
+    doc.setTextColor(255, 255, 255);
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(9.8);
+    doc.text(title, LEFT + 3, y + 4.9);
+    doc.text("Day 1 of 1", RIGHT - 3, y + 4.9, { align: "right" });
+  };
+
+  const drawSummaryCells = (y: number, grey = false) => {
+    const height = grey ? 10 : 10;
+    if (grey) {
+      doc.setFillColor(...LIGHT_GREY);
+      doc.rect(LEFT, y, CONTENT_WIDTH, height, "F");
+    }
+    doc.setDrawColor(20, 20, 20);
+    doc.setLineWidth(0.3);
+    doc.rect(LEFT, y, CONTENT_WIDTH, height);
+    [48, 105, 143].forEach((x) => doc.line(x, y, x, y + height));
+    const weight = grey ? true : false;
+    text(`◷  ${timeRange}`, LEFT + 3, y + 5.5, 7.1, weight);
+    text(`▰  ${data.eventTitle}`, 51, y + 5.5, 7.1, weight);
+    text(`♟  Attendees: ${totalGuests}`, 108, y + 4.3, 7.1, weight);
+    text(`Kids:${data.kidsGuests}`, 112, y + 8, 7.1, weight);
+    text(`▮  ${data.venueSpace}`, 146, y + 5.5, 7.1, weight);
+  };
+
+  const drawFirstPageStructure = () => {
+    drawTitleBlock();
+    drawBand(`Event Summary - ${data.eventDateLabel}`, 54);
+    drawSummaryCells(61);
+    drawBand(`Agenda - ${data.eventDateLabel}`, 76);
+    drawSummaryCells(83, true);
+    detailStartPage = doc.getNumberOfPages();
+  };
+
+  const footer = (page: number, pages: number) => {
+    doc.setPage(page);
+    doc.setTextColor(...INK);
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(7.5);
+    doc.text(`END DAY 1 OF 1${pages > 1 ? ` — CONTINUED ${page} OF ${pages}` : ""}`, PAGE_WIDTH / 2, 260, { align: "center" });
+    doc.setDrawColor(202, 202, 202);
+    doc.setLineWidth(0.9);
+    doc.setLineDashPattern([3, 2.2], 0);
+    doc.line(LEFT, 267, RIGHT, 267);
+    doc.setLineDashPattern([], 0);
+    doc.setTextColor(...MUTED);
+    doc.setFontSize(6.8);
+    doc.text(`Printed Date: ${new Date().toLocaleDateString("en-AU")}`, RIGHT, 285, { align: "right" });
+    doc.setTextColor(...INK);
+    doc.text("Name:", LEFT, 290);
+    doc.line(19, 291, 56, 291);
+    doc.text("Signature:", 60, 290);
+    doc.line(74, 291, 101, 291);
+    doc.text("Date:", 104, 290);
+    doc.line(112, 291, 118, 291);
+    doc.text("/", 120, 290);
+    doc.line(123, 291, 129, 291);
+    doc.text("/", 131, 290);
+    doc.line(134, 291, 140, 291);
+    doc.text(`Page ${page} of ${pages}`, RIGHT, 290, { align: "right" });
+  };
+
+  const menuLines: PdfLine[] = [
+    { text: `${data.packageName || "Menu"} (${timeRange})`, level: 0, bold: true },
+    { text: "Items", level: 1, bold: true },
+  ];
+  data.menuByCategory.forEach((group) => {
+    menuLines.push({ text: group.category, level: 1, bold: true });
+    group.items.forEach((item) => menuLines.push({ text: item, level: 2 }));
+  });
+  if (data.schedule.length) {
+    menuLines.push({ text: "Service timings", level: 1, bold: true });
+    data.schedule.forEach((line) => menuLines.push({
+      text: `${line.time} - ${line.label}${line.detail ? ` (${line.detail})` : ""}`,
+      level: 2,
+    }));
+  }
+  if (data.specialRequests) menuLines.push({ text: data.specialRequests, level: 0, bold: true });
+  if (data.kidsMenuNote) menuLines.push({ text: `Kids Menu- ${data.kidsMenuNote}`, level: 0, bold: true });
+  if (data.beveragePackage) menuLines.push({ text: `Beverages- ${data.beveragePackage}`, level: 0, bold: true });
+  if (data.liveStallNote) menuLines.push({ text: `Live Stalls- ${data.liveStallNote}`, level: 0, bold: true });
+  if (data.corkageNote) menuLines.push({ text: `Corkage- ${data.corkageNote}`, level: 0, bold: true });
+  if (data.dietaryRequirements) menuLines.push({ text: `Dietary: ${data.dietaryRequirements}`, level: 0, bold: true });
+  if (data.allergies) menuLines.push({ text: `ALLERGIES: ${data.allergies}`, level: 0, bold: true, color: "alert" });
+
+  const setupLines: PdfLine[] = [
+    { text: "Setup & Additional Information", level: 0, bold: true },
+    { text: data.eventTitle, level: 0, bold: true },
+    ...data.setupItems.map((item): PdfLine => ({ text: item, level: 1 })),
+  ];
+  normalize(data.setupNotes).split("\n").filter(Boolean).forEach((note) => setupLines.push({ text: note, level: 1 }));
+  if (data.accessTime) setupLines.push({ text: `Decor access required at ${data.accessTime}`, level: 0 });
+
+  const measureLine = (line: PdfLine, width: number) => {
+    doc.setFont("helvetica", line.bold ? "bold" : "normal");
+    doc.setFontSize(7.4);
+    const indent = line.level === 2 ? 10 : line.level === 1 ? 5 : 0;
+    const wrapped = doc.splitTextToSize(line.text, width - indent - 5) as string[];
+    return { wrapped, height: Math.max(4.4, wrapped.length * 3.7) + (line.level < 2 ? 1.2 : 0), indent };
+  };
+
+  const paginate = (lines: PdfLine[], width: number) => {
+    const pages: PdfLine[][] = [[]];
+    let used = 0;
+    lines.forEach((line) => {
+      const measured = measureLine(line, width);
+      if (used + measured.height > DETAIL_BOTTOM - DETAIL_TOP - 4 && pages[pages.length - 1].length) {
+        pages.push([]);
+        used = 0;
+      }
+      pages[pages.length - 1].push(line);
+      used += measured.height;
+    });
+    return pages;
+  };
+
+  drawFirstPageStructure();
+  const leftPages = paginate(menuLines, COLUMN_DIVIDER - LEFT - 5);
+  const rightPages = paginate(setupLines, RIGHT - COLUMN_DIVIDER - 5);
+  const contentPages = Math.max(leftPages.length, rightPages.length);
+  while (doc.getNumberOfPages() < contentPages) doc.addPage();
+
+  const drawColumn = (lines: PdfLine[], x: number, width: number) => {
+    let y = DETAIL_TOP + 4;
+    lines.forEach((line) => {
+      const { wrapped, height, indent } = measureLine(line, width);
+      const bullet = line.level === 2 ? "▪" : "•";
+      doc.setTextColor(...(line.color === "alert" ? [160, 35, 35] as [number, number, number] : INK));
+      doc.setFont("helvetica", line.bold ? "bold" : "normal");
+      doc.setFontSize(7.4);
+      doc.text(bullet, x + indent, y);
+      doc.text(wrapped, x + indent + 4, y);
+      y += height;
+    });
+  };
+
+  for (let index = 0; index < contentPages; index += 1) {
+    doc.setPage(detailStartPage + index);
+    if (index > 0) {
+      drawBand(`Agenda continued - ${data.eventDateLabel}`, 12);
+    }
+    const top = index === 0 ? DETAIL_TOP : 19;
+    const previousTop = DETAIL_TOP;
+    const verticalShift = top - previousTop;
+    if (verticalShift !== 0) {
+      doc.setCurrentTransformationMatrix({ matrix: [1, 0, 0, 1, 0, verticalShift] } as never);
+    }
+    doc.setDrawColor(20, 20, 20);
+    doc.setLineWidth(0.3);
+    doc.rect(LEFT, DETAIL_TOP, CONTENT_WIDTH, DETAIL_BOTTOM - DETAIL_TOP);
+    doc.line(COLUMN_DIVIDER, DETAIL_TOP, COLUMN_DIVIDER, DETAIL_BOTTOM);
+    drawColumn(leftPages[index] || [], LEFT + 3, COLUMN_DIVIDER - LEFT - 5);
+    drawColumn(rightPages[index] || [], COLUMN_DIVIDER + 3, RIGHT - COLUMN_DIVIDER - 5);
+  }
 
   const pages = doc.getNumberOfPages();
-  for (let page = 1; page <= pages; page += 1) {
-    doc.setPage(page);
-    doc.setFontSize(8); doc.setTextColor(...MUTED);
-    doc.text(`Printed Date: ${new Date().toLocaleDateString("en-AU")}`, right, 283, { align: "right" });
-    doc.setTextColor(...INK); doc.setFontSize(9);
-    doc.text("Name:", left, 289);
-    doc.text("Signature:", left + 42, 289);
-    doc.text("Date:      /      /", left + 88, 289);
-    doc.setFontSize(8); doc.setTextColor(...MUTED);
-    doc.text(`Page ${page} of ${pages}`, right, 289, { align: "right" });
-  }
+  for (let page = 1; page <= pages; page += 1) footer(page, pages);
   return doc;
 }
