@@ -121,8 +121,12 @@ export async function buildRunsheetPdf(data: RunsheetPdfData) {
     doc.setDrawColor(202, 202, 202);
     doc.setLineWidth(0.25);
     doc.line(110, 31, 110, 49);
-    if (data.eventOrderNumber) text(`Event Order: ${data.eventOrderNumber}`, RIGHT - 2, 35, 7.2);
-    if (data.eventOrderNumber) doc.text(`Event Order: ${data.eventOrderNumber}`, RIGHT - 2, 35, { align: "right" });
+    if (data.eventOrderNumber) {
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(7.2);
+      doc.setTextColor(...INK);
+      doc.text(`Event Order: ${data.eventOrderNumber}`, RIGHT - 2, 35, { align: "right" });
+    }
     if (data.bookingReference) {
       doc.setFont("helvetica", "normal");
       doc.setFontSize(7.2);
@@ -255,8 +259,8 @@ export async function buildRunsheetPdf(data: RunsheetPdfData) {
   const contentPages = Math.max(leftPages.length, rightPages.length);
   while (doc.getNumberOfPages() < contentPages) doc.addPage();
 
-  const drawColumn = (lines: PdfLine[], x: number, width: number) => {
-    let y = DETAIL_TOP + 4;
+  const drawColumn = (lines: PdfLine[], x: number, width: number, top: number) => {
+    let y = top + 4;
     lines.forEach((line) => {
       const { wrapped, height, indent } = measureLine(line, width);
       const bullet = line.level === 2 ? "▪" : "•";
@@ -275,17 +279,12 @@ export async function buildRunsheetPdf(data: RunsheetPdfData) {
       drawBand(`Agenda continued - ${data.eventDateLabel}`, 12);
     }
     const top = index === 0 ? DETAIL_TOP : 19;
-    const previousTop = DETAIL_TOP;
-    const verticalShift = top - previousTop;
-    if (verticalShift !== 0) {
-      doc.setCurrentTransformationMatrix({ matrix: [1, 0, 0, 1, 0, verticalShift] } as never);
-    }
     doc.setDrawColor(20, 20, 20);
     doc.setLineWidth(0.3);
-    doc.rect(LEFT, DETAIL_TOP, CONTENT_WIDTH, DETAIL_BOTTOM - DETAIL_TOP);
-    doc.line(COLUMN_DIVIDER, DETAIL_TOP, COLUMN_DIVIDER, DETAIL_BOTTOM);
-    drawColumn(leftPages[index] || [], LEFT + 3, COLUMN_DIVIDER - LEFT - 5);
-    drawColumn(rightPages[index] || [], COLUMN_DIVIDER + 3, RIGHT - COLUMN_DIVIDER - 5);
+    doc.rect(LEFT, top, CONTENT_WIDTH, DETAIL_BOTTOM - top);
+    doc.line(COLUMN_DIVIDER, top, COLUMN_DIVIDER, DETAIL_BOTTOM);
+    drawColumn(leftPages[index] || [], LEFT + 3, COLUMN_DIVIDER - LEFT - 5, top);
+    drawColumn(rightPages[index] || [], COLUMN_DIVIDER + 3, RIGHT - COLUMN_DIVIDER - 5, top);
   }
 
   const pages = doc.getNumberOfPages();
