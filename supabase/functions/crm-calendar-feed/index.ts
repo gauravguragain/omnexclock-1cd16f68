@@ -17,11 +17,23 @@ Deno.serve(async (req) => {
   try {
     const url = new URL(req.url);
     const businessId = url.searchParams.get("b") || "";
-    if (!/^[0-9a-f-]{36}$/i.test(businessId)) {
+    const token = url.searchParams.get("t") || "";
+    if (!/^[0-9a-f-]{36}$/i.test(businessId) || !/^[0-9a-f]{32,128}$/i.test(token)) {
       return new Response("Calendar not found", { status: 404, headers: corsHeaders });
     }
 
     const supabase = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
+
+    // The feed is only readable with the private per-business token.
+    const { data: settings } = await supabase
+      .from("crm_settings")
+      .select("business_id")
+      .eq("business_id", businessId)
+      .eq("calendar_token", token)
+      .maybeSingle();
+    if (!settings) {
+      return new Response("Calendar not found", { status: 404, headers: corsHeaders });
+    }
     const [businessRes, leadRes, inspectionRes, bookingRes, taskRes] = await Promise.all([
       supabase.from("businesses").select("id,name").eq("id", businessId).maybeSingle(),
       supabase.from("crm_leads").select("id,full_name,phone,email,venue_space").eq("business_id", businessId),

@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { getCaller, serviceClient } from "../_shared/auth.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -12,6 +13,14 @@ serve(async (req) => {
   }
 
   try {
+    const caller = await getCaller(req, serviceClient());
+    if (!caller || caller.roles.length === 0) {
+      return new Response(JSON.stringify({ error: "Not allowed" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     const { transcript, employees, weekDates } = await req.json();
     const GROQ_API_KEY = Deno.env.get("GROQ_API_KEY");
     if (!GROQ_API_KEY) throw new Error("GROQ_API_KEY is not configured");
