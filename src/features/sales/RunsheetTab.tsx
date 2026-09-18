@@ -247,6 +247,7 @@ export default function RunsheetTab({ lead, booking, options, onSaved }: {
   const buildPdf = (revision: number) => buildRunsheetPdf({
     businessName: business?.name || "",
     businessPhone: business?.phone, businessEmail: business?.email,
+    logoUrl: business?.logo_url || "/regal-logo.png",
     eventTitle: `${prettyCrmValue(lead.event_type)} — ${lead.full_name}`,
     eventTypeLabel: prettyCrmValue(lead.event_type),
     eventDateLabel: booking?.event_date ? format(new Date(`${booking.event_date}T00:00:00`), "EEEE, d MMMM yyyy") : "Date to be confirmed",
@@ -270,9 +271,10 @@ export default function RunsheetTab({ lead, booking, options, onSaved }: {
 
   const fileName = (revision: number) => `Runsheet-v${revision}-${lead.full_name.replace(/\s+/g, "-")}-${booking?.event_date || "draft"}.pdf`;
 
-  const download = () => {
+  const download = async () => {
     const revision = Number(runsheet?.revision || 1);
-    buildPdf(revision).save(fileName(revision));
+    const pdf = await buildPdf(revision);
+    pdf.save(fileName(revision));
   };
 
   const issueRunsheet = async () => {
@@ -281,7 +283,8 @@ export default function RunsheetTab({ lead, booking, options, onSaved }: {
     const saved = await persist({ status: "sent", sent_at: new Date().toISOString(), generated_at: new Date().toISOString(), revision });
     if (!saved) { setSaving(false); return; }
 
-    buildPdf(revision).save(fileName(revision));
+    const pdf = await buildPdf(revision);
+    pdf.save(fileName(revision));
 
     const audience = form.distributed_to || "the operations team";
     await supabase.from("crm_interactions").insert({

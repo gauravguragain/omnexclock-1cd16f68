@@ -11,3 +11,4 @@
 - [x] Add public enquiry and secure confirmation flows
 - [x] Add AI note extraction and CRM email/PDF automation
 - [x] Verify database security, build, and desktop/mobile workflows
+- [x] Match the runsheet PDF to the supplied Pro Regal Pavilion event order
