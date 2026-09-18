@@ -18,7 +18,25 @@ export default function CalendarTab({ businessId, businessName, leads, inspectio
   businessId: string; businessName: string; leads: CrmLead[]; inspections: CrmInspection[]; bookings: any[]; tasks: CrmTask[];
 }) {
   const [filter, setFilter] = useState<"all" | AgendaEntry["kind"]>("all");
-  const feedUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/crm-calendar-feed?b=${businessId}`;
+  const [token, setToken] = useState("");
+
+  // The private calendar key is only readable by staff with sales access.
+  useEffect(() => {
+    let active = true;
+    (async () => {
+      const { data } = await supabase
+        .from("crm_settings")
+        .select("calendar_token")
+        .eq("business_id", businessId)
+        .maybeSingle();
+      if (active) setToken((data as any)?.calendar_token || "");
+    })();
+    return () => { active = false; };
+  }, [businessId]);
+
+  const feedUrl = token
+    ? `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/crm-calendar-feed?b=${businessId}&t=${token}`
+    : "";
   const googleUrl = `https://calendar.google.com/calendar/r?cid=${encodeURIComponent(feedUrl)}`;
   const nameOf = (id: string | null) => leads.find((lead) => lead.id === id)?.full_name || "Client";
 
