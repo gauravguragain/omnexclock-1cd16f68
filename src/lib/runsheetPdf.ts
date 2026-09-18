@@ -38,14 +38,14 @@ export type RunsheetPdfData = {
   accessTime?: string | null;
 };
 
-type PdfLine = { text: string; level: 0 | 1 | 2; bold?: boolean; color?: "alert" };
+type PdfLine = { text: string; level: 0 | 1 | 2; bold?: boolean; color?: "alert"; bullet?: boolean };
 
 const PAGE_WIDTH = 210;
 const PAGE_HEIGHT = 297;
 const LEFT = 10;
 const RIGHT = 200;
 const CONTENT_WIDTH = RIGHT - LEFT;
-const DETAIL_TOP = 91;
+const DETAIL_TOP = 93;
 const DETAIL_BOTTOM = 242;
 const COLUMN_DIVIDER = 107;
 const INK: [number, number, number] = [14, 14, 14];
@@ -237,7 +237,7 @@ export async function buildRunsheetPdf(data: RunsheetPdfData) {
   if (data.allergies) menuLines.push({ text: `ALLERGIES: ${data.allergies}`, level: 0, bold: true, color: "alert" });
 
   const setupLines: PdfLine[] = [
-    { text: "Setup & Additional Information", level: 0, bold: true },
+    { text: "Setup & Additional Information", level: 0, bold: true, bullet: false },
     { text: data.eventTitle, level: 0, bold: true },
     ...data.setupItems.map((item): PdfLine => ({ text: item, level: 1 })),
   ];
@@ -281,7 +281,7 @@ export async function buildRunsheetPdf(data: RunsheetPdfData) {
       doc.setTextColor(...(line.color === "alert" ? [160, 35, 35] as [number, number, number] : INK));
       doc.setFont("helvetica", line.bold ? "bold" : "normal");
       doc.setFontSize(7.4);
-      doc.text(bullet, x + indent, y);
+      if (line.bullet !== false) doc.text(bullet, x + indent, y);
       doc.text(wrapped, x + indent + 4, y);
       y += height;
     });
