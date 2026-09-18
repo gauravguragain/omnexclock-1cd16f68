@@ -1447,6 +1447,7 @@ export type Database = {
         Row: {
           assignment_mode: string
           business_id: string
+          calendar_token: string | null
           calendly_enabled: boolean
           confirmation_terms: string | null
           created_at: string
@@ -1462,6 +1463,7 @@ export type Database = {
         Insert: {
           assignment_mode?: string
           business_id: string
+          calendar_token?: string | null
           calendly_enabled?: boolean
           confirmation_terms?: string | null
           created_at?: string
@@ -1477,6 +1479,7 @@ export type Database = {
         Update: {
           assignment_mode?: string
           business_id?: string
+          calendar_token?: string | null
           calendly_enabled?: boolean
           confirmation_terms?: string | null
           created_at?: string
