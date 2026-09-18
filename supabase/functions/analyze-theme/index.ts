@@ -24,9 +24,17 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
+    const caller = await getCaller(req, serviceClient());
+    if (!caller || caller.roles.length === 0) {
+      return new Response(JSON.stringify({ error: "Not allowed" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     const { imageUrl } = await req.json();
-    if (!imageUrl) {
-      return new Response(JSON.stringify({ error: "imageUrl is required" }), {
+    if (!isAllowedUrl(imageUrl)) {
+      return new Response(JSON.stringify({ error: "A project storage image URL is required" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
