@@ -24,9 +24,17 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
+    const caller = await getCaller(req, serviceClient());
+    if (!caller || caller.roles.length === 0) {
+      return new Response(JSON.stringify({ error: "Not allowed" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     const { pdfUrl } = await req.json();
-    if (!pdfUrl) {
-      return new Response(JSON.stringify({ error: "pdfUrl is required" }), {
+    if (!isAllowedUrl(pdfUrl)) {
+      return new Response(JSON.stringify({ error: "A project storage PDF URL is required" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });

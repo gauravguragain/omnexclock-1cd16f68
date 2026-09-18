@@ -13,6 +13,14 @@ serve(async (req) => {
   }
 
   try {
+    const caller = await getCaller(req, serviceClient());
+    if (!caller || caller.roles.length === 0) {
+      return new Response(JSON.stringify({ error: "Not allowed" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     const { text, voiceId } = await req.json();
     const ELEVENLABS_API_KEY = Deno.env.get("ELEVENLABS_API_KEY");
 
