@@ -1,4 +1,18 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { getCaller, serviceClient } from "../_shared/auth.ts";
+
+/** Only project storage files may be fetched server-side (prevents SSRF). */
+function isAllowedUrl(value: unknown): boolean {
+  if (typeof value !== "string") return false;
+  try {
+    const target = new URL(value);
+    const base = new URL(Deno.env.get("SUPABASE_URL")!);
+    return target.protocol === "https:" && target.hostname === base.hostname &&
+      target.pathname.startsWith("/storage/v1/object/");
+  } catch {
+    return false;
+  }
+}
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
