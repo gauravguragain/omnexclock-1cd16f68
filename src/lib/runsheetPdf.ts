@@ -60,12 +60,15 @@ async function imageAsDataUrl(url?: string | null) {
     const response = await fetch(url);
     if (!response.ok) return null;
     const blob = await response.blob();
-    return await new Promise<string | null>((resolve) => {
-      const reader = new FileReader();
-      reader.onload = () => resolve(typeof reader.result === "string" ? reader.result : null);
-      reader.onerror = () => resolve(null);
-      reader.readAsDataURL(blob);
-    });
+    const bitmap = await createImageBitmap(blob);
+    const canvas = document.createElement("canvas");
+    canvas.width = bitmap.width;
+    canvas.height = bitmap.height;
+    const context = canvas.getContext("2d");
+    if (!context) return null;
+    context.drawImage(bitmap, 0, 0);
+    bitmap.close();
+    return canvas.toDataURL("image/png");
   } catch {
     return null;
   }
@@ -102,8 +105,7 @@ export async function buildRunsheetPdf(data: RunsheetPdfData) {
     );
 
     if (logoData) {
-      const format = logoData.startsWith("data:image/jpeg") ? "JPEG" : "PNG";
-      doc.addImage(logoData, format, 166, 9, 27, 18, undefined, "FAST");
+      doc.addImage(logoData, "PNG", 166, 9, 27, 18, undefined, "FAST");
     }
 
     const contacts: [string, string][] = [
