@@ -157,11 +157,23 @@ export async function buildRunsheetPdf(data: RunsheetPdfData) {
     doc.rect(LEFT, y, CONTENT_WIDTH, height);
     [48, 105, 143].forEach((x) => doc.line(x, y, x, y + height));
     const weight = grey ? true : false;
-    text(`◷  ${timeRange}`, LEFT + 3, y + 5.5, 7.1, weight);
-    text(`▰  ${data.eventTitle}`, 51, y + 5.5, 7.1, weight);
-    text(`♟  Attendees: ${totalGuests}`, 108, y + 4.3, 7.1, weight);
+    const iconY = y + 5.1;
+    doc.setDrawColor(...INK);
+    doc.setLineWidth(0.35);
+    doc.circle(14, iconY - 0.2, 1.5);
+    doc.line(14, iconY - 0.2, 14, iconY - 1.2);
+    doc.line(14, iconY - 0.2, 14.8, iconY - 0.2);
+    doc.roundedRect(52, iconY - 1.6, 3.6, 2.6, 0.3, 0.3);
+    doc.line(52.8, iconY + 1.5, 55.8, iconY + 1.5);
+    doc.circle(110, iconY - 1.1, 1);
+    doc.roundedRect(108.5, iconY, 3, 2, 0.4, 0.4, "F");
+    doc.rect(146, iconY - 1.8, 2.6, 3.8);
+    doc.circle(148, iconY + 0.2, 0.25, "F");
+    text(timeRange, 17, y + 5.5, 7.1, weight);
+    text(data.eventTitle, 57, y + 5.5, 7.1, weight);
+    text(`Attendees: ${totalGuests}`, 113, y + 4.3, 7.1, weight);
     text(`Kids:${data.kidsGuests}`, 112, y + 8, 7.1, weight);
-    text(`▮  ${data.venueSpace}`, 146, y + 5.5, 7.1, weight);
+    text(data.venueSpace, 150, y + 5.5, 7.1, weight);
   };
 
   const drawFirstPageStructure = () => {
@@ -265,7 +277,7 @@ export async function buildRunsheetPdf(data: RunsheetPdfData) {
     let y = top + 4;
     lines.forEach((line) => {
       const { wrapped, height, indent } = measureLine(line, width);
-      const bullet = line.level === 2 ? "▪" : "•";
+      const bullet = line.level === 2 ? "-" : "•";
       doc.setTextColor(...(line.color === "alert" ? [160, 35, 35] as [number, number, number] : INK));
       doc.setFont("helvetica", line.bold ? "bold" : "normal");
       doc.setFontSize(7.4);

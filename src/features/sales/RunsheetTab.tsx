@@ -16,7 +16,6 @@ import { format, subDays } from "date-fns";
 import type { CrmLead, CrmOption } from "./types";
 import { prettyCrmValue } from "./types";
 import { buildRunsheetPdf, type RunsheetScheduleLine } from "@/lib/runsheetPdf";
-import proRegalLogo from "@/assets/pro-regal-pavilion-logo.png.asset.json";
 
 const FALLBACK_SETUP_ITEMS = [
   "Black tablecloths", "White tablecloths", "Red carpet", "Smoke machine", "Cold sparkles", "Dry ice",
@@ -248,7 +247,7 @@ export default function RunsheetTab({ lead, booking, options, onSaved }: {
   const buildPdf = (revision: number) => buildRunsheetPdf({
     businessName: business?.name || "",
     businessPhone: business?.phone, businessEmail: business?.email,
-    logoUrl: business?.logo_url || proRegalLogo.url,
+    logoUrl: business?.logo_url || "/regal-logo.png",
     eventTitle: `${prettyCrmValue(lead.event_type)} — ${lead.full_name}`,
     eventTypeLabel: prettyCrmValue(lead.event_type),
     eventDateLabel: booking?.event_date ? format(new Date(`${booking.event_date}T00:00:00`), "EEEE, d MMMM yyyy") : "Date to be confirmed",
