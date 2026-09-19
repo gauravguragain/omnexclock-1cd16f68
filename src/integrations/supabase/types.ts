@@ -1121,6 +1121,8 @@ export type Database = {
           price_per_head: number | null
           quantity: number
           selection_id: string
+          service_end_time: string | null
+          service_start_time: string | null
         }
         Insert: {
           business_id: string
@@ -1134,6 +1136,8 @@ export type Database = {
           price_per_head?: number | null
           quantity?: number
           selection_id: string
+          service_end_time?: string | null
+          service_start_time?: string | null
         }
         Update: {
           business_id?: string
@@ -1147,6 +1151,8 @@ export type Database = {
           price_per_head?: number | null
           quantity?: number
           selection_id?: string
+          service_end_time?: string | null
+          service_start_time?: string | null
         }
         Relationships: [
           {
@@ -1333,6 +1339,7 @@ export type Database = {
           created_by: string | null
           distributed_to: string | null
           event_coordinator: string | null
+          event_coordinator_phone: string | null
           event_order_number: string | null
           generated_at: string | null
           id: string
@@ -1343,6 +1350,7 @@ export type Database = {
           ops_notes: string | null
           revision: number
           sales_person: string | null
+          sales_person_phone: string | null
           sent_at: string | null
           service_schedule: Json
           setup_items: string[]
@@ -1363,6 +1371,7 @@ export type Database = {
           created_by?: string | null
           distributed_to?: string | null
           event_coordinator?: string | null
+          event_coordinator_phone?: string | null
           event_order_number?: string | null
           generated_at?: string | null
           id?: string
@@ -1373,6 +1382,7 @@ export type Database = {
           ops_notes?: string | null
           revision?: number
           sales_person?: string | null
+          sales_person_phone?: string | null
           sent_at?: string | null
           service_schedule?: Json
           setup_items?: string[]
@@ -1393,6 +1403,7 @@ export type Database = {
           created_by?: string | null
           distributed_to?: string | null
           event_coordinator?: string | null
+          event_coordinator_phone?: string | null
           event_order_number?: string | null
           generated_at?: string | null
           id?: string
@@ -1403,6 +1414,7 @@ export type Database = {
           ops_notes?: string | null
           revision?: number
           sales_person?: string | null
+          sales_person_phone?: string | null
           sent_at?: string | null
           service_schedule?: Json
           setup_items?: string[]
