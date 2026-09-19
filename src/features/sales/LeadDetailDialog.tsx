@@ -17,6 +17,7 @@ export default function LeadDetailDialog({ lead, open, onOpenChange, options, in
   const [insDate,setInsDate]=useState(""); const [insStart,setInsStart]=useState("10:00"); const [insEnd,setInsEnd]=useState("11:00"); const [followDate,setFollowDate]=useState(""); const [followTime,setFollowTime]=useState("09:00"); const [bookStart,setBookStart]=useState(String(booking?.start_time||"18:00").slice(0,5)); const [bookEnd,setBookEnd]=useState("23:00"); const [durationHours,setDurationHours]=useState<number|string>(booking?.duration_minutes?Number(booking.duration_minutes)/60:5);
   const timeToMin=(t:string)=>{const[h,m]=t.split(":").map(Number);return h*60+m;};
   const minToTime=(m:number)=>{const hh=Math.floor(m/60)%24;const mm=m%60;return `${String(hh).padStart(2,"0")}:${String(mm).padStart(2,"0")}`;};
+  const prettyTime=(value:string)=>{const[h,m]=value.split(":").map(Number);return `${h%12===0?12:h%12}:${String(m||0).padStart(2,"0")} ${h>=12?"PM":"AM"}`;};
   useEffect(()=>{if(booking?.start_time)setBookStart(String(booking.start_time).slice(0,5));},[booking?.start_time]);
   useEffect(()=>{if(booking?.duration_minutes)setDurationHours(Number(booking.duration_minutes)/60);},[booking?.duration_minutes]);
   useEffect(()=>{const endMin=timeToMin(bookStart)+Number(durationHours||0)*60;setBookEnd(minToTime(endMin));},[bookStart,durationHours]);
