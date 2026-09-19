@@ -47,7 +47,7 @@ export default function RunsheetTab({ lead, booking, options, onSaved }: {
   const [menu, setMenu] = useState<{ selection: any; items: any[]; catalogue: Record<string, string> }>({ selection: null, items: [], catalogue: {} });
 
   const [form, setForm] = useState({
-    event_order_number: "", booking_reference: "", sales_person: "", event_coordinator: "",
+    event_order_number: "", booking_reference: "", sales_person: "", sales_person_phone: "", event_coordinator: "", event_coordinator_phone: "",
     onsite_contact_name: "", onsite_contact_phone: "", adult_guests: "", kids_guests: "",
     access_time: "", setup_notes: "", special_requests: "", distributed_to: "", ops_notes: "", client_notes: "",
   });
@@ -88,7 +88,7 @@ export default function RunsheetTab({ lead, booking, options, onSaved }: {
     if (row) {
       setForm({
         event_order_number: row.event_order_number || "", booking_reference: row.booking_reference || "",
-        sales_person: row.sales_person || "", event_coordinator: row.event_coordinator || "",
+        sales_person: row.sales_person || "", sales_person_phone: row.sales_person_phone || "", event_coordinator: row.event_coordinator || "", event_coordinator_phone: row.event_coordinator_phone || "",
         onsite_contact_name: row.onsite_contact_name || "", onsite_contact_phone: row.onsite_contact_phone || "",
         adult_guests: row.adult_guests != null ? String(row.adult_guests) : "",
         kids_guests: row.kids_guests != null ? String(row.kids_guests) : "",
@@ -126,25 +126,18 @@ export default function RunsheetTab({ lead, booking, options, onSaved }: {
     const packages = menu.items.filter((item: any) => item.course === "package").map((item: any) => item.item_name);
     return menu.selection?.package_name || packages.join(", ") || null;
   }, [menu]);
-  const liveStallNote = useMemo(() => {
+  const liveStalls = useMemo(() => {
     const stalls = menu.items.filter((item: any) => item.course === "live_stall");
-    if (!stalls.length) return null;
-    return stalls.map((stall: any) => {
-      const parts = [
-        stall.price_per_head ? `$${Number(stall.price_per_head).toFixed(2)} per guest` : "",
-        stall.flat_price ? `$${Number(stall.flat_price).toFixed(2)} flat` : "",
-      ].filter(Boolean);
-      return `${stall.item_name}${parts.length ? ` (${parts.join(" + ")})` : ""}`;
-    }).join(", ");
+    return stalls.map((stall: any) => ({
+      name: stall.item_name,
+      startTime: stall.service_start_time ? prettyTime(String(stall.service_start_time).slice(0, 5)) : "",
+      endTime: stall.service_end_time ? prettyTime(String(stall.service_end_time).slice(0, 5)) : "",
+    }));
   }, [menu]);
   const corkageNote = useMemo(() => {
     const selection: any = menu.selection;
     if (!selection?.corkage_enabled) return null;
-    const parts = [
-      selection.corkage_per_head ? `$${Number(selection.corkage_per_head).toFixed(2)} per guest` : "",
-      selection.corkage_flat ? `$${Number(selection.corkage_flat).toFixed(2)} flat` : "",
-    ].filter(Boolean);
-    return `Host bringing own drinks${parts.length ? ` — ${parts.join(" + ")}` : ""}`;
+    return "Host bringing own drinks";
   }, [menu.selection]);
 
   const startTime = String(booking?.start_time || "17:30").slice(0, 5);
@@ -217,7 +210,8 @@ export default function RunsheetTab({ lead, booking, options, onSaved }: {
     const payload: any = {
       business_id: lead.business_id, lead_id: lead.id, booking_id: booking?.id || null,
       event_order_number: form.event_order_number || null, booking_reference: form.booking_reference || null,
-      sales_person: form.sales_person || null, event_coordinator: form.event_coordinator || null,
+       sales_person: form.sales_person || null, sales_person_phone: form.sales_person_phone || null,
+       event_coordinator: form.event_coordinator || null, event_coordinator_phone: form.event_coordinator_phone || null,
       onsite_contact_name: form.onsite_contact_name || null, onsite_contact_phone: form.onsite_contact_phone || null,
       adult_guests: form.adult_guests ? Number(form.adult_guests) : null,
       kids_guests: form.kids_guests ? Number(form.kids_guests) : null,
@@ -255,12 +249,13 @@ export default function RunsheetTab({ lead, booking, options, onSaved }: {
     venueSpace: prettyCrmValue(booking?.venue_space || lead.venue_space || "—"),
     adultGuests: Number(form.adult_guests || 0), kidsGuests: Number(form.kids_guests || 0),
     clientName: lead.full_name, clientPhone: lead.phone,
-    salesPerson: form.sales_person, eventCoordinator: form.event_coordinator,
+    salesPerson: form.sales_person, salesPersonPhone: form.sales_person_phone,
+    eventCoordinator: form.event_coordinator, eventCoordinatorPhone: form.event_coordinator_phone,
     onsiteContactName: form.onsite_contact_name, onsiteContactPhone: form.onsite_contact_phone,
     eventOrderNumber: form.event_order_number ? `${form.event_order_number} · v${revision}` : `v${revision}`,
     bookingReference: form.booking_reference,
     schedule: schedule.map(({ time, label, detail }) => ({ time: prettyTime(time), label, detail })),
-    menuByCategory, packageName, corkageNote, liveStallNote,
+    menuByCategory, packageName, corkageNote, liveStalls,
     kidsMenuNote: Number(form.kids_guests || 0) > 0 ? menuByCategory.find((g) => g.category === "Kids Menu")?.items.join(", ") || `${form.kids_guests} kids` : null,
     beveragePackage: menu.selection?.beverage_package ? prettyCrmValue(menu.selection.beverage_package) : null,
     dietaryRequirements: menu.selection?.dietary_requirements, allergies: menu.selection?.allergies,
@@ -373,7 +368,9 @@ export default function RunsheetTab({ lead, booking, options, onSaved }: {
         <div className="space-y-1.5"><Label>Event order number</Label><Input value={form.event_order_number} onChange={set("event_order_number")} placeholder="698-1" /></div>
         <div className="space-y-1.5"><Label>Booking reference</Label><Input value={form.booking_reference} onChange={set("booking_reference")} /></div>
         <div className="space-y-1.5"><Label>Sales person</Label><Input value={form.sales_person} onChange={set("sales_person")} /></div>
+        <div className="space-y-1.5"><Label>Sales person contact number</Label><Input type="tel" value={form.sales_person_phone} onChange={set("sales_person_phone")} /></div>
         <div className="space-y-1.5"><Label>Event coordinator</Label><Input value={form.event_coordinator} onChange={set("event_coordinator")} /></div>
+        <div className="space-y-1.5"><Label>Event coordinator contact number</Label><Input type="tel" value={form.event_coordinator_phone} onChange={set("event_coordinator_phone")} /></div>
         <div className="space-y-1.5"><Label>Onsite contact</Label><Input value={form.onsite_contact_name} onChange={set("onsite_contact_name")} placeholder="Name on the day" /></div>
         <div className="space-y-1.5"><Label>Onsite contact number</Label><Input value={form.onsite_contact_phone} onChange={set("onsite_contact_phone")} /></div>
         <div className="space-y-1.5"><Label>Adults</Label><Input type="number" min="0" value={form.adult_guests} onChange={set("adult_guests")} /></div>

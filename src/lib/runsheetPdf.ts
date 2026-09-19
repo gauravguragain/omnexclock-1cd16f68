@@ -18,7 +18,9 @@ export type RunsheetPdfData = {
   clientName: string;
   clientPhone?: string | null;
   salesPerson?: string | null;
+  salesPersonPhone?: string | null;
   eventCoordinator?: string | null;
+  eventCoordinatorPhone?: string | null;
   onsiteContactName?: string | null;
   onsiteContactPhone?: string | null;
   eventOrderNumber?: string | null;
@@ -28,7 +30,7 @@ export type RunsheetPdfData = {
   menuByCategory: { category: string; items: string[] }[];
   beveragePackage?: string | null;
   corkageNote?: string | null;
-  liveStallNote?: string | null;
+  liveStalls: { name: string; startTime?: string; endTime?: string }[];
   kidsMenuNote?: string | null;
   dietaryRequirements?: string | null;
   allergies?: string | null;
@@ -80,7 +82,6 @@ export async function buildRunsheetPdf(data: RunsheetPdfData) {
   const logoData = await imageAsDataUrl(data.logoUrl);
   const timeRange = `${data.startTime} - ${data.endTime}`;
   const eventHeading = `${data.eventTypeLabel || data.eventTitle} Event Order`;
-  const totalGuests = data.adultGuests + data.kidsGuests;
   let detailStartPage = 1;
 
   const text = (value: string, x: number, y: number, size = 8, bold = false) => {
@@ -109,8 +110,8 @@ export async function buildRunsheetPdf(data: RunsheetPdfData) {
     }
 
     const contacts: [string, string][] = [
-      ["Sales Person:", normalize(data.salesPerson) || "—"],
-      ["Event Coordinator:", normalize(data.eventCoordinator) || "—"],
+      ["Sales Person:", `${normalize(data.salesPerson) || "—"}${data.salesPersonPhone ? ` (${data.salesPersonPhone})` : ""}`],
+      ["Event Coordinator:", `${normalize(data.eventCoordinator) || "—"}${data.eventCoordinatorPhone ? ` (${data.eventCoordinatorPhone})` : ""}`],
       ["Client:", `${data.clientName}${data.clientPhone ? ` (${data.clientPhone})` : ""}`],
       ["Onsite Contact:", `${normalize(data.onsiteContactName)}${data.onsiteContactPhone ? ` (${data.onsiteContactPhone})` : " ()"}`.trim()],
     ];
@@ -171,9 +172,10 @@ export async function buildRunsheetPdf(data: RunsheetPdfData) {
     doc.circle(148, iconY + 0.2, 0.25, "F");
     text(timeRange, 17, y + 5.5, 7.1, weight);
     text(data.eventTitle, 57, y + 5.5, 7.1, weight);
-    text(`Attendees: ${totalGuests}`, 113, y + 4.3, 7.1, weight);
-    text(`Kids:${data.kidsGuests}`, 112, y + 8, 7.1, weight);
-    text(data.venueSpace, 150, y + 5.5, 7.1, weight);
+    text(`Adults: ${data.adultGuests}`, 113, y + 4.3, 7.1, weight);
+    text(`Kids: ${data.kidsGuests}`, 113, y + 8, 7.1, weight);
+    text("Venue", 150, y + 3.7, 6.2, weight);
+    text(data.venueSpace, 150, y + 7.3, 7.1, weight);
   };
 
   const drawFirstPageStructure = () => {
@@ -214,6 +216,10 @@ export async function buildRunsheetPdf(data: RunsheetPdfData) {
   };
 
   const menuLines: PdfLine[] = [
+    ...(data.liveStalls.length ? [
+      { text: "Live Stalls", level: 0 as const, bold: true, bullet: false },
+      ...data.liveStalls.map((stall): PdfLine => ({ text: `${stall.name}${stall.startTime && stall.endTime ? ` — ${stall.startTime} to ${stall.endTime}` : ""}`, level: 1 })),
+    ] : []),
     { text: `${data.packageName || "Menu"} (${timeRange})`, level: 0, bold: true },
     { text: "Items", level: 1, bold: true },
   ];
@@ -221,17 +227,9 @@ export async function buildRunsheetPdf(data: RunsheetPdfData) {
     menuLines.push({ text: group.category, level: 1, bold: true });
     group.items.forEach((item) => menuLines.push({ text: item, level: 2 }));
   });
-  if (data.schedule.length) {
-    menuLines.push({ text: "Service timings", level: 1, bold: true });
-    data.schedule.forEach((line) => menuLines.push({
-      text: `${line.time} - ${line.label}${line.detail ? ` (${line.detail})` : ""}`,
-      level: 2,
-    }));
-  }
   if (data.specialRequests) menuLines.push({ text: data.specialRequests, level: 0, bold: true });
   if (data.kidsMenuNote) menuLines.push({ text: `Kids Menu- ${data.kidsMenuNote}`, level: 0, bold: true });
   if (data.beveragePackage) menuLines.push({ text: `Beverages- ${data.beveragePackage}`, level: 0, bold: true });
-  if (data.liveStallNote) menuLines.push({ text: `Live Stalls- ${data.liveStallNote}`, level: 0, bold: true });
   if (data.corkageNote) menuLines.push({ text: `Corkage- ${data.corkageNote}`, level: 0, bold: true });
   if (data.dietaryRequirements) menuLines.push({ text: `Dietary: ${data.dietaryRequirements}`, level: 0, bold: true });
   if (data.allergies) menuLines.push({ text: `ALLERGIES: ${data.allergies}`, level: 0, bold: true, color: "alert" });
@@ -243,6 +241,13 @@ export async function buildRunsheetPdf(data: RunsheetPdfData) {
   ];
   normalize(data.setupNotes).split("\n").filter(Boolean).forEach((note) => setupLines.push({ text: note, level: 1 }));
   if (data.accessTime) setupLines.push({ text: `Decor access required at ${data.accessTime}`, level: 0 });
+  if (data.schedule.length) {
+    setupLines.push({ text: "Service timings", level: 0, bold: true, bullet: false });
+    data.schedule.forEach((line) => setupLines.push({
+      text: `${line.time} - ${line.label}${line.detail ? ` (${line.detail})` : ""}`,
+      level: 1,
+    }));
+  }
 
   const measureLine = (line: PdfLine, width: number) => {
     doc.setFont("helvetica", line.bold ? "bold" : "normal");
