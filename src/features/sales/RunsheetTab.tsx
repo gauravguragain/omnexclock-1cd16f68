@@ -51,6 +51,8 @@ export default function RunsheetTab({ lead, booking, options, onSaved }: {
     onsite_contact_name: "", onsite_contact_phone: "", adult_guests: "", kids_guests: "",
     access_time: "", setup_notes: "", special_requests: "", distributed_to: "", ops_notes: "", client_notes: "",
   });
+  const [accessEnabled, setAccessEnabled] = useState(false);
+  });
   const [setupItems, setSetupItems] = useState<string[]>([]);
   const [extraSetupItems, setExtraSetupItems] = useState<string[]>([]);
   const [newSetupItem, setNewSetupItem] = useState("");
