@@ -51,6 +51,7 @@ export default function RunsheetTab({ lead, booking, options, onSaved }: {
     onsite_contact_name: "", onsite_contact_phone: "", adult_guests: "", kids_guests: "",
     access_time: "", setup_notes: "", special_requests: "", distributed_to: "", ops_notes: "", client_notes: "",
   });
+  const [accessEnabled, setAccessEnabled] = useState(false);
   const [setupItems, setSetupItems] = useState<string[]>([]);
   const [extraSetupItems, setExtraSetupItems] = useState<string[]>([]);
   const [newSetupItem, setNewSetupItem] = useState("");
@@ -95,9 +96,11 @@ export default function RunsheetTab({ lead, booking, options, onSaved }: {
         access_time: row.access_time || "", setup_notes: row.setup_notes || "", special_requests: row.special_requests || "",
         distributed_to: row.distributed_to || "", ops_notes: row.ops_notes || "", client_notes: row.client_notes || "",
       });
+      setAccessEnabled(Boolean(row.access_time));
       setSetupItems(row.setup_items || []);
       setSchedule(((row.service_schedule || []) as RunsheetScheduleLine[]).map((line, index) => ({ ...line, key: `s${index}` })));
     } else {
+      setAccessEnabled(false);
       setForm((prev) => ({
         ...prev,
         adult_guests: String(booking?.guest_count || lead.estimated_guest_count || ""),
@@ -169,7 +172,6 @@ export default function RunsheetTab({ lead, booking, options, onSaved }: {
       booking_reference: prev.booking_reference || lead.id.slice(0, 10).toUpperCase(),
       onsite_contact_name: prev.onsite_contact_name || lead.full_name,
       onsite_contact_phone: prev.onsite_contact_phone || lead.phone || "",
-      access_time: prev.access_time || minutesToTime(Math.max(0, timeToMinutes(startTime) - 180)),
       client_notes: prev.client_notes || [menu.selection?.dietary_requirements, menu.selection?.allergies ? `Allergies: ${menu.selection.allergies}` : ""].filter(Boolean).join(" · "),
     }));
     if (!schedule.length) suggestSchedule();
@@ -185,9 +187,9 @@ export default function RunsheetTab({ lead, booking, options, onSaved }: {
     { label: "Onsite contact on the day", done: Boolean(form.onsite_contact_name.trim() && form.onsite_contact_phone.trim()) },
     { label: "Service schedule built", done: schedule.length > 0 },
     { label: "Setup and styling ticked off", done: setupItems.length > 0 },
-    { label: "Vendor access time agreed", done: Boolean(form.access_time) },
+    ...(accessEnabled ? [{ label: "Vendor access time agreed", done: Boolean(form.access_time) }] : []),
     { label: "Deposit received", done: ["deposit_received", "runsheet_sent", "full_payment_received"].includes(lead.status) },
-  ]), [booking, form, menu, schedule, setupItems, lead.status]);
+  ]), [booking, form, menu, schedule, setupItems, lead.status, accessEnabled]);
 
   const completed = checklist.filter((c) => c.done).length;
   const readyToSend = completed === checklist.length;
@@ -215,7 +217,7 @@ export default function RunsheetTab({ lead, booking, options, onSaved }: {
       onsite_contact_name: form.onsite_contact_name || null, onsite_contact_phone: form.onsite_contact_phone || null,
       adult_guests: form.adult_guests ? Number(form.adult_guests) : null,
       kids_guests: form.kids_guests ? Number(form.kids_guests) : null,
-      access_time: form.access_time || null, setup_items: setupItems, setup_notes: form.setup_notes || null,
+      access_time: accessEnabled ? (form.access_time || null) : null, setup_items: setupItems, setup_notes: form.setup_notes || null,
       service_schedule: schedule.map(({ time, label, detail }) => ({ time, label, detail })),
       special_requests: form.special_requests || null, distributed_to: form.distributed_to || null,
       ops_notes: form.ops_notes || null, client_notes: form.client_notes || null,
@@ -261,7 +263,7 @@ export default function RunsheetTab({ lead, booking, options, onSaved }: {
     dietaryRequirements: menu.selection?.dietary_requirements, allergies: menu.selection?.allergies,
     specialRequests: [form.special_requests, form.client_notes].filter(Boolean).join(" · "),
     setupItems, setupNotes: [form.setup_notes, form.ops_notes].filter(Boolean).join("\n"),
-    accessTime: form.access_time ? prettyTime(form.access_time) : null,
+    accessTime: accessEnabled && form.access_time ? prettyTime(form.access_time) : null,
   });
 
   const fileName = (revision: number) => `Runsheet-v${revision}-${lead.full_name.replace(/\s+/g, "-")}-${booking?.event_date || "draft"}.pdf`;
@@ -420,7 +422,17 @@ export default function RunsheetTab({ lead, booking, options, onSaved }: {
             <Input value={newSetupItem} onChange={(event) => setNewSetupItem(event.target.value)} placeholder="Add another setup item" />
             <Button type="button" variant="secondary" onClick={addSetupOption}><Plus className="h-4 w-4" /></Button>
           </div>
-          <div className="space-y-1.5"><Label>Decor / vendor access time</Label><TimeDropdownPicker value={form.access_time || "10:00"} onChange={(value) => setForm((prev) => ({ ...prev, access_time: value }))} /></div>
+          <div className="space-y-1.5">
+            <label className="flex items-center gap-2 text-sm">
+              <Checkbox checked={accessEnabled} onCheckedChange={(checked) => {
+                const on = Boolean(checked);
+                setAccessEnabled(on);
+                if (on && !form.access_time) setForm((prev) => ({ ...prev, access_time: minutesToTime(Math.max(0, timeToMinutes(startTime) - 180)) }));
+              }} />
+              Decor / vendor access required
+            </label>
+            {accessEnabled && <TimeDropdownPicker value={form.access_time || "10:00"} onChange={(value) => setForm((prev) => ({ ...prev, access_time: value }))} />}
+          </div>
           <div className="space-y-1.5"><Label>Setup notes</Label><Textarea rows={3} value={form.setup_notes} onChange={set("setup_notes")} placeholder="8 chairs per table, gift table on stage…" /></div>
           <div className="space-y-1.5"><Label>Notes for the team only</Label><Textarea rows={2} value={form.ops_notes} onChange={set("ops_notes")} placeholder="Kitchen and floor reminders" /></div>
         </div>
