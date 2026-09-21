@@ -254,7 +254,7 @@ export async function buildRunsheetPdf(data: RunsheetPdfData) {
     doc.setFontSize(7.4);
     const indent = line.level === 2 ? 10 : line.level === 1 ? 5 : 0;
     const wrapped = doc.splitTextToSize(line.text, width - indent - 5) as string[];
-    return { wrapped, height: Math.max(4.4, wrapped.length * 3.7) + (line.level < 2 ? 1.2 : 0), indent };
+    return { wrapped, height: Math.max(4.1, wrapped.length * 3.6) + (line.level < 2 ? 0.7 : 0), indent };
   };
 
   const paginate = (lines: PdfLine[], width: number) => {
