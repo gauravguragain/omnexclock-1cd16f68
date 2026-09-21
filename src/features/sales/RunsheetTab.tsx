@@ -52,7 +52,6 @@ export default function RunsheetTab({ lead, booking, options, onSaved }: {
     access_time: "", setup_notes: "", special_requests: "", distributed_to: "", ops_notes: "", client_notes: "",
   });
   const [accessEnabled, setAccessEnabled] = useState(false);
-  });
   const [setupItems, setSetupItems] = useState<string[]>([]);
   const [extraSetupItems, setExtraSetupItems] = useState<string[]>([]);
   const [newSetupItem, setNewSetupItem] = useState("");
