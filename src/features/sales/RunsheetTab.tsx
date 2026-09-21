@@ -264,7 +264,7 @@ export default function RunsheetTab({ lead, booking, options, onSaved }: {
     dietaryRequirements: menu.selection?.dietary_requirements, allergies: menu.selection?.allergies,
     specialRequests: [form.special_requests, form.client_notes].filter(Boolean).join(" · "),
     setupItems, setupNotes: [form.setup_notes, form.ops_notes].filter(Boolean).join("\n"),
-    accessTime: form.access_time ? prettyTime(form.access_time) : null,
+    accessTime: accessEnabled && form.access_time ? prettyTime(form.access_time) : null,
   });
 
   const fileName = (revision: number) => `Runsheet-v${revision}-${lead.full_name.replace(/\s+/g, "-")}-${booking?.event_date || "draft"}.pdf`;
