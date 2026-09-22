@@ -23,7 +23,7 @@ export interface PayrollPdfEntry {
   account_number: string | null;
 }
 
-export type PayrollTab = "employee" | "admin" | "margin";
+export type PayrollTab = "employee" | "admin";
 
 interface Opts {
   tab: PayrollTab;
@@ -41,7 +41,7 @@ export function buildPayrollPdf(opts: Opts): jsPDF {
   const pageWidth = doc.internal.pageSize.getWidth();
   const pageHeight = doc.internal.pageSize.getHeight();
 
-  const tabTitle = tab === "employee" ? "Employee Payroll" : tab === "admin" ? "Admin Payroll" : "Margin Analysis";
+  const tabTitle = tab === "employee" ? "Employee Payroll" : "Admin Payroll";
   const periodLabel = `${format(dateFrom, "dd MMM yyyy")} – ${format(dateTo, "dd MMM yyyy")}`;
 
   // Header band
@@ -87,10 +87,6 @@ export function buildPayrollPdf(opts: Opts): jsPDF {
   const totalEmployeePay = entries.reduce((s, e) => s + e.employee_pay, 0);
   const totalAdminPay = entries.reduce((s, e) => s + e.admin_pay, 0);
   const totalAdminPayIncl = entries.reduce((s, e) => s + e.admin_pay_incl_gst, 0);
-  const totalMarginEx = totalAdminPay - totalEmployeePay;
-  const totalMarginIncl = totalAdminPayIncl - totalEmployeePay;
-  const marginPct = totalAdminPay > 0 ? (totalMarginEx / totalAdminPay) * 100 : 0;
-
   const stats: { label: string; value: string; color: [number, number, number] }[] =
     tab === "employee"
       ? [
@@ -99,18 +95,11 @@ export function buildPayrollPdf(opts: Opts): jsPDF {
           { label: "Break Hours", value: totalBreakHours.toFixed(2), color: [180, 83, 9] },
           { label: "Employees", value: String(entries.length), color: [124, 58, 237] },
         ]
-      : tab === "admin"
-      ? [
+      : [
           { label: "Admin (incl GST)", value: `$${totalAdminPayIncl.toFixed(2)}`, color: [220, 38, 38] },
           { label: "Admin (ex GST)", value: `$${totalAdminPay.toFixed(2)}`, color: [180, 83, 9] },
           { label: "GST Component", value: `$${(totalAdminPayIncl - totalAdminPay).toFixed(2)}`, color: [41, 98, 255] },
           { label: "Net Hours", value: totalNetHours.toFixed(2), color: [16, 124, 65] },
-        ]
-      : [
-          { label: "Margin (ex GST)", value: `$${totalMarginEx.toFixed(2)}`, color: [16, 124, 65] },
-          { label: "Margin (incl GST)", value: `$${totalMarginIncl.toFixed(2)}`, color: [16, 124, 65] },
-          { label: "Margin %", value: `${marginPct.toFixed(1)}%`, color: [124, 58, 237] },
-          { label: "Employee Pay", value: `$${totalEmployeePay.toFixed(2)}`, color: [180, 83, 9] },
         ];
 
   // Stat boxes
@@ -153,7 +142,7 @@ export function buildPayrollPdf(opts: Opts): jsPDF {
       e.account_number || "-",
     ]);
     foot = ["TOTAL", "", totalTotalHours.toFixed(2), totalBreakHours.toFixed(2), totalNetHours.toFixed(2), `$${totalEmployeePay.toFixed(2)}`, "", "", "", ""];
-  } else if (tab === "admin") {
+  } else {
     headers = ["Name", "Department", "Admin Rate (incl GST)", "Total Hrs", "Break Hrs", "Net Hrs", "Cost (ex GST)", "Cost (incl GST)"];
     rows = entries.map((e) => [
       e.name,
@@ -166,35 +155,6 @@ export function buildPayrollPdf(opts: Opts): jsPDF {
       `$${e.admin_pay_incl_gst.toFixed(2)}`,
     ]);
     foot = ["TOTAL", "", "", totalTotalHours.toFixed(2), totalBreakHours.toFixed(2), totalNetHours.toFixed(2), `$${totalAdminPay.toFixed(2)}`, `$${totalAdminPayIncl.toFixed(2)}`];
-  } else {
-    headers = ["Name", "Department", "Net Hrs", "Employee Pay", "Admin (ex GST)", "Admin (incl GST)", "Margin (ex)", "Margin (incl)", "Margin %"];
-    rows = entries.map((e) => {
-      const mEx = e.admin_pay - e.employee_pay;
-      const mIncl = e.admin_pay_incl_gst - e.employee_pay;
-      const mPct = e.admin_pay > 0 ? (mEx / e.admin_pay) * 100 : 0;
-      return [
-        e.name,
-        e.department || "-",
-        e.net_hours.toFixed(2),
-        `$${e.employee_pay.toFixed(2)}`,
-        `$${e.admin_pay.toFixed(2)}`,
-        `$${e.admin_pay_incl_gst.toFixed(2)}`,
-        `$${mEx.toFixed(2)}`,
-        `$${mIncl.toFixed(2)}`,
-        `${mPct.toFixed(1)}%`,
-      ];
-    });
-    foot = [
-      "TOTAL",
-      "",
-      totalNetHours.toFixed(2),
-      `$${totalEmployeePay.toFixed(2)}`,
-      `$${totalAdminPay.toFixed(2)}`,
-      `$${totalAdminPayIncl.toFixed(2)}`,
-      `$${totalMarginEx.toFixed(2)}`,
-      `$${totalMarginIncl.toFixed(2)}`,
-      `${marginPct.toFixed(1)}%`,
-    ];
   }
 
   autoTable(doc, {
