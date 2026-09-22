@@ -1,6 +1,5 @@
 import { useEffect, useState, useMemo } from "react";
 import { useBusiness } from "@/contexts/BusinessContext";
-import { useAuth } from "@/contexts/AuthContext";
 import { ausNow } from "@/lib/dateUtils";
 import { computeTimesheetEntries, filterApprovedEntries, filterTimesheetEntriesByDateRange, getTimesheetEventWindow } from "@/lib/timesheetUtils";
 import { format, startOfWeek, endOfWeek, addWeeks, subWeeks } from "date-fns";
@@ -12,7 +11,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Download, DollarSign, Clock as ClockIcon, Users, Coffee, Search, ChevronLeft, ChevronRight, ArrowUpDown, CalendarIcon, CheckCircle2, Mail, TrendingUp, FileText } from "lucide-react";
+import { Download, DollarSign, Clock as ClockIcon, Users, Coffee, Search, ChevronLeft, ChevronRight, ArrowUpDown, CalendarIcon, CheckCircle2, Mail, FileText } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from "recharts";
 import { Badge } from "@/components/ui/badge";
@@ -112,7 +111,6 @@ function DateRangeSelector({ dateFrom, dateTo, onChangeFrom, onChangeTo }: {
 
 export default function PayrollPage() {
   const { business } = useBusiness();
-  const { isSuperAdminOf } = useAuth();
   const [entries, setEntries] = useState<PayrollEntry[]>([]);
   const [allEmployees, setAllEmployees] = useState<{ id: string; name: string; department: string | null }[]>([]);
   const [loading, setLoading] = useState(false);
@@ -125,11 +123,8 @@ export default function PayrollPage() {
   const [sortKey, setSortKey] = useState<SortKey>("employee_pay");
   const [sortDir, setSortDir] = useState<SortDir>("desc");
   const [chartLimit, setChartLimit] = useState(25);
-  const [activeTab, setActiveTab] = useState<"employee" | "admin" | "margin">("employee");
+  const [activeTab, setActiveTab] = useState<"employee" | "admin">("employee");
   const [emailDialogOpen, setEmailDialogOpen] = useState(false);
-
-  const currentBusinessId = business?.id || "";
-  const isSuperAdmin = isSuperAdminOf(currentBusinessId);
 
   useEffect(() => {
     if (business) fetchPayroll();
@@ -277,24 +272,6 @@ export default function PayrollPage() {
   };
 
   const buildPayrollCSV = () => {
-    if (activeTab === "margin") {
-      const headers = "Name,Department,Net Hours,Employee Pay,Admin Cost (ex GST),Admin Cost (incl GST),Margin (ex GST),Margin (incl GST),Margin %\n";
-      const rows = filtered.map((e) => {
-        const marginEx = e.admin_pay - e.employee_pay;
-        const marginIncl = e.admin_pay_incl_gst - e.employee_pay;
-        const marginPct = e.admin_pay > 0 ? (marginEx / e.admin_pay * 100) : 0;
-        return `${e.name},${e.department || "-"},${e.net_hours.toFixed(2)},${e.employee_pay.toFixed(2)},${e.admin_pay.toFixed(2)},${e.admin_pay_incl_gst.toFixed(2)},${marginEx.toFixed(2)},${marginIncl.toFixed(2)},${marginPct.toFixed(1)}%`;
-      }).join("\n");
-      const totEmpPay = filtered.reduce((s, e) => s + e.employee_pay, 0);
-      const totAdminPay = filtered.reduce((s, e) => s + e.admin_pay, 0);
-      const totAdminPayIncl = filtered.reduce((s, e) => s + e.admin_pay_incl_gst, 0);
-      const totMarginEx = totAdminPay - totEmpPay;
-      const totMarginIncl = totAdminPayIncl - totEmpPay;
-      const totNetHrs = filtered.reduce((s, e) => s + e.net_hours, 0);
-      const totalRow = `\nTOTAL,,${totNetHrs.toFixed(2)},${totEmpPay.toFixed(2)},${totAdminPay.toFixed(2)},${totAdminPayIncl.toFixed(2)},${totMarginEx.toFixed(2)},${totMarginIncl.toFixed(2)},${totAdminPay > 0 ? (totMarginEx / totAdminPay * 100).toFixed(1) : 0}%`;
-      return headers + rows + totalRow;
-    }
-
     const isEmp = activeTab === "employee";
     const headers = isEmp
       ? "Name,Rate ($/hr),Total Hours,Break Hours,Net Hours,Employee Pay,Pay ID,Account Name,BSB,Account Number\n"
@@ -323,7 +300,7 @@ export default function PayrollPage() {
     return headers + rows + totalRow;
   };
 
-  const payrollTabLabel = activeTab === "employee" ? "Employee-Payroll" : activeTab === "admin" ? "Admin-Payroll" : "Margin-Analysis";
+  const payrollTabLabel = activeTab === "employee" ? "Employee-Payroll" : "Admin-Payroll";
   const selectedEmpName = selectedEmployee !== "all" ? allEmployees.find(e => e.id === selectedEmployee)?.name : null;
   const exportScope = [
     formatDepartmentScope(selectedDepartment),
@@ -348,7 +325,7 @@ export default function PayrollPage() {
     dateTo,
     ext: "pdf",
   });
-  const payrollSubject = `${activeTab === "employee" ? "Employee" : activeTab === "admin" ? "Admin" : "Margin"} Payroll Report – ${format(dateFrom, "dd MMM")} to ${format(dateTo, "dd MMM yyyy")}`;
+  const payrollSubject = `${activeTab === "employee" ? "Employee" : "Admin"} Payroll Report – ${format(dateFrom, "dd MMM")} to ${format(dateTo, "dd MMM yyyy")}`;
 
   const buildPdfDoc = () =>
     buildPayrollPdf({
@@ -373,27 +350,23 @@ export default function PayrollPage() {
     a.href = url;
     a.download = payrollCsvFilename;
     a.click();
-    if (activeTab !== "margin") {
-      logAudit("csv_download", {
-        source: "payroll",
-        tab: activeTab,
-        filename: payrollCsvFilename,
-        device: getDeviceInfo(),
-      });
-    }
+    logAudit("csv_download", {
+      source: "payroll",
+      tab: activeTab,
+      filename: payrollCsvFilename,
+      device: getDeviceInfo(),
+    });
   };
 
   const exportPDF = () => {
     const doc = buildPdfDoc();
     doc.save(payrollPdfFilename);
-    if (activeTab !== "margin") {
-      logAudit("pdf_download", {
-        source: "payroll",
-        tab: activeTab,
-        filename: payrollPdfFilename,
-        device: getDeviceInfo(),
-      });
-    }
+    logAudit("pdf_download", {
+      source: "payroll",
+      tab: activeTab,
+      filename: payrollPdfFilename,
+      device: getDeviceInfo(),
+    });
   };
 
 
@@ -402,11 +375,7 @@ export default function PayrollPage() {
   const totalNetHours = filtered.reduce((sum, e) => sum + e.net_hours, 0);
   const totalBreakHours = filtered.reduce((sum, e) => sum + e.break_hours, 0);
   const totalAdminPayInclGst = filtered.reduce((sum, e) => sum + e.admin_pay_incl_gst, 0);
-  const totalMargin = totalAdminPay - totalEmployeePay;
-  const totalMarginInclGst = totalAdminPayInclGst - totalEmployeePay;
-  const marginPercentage = totalAdminPay > 0 ? (totalMargin / totalAdminPay * 100) : 0;
-
-  const payKey = activeTab === "margin" ? "admin_pay" : (activeTab === "employee" ? "employee_pay" : "admin_pay");
+  const payKey = activeTab === "employee" ? "employee_pay" : "admin_pay";
   const topByPay = [...filtered].sort((a, b) => (b[payKey] as number) - (a[payKey] as number)).slice(0, chartLimit);
   const topByHours = [...filtered].sort((a, b) => b.net_hours - a.net_hours).slice(0, chartLimit);
   const othersPayCount = filtered.length - topByPay.length;
@@ -427,15 +396,6 @@ export default function PayrollPage() {
     { title: "Employees", value: filtered.length, icon: Users, color: "text-primary" },
   ];
 
-  const marginSummaryCards = [
-    { title: "Margin (ex GST)", value: `$${totalMargin.toFixed(2)}`, icon: TrendingUp, color: "text-green-500" },
-    { title: "Margin (incl GST)", value: `$${totalMarginInclGst.toFixed(2)}`, icon: TrendingUp, color: "text-green-400" },
-    { title: "Margin %", value: `${marginPercentage.toFixed(1)}%`, icon: TrendingUp, color: "text-primary" },
-    { title: "Employee Pay", value: `$${totalEmployeePay.toFixed(2)}`, icon: DollarSign, color: "text-yellow-500" },
-  ];
-
-  const summaryCards = activeTab === "employee" ? empSummaryCards : activeTab === "admin" ? adminSummaryCards : marginSummaryCards;
-
   const SortHeader = ({ label, sortKeyName }: { label: string; sortKeyName: SortKey }) => (
     <TableHead className="cursor-pointer select-none" onClick={() => toggleSort(sortKeyName)}>
       <div className="flex items-center gap-1">
@@ -446,263 +406,9 @@ export default function PayrollPage() {
   );
 
   const isEmployee = activeTab === "employee";
-  const isMargin = activeTab === "margin";
-  const payLabel = isEmployee ? "Employee Pay" : isMargin ? "Margin" : "Admin Cost (ex GST)";
+  const payLabel = isEmployee ? "Employee Pay" : "Admin Cost (ex GST)";
   const rateLabel = isEmployee ? "Rate ($/hr)" : "Admin Rate ($/hr incl GST)";
-  const totalPay = isEmployee ? totalEmployeePay : isMargin ? totalMargin : totalAdminPay;
-
-  const renderMarginTable = () => (
-    <Card>
-      <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
-        <CardTitle className="text-sm font-medium text-muted-foreground">
-          Margin Breakdown ({filtered.length} employee{filtered.length !== 1 ? "s" : ""})
-        </CardTitle>
-        <div className="relative w-full sm:w-64">
-          <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input placeholder="Search employees..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-8" />
-        </div>
-      </CardHeader>
-      <CardContent className="p-0">
-        <div className="overflow-x-auto scrollbar-thin">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="cursor-pointer select-none sticky left-0 bg-card z-20 border-r border-border/60 min-w-[140px]" onClick={() => toggleSort("name")}>
-                  <div className="flex items-center gap-1">
-                    Employee
-                    <ArrowUpDown className={`h-3 w-3 ${sortKey === "name" ? "text-primary" : "text-muted-foreground"}`} />
-                  </div>
-                </TableHead>
-                <TableHead>Department</TableHead>
-                <SortHeader label="Net Hrs" sortKeyName="net_hours" />
-                <SortHeader label="Employee Pay" sortKeyName="employee_pay" />
-                <SortHeader label="Admin (ex GST)" sortKeyName="admin_pay" />
-                <TableHead>Admin (incl GST)</TableHead>
-                <TableHead className="text-right">Margin (ex GST)</TableHead>
-                <TableHead className="text-right">Margin (incl GST)</TableHead>
-                <TableHead className="text-right">Margin %</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {pageEntries.map((e) => {
-                const marginEx = e.admin_pay - e.employee_pay;
-                const marginIncl = e.admin_pay_incl_gst - e.employee_pay;
-                const marginPct = e.admin_pay > 0 ? (marginEx / e.admin_pay * 100) : 0;
-                return (
-                  <TableRow key={e.employee_id}>
-                    <TableCell className="font-medium sticky left-0 bg-card z-20 border-r border-border/60">{e.name}</TableCell>
-                    <TableCell>{e.department || "-"}</TableCell>
-                    <TableCell>{e.net_hours.toFixed(2)}</TableCell>
-                    <TableCell>${e.employee_pay.toFixed(2)}</TableCell>
-                    <TableCell>${e.admin_pay.toFixed(2)}</TableCell>
-                    <TableCell>${e.admin_pay_incl_gst.toFixed(2)}</TableCell>
-                    <TableCell className={`text-right font-semibold ${marginEx >= 0 ? "text-green-500" : "text-red-500"}`}>
-                      ${marginEx.toFixed(2)}
-                    </TableCell>
-                    <TableCell className={`text-right font-semibold ${marginIncl >= 0 ? "text-green-500" : "text-red-500"}`}>
-                      ${marginIncl.toFixed(2)}
-                    </TableCell>
-                    <TableCell className={`text-right ${marginEx >= 0 ? "text-green-500" : "text-red-500"}`}>
-                      {marginPct.toFixed(1)}%
-                    </TableCell>
-                  </TableRow>
-                );
-              })}
-              {pageEntries.length === 0 && (
-                <TableRow>
-                  <TableCell colSpan={9} className="text-center text-muted-foreground py-8">
-                    {loading ? "Loading..." : "No approved payroll data for this period."}
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-            {pageEntries.length > 0 && (
-              <tfoot>
-                <TableRow className="bg-muted/50 font-semibold">
-                  <TableCell className="sticky left-0 bg-muted/50 z-20 border-r border-border/60">Totals</TableCell>
-                  <TableCell />
-                  <TableCell>{totalNetHours.toFixed(2)}</TableCell>
-                  <TableCell>${totalEmployeePay.toFixed(2)}</TableCell>
-                  <TableCell>${totalAdminPay.toFixed(2)}</TableCell>
-                  <TableCell>${totalAdminPayInclGst.toFixed(2)}</TableCell>
-                  <TableCell className={`text-right ${totalMargin >= 0 ? "text-green-500" : "text-red-500"}`}>
-                    ${totalMargin.toFixed(2)}
-                  </TableCell>
-                  <TableCell className={`text-right ${totalMarginInclGst >= 0 ? "text-green-500" : "text-red-500"}`}>
-                    ${totalMarginInclGst.toFixed(2)}
-                  </TableCell>
-                  <TableCell className={`text-right ${totalMargin >= 0 ? "text-green-500" : "text-red-500"}`}>
-                    {marginPercentage.toFixed(1)}%
-                  </TableCell>
-                </TableRow>
-              </tfoot>
-            )}
-          </Table>
-        </div>
-
-        {totalPages > 1 && (
-          <div className="flex items-center justify-between px-4 py-3 border-t border-border">
-            <p className="text-xs text-muted-foreground">
-              Showing {page * PAGE_SIZE + 1}–{Math.min((page + 1) * PAGE_SIZE, filtered.length)} of {filtered.length}
-            </p>
-            <div className="flex gap-1">
-              <Button variant="ghost" size="sm" disabled={page === 0} onClick={() => setPage(page - 1)}>
-                <ChevronLeft className="h-4 w-4" />
-              </Button>
-              <Button variant="ghost" size="sm" disabled={page >= totalPages - 1} onClick={() => setPage(page + 1)}>
-                <ChevronRight className="h-4 w-4" />
-              </Button>
-            </div>
-          </div>
-        )}
-      </CardContent>
-    </Card>
-  );
-
-  const renderMarginCharts = () => {
-    // Chart 1: Employee Pay vs Admin Cost comparison per employee
-    const comparisonData = [...filtered]
-      .sort((a, b) => (b.admin_pay - b.employee_pay) - (a.admin_pay - a.employee_pay))
-      .slice(0, chartLimit)
-      .map(e => ({
-        name: e.name,
-        employee_pay: Math.round(e.employee_pay * 100) / 100,
-        admin_cost: Math.round(e.admin_pay * 100) / 100,
-      }));
-
-    // Chart 2: Department stacked cost breakdown
-    const deptAgg: Record<string, { empPay: number; adminPay: number; hours: number; headcount: number }> = {};
-    filtered.forEach(e => {
-      const dept = e.department || "Unassigned";
-      if (!deptAgg[dept]) deptAgg[dept] = { empPay: 0, adminPay: 0, hours: 0, headcount: 0 };
-      deptAgg[dept].empPay += e.employee_pay;
-      deptAgg[dept].adminPay += e.admin_pay;
-      deptAgg[dept].hours += e.net_hours;
-      deptAgg[dept].headcount += 1;
-    });
-    const deptStackData = Object.entries(deptAgg)
-      .map(([dept, d]) => ({
-        name: dept,
-        employee_pay: Math.round(d.empPay * 100) / 100,
-        margin: Math.round((d.adminPay - d.empPay) * 100) / 100,
-        hours: Math.round(d.hours * 100) / 100,
-        headcount: d.headcount,
-        margin_pct: d.adminPay > 0 ? Math.round((d.adminPay - d.empPay) / d.adminPay * 1000) / 10 : 0,
-      }))
-      .sort((a, b) => (b.employee_pay + b.margin) - (a.employee_pay + a.margin));
-
-    const customTooltip = ({ active, payload, label }: any) => {
-      if (!active || !payload?.length) return null;
-      return (
-        <div style={{ backgroundColor: "hsl(var(--popover))", border: "1px solid hsl(var(--border))", borderRadius: 10, padding: "10px 14px", boxShadow: "0 8px 24px rgba(0,0,0,0.3)" }}>
-          <p style={{ color: "hsl(var(--popover-foreground))", fontSize: 13, fontWeight: 600, marginBottom: 4 }}>{label}</p>
-          {payload.map((p: any, i: number) => (
-            <p key={i} style={{ color: "hsl(var(--popover-foreground))", fontSize: 12, margin: "2px 0" }}>
-              <span style={{ display: "inline-block", width: 10, height: 10, borderRadius: 2, backgroundColor: p.color, marginRight: 6 }} />
-              {p.name}: ${p.value.toFixed(2)}
-            </p>
-          ))}
-        </div>
-      );
-    };
-
-    const deptTooltip = ({ active, payload, label }: any) => {
-      if (!active || !payload?.length) return null;
-      const data = deptStackData.find(d => d.name === label);
-      return (
-        <div style={{ backgroundColor: "hsl(var(--popover))", border: "1px solid hsl(var(--border))", borderRadius: 10, padding: "10px 14px", boxShadow: "0 8px 24px rgba(0,0,0,0.3)" }}>
-          <p style={{ color: "hsl(var(--popover-foreground))", fontSize: 13, fontWeight: 600, marginBottom: 4 }}>{label}</p>
-          {payload.map((p: any, i: number) => (
-            <p key={i} style={{ color: "hsl(var(--popover-foreground))", fontSize: 12, margin: "2px 0" }}>
-              <span style={{ display: "inline-block", width: 10, height: 10, borderRadius: 2, backgroundColor: p.color, marginRight: 6 }} />
-              {p.name}: ${p.value.toFixed(2)}
-            </p>
-          ))}
-          {data && (
-            <p style={{ color: "hsl(var(--popover-foreground))", fontSize: 11, marginTop: 6, opacity: 0.7 }}>
-              {data.headcount} employee{data.headcount !== 1 ? "s" : ""} · {data.hours}h · {data.margin_pct}% margin
-            </p>
-          )}
-        </div>
-      );
-    };
-
-    return (
-      <>
-        <div className="flex items-center gap-2 text-sm">
-          <span className="text-muted-foreground">Show top</span>
-          <Select value={String(chartLimit)} onValueChange={(v) => setChartLimit(Number(v))}>
-            <SelectTrigger className="w-20 h-8">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {[10, 25, 50, 100].map((n) => (
-                <SelectItem key={n} value={String(n)}>{n}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <span className="text-muted-foreground">employees in charts</span>
-        </div>
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-sm font-medium text-muted-foreground">
-                Pay vs Cost per Employee{filtered.length > chartLimit ? ` (Top ${chartLimit})` : ""}
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {comparisonData.length > 0 ? (
-                <ResponsiveContainer width="100%" height={280}>
-                  <BarChart data={comparisonData} barGap={2}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" strokeOpacity={0.5} />
-                    <XAxis dataKey="name" tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} interval={0} angle={-30} textAnchor="end" height={60} />
-                    <YAxis tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} />
-                    <Tooltip content={customTooltip} />
-                    <Legend
-                      wrapperStyle={{ fontSize: 12 }}
-                      formatter={(value: string) => <span style={{ color: "hsl(var(--foreground))" }}>{value}</span>}
-                    />
-                    <Bar dataKey="employee_pay" name="Employee Pay" fill="hsl(45, 60%, 53%)" radius={[4, 4, 0, 0]} />
-                    <Bar dataKey="admin_cost" name="Admin Cost (ex GST)" fill="hsl(217, 91%, 60%)" radius={[4, 4, 0, 0]} />
-                  </BarChart>
-                </ResponsiveContainer>
-              ) : (
-                <p className="text-center text-muted-foreground py-16">No data</p>
-              )}
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-sm font-medium text-muted-foreground">
-                Department Cost Breakdown
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {deptStackData.length > 0 ? (
-                <ResponsiveContainer width="100%" height={280}>
-                  <BarChart data={deptStackData}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" strokeOpacity={0.5} />
-                    <XAxis dataKey="name" tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} />
-                    <YAxis tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} />
-                    <Tooltip content={deptTooltip} />
-                    <Legend
-                      wrapperStyle={{ fontSize: 12 }}
-                      formatter={(value: string) => <span style={{ color: "hsl(var(--foreground))" }}>{value}</span>}
-                    />
-                    <Bar dataKey="employee_pay" name="Employee Pay" stackId="cost" fill="hsl(45, 60%, 53%)" />
-                    <Bar dataKey="margin" name="Margin (ex GST)" stackId="cost" fill="hsl(142, 71%, 45%)" radius={[4, 4, 0, 0]} />
-                  </BarChart>
-                </ResponsiveContainer>
-              ) : (
-                <p className="text-center text-muted-foreground py-16">No data</p>
-              )}
-            </CardContent>
-          </Card>
-        </div>
-      </>
-    );
-  };
+  const totalPay = isEmployee ? totalEmployeePay : totalAdminPay;
 
   const renderTable = () => (
     <Card>
@@ -914,15 +620,10 @@ export default function PayrollPage() {
         <CheckCircle2 className="mr-1 h-3 w-3" /> Showing approved timesheets only
       </Badge>
 
-      <Tabs value={activeTab} onValueChange={(v) => { setActiveTab(v as "employee" | "admin" | "margin"); setPage(0); }}>
+      <Tabs value={activeTab} onValueChange={(v) => { setActiveTab(v as "employee" | "admin"); setPage(0); }}>
         <TabsList className="w-full flex overflow-x-auto scrollbar-hide">
           <TabsTrigger value="employee" className="flex-1 text-xs sm:text-sm whitespace-nowrap">Employee</TabsTrigger>
           <TabsTrigger value="admin" className="flex-1 text-xs sm:text-sm whitespace-nowrap">Admin</TabsTrigger>
-          {isSuperAdmin && (
-            <TabsTrigger value="margin" className="flex-1 text-xs sm:text-sm whitespace-nowrap gap-1">
-              <TrendingUp className="h-3 w-3" /> Margin
-            </TabsTrigger>
-          )}
         </TabsList>
 
         <TabsContent value="employee" className="space-y-3 mt-3">
@@ -965,27 +666,6 @@ export default function PayrollPage() {
           {renderTable()}
         </TabsContent>
 
-        {isSuperAdmin && (
-          <TabsContent value="margin" className="space-y-3 mt-3">
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3 stagger-children">
-              {marginSummaryCards.map(({ title, value, icon: Icon, color }) => (
-                <Card key={title} className="stat-card group">
-                  <CardHeader className="flex flex-row items-center justify-between pb-1 pt-3 px-3">
-                    <CardTitle className="text-xs font-medium text-muted-foreground leading-tight">{title}</CardTitle>
-                    <div className="h-7 w-7 rounded-lg bg-secondary/80 flex items-center justify-center shrink-0">
-                      <Icon className={`h-3.5 w-3.5 ${color}`} />
-                    </div>
-                  </CardHeader>
-                  <CardContent className="px-3 pb-3 pt-0">
-                    <p className="text-lg sm:text-xl lg:text-2xl font-bold tabular-smooth truncate">{value}</p>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-            {renderMarginCharts()}
-            {renderMarginTable()}
-          </TabsContent>
-        )}
       </Tabs>
 
       <EmailPDFDialog
@@ -995,7 +675,6 @@ export default function PayrollPage() {
         pdfFilename={payrollPdfFilename}
         subject={payrollSubject}
         businessName={business?.name}
-        skipAudit={activeTab === "margin"}
       />
     </div>
 
