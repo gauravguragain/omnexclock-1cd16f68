@@ -42,7 +42,7 @@ export default function MenuBooksPage() {
       <CardHeader className="flex-row items-start justify-between space-y-0"><div><CardTitle className="font-serif text-2xl">{b.name}</CardTitle><p className="text-sm text-muted-foreground">{pk.length} packages{b.description ? ` · ${b.description}` : ""}</p></div>
         <div className="flex">{!b.active && <Badge variant="outline">Archived</Badge>}<Button size="icon" variant="ghost" title="Edit book" onClick={() => setBookOpen(b)}><Pencil className="h-4 w-4" /></Button><Button size="icon" variant="ghost" title={b.active ? "Archive" : "Restore"} onClick={() => toggle("crm_menu_books", b)}>{b.active ? <Archive className="h-4 w-4" /> : <ArchiveRestore className="h-4 w-4" />}</Button></div></CardHeader>
       <CardContent className="space-y-2">{pk.map(p => <div key={p.id} className="flex items-center justify-between gap-2 rounded-md border p-3">
-        <button className="text-left" onClick={() => { setPkg(p); setPkgOpen(true); }}><p className="font-medium">{p.name} {!p.active && <Badge variant="outline" className="ml-1 text-[10px]">Archived</Badge>}</p><p className="text-xs text-muted-foreground">{p.package_type === "beverage" ? "Beverage" : "Food"} · ${Number(p.price_per_head)} per head · Min {p.min_guests} pax · {coursesOf(p).length} courses · {dishCount(p)} items</p></button>
+        <button className="text-left" onClick={() => { setPkg(p); setPkgOpen(true); }}><p className="font-medium">{p.name} {!p.active && <Badge variant="outline" className="ml-1 text-[10px]">Archived</Badge>}</p><p className="text-xs text-muted-foreground">{p.package_type === "beverage" ? "Beverage" : "Food"} · {coursesOf(p).length} courses · {dishCount(p)} items</p></button>
         <Button size="icon" variant="ghost" title={p.active ? "Archive" : "Restore"} onClick={() => toggle("crm_packages", p)}>{p.active ? <Archive className="h-4 w-4" /> : <ArchiveRestore className="h-4 w-4" />}</Button>
       </div>)}{!pk.length && <p className="text-sm text-muted-foreground">No packages yet.</p>}</CardContent></Card>; })}</div>
 
@@ -54,12 +54,12 @@ export default function MenuBooksPage() {
 
 function PackageEditor({ open, onClose, pkg, data: d }: { open: boolean; onClose: () => void; pkg: Row | null; data: ReturnType<typeof useEventsData> }) {
   const initialCourses: CourseDraft[] = pkg ? d.courses.filter(c => c.package_id === pkg.id).map(c => ({ key: c.id, name: c.name, picks: c.picks ? String(c.picks) : "", items: d.courseItems.filter(ci => ci.course_id === c.id).map(ci => ci.dish_id || `drink:${ci.drink_id}`) })) : [{ key: crypto.randomUUID(), name: "Starters", picks: "", items: [] }];
-  const [f, setF] = useState({ book_id: pkg?.book_id || d.books.find(b => b.active)?.id || "", name: pkg?.name || "", package_type: pkg?.package_type || "food", description: pkg?.description || "", price: pkg ? String(pkg.price_per_head) : "", min: pkg ? String(pkg.min_guests) : "1" });
+  const [f, setF] = useState({ book_id: pkg?.book_id || d.books.find(b => b.active)?.id || "", name: pkg?.name || "", package_type: pkg?.package_type || "food", description: pkg?.description || "" });
   const [courses, setCourses] = useState<CourseDraft[]>(initialCourses); const [saving, setSaving] = useState(false); const [newDish, setNewDish] = useState<Record<string, { name: string; diet: string }>>({});
   const bev = f.package_type === "beverage";
   const pool = bev ? d.drinks.filter(x => x.active).map(x => ({ id: `drink:${x.id}`, name: x.name, tag: x.kind === "soft" ? "Soft" : "Hard" })) : d.dishes.filter(x => x.active).map(x => ({ id: x.id, name: x.name, tag: x.diet === "veg" ? "V" : "N" }));
   const upd = (key: string, patch: Partial<CourseDraft>) => setCourses(cs => cs.map(c => c.key === key ? { ...c, ...patch } : c));
-  const checks = [["Menu book selected", !!f.book_id], ["Package named", !!f.name], ["Price per head set", f.price !== ""], ["At least one item", courses.some(c => c.items.length)]] as const;
+  const checks = [["Menu book selected", !!f.book_id], ["Package named", !!f.name], ["At least one item", courses.some(c => c.items.length)]] as const;
 
   const addDish = async (course: CourseDraft) => {
     const nd = newDish[course.key]; if (!nd?.name) return;
@@ -71,7 +71,7 @@ function PackageEditor({ open, onClose, pkg, data: d }: { open: boolean; onClose
   const save = async () => {
     setSaving(true);
     try {
-      const bid = d.business!.id; const values = { book_id: f.book_id, name: f.name, package_type: f.package_type, description: f.description || null, price_per_head: Number(f.price) || 0, min_guests: Number(f.min) || 1 };
+      const bid = d.business!.id; const values = { book_id: f.book_id, name: f.name, package_type: f.package_type, description: f.description || null, price_per_head: 0, min_guests: 1 };
       const t = supabase.from("crm_packages" as any) as any;
       let pid = pkg?.id;
       if (pid) { const r = await t.update(values).eq("id", pid); if (r.error) throw r.error; await (supabase.from("crm_package_courses" as any) as any).delete().eq("package_id", pid); }
@@ -93,7 +93,6 @@ function PackageEditor({ open, onClose, pkg, data: d }: { open: boolean; onClose
           <div className="space-y-1.5"><Label>Menu book *</Label><select value={f.book_id} onChange={e => setF({ ...f, book_id: e.target.value })} className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm">{d.books.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}</select></div>
           <div className="space-y-1.5"><Label>Package name *</Label><Input value={f.name} onChange={e => setF({ ...f, name: e.target.value })} /></div>
           <div className="space-y-1.5"><Label>Type</Label><div className="flex gap-2">{["food", "beverage"].map(t => <Button key={t} type="button" size="sm" variant={f.package_type === t ? "default" : "outline"} className="capitalize" onClick={() => setF({ ...f, package_type: t })}>{t}</Button>)}</div></div>
-          <div className="grid grid-cols-2 gap-2"><div className="space-y-1.5"><Label>Price per head *</Label><Input type="number" min="0" step="0.01" value={f.price} onChange={e => setF({ ...f, price: e.target.value })} /></div><div className="space-y-1.5"><Label>Min guests</Label><Input type="number" min="1" value={f.min} onChange={e => setF({ ...f, min: e.target.value })} /></div></div>
           <div className="space-y-1.5 sm:col-span-2"><Label>Description</Label><Textarea maxLength={600} value={f.description} onChange={e => setF({ ...f, description: e.target.value })} /></div>
         </div>
         {courses.map((c, i) => <div key={c.key} className="space-y-3 rounded-md border p-4">
@@ -105,9 +104,10 @@ function PackageEditor({ open, onClose, pkg, data: d }: { open: boolean; onClose
         <div className="flex flex-wrap items-center gap-2"><Button type="button" variant="outline" size="sm" onClick={() => setCourses(cs => [...cs, { key: crypto.randomUUID(), name: "", picks: "", items: [] }])}><Plus className="mr-1 h-4 w-4" />Add course</Button><span className="text-xs text-muted-foreground">or start from</span>{COURSE_PRESETS.map(p => <Button key={p} type="button" size="sm" variant="ghost" onClick={() => setCourses(cs => [...cs, { key: crypto.randomUUID(), name: p, picks: "", items: [] }])}>{p}</Button>)}</div>
       </div>
       <aside className="space-y-4 lg:sticky lg:top-0 lg:self-start"><Card><CardContent className="space-y-3 p-4"><p className="text-xs uppercase tracking-widest text-muted-foreground">Package preview</p><p className="font-serif text-xl">{f.name || "Untitled package"}</p><p className="text-xs text-muted-foreground">{d.books.find(b => b.id === f.book_id)?.name || "No menu book"} · {bev ? "Beverage" : "Food"}</p>
-        <div className="grid grid-cols-2 gap-2 text-sm"><div><p className="text-xs text-muted-foreground">Courses</p>{courses.length}</div><div><p className="text-xs text-muted-foreground">Items</p>{courses.reduce((s, c) => s + c.items.length, 0)}</div><div><p className="text-xs text-muted-foreground">Per head</p>{f.price ? `$${f.price}` : "—"}</div><div><p className="text-xs text-muted-foreground">Min guests</p>{f.min || "—"}</div></div>
+        <div className="grid grid-cols-2 gap-2 text-sm"><div><p className="text-xs text-muted-foreground">Courses</p>{courses.length}</div><div><p className="text-xs text-muted-foreground">Items</p>{courses.reduce((s, c) => s + c.items.length, 0)}</div></div>
+        <p className="text-xs text-muted-foreground">Price per guest is set per event on the lead's menu page.</p>
         <div className="space-y-1 border-t pt-3">{checks.map(([l, ok]) => <p key={l} className="flex justify-between text-xs"><span>{l}</span><span className={ok ? "text-primary" : "text-muted-foreground"}>{ok ? "done" : "not yet"}</span></p>)}</div></CardContent></Card></aside>
     </div>
-    <DialogFooter className="gap-2">{pkg && <Button variant="ghost" className="mr-auto text-destructive" onClick={remove}>Delete</Button>}<Button variant="outline" onClick={onClose}>Cancel</Button><Button disabled={saving || !checks.slice(0, 3).every(c => c[1])} onClick={save}>{saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Save package</Button></DialogFooter>
+    <DialogFooter className="gap-2">{pkg && <Button variant="ghost" className="mr-auto text-destructive" onClick={remove}>Delete</Button>}<Button variant="outline" onClick={onClose}>Cancel</Button><Button disabled={saving || !checks.every(c => c[1])} onClick={save}>{saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Save package</Button></DialogFooter>
   </DialogContent></Dialog>;
 }
