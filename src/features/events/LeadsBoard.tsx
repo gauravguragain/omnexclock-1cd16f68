@@ -68,7 +68,7 @@ export default function LeadsBoard({ kind }: { kind: "event" | "catering" }) {
       <div className="flex flex-wrap gap-2 pt-1">
         {outcome(l) === "new" && <>{kind === "catering" && <Button size="sm" onClick={() => nav(`/b/${businessCode}/events/catering-bookings/new?lead=${l.id}`)}>Confirm as catering job</Button>}<Button size="sm" variant={kind === "catering" ? "outline" : "default"} onClick={() => setDetail(l)}>Continue workflow · {prettyCrmValue(l.status)}</Button><Button size="sm" variant="outline" onClick={() => setDeclining(l)}>Decline</Button></>}
         {outcome(l) === "declined" && <Button size="sm" variant="outline" onClick={() => reopen(l)}>Reopen</Button>}
-        <Button size="sm" variant="ghost" onClick={() => setDetail(l)}>View details</Button><Button size="sm" variant="ghost" onClick={() => { setEditing(l); setFormOpen(true); }}>Edit</Button>
+        <Button size="sm" variant="ghost" onClick={() => { if (kind === "catering") { const b = crm.bookings.find(bk => bk.lead_id === l.id); if (b) { nav(`/b/${businessCode}/events/catering-bookings/${b.id}`); return; } } setDetail(l); }}>View details</Button><Button size="sm" variant="ghost" onClick={() => { setEditing(l); setFormOpen(true); }}>Edit</Button>
       </div>
     </CardContent></Card>)}{!shown.length && <p className="text-sm text-muted-foreground">No leads here.</p>}</div>
     <Dialog open={!!declining} onOpenChange={o => !o && setDeclining(null)}><DialogContent><DialogHeader><DialogTitle>Decline {declining?.full_name}</DialogTitle></DialogHeader>
