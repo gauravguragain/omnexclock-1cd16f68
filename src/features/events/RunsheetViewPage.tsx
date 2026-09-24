@@ -50,24 +50,24 @@ export function RunsheetDocument({ rs, lead, b, items, selection, businessName }
         </div>
       </div>
 
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <Info k="Event Coordinator" v={rs.event_coordinator && `${rs.event_coordinator}${rs.event_coordinator_phone ? ` (${rs.event_coordinator_phone})` : ""}`} />
           <Info k="Sales Person" v={rs.sales_person && `${rs.sales_person}${rs.sales_person_phone ? ` (${rs.sales_person_phone})` : ""}`} />
           <Info k="Client" v={lead?.full_name && `${lead.full_name}${lead.phone ? ` (${lead.phone})` : ""}`} />
           <Info k="Onsite Contact" v={[rs.onsite_contact_name, rs.onsite_contact_phone].filter(Boolean).join(" · ")} />
         </div>
-        <div className="min-w-[190px] space-y-1.5 rounded-lg bg-secondary px-3 py-2 text-secondary-foreground shadow-md">
+        <div className="min-w-[210px] space-y-2.5 rounded-lg bg-secondary px-4 py-3 text-secondary-foreground shadow-md">
           <div className="flex gap-2"><FileText className="mt-0.5 h-4 w-4 text-primary" /><div><p className="text-[10px] font-semibold uppercase tracking-widest text-primary">Event order</p><p className="font-mono font-semibold">{rs.event_order_number || "—"}</p></div></div>
           <div className="flex gap-2"><Bookmark className="mt-0.5 h-4 w-4 text-primary" /><div><p className="text-[10px] font-semibold uppercase tracking-widest text-primary">Booking reference</p><p className="font-mono font-semibold">{rs.booking_reference || "—"}</p></div></div>
         </div>
       </div>
 
       <div className="overflow-hidden rounded-lg border border-primary/40">
-        <div className="flex items-center justify-between bg-primary px-3 py-1 text-[10px] font-semibold uppercase tracking-widest text-primary-foreground">
+        <div className="flex items-center justify-between bg-primary px-4 py-2 text-xs font-semibold uppercase tracking-widest text-primary-foreground">
           <span className="flex items-center gap-2"><CalendarDays className="h-4 w-4" />Event summary – {date}</span><span>Day 1 of 1</span>
         </div>
-        <div className="grid gap-2 bg-primary/5 px-3 py-2 text-xs grid-cols-2 sm:grid-cols-4">
+        <div className="grid gap-3 bg-primary/5 px-4 py-3 text-sm grid-cols-2 sm:grid-cols-4">
           <p className="flex gap-2"><Clock className="mt-0.5 h-4 w-4 text-muted-foreground" />{start ? `${to12(start)}${end ? ` - ${to12(end)}` : ""}` : "Time TBC"}</p>
           <p className="flex gap-2"><Mic className="mt-0.5 h-4 w-4 text-muted-foreground" />{title}</p>
           <p className="flex gap-2"><Users className="mt-0.5 h-4 w-4 text-muted-foreground" /><span>Attendees: {rs.adult_guests ?? "—"}<br /><span className="text-muted-foreground">Kids: {rs.kids_guests ?? 0}</span></span></p>
