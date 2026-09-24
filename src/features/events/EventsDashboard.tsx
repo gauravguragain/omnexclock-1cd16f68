@@ -48,7 +48,7 @@ export default function EventsDashboard() {
       <Button asChild><Link to={`${base}/leads/events`}><UserPlus className="mr-2 h-4 w-4" />New lead</Link></Button>
     </div>
 
-    <div className="grid gap-4 lg:grid-cols-[1.6fr_1fr]">
+     <div className="grid min-w-0 gap-4 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
       <Card><CardContent className="p-6">
         <div className="flex items-start justify-between"><div><p className="text-lg font-semibold">Event load</p><p className="text-xs text-muted-foreground">How the work is spread</p></div><span className="rounded-full border border-border px-3 py-1 text-xs">{upcoming.length} upcoming events</span></div>
         <div className="mt-6 flex flex-col items-center gap-8 sm:flex-row">
@@ -70,7 +70,7 @@ export default function EventsDashboard() {
       </CardContent></Card>
     </div>
 
-    <div className="grid gap-4 lg:grid-cols-[1.6fr_1fr]">
+     <div className="grid min-w-0 gap-4 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
       <div className="grid gap-4 sm:grid-cols-2">
         <Stat title="Events today" sub={format(new Date(), "EEE d MMM")} value={todays.length} unit="events scheduled" icon={CalendarDays} link="View today's events" to={`${base}/events`}>{first ? `${to12(String(first.start_time).slice(0, 5))} – ${to12(bookingEnd(first))} · ${first.event_name || first.venue_space}` : "Nothing on today"}</Stat>
         <Stat title="Guests expected" sub="Across today's events" value={todayGuests} unit="guests expected" icon={Users} link="View events" to={`${base}/events`}>{todays.slice(0, 2).map(b => <p key={b.id} className="truncate">{b.event_name || b.venue_space} · {guests(b)}</p>)}</Stat>
@@ -80,9 +80,9 @@ export default function EventsDashboard() {
       </div>
       <Card><CardContent className="p-6">
         <div className="flex items-start justify-between"><div className="border-l-2 border-primary pl-3"><p className="font-semibold">Upcoming events</p><p className="text-xs text-muted-foreground">The next seven days</p></div><Link to={`${base}/events`} className="text-xs text-muted-foreground hover:text-primary">View all ›</Link></div>
-        <div className="mt-4 space-y-2">{[...todays, ...week].slice(0, 6).map(b => <div key={b.id} className="flex items-center gap-4 rounded-lg border border-border p-3">
+         <div className="mt-4 space-y-2">{[...todays, ...week].slice(0, 6).map(b => <div key={b.id} className="flex min-w-0 items-center gap-3 rounded-lg border border-border p-3 sm:gap-4">
           <div className="text-center"><p className="text-lg font-semibold leading-none">{format(d(b.event_date), "dd")}</p><p className="text-[10px] uppercase text-muted-foreground">{format(d(b.event_date), "MMM")}</p></div>
-          <div className="min-w-0 flex-1"><p className="truncate font-medium">{b.event_name || crm.leads.find(l => l.id === b.lead_id)?.full_name || "Event"}</p><p className="flex gap-3 text-xs text-muted-foreground"><span className="flex items-center gap-1"><MapPin className="h-3 w-3" />{b.venue_space || b.service_location || "—"}</span><span className="flex items-center gap-1"><Users className="h-3 w-3" />{guests(b)} guests</span></p></div>
+           <div className="min-w-0 flex-1"><p className="truncate font-medium">{b.event_name || crm.leads.find(l => l.id === b.lead_id)?.full_name || "Event"}</p><p className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground"><span className="flex min-w-0 items-center gap-1"><MapPin className="h-3 w-3 shrink-0" /><span className="truncate">{b.venue_space || b.service_location || "—"}</span></span><span className="flex items-center gap-1"><Users className="h-3 w-3" />{guests(b)} guests</span></p></div>
           {b.event_date === today && <span className="rounded bg-primary/15 px-2 py-0.5 text-xs text-primary">Today</span>}
         </div>)}{!todays.length && !week.length && <p className="py-8 text-center text-sm text-muted-foreground">Nothing booked in the next seven days</p>}</div>
       </CardContent></Card>
@@ -94,7 +94,7 @@ export default function EventsDashboard() {
         <p className="mt-4 text-sm">Utilisation rate</p><p className="text-4xl font-semibold">{util}%</p>
         <div className="mt-2 h-2 rounded-full bg-muted"><div className="h-full rounded-full bg-primary" style={{ width: `${util}%` }} /></div>
         <div className="mt-2 flex justify-between text-sm text-muted-foreground"><span>In use <b className="text-foreground">{usedSpaces.size}</b></span><span>Active spaces <b className="text-foreground">{venues.length}</b></span></div>
-        <div className="mt-5 grid grid-cols-3 divide-x divide-border">{[[active.length, "Total events", "All time"], [thisMonth, "This month", format(new Date(), "MMMM yyyy")], [ev.venues.length, "Total spaces", `${venues.length} active`]].map(([n, l, s]: any) => <div key={l} className="px-3 first:pl-0"><p className="text-3xl font-semibold">{n}</p><p className="text-sm">{l}</p><p className="text-xs text-muted-foreground">{s}</p></div>)}</div>
+         <div className="mt-5 grid grid-cols-3 divide-x divide-border">{[[active.length, "Total events", "All time"], [thisMonth, "This month", format(new Date(), "MMMM yyyy")], [ev.venues.length, "Total spaces", `${venues.length} active`]].map(([n, l, s]: any) => <div key={l} className="min-w-0 px-2 first:pl-0 sm:px-3"><p className="text-2xl font-semibold sm:text-3xl">{n}</p><p className="text-xs sm:text-sm">{l}</p><p className="break-words text-xs text-muted-foreground">{s}</p></div>)}</div>
       </CardContent></Card>
       <Card><CardContent className="p-6">
         <p className="font-semibold">Quick actions</p><p className="text-xs text-muted-foreground">Where a shift usually starts</p>
