@@ -82,19 +82,50 @@ export default function CateringDetailPage({ view }: { view: "lead" | "booking" 
     await crm.refresh();
     return data;
   };
+  const itemName = (ci: any) => ci.dish_id ? ev.dishes.find(x => x.id === ci.dish_id)?.name : ev.drinks.find(x => x.id === ci.drink_id)?.name;
+  const courseOpts = (courseId: string) => ev.courseItems.filter(ci => ci.course_id === courseId).map(ci => ({ id: ci.id, name: itemName(ci) as string })).filter(o => o.name);
   const openBkEdit = () => {
     if (!booking) return;
+    setBkTab("details");
     setBk({ event_name: booking.event_name || "", event_date: booking.event_date || "", start_time: String(booking.start_time || "18:00").slice(0, 5), end_time: String(booking.end_time || bookingEnd(booking) || "23:00").slice(0, 5), fulfilment_method: booking.fulfilment_method || "delivery", service_location: booking.service_location || "", adults: String(booking.adults ?? booking.guest_count ?? ""), kids: String(booking.kids ?? 0), notes: booking.notes || "" });
+    const pkgRows = items.filter(i => i.course === "package" || i.course === "kids_package");
+    setPkgs(pkgRows.map((row, idx) => {
+      const pk = ev.packages.find(p => p.name === row.item_name);
+      const key = row.notes?.startsWith("pkg:") ? row.notes.slice(4) : `p${idx + 1}`;
+      const dishes: Record<string, string[]> = {};
+      if (pk) ev.courses.filter(c => c.package_id === pk.id).forEach(c => {
+        const names = items.filter(i => i.course === c.name && i.notes === `pkg:${key}`).map(i => i.item_name);
+        const ids = courseOpts(c.id).filter(o => names.includes(o.name as string)).map(o => o.id);
+        if (ids.length) dishes[c.id] = ids;
+      });
+      return { key, packageId: pk?.id || "", dishes };
+    }));
+    setTeam({ coordinator: rs?.event_coordinator || "", coordinator_phone: rs?.event_coordinator_phone || "", onsite_name: rs?.onsite_contact_name || "", onsite_phone: rs?.onsite_contact_phone || "", client_notes: rs?.client_notes || booking.notes || "" });
+    setFoodRows((rs?.service_schedule || []).map((s: any) => ({ time: s.time || "", label: s.label || "" })));
+    setFohRows((rs?.service_schedule_foh || []).map((s: any) => ({ time: s.time || "", label: s.label || "" })));
     setEditBkOpen(true);
   };
   const saveBk = async () => {
-    if (!booking) return;
+    if (!booking || !crm.business) return;
     if (!bk.event_name || !bk.event_date || !(Number(bk.adults) > 0) || (bk.fulfilment_method === "delivery" && !bk.service_location)) { toast.error("Name, date, adults and delivery address are required."); return; }
     setBkSaving(true);
+    const bid = crm.business.id;
     const total = (Number(bk.adults) || 0) + (Number(bk.kids) || 0);
     const { error } = await supabase.from("crm_bookings").update({ event_name: bk.event_name, event_date: bk.event_date, start_time: bk.start_time, end_time: bk.end_time, duration_minutes: minutesBetween(bk.start_time, bk.end_time), fulfilment_method: bk.fulfilment_method, service_location: bk.fulfilment_method === "pickup" ? null : bk.service_location || null, adults: Number(bk.adults) || 0, kids: Number(bk.kids) || 0, guest_count: total, notes: bk.notes || null } as any).eq("id", booking.id);
+    if (error) { setBkSaving(false); toast.error(error.message); return; }
+    const chosen = pkgs.filter(p => p.packageId);
+    const { data: sel, error: se } = await supabase.from("crm_menu_selections").upsert({ business_id: bid, lead_id: lead.id, guest_count: Number(bk.adults) || total, package_name: ev.packages.find(x => x.id === chosen[0]?.packageId)?.name || null, updated_by: null } as any, { onConflict: "lead_id" }).select("id").single();
+    if (se) { setBkSaving(false); toast.error(se.message); return; }
+    await supabase.from("crm_menu_selection_items").delete().eq("selection_id", sel.id);
+    const rows: any[] = [];
+    chosen.forEach(cp => { const pk = ev.packages.find(x => x.id === cp.packageId); rows.push({ business_id: bid, selection_id: sel.id, item_name: pk?.name, course: "package", notes: `pkg:${cp.key}` });
+      ev.courses.filter(c => c.package_id === cp.packageId).forEach(c => (cp.dishes[c.id] || []).forEach(ciId => { const o = courseOpts(c.id).find(x => x.id === ciId); if (o) rows.push({ business_id: bid, selection_id: sel.id, item_name: o.name, course: String(c.name), notes: `pkg:${cp.key}` }); })); });
+    if (rows.length) { const { error: ie } = await supabase.from("crm_menu_selection_items").insert(rows as any); if (ie) { setBkSaving(false); toast.error(ie.message); return; } }
+    if (rs) {
+      const { error: re } = await supabase.from("crm_runsheets").update({ event_coordinator: team.coordinator || null, event_coordinator_phone: team.coordinator_phone || null, onsite_contact_name: team.onsite_name || null, onsite_contact_phone: team.onsite_phone || null, client_notes: team.client_notes || null, service_schedule: foodRows.filter(r => r.label), service_schedule_foh: fohRows.filter(r => r.label) } as any).eq("id", rs.id);
+      if (re) { setBkSaving(false); toast.error(re.message); return; }
+    }
     setBkSaving(false);
-    if (error) { toast.error(error.message); return; }
     toast.success("Catering booking updated.");
     setEditBkOpen(false);
     await crm.refresh();
