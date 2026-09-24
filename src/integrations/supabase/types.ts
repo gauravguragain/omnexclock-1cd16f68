@@ -497,76 +497,109 @@ export type Database = {
       }
       crm_bookings: {
         Row: {
+          adults: number | null
           balance_due_date: string | null
+          booking_kind: string
           business_id: string
           confirmation_sent_at: string | null
           confirmed_at: string | null
           created_at: string
           created_by: string | null
+          customer_id: string | null
           deposit_amount: number
           deposit_due_date: string | null
           deposit_paid: boolean
           duration_minutes: number
+          end_time: string | null
           event_date: string
+          event_name: string | null
+          event_order_number: string | null
+          event_type: string | null
           guest_count: number
           id: string
-          lead_id: string
+          kids: number | null
+          lead_id: string | null
           menu_selection_id: string | null
+          notes: string | null
           roster_event_id: string | null
+          service_location: string | null
           start_time: string
           status: string
           total_amount: number
           updated_at: string
           updated_by: string | null
           venue_space: string
+          venue_space_id: string | null
         }
         Insert: {
+          adults?: number | null
           balance_due_date?: string | null
+          booking_kind?: string
           business_id: string
           confirmation_sent_at?: string | null
           confirmed_at?: string | null
           created_at?: string
           created_by?: string | null
+          customer_id?: string | null
           deposit_amount?: number
           deposit_due_date?: string | null
           deposit_paid?: boolean
           duration_minutes: number
+          end_time?: string | null
           event_date: string
+          event_name?: string | null
+          event_order_number?: string | null
+          event_type?: string | null
           guest_count: number
           id?: string
-          lead_id: string
+          kids?: number | null
+          lead_id?: string | null
           menu_selection_id?: string | null
+          notes?: string | null
           roster_event_id?: string | null
+          service_location?: string | null
           start_time: string
           status?: string
           total_amount?: number
           updated_at?: string
           updated_by?: string | null
           venue_space: string
+          venue_space_id?: string | null
         }
         Update: {
+          adults?: number | null
           balance_due_date?: string | null
+          booking_kind?: string
           business_id?: string
           confirmation_sent_at?: string | null
           confirmed_at?: string | null
           created_at?: string
           created_by?: string | null
+          customer_id?: string | null
           deposit_amount?: number
           deposit_due_date?: string | null
           deposit_paid?: boolean
           duration_minutes?: number
+          end_time?: string | null
           event_date?: string
+          event_name?: string | null
+          event_order_number?: string | null
+          event_type?: string | null
           guest_count?: number
           id?: string
-          lead_id?: string
+          kids?: number | null
+          lead_id?: string | null
           menu_selection_id?: string | null
+          notes?: string | null
           roster_event_id?: string | null
+          service_location?: string | null
           start_time?: string
           status?: string
           total_amount?: number
           updated_at?: string
           updated_by?: string | null
           venue_space?: string
+          venue_space_id?: string | null
         }
         Relationships: [
           {
@@ -581,6 +614,13 @@ export type Database = {
             columns: ["business_id"]
             isOneToOne: false
             referencedRelation: "businesses_public"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_bookings_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "crm_customers"
             referencedColumns: ["id"]
           },
           {
@@ -602,6 +642,13 @@ export type Database = {
             columns: ["roster_event_id"]
             isOneToOne: false
             referencedRelation: "roster_day_events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_bookings_venue_space_id_fkey"
+            columns: ["venue_space_id"]
+            isOneToOne: false
+            referencedRelation: "crm_venue_spaces"
             referencedColumns: ["id"]
           },
         ]
@@ -762,6 +809,153 @@ export type Database = {
           },
           {
             foreignKeyName: "crm_confirmation_tokens_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses_public"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      crm_customers: {
+        Row: {
+          address: string | null
+          business_id: string
+          company: string | null
+          created_at: string
+          email: string | null
+          full_name: string
+          id: string
+          notes: string | null
+          phone: string | null
+          source: string
+          updated_at: string
+        }
+        Insert: {
+          address?: string | null
+          business_id: string
+          company?: string | null
+          created_at?: string
+          email?: string | null
+          full_name: string
+          id?: string
+          notes?: string | null
+          phone?: string | null
+          source?: string
+          updated_at?: string
+        }
+        Update: {
+          address?: string | null
+          business_id?: string
+          company?: string | null
+          created_at?: string
+          email?: string | null
+          full_name?: string
+          id?: string
+          notes?: string | null
+          phone?: string | null
+          source?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_customers_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_customers_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses_public"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      crm_dishes: {
+        Row: {
+          active: boolean
+          business_id: string
+          created_at: string
+          diet: string
+          id: string
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          business_id: string
+          created_at?: string
+          diet?: string
+          id?: string
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          business_id?: string
+          created_at?: string
+          diet?: string
+          id?: string
+          name?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_dishes_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_dishes_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses_public"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      crm_drinks: {
+        Row: {
+          active: boolean
+          business_id: string
+          created_at: string
+          id: string
+          kind: string
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          business_id: string
+          created_at?: string
+          id?: string
+          kind?: string
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          business_id?: string
+          created_at?: string
+          id?: string
+          kind?: string
+          name?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_drinks_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_drinks_business_id_fkey"
             columns: ["business_id"]
             isOneToOne: false
             referencedRelation: "businesses_public"
@@ -950,6 +1144,8 @@ export type Database = {
           company: string | null
           created_at: string
           created_by: string | null
+          customer_id: string | null
+          decline_reason: string | null
           email: string | null
           estimated_guest_count: number | null
           estimated_value: number
@@ -958,11 +1154,14 @@ export type Database = {
           full_name: string
           id: string
           last_contact_at: string | null
+          lead_kind: string
+          lead_outcome: string
           lost_reason: string | null
           normalized_email: string | null
           normalized_phone: string | null
           phone: string | null
           preferred_dates: string[]
+          service_location: string | null
           source: string
           status: string
           tags: string[]
@@ -979,6 +1178,8 @@ export type Database = {
           company?: string | null
           created_at?: string
           created_by?: string | null
+          customer_id?: string | null
+          decline_reason?: string | null
           email?: string | null
           estimated_guest_count?: number | null
           estimated_value?: number
@@ -987,11 +1188,14 @@ export type Database = {
           full_name: string
           id?: string
           last_contact_at?: string | null
+          lead_kind?: string
+          lead_outcome?: string
           lost_reason?: string | null
           normalized_email?: string | null
           normalized_phone?: string | null
           phone?: string | null
           preferred_dates?: string[]
+          service_location?: string | null
           source: string
           status?: string
           tags?: string[]
@@ -1008,6 +1212,8 @@ export type Database = {
           company?: string | null
           created_at?: string
           created_by?: string | null
+          customer_id?: string | null
+          decline_reason?: string | null
           email?: string | null
           estimated_guest_count?: number | null
           estimated_value?: number
@@ -1016,11 +1222,14 @@ export type Database = {
           full_name?: string
           id?: string
           last_contact_at?: string | null
+          lead_kind?: string
+          lead_outcome?: string
           lost_reason?: string | null
           normalized_email?: string | null
           normalized_phone?: string | null
           phone?: string | null
           preferred_dates?: string[]
+          service_location?: string | null
           source?: string
           status?: string
           tags?: string[]
@@ -1038,6 +1247,61 @@ export type Database = {
           },
           {
             foreignKeyName: "crm_leads_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses_public"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_leads_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "crm_customers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      crm_menu_books: {
+        Row: {
+          active: boolean
+          business_id: string
+          created_at: string
+          description: string | null
+          id: string
+          name: string
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          business_id: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          name: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          business_id?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          name?: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_menu_books_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_menu_books_business_id_fkey"
             columns: ["business_id"]
             isOneToOne: false
             referencedRelation: "businesses_public"
@@ -1199,6 +1463,7 @@ export type Database = {
           guest_count: number
           id: string
           lead_id: string
+          package_id: string | null
           package_name: string | null
           package_price_per_head: number | null
           total_estimate: number
@@ -1218,6 +1483,7 @@ export type Database = {
           guest_count?: number
           id?: string
           lead_id: string
+          package_id?: string | null
           package_name?: string | null
           package_price_per_head?: number | null
           total_estimate?: number
@@ -1237,6 +1503,7 @@ export type Database = {
           guest_count?: number
           id?: string
           lead_id?: string
+          package_id?: string | null
           package_name?: string | null
           package_price_per_head?: number | null
           total_estimate?: number
@@ -1263,6 +1530,13 @@ export type Database = {
             columns: ["lead_id"]
             isOneToOne: true
             referencedRelation: "crm_leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_menu_selections_package_id_fkey"
+            columns: ["package_id"]
+            isOneToOne: false
+            referencedRelation: "crm_packages"
             referencedColumns: ["id"]
           },
         ]
@@ -1320,6 +1594,185 @@ export type Database = {
           },
           {
             foreignKeyName: "crm_options_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses_public"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      crm_package_course_items: {
+        Row: {
+          business_id: string
+          course_id: string
+          created_at: string
+          dish_id: string | null
+          drink_id: string | null
+          id: string
+        }
+        Insert: {
+          business_id: string
+          course_id: string
+          created_at?: string
+          dish_id?: string | null
+          drink_id?: string | null
+          id?: string
+        }
+        Update: {
+          business_id?: string
+          course_id?: string
+          created_at?: string
+          dish_id?: string | null
+          drink_id?: string | null
+          id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_package_course_items_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_package_course_items_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses_public"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_package_course_items_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "crm_package_courses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_package_course_items_dish_id_fkey"
+            columns: ["dish_id"]
+            isOneToOne: false
+            referencedRelation: "crm_dishes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_package_course_items_drink_id_fkey"
+            columns: ["drink_id"]
+            isOneToOne: false
+            referencedRelation: "crm_drinks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      crm_package_courses: {
+        Row: {
+          business_id: string
+          created_at: string
+          id: string
+          name: string
+          package_id: string
+          picks: number | null
+          sort_order: number
+        }
+        Insert: {
+          business_id: string
+          created_at?: string
+          id?: string
+          name: string
+          package_id: string
+          picks?: number | null
+          sort_order?: number
+        }
+        Update: {
+          business_id?: string
+          created_at?: string
+          id?: string
+          name?: string
+          package_id?: string
+          picks?: number | null
+          sort_order?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_package_courses_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_package_courses_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses_public"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_package_courses_package_id_fkey"
+            columns: ["package_id"]
+            isOneToOne: false
+            referencedRelation: "crm_packages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      crm_packages: {
+        Row: {
+          active: boolean
+          book_id: string | null
+          business_id: string
+          created_at: string
+          description: string | null
+          id: string
+          min_guests: number
+          name: string
+          package_type: string
+          price_per_head: number
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          book_id?: string | null
+          business_id: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          min_guests?: number
+          name: string
+          package_type?: string
+          price_per_head?: number
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          book_id?: string | null
+          business_id?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          min_guests?: number
+          name?: string
+          package_type?: string
+          price_per_head?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_packages_book_id_fkey"
+            columns: ["book_id"]
+            isOneToOne: false
+            referencedRelation: "crm_menu_books"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_packages_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_packages_business_id_fkey"
             columns: ["business_id"]
             isOneToOne: false
             referencedRelation: "businesses_public"
@@ -1521,6 +1974,63 @@ export type Database = {
           },
         ]
       }
+      crm_stakeholders: {
+        Row: {
+          active: boolean
+          business_id: string
+          created_at: string
+          email: string | null
+          full_name: string
+          id: string
+          notes: string | null
+          phone: string | null
+          position: string | null
+          stakeholder_type: string
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          business_id: string
+          created_at?: string
+          email?: string | null
+          full_name: string
+          id?: string
+          notes?: string | null
+          phone?: string | null
+          position?: string | null
+          stakeholder_type?: string
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          business_id?: string
+          created_at?: string
+          email?: string | null
+          full_name?: string
+          id?: string
+          notes?: string | null
+          phone?: string | null
+          position?: string | null
+          stakeholder_type?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_stakeholders_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_stakeholders_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses_public"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       crm_tasks: {
         Row: {
           assigned_to: string | null
@@ -1715,6 +2225,60 @@ export type Database = {
             columns: ["lead_id"]
             isOneToOne: false
             referencedRelation: "crm_leads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      crm_venue_spaces: {
+        Row: {
+          active: boolean
+          business_id: string
+          capacity: number | null
+          created_at: string
+          description: string | null
+          id: string
+          layouts: string[]
+          name: string
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          business_id: string
+          capacity?: number | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          layouts?: string[]
+          name: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          business_id?: string
+          capacity?: number | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          layouts?: string[]
+          name?: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_venue_spaces_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_venue_spaces_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses_public"
             referencedColumns: ["id"]
           },
         ]
@@ -3024,6 +3588,7 @@ export type Database = {
         Returns: boolean
       }
       can_access_crm: { Args: { _business_id: string }; Returns: boolean }
+      crm_next_event_order: { Args: { _business_id: string }; Returns: string }
       delete_employee: { Args: { _employee_id: string }; Returns: boolean }
       delete_employee_request: {
         Args: {
