@@ -204,6 +204,13 @@
       "when": 1790274003865,
       "tag": "0028_sync_event_lead_confirmation_outcome",
       "breakpoints": true
+    },
+    {
+      "idx": 29,
+      "version": "7",
+      "when": 1790274306657,
+      "tag": "0029_add_course_diet_pick_limits",
+      "breakpoints": true
     }
   ]
 }
