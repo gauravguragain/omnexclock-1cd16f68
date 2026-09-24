@@ -58,14 +58,14 @@ export default function EventDetailPage({ kind }: { kind: "event" | "catering" }
     </div>
 
     <Card><CardContent className="grid divide-y divide-border p-0 sm:grid-cols-4 sm:divide-x sm:divide-y-0">
-      {[[CalendarDays, "Date", format(date, "EEEE, d MMMM yyyy"), isToday(date) ? "Today" : format(date, "EEE")], [Clock, "Time", `${to12(start)} – ${to12(end)}`, `${+hrs.toFixed(2)} hours`], [MapPin, kind === "event" ? "Venue" : "Location", kind === "event" ? b.venue_space : b.service_location || "—", venue?.capacity ? `Capacity ${venue.capacity}` : ""], [Users, "Guests", guests, `${b.adults ?? b.guest_count} adults · ${b.kids || 0} kids`]].map(([I, l, v, s]: any, i) => <div key={l} className="p-5">
+      {[[CalendarDays, "Date", format(date, "EEEE, d MMMM yyyy"), isToday(date) ? "Today" : format(date, "EEE")], [Clock, "Time", `${to12(start)} – ${to12(end)}`, `${+hrs.toFixed(2)} hours`], [MapPin, kind === "event" ? "Venue" : "Location", kind === "event" ? (venue?.name || prettyCrmValue(b.venue_space)) : b.service_location || "—", venue?.capacity ? `Capacity ${venue.capacity}` : ""], [Users, "Guests", guests, `${b.adults ?? b.guest_count} adults · ${b.kids || 0} kids`]].map(([I, l, v, s]: any, i) => <div key={l} className="p-5">
         <p className="flex items-center gap-1.5 text-xs text-muted-foreground"><I className="h-3.5 w-3.5" />{l}</p><p className="mt-1 font-medium">{v}</p><p className="text-xs text-muted-foreground">{s}</p>
         {i === 3 && venue?.capacity && <div className="mt-2 h-1 rounded-full bg-muted"><div className="h-full rounded-full bg-primary" style={{ width: `${Math.min(100, guests / venue.capacity * 100)}%` }} /></div>}</div>)}
     </CardContent></Card>
 
     <div className="grid gap-6 lg:grid-cols-[1.6fr_1fr]">
       <div className="space-y-6">
-        <Section icon={CalendarDays} title="Schedule"><p className="font-medium">{title}</p><p className="text-sm">{format(date, "EEEE, d MMMM yyyy")} · {to12(start)} – {to12(end)}</p><p className="text-xs text-muted-foreground">{b.venue_space || b.service_location} · {guests} guests</p></Section>
+        <Section icon={CalendarDays} title="Schedule"><p className="font-medium">{title}</p><p className="text-sm">{format(date, "EEEE, d MMMM yyyy")} · {to12(start)} – {to12(end)}</p><p className="text-xs text-muted-foreground">{venue?.name || prettyCrmValue(b.venue_space) || b.service_location} · {guests} guests</p></Section>
 
         <Section icon={UtensilsCrossed} title="Catering" action={<span className="text-xs text-muted-foreground">{selection?.package_name ? `${selection.package_name} · ` : ""}{items.length} items</span>}>
           {items.length ? <div className="space-y-4">{selection?.beverage_package && <div><p className="text-sm font-medium">Beverages</p><p className="text-sm text-muted-foreground">{prettyCrmValue(selection.beverage_package)}</p></div>}
