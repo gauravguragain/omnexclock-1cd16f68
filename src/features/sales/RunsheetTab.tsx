@@ -291,11 +291,11 @@ export default function RunsheetTab({ lead, booking, options, onSaved }: {
     return saved;
   };
   const [issueOpen, setIssueOpen] = useState(false);
+  const coordinators = useMemo(() => stakeholders.filter((p) => p.stakeholder_type === "coordinator"), [stakeholders]);
 
   if (loading) return <p className="py-8 text-sm text-muted-foreground">Loading runsheet…</p>;
 
   const pickPerson = (key: keyof typeof form, phoneKey: keyof typeof form) => (event: { target: { value: string } }) => { const v = event.target.value; const match = stakeholders.find((p) => p.full_name === v); setForm((prev) => ({ ...prev, [key]: v, ...(match?.phone ? { [phoneKey]: match.phone } : {}) })); };
-  const coordinators = useMemo(() => stakeholders.filter((p) => p.stakeholder_type === "coordinator"), [stakeholders]);
   const PersonSelect = ({ value, personKey, phoneKey, placeholder }: { value: string; personKey: keyof typeof form; phoneKey: keyof typeof form; placeholder: string }) => (
     <select
       value={value}
