@@ -1,4 +1,6 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import DishPhotoCell from "./DishPhotoCell";
+import { signDishPhotos } from "./dishPhotos";
 import { useCrmData } from "@/features/sales/useCrmData";
 import { useEventsData, type Row } from "./useEventsData";
 import SimpleList from "./SimpleList";
@@ -45,11 +47,16 @@ export function StakeholdersPage() {
 }
 
 export function DishesPage() {
-  const d = useEventsData(); if (!d.business) return null;
+  const d = useEventsData();
+  const [urls, setUrls] = useState<Record<string, string>>({});
+  const pathsKey = d.dishes.map(x => x.photo_path || "").join("|");
+  useEffect(() => { signDishPhotos(d.dishes.map(x => x.photo_path)).then(setUrls); }, [pathsKey]);
+  if (!d.business) return null;
+  const bid = d.business.id;
   const opts = [{ value: "veg", label: "Vegetarian" }, { value: "nonveg", label: "Non-vegetarian" }];
-  return <SimpleList title="Dishes" subtitle={`${d.dishes.length} dishes shared across every package.`} table="crm_dishes" businessId={d.business.id} rows={d.dishes} refresh={d.refresh} archivable groupAZ filterKey="diet" filterOptions={opts}
+  return <SimpleList title="Dishes" subtitle={`${d.dishes.length} dishes shared across every package. Add a photo so guests can see each dish.`} table="crm_dishes" businessId={bid} rows={d.dishes} refresh={d.refresh} archivable groupAZ filterKey="diet" filterOptions={opts}
     fields={[{ key: "name", label: "Dish name", required: true }, { key: "diet", label: "Diet", type: "select", options: opts }]}
-    columns={[{ label: "Dish", render: r => r.name }, { label: "Diet", render: r => <Badge variant={r.diet === "veg" ? "outline" : "secondary"}>{r.diet === "veg" ? "V · Veg" : "N · Non-veg"}</Badge> }, { label: "Used", render: r => <span className="text-muted-foreground">{usage(d.courseItems, "dish_id", r.id, d.courses)}</span> }]} />;
+    columns={[{ label: "Photo", render: r => <DishPhotoCell dish={r} businessId={bid} url={r.photo_path ? urls[r.photo_path] : undefined} onChanged={d.refresh} /> }, { label: "Dish", render: r => r.name }, { label: "Diet", render: r => <Badge variant={r.diet === "veg" ? "outline" : "secondary"}>{r.diet === "veg" ? "V · Veg" : "N · Non-veg"}</Badge> }, { label: "Used", render: r => <span className="text-muted-foreground">{usage(d.courseItems, "dish_id", r.id, d.courses)}</span> }]} />;
 }
 
 export function DrinksPage() {
