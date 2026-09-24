@@ -321,6 +321,7 @@ export default function RunsheetTab({ lead, booking, options, onSaved }: {
 
   if (loading) return <p className="py-8 text-sm text-muted-foreground">Loading runsheet…</p>;
 
+  const pickPerson = (key: keyof typeof form, phoneKey: keyof typeof form) => (event: { target: { value: string } }) => { const v = event.target.value; const match = stakeholders.find((p) => p.full_name === v); setForm((prev) => ({ ...prev, [key]: v, ...(match?.phone ? { [phoneKey]: match.phone } : {}) })); };
   const set = (key: keyof typeof form) => (event: { target: { value: string } }) => setForm((prev) => ({ ...prev, [key]: event.target.value }));
   const revision = Number(runsheet?.revision || 1);
 
@@ -369,9 +370,10 @@ export default function RunsheetTab({ lead, booking, options, onSaved }: {
       <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <div className="space-y-1.5"><Label>Event order number</Label><Input value={form.event_order_number} onChange={set("event_order_number")} placeholder="698-1" /></div>
         <div className="space-y-1.5"><Label>Booking reference</Label><Input value={form.booking_reference} onChange={set("booking_reference")} /></div>
-        <div className="space-y-1.5"><Label>Sales person</Label><Input value={form.sales_person} onChange={set("sales_person")} /></div>
+        <datalist id="rs-stakeholders">{stakeholders.map((p) => <option key={p.id} value={p.full_name}>{p.position || p.stakeholder_type}</option>)}</datalist>
+        <div className="space-y-1.5"><Label>Sales person</Label><Input list="rs-stakeholders" value={form.sales_person} onChange={pickPerson("sales_person", "sales_person_phone")} /></div>
         <div className="space-y-1.5"><Label>Sales person contact number</Label><Input type="tel" value={form.sales_person_phone} onChange={set("sales_person_phone")} /></div>
-        <div className="space-y-1.5"><Label>Event coordinator</Label><Input value={form.event_coordinator} onChange={set("event_coordinator")} /></div>
+        <div className="space-y-1.5"><Label>Event coordinator</Label><Input list="rs-stakeholders" value={form.event_coordinator} onChange={pickPerson("event_coordinator", "event_coordinator_phone")} /></div>
         <div className="space-y-1.5"><Label>Event coordinator contact number</Label><Input type="tel" value={form.event_coordinator_phone} onChange={set("event_coordinator_phone")} /></div>
         <div className="space-y-1.5"><Label>Onsite contact</Label><Input value={form.onsite_contact_name} onChange={set("onsite_contact_name")} placeholder="Name on the day" /></div>
         <div className="space-y-1.5"><Label>Onsite contact number</Label><Input value={form.onsite_contact_phone} onChange={set("onsite_contact_phone")} /></div>
