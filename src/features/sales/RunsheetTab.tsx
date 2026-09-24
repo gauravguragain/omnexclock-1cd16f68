@@ -181,7 +181,7 @@ export default function RunsheetTab({ lead, booking, options, onSaved }: {
       onsite_contact_phone: prev.onsite_contact_phone || lead.phone || "",
       client_notes: prev.client_notes || [menu.selection?.dietary_requirements, menu.selection?.allergies ? `Allergies: ${menu.selection.allergies}` : ""].filter(Boolean).join(" · "),
     }));
-    if (!schedule.length) suggestSchedule();
+    if (!schedule.length && !fohSchedule.length) suggestSchedule();
     toast.success("Runsheet built from the booking and menu");
   };
 
@@ -192,11 +192,11 @@ export default function RunsheetTab({ lead, booking, options, onSaved }: {
     { label: "Beverage package chosen", done: Boolean(menu.selection?.beverage_package), hint: "Menu tab" },
     { label: "Event coordinator assigned", done: Boolean(form.event_coordinator.trim()) },
     { label: "Onsite contact on the day", done: Boolean(form.onsite_contact_name.trim() && form.onsite_contact_phone.trim()) },
-    { label: "Service schedule built", done: schedule.length > 0 },
+    { label: "Service schedule built", done: schedule.length > 0 || fohSchedule.length > 0 },
     { label: "Setup and styling ticked off", done: setupItems.length > 0 },
     ...(accessEnabled ? [{ label: "Vendor access time agreed", done: Boolean(form.access_time) }] : []),
     { label: "Deposit received", done: ["deposit_received", "runsheet_sent", "full_payment_received"].includes(lead.status) },
-  ]), [booking, form, menu, schedule, setupItems, lead.status, accessEnabled]);
+  ]), [booking, form, menu, schedule, fohSchedule, setupItems, lead.status, accessEnabled]);
 
   const completed = checklist.filter((c) => c.done).length;
   const readyToSend = completed === checklist.length;
@@ -226,6 +226,7 @@ export default function RunsheetTab({ lead, booking, options, onSaved }: {
       kids_guests: form.kids_guests ? Number(form.kids_guests) : null,
       access_time: accessEnabled ? (form.access_time || null) : null, setup_items: setupItems, setup_notes: form.setup_notes || null,
       service_schedule: schedule.map(({ time, label, detail }) => ({ time, label, detail })),
+      service_schedule_foh: fohSchedule.map(({ time, label, detail }) => ({ time, label, detail })),
       special_requests: form.special_requests || null, distributed_to: form.distributed_to || null,
       ops_notes: form.ops_notes || null, client_notes: form.client_notes || null,
       updated_by: user?.id, ...extra,
