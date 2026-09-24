@@ -151,7 +151,7 @@ export default function FoodSafetyStaffPage() {
       <div className="flex justify-center gap-3 my-6">{[0, 1, 2, 3].map((i) => <div key={i} className={`h-4 w-4 rounded-full ${pin.length > i ? "bg-primary" : "bg-muted"}`} />)}</div>
       <div className="grid grid-cols-3 gap-3">
         {["1", "2", "3", "4", "5", "6", "7", "8", "9", "", "0", "⌫"].map((k) => k === "" ? <div key="x" /> : (
-          <button key={k} onClick={() => setPin((p) => (k === "⌫" ? p.slice(0, -1) : (p + k).slice(0, 8)))} className="h-16 rounded-2xl bg-secondary text-2xl font-semibold active:scale-95 flex items-center justify-center">{k === "⌫" ? <Delete className="h-6 w-6" /> : k}</button>
+          <button key={k} onClick={() => setPin((p) => (k === "⌫" ? p.slice(0, -1) : (p + k).slice(0, 8)))} className="h-16 rounded-2xl bg-secondary text-secondary-foreground border border-border text-2xl font-semibold active:scale-95 flex items-center justify-center">{k === "⌫" ? <Delete className="h-6 w-6" /> : k}</button>
         ))}
       </div>
       <Button size="lg" className="w-full h-14 mt-5" disabled={pin.length < 4} onClick={login}>Sign in</Button>
