@@ -34,12 +34,9 @@ export default function CalendarTab({ businessId, businessName, leads, inspectio
   useEffect(() => {
     let active = true;
     (async () => {
-      const { data } = await supabase
-        .from("crm_settings")
-        .select("calendar_token")
-        .eq("business_id", businessId)
-        .maybeSingle();
-      if (active) setToken((data as any)?.calendar_token || "");
+      const { data, error } = await (supabase.rpc as any)("get_crm_calendar_token", { _business_id: businessId });
+      if (error) console.error("Calendar link lookup failed", error);
+      if (active) setToken((data as string) || "");
     })();
     return () => { active = false; };
   }, [businessId]);
