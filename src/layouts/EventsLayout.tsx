@@ -34,7 +34,7 @@ export default function EventsLayout({ mode = "events" }: { mode?: "events" | "c
   if (!user) return <Navigate to="/auth?next=events" replace />;
   const id = business!.id;
   const allowed = isApproved && (isAdminOf(id) || isSuperAdminOf(id) || isSalesManagerOf(id));
-  if (!allowed) return <div className="min-h-dvh flex items-center justify-center bg-background"><div className="space-y-4 text-center"><h1 className="text-xl font-bold">Access denied</h1><p className="text-muted-foreground">Events & Sales is for admins and sales managers.</p><Link to="/hub"><Button variant="outline">Back</Button></Link></div></div>;
+   if (!allowed) return <div className="min-h-dvh flex items-center justify-center bg-background"><div className="space-y-4 text-center"><h1 className="text-xl font-bold">Access denied</h1><p className="text-muted-foreground">{mode === "catering" ? "Catering" : "Events & Sales"} is for admins and sales managers.</p><Link to="/hub"><Button variant="outline">Back</Button></Link></div></div>;
    const base = `/b/${businessCode}/${mode}`;
    const sections = mode === "catering" ? [
      { title: "Catering", items: [{ to: "leads", label: "Catering leads", icon: Utensils }, { to: "bookings", label: "Catering bookings", icon: Truck }] },
