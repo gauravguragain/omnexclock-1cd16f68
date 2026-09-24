@@ -6,6 +6,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import OptionSelect from "@/features/sales/OptionSelect";
 import DateField from "@/features/sales/DateField";
 import { Checkbox } from "@/components/ui/checkbox";
 import { CalendarDays, CheckCircle2, Loader2 } from "lucide-react";
@@ -33,7 +34,7 @@ export default function PublicEnquiryPage() {
         <div className="space-y-2"><Label htmlFor="fullName">Full name</Label><Input id="fullName" name="fullName" required maxLength={150}/></div>
         <div className="space-y-2"><Label htmlFor="phone">Phone</Label><Input id="phone" name="phone" type="tel" maxLength={40}/></div>
         <div className="space-y-2"><Label htmlFor="email">Email</Label><Input id="email" name="email" type="email" required maxLength={255}/></div>
-        <div className="space-y-2"><Label htmlFor="eventType">Event type</Label><select id="eventType" name="eventType" className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm" required>{eventTypes.map((type) => <option key={type}>{type}</option>)}</select></div>
+        <div className="space-y-2"><Label htmlFor="eventType">Event type</Label><OptionSelect name="eventType" required defaultValue={eventTypes[0]} options={eventTypes.filter(t => t !== "Other").map(t => ({ value: t, label: t }))} otherPlaceholder="Type your event type" /></div>
         <div className="space-y-2"><Label htmlFor="preferredDate">Preferred date</Label><DateField name="preferredDate" placeholder="Choose a date"/></div>
         <div className="space-y-2"><Label htmlFor="guestCount">Estimated guests</Label><Input id="guestCount" name="guestCount" type="number" min="1" max="10000"/></div>
         <label className="flex items-center gap-2 text-sm sm:col-span-2"><Checkbox name="flexibleDate"/> My date is flexible</label>
