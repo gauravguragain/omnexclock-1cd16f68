@@ -85,7 +85,6 @@ export default function AdminLayout() {
     { path: `${basePath}/inventory`, label: "Inventory", icon: Package, tourId: "inventory", access: "inventory" },
     { path: `${basePath}/service`, label: "Service", icon: Wrench, tourId: "service", access: "admin" },
     { path: `${basePath}/food-safety`, label: "Food Safety", icon: ShieldPlus, tourId: "food-safety", access: "food_safety" },
-    { path: `/b/${businessCode}/events`, label: "Sales & Marketing", icon: BriefcaseBusiness, tourId: "sales", access: "sales" },
     { path: `${basePath}/users`, label: "User Management", icon: UserCog, tourId: "users", access: "super_admin_only" },
     
     { path: `${basePath}/my-business`, label: "My Business", icon: Building2, tourId: "my-business", access: "admin" },
