@@ -73,14 +73,6 @@ export default function EventsDashboard() {
             <div className="mt-1 h-1.5 rounded-full bg-muted"><div className="h-full rounded-full" style={{ width: `${(n / total) * 100}%`, background: c }} /></div></div>)}</div>
         </div>
       </CardContent></Card>
-
-      <Card className="border-primary/40 bg-card"><CardContent className="p-6">
-        <p className="text-xl font-semibold">{format(month, "MMMM yyyy")}</p><p className="text-xs text-muted-foreground">{monthCount} events this month</p>
-        <div className="mt-3 flex gap-2"><Button size="icon" variant="outline" className="h-8 w-8" onClick={() => setMonth(addMonths(month, -1))}><ChevronLeft className="h-4 w-4" /></Button><Button size="icon" variant="outline" className="h-8 w-8" onClick={() => setMonth(addMonths(month, 1))}><ChevronRight className="h-4 w-4" /></Button><Button size="sm" variant="secondary" onClick={() => setMonth(startOfMonth(new Date()))}>Today</Button></div>
-        <div className="mt-4 grid grid-cols-7 gap-y-1 text-center text-sm">{["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map(x => <span key={x} className="text-[10px] uppercase tracking-wider text-muted-foreground">{x}</span>)}
-          {days.map(x => { const k = format(x, "yyyy-MM-dd"); return <span key={k} className={`relative mx-auto flex h-8 w-8 items-center justify-center rounded-full ${k === today ? "bg-primary text-primary-foreground font-semibold" : isSameMonth(x, month) ? "" : "text-muted-foreground/50"}`}>{format(x, "d")}{eventDays.has(k) && <span className="absolute bottom-0.5 h-1 w-1 rounded-full bg-primary ring-1 ring-card" />}</span>; })}</div>
-        <div className="mt-3 flex justify-between text-xs"><span className="text-muted-foreground">• Event day</span><Link to={`${base}/calendar`} className="text-primary">View full calendar ›</Link></div>
-      </CardContent></Card>
     </div>
 
     <div className="grid min-w-0 gap-4 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
@@ -94,6 +86,14 @@ export default function EventsDashboard() {
             <div className="flex items-baseline justify-between text-sm"><span><span className="mr-2 text-2xl font-semibold">{n}</span><span className="text-muted-foreground">{l}</span></span><span className="text-xs">{Math.round((n / cTotal) * 100)}%</span></div>
             <div className="mt-1 h-1.5 rounded-full bg-muted"><div className="h-full rounded-full" style={{ width: `${(n / cTotal) * 100}%`, background: c }} /></div></div>)}</div>
         </div>
+      </CardContent></Card>
+
+      <Card className="border-primary/40 bg-card"><CardContent className="p-6">
+        <p className="text-xl font-semibold">{format(month, "MMMM yyyy")}</p><p className="text-xs text-muted-foreground">{monthCount} events this month</p>
+        <div className="mt-3 flex gap-2"><Button size="icon" variant="outline" className="h-8 w-8" onClick={() => setMonth(addMonths(month, -1))}><ChevronLeft className="h-4 w-4" /></Button><Button size="icon" variant="outline" className="h-8 w-8" onClick={() => setMonth(addMonths(month, 1))}><ChevronRight className="h-4 w-4" /></Button><Button size="sm" variant="secondary" onClick={() => setMonth(startOfMonth(new Date()))}>Today</Button></div>
+        <div className="mt-4 grid grid-cols-7 gap-y-1 text-center text-sm">{["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map(x => <span key={x} className="text-[10px] uppercase tracking-wider text-muted-foreground">{x}</span>)}
+          {days.map(x => { const k = format(x, "yyyy-MM-dd"); return <span key={k} className={`relative mx-auto flex h-8 w-8 items-center justify-center rounded-full ${k === today ? "bg-primary text-primary-foreground font-semibold" : isSameMonth(x, month) ? "" : "text-muted-foreground/50"}`}>{format(x, "d")}{eventDays.has(k) && <span className="absolute bottom-0.5 h-1 w-1 rounded-full bg-primary ring-1 ring-card" />}</span>; })}</div>
+        <div className="mt-3 flex justify-between text-xs"><span className="text-muted-foreground">• Event day</span><Link to={`${base}/calendar`} className="text-primary">View full calendar ›</Link></div>
       </CardContent></Card>
     </div>
 
