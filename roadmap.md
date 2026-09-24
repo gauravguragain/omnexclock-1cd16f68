@@ -20,3 +20,9 @@
 - [x] Menu books, dishes, drinks; load package into client menu
 - [x] Event/catering leads, events lists, create wizard with clash check
 - [x] Month calendar and reports (PDF/Excel)
+
+# A4 run sheet and device layouts
+- [x] Keep the original monochrome run sheet in an A4-sized, scaled web preview and A4 download/print on every device
+- [x] Refine Events & Sales / Sales & Marketing navigation, pipeline, lists, and workflow for phone, tablet, and desktop
+- [x] Verify the web preview and download at mobile and desktop sizes
+- [x] Redesign the lead editing form for phone, tablet, and desktop while preserving the existing fields and workflow

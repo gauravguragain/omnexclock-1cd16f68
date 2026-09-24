@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { downloadRunsheetPdf } from "@/lib/runsheetDownload";
 import { Link, useParams } from "react-router-dom";
 import { format } from "date-fns";
@@ -12,6 +12,31 @@ import { prettyCrmValue } from "@/features/sales/types";
 import { to12 } from "./useEventsData";
 
 export function runsheetTitle(lead: any, b: any) { return `${prettyCrmValue(lead?.event_type || b?.event_type || "Event")} — ${lead?.full_name || "Client"}`; }
+
+// Keep the document at its real A4 dimensions; only its on-screen preview is scaled.
+function A4Preview({ children, documentRef }: { children: React.ReactNode; documentRef: React.RefObject<HTMLDivElement> }) {
+  const frameRef = useRef<HTMLDivElement>(null);
+  const [scale, setScale] = useState(1);
+  const [height, setHeight] = useState(1123);
+  useLayoutEffect(() => {
+    const frame = frameRef.current;
+    const document = documentRef.current;
+    if (!frame || !document) return;
+    const measure = () => {
+      const nextScale = Math.min(1, frame.clientWidth / document.offsetWidth);
+      setScale(nextScale);
+      setHeight(document.scrollHeight * nextScale);
+    };
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(frame);
+    observer.observe(document);
+    return () => observer.disconnect();
+  }, [documentRef, children]);
+  return <div ref={frameRef} className="runsheet-preview w-full overflow-hidden" style={{ height }}>
+    <div ref={documentRef} className="runsheet-page" style={{ transform: `scale(${scale})` }}>{children}</div>
+  </div>;
+}
 
 export function RunsheetDocument({ rs, lead, b, items, selection, businessName }: { rs: any; lead: any; b: any; items: any[]; selection: any; businessName?: string }) {
   const PKG = ["package", "kids_package", "manual"];
@@ -41,7 +66,7 @@ export function RunsheetDocument({ rs, lead, b, items, selection, businessName }
     <div className="p-2"><span className="block text-[10px]">Venue</span><span className="font-medium">{prettyCrmValue(b?.venue_space || lead?.venue_space || "—")}</span></div>
   </div>;
 
-  return <article className="runsheet-monochrome min-w-[680px] bg-background px-8 py-7 font-sans text-foreground">
+  return <article className="runsheet-monochrome bg-background font-sans text-foreground">
     <header className="flex items-start justify-between gap-6">
       <div>
         <h1 className="text-2xl font-bold">{eventType} Event Order</h1>
@@ -74,7 +99,7 @@ export function RunsheetDocument({ rs, lead, b, items, selection, businessName }
         <div className="min-w-0 border-r border-border p-4">
           {stalls.length > 0 && <div className="mb-4 break-inside-avoid"><h2 className="font-bold">Live Stalls</h2>{stalls.map(s => <p key={s.id} className="pl-3">• {s.item_name}{s.service_start_time ? ` — ${to12(s.service_start_time)}${s.service_end_time ? ` to ${to12(s.service_end_time)}` : ""}` : ""}</p>)}</div>}
           <h2 className="font-bold">Menu selection{pkgs.length ? ` – ${pkgs.map(p => p.item_name).join(" · ")}` : ""}</h2>
-          {Object.entries(courses).map(([course, dishes]) => <div key={course} className="mt-2 break-inside-avoid"><h3 className="pl-3 font-semibold">{course}</h3>{dishes.map(d => <p key={d.id} className="pl-6">- {d.item_name}</p>)}</div>)}
+           {Object.entries(courses as Record<string, any[]>).map(([course, dishes]) => <div key={course} className="mt-2 break-inside-avoid"><h3 className="pl-3 font-semibold">{course}</h3>{dishes.map(d => <p key={d.id} className="pl-6">- {d.item_name}</p>)}</div>)}
           {kidsRow && !courses["Kids Menu"] && <p className="mt-2">Kids menu: {kidsRow.quantity || rs.kids_guests || 0} kids</p>}
           {selection?.beverage_package && <p className="mt-2">Beverages: {prettyCrmValue(selection.beverage_package)}</p>}
           {selection?.corkage_enabled && <p className="mt-1">Host is bringing their own drinks.</p>}
@@ -139,7 +164,7 @@ export default function RunsheetViewPage() {
   const title = runsheetTitle(lead, b);
   const copyLink = async () => { await navigator.clipboard.writeText(runsheetPublicUrl(rs)); toast.success("Web link copied"); };
 
-  return <div className="mx-auto max-w-4xl space-y-6">
+  return <div className="mx-auto w-full max-w-[210mm] space-y-6">
     <p className="flex items-center gap-1 text-sm text-muted-foreground print:hidden"><Link to={back} className="hover:text-primary">Events</Link><ChevronRight className="h-3 w-3" /><span>Run Sheet</span><ChevronRight className="h-3 w-3" /><span className="font-medium text-foreground">Details</span></p>
     <div className="flex flex-wrap gap-2 print:hidden">
       <Button variant="outline" asChild><Link to={back}><ArrowLeft className="mr-2 h-4 w-4" />Back to event</Link></Button>
@@ -148,7 +173,7 @@ export default function RunsheetViewPage() {
       <Button variant="outline" disabled={dl} onClick={async () => { if (!docRef.current) return; setDl(true); try { await downloadRunsheetPdf(docRef.current, `Run sheet - ${title}`); } catch { toast.error("Could not create PDF"); } setDl(false); }}><Download className="mr-2 h-4 w-4" />{dl ? "Preparing…" : "Download PDF"}</Button>
       {lead && rs.sent_at && <Button onClick={() => setSendOpen(true)}><Mail className="mr-2 h-4 w-4" />Resend Email</Button>}
     </div>
-    <div ref={docRef} className="overflow-x-auto"><RunsheetDocument rs={rs} lead={lead} b={b} items={items} selection={selection} businessName={crm.business?.name} /></div>
+    <A4Preview documentRef={docRef}><RunsheetDocument rs={rs} lead={lead} b={b} items={items} selection={selection} businessName={crm.business?.name} /></A4Preview>
     {lead && <SendRunsheetDialog open={sendOpen} onOpenChange={setSendOpen} rs={rs} lead={lead} booking={b} businessName={crm.business?.name || ""} />}
   </div>;
 }
@@ -164,13 +189,13 @@ export function PublicRunsheetPage() {
   }, [runsheetId, t]);
   if (err) return <div className="py-20 text-center text-muted-foreground">{err}</div>;
   if (!data) return <div className="py-20 text-center text-muted-foreground">Loading…</div>;
-  return <div className="min-h-screen bg-background px-4 py-8">
-    <div className="mx-auto max-w-4xl space-y-4">
+   return <div className="min-h-screen bg-background px-4 py-8 print:!min-h-0 print:!p-0">
+    <div className="mx-auto w-full max-w-[210mm] space-y-4">
       <div className="flex justify-end gap-2 print:hidden">
         <Button variant="outline" onClick={() => window.print()}><Printer className="mr-2 h-4 w-4" />Print</Button>
         <Button disabled={dl} onClick={async () => { if (!docRef.current) return; setDl(true); try { await downloadRunsheetPdf(docRef.current, `Run sheet - ${runsheetTitle(data.lead, data.booking)}`); } catch { toast.error("Could not create PDF"); } setDl(false); }}><Download className="mr-2 h-4 w-4" />{dl ? "Preparing…" : "Download PDF"}</Button>
       </div>
-       <div ref={docRef} className="overflow-x-auto"><RunsheetDocument rs={data.rs} lead={data.lead} b={data.booking} items={data.items || []} selection={data.selection} businessName={data.businessName} /></div>
+        <A4Preview documentRef={docRef}><RunsheetDocument rs={data.rs} lead={data.lead} b={data.booking} items={data.items || []} selection={data.selection} businessName={data.businessName} /></A4Preview>
     </div>
   </div>;
 }
