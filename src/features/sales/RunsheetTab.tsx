@@ -304,7 +304,7 @@ export default function RunsheetTab({ lead, booking, options, onSaved }: {
     >
       <option value="">{placeholder}</option>
       {value && !coordinators.some((p) => p.full_name === value) ? <option value={value}>{value}</option> : null}
-      {coordinators.map((p) => <option key={p.id} value={p.full_name}>{p.full_name}{p.phone ? ` — ${p.phone}` : ""}</option>)}
+      {coordinators.map((p) => <option key={p.id} value={p.full_name}>{p.full_name}</option>)}
     </select>
   );
   const set = (key: keyof typeof form) => (event: { target: { value: string } }) => setForm((prev) => ({ ...prev, [key]: event.target.value }));
