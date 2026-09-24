@@ -356,12 +356,11 @@ export default function RunsheetTab({ lead, booking, options, onSaved }: {
       <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <div className="space-y-1.5"><Label>Event order number</Label><Input value={form.event_order_number} onChange={set("event_order_number")} placeholder="698-1" /></div>
         <div className="space-y-1.5"><Label>Booking reference</Label><Input value={form.booking_reference} onChange={set("booking_reference")} /></div>
-        <datalist id="rs-stakeholders">{stakeholders.map((p) => <option key={p.id} value={p.full_name}>{p.position || p.stakeholder_type}</option>)}</datalist>
-        <div className="space-y-1.5"><Label>Sales person</Label><Input list="rs-stakeholders" value={form.sales_person} onChange={pickPerson("sales_person", "sales_person_phone")} /></div>
+        <div className="space-y-1.5"><Label>Sales person</Label><PersonSelect value={form.sales_person} personKey="sales_person" phoneKey="sales_person_phone" placeholder="Select from coordinators" /></div>
         <div className="space-y-1.5"><Label>Sales person contact number</Label><Input type="tel" value={form.sales_person_phone} onChange={set("sales_person_phone")} /></div>
-        <div className="space-y-1.5"><Label>Event coordinator</Label><Input list="rs-stakeholders" value={form.event_coordinator} onChange={pickPerson("event_coordinator", "event_coordinator_phone")} /></div>
+        <div className="space-y-1.5"><Label>Event coordinator</Label><PersonSelect value={form.event_coordinator} personKey="event_coordinator" phoneKey="event_coordinator_phone" placeholder="Select from coordinators" /></div>
         <div className="space-y-1.5"><Label>Event coordinator contact number</Label><Input type="tel" value={form.event_coordinator_phone} onChange={set("event_coordinator_phone")} /></div>
-        <div className="space-y-1.5"><Label>Onsite contact</Label><Input value={form.onsite_contact_name} onChange={set("onsite_contact_name")} placeholder="Name on the day" /></div>
+        <div className="space-y-1.5"><Label>Onsite contact</Label><PersonSelect value={form.onsite_contact_name} personKey="onsite_contact_name" phoneKey="onsite_contact_phone" placeholder="Select from coordinators" /></div>
         <div className="space-y-1.5"><Label>Onsite contact number</Label><Input value={form.onsite_contact_phone} onChange={set("onsite_contact_phone")} /></div>
         <div className="space-y-1.5"><Label>Adults</Label><Input type="number" min="0" value={form.adult_guests} onChange={set("adult_guests")} /></div>
         <div className="space-y-1.5"><Label>Kids</Label><Input type="number" min="0" value={form.kids_guests} onChange={set("kids_guests")} /></div>
