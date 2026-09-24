@@ -13,6 +13,7 @@ type Booking = Record<string, any>;
 type CalendarProps = {
   bookings: Booking[];
   leads: CrmLead[];
+  runsheets: Booking[];
   customers: Booking[];
   venues: Booking[];
   onView: (booking: Booking) => void;
@@ -27,7 +28,7 @@ const TONES = [
   "bg-destructive/15 text-destructive",
 ];
 
-export default function MonthCalendar({ bookings, leads, customers, venues, onView, onEdit }: CalendarProps) {
+export default function MonthCalendar({ bookings, leads, runsheets, customers, venues, onView, onEdit }: CalendarProps) {
   const [month, setMonth] = useState(startOfMonth(new Date()));
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [types, setTypes] = useState<string[] | null>(null);
@@ -36,7 +37,7 @@ export default function MonthCalendar({ bookings, leads, customers, venues, onVi
   const customerOf = (b: Booking) => customers.find(c => c.id === b.customer_id) || leadOf(b);
   const nameOf = (b: Booking) => b.event_name || leadOf(b)?.full_name || "Event";
   const typeOf = (b: Booking) => b.event_type || leadOf(b)?.event_type || "no_type";
-  const placeOf = (b: Booking) => venues.find(v => v.id === b.venue_space_id || v.name === b.venue_space)?.name || b.venue_space || b.service_location || "No venue selected";
+  const placeOf = (b: Booking) => venues.find(v => v.id === b.venue_space_id || v.name === b.venue_space || v.name.toLowerCase().replace(/\s+/g, "_") === b.venue_space)?.name || (b.booking_kind === "catering" ? b.service_location : null) || (b.venue_space ? prettyCrmValue(b.venue_space) : null) || "No venue selected";
   const allTypes = Array.from(new Set(active.map(typeOf)));
   const tone = (type: string) => TONES[Math.max(0, allTypes.indexOf(type)) % TONES.length];
   const filtered = active.filter(b => !types || types.includes(typeOf(b)));
@@ -44,7 +45,11 @@ export default function MonthCalendar({ bookings, leads, customers, venues, onVi
   const eventsOn = (date: string) => filtered.filter(b => b.event_date === date).sort((a, b) => String(a.start_time || "").localeCompare(String(b.start_time || "")));
   const selected = selectedDate ? eventsOn(selectedDate) : [];
   const groups = Array.from(new Set(selected.map(placeOf)));
-  const guestCount = (b: Booking) => Number(b.adults ?? b.guest_count ?? 0) + Number(b.kids ?? 0);
+  const guestSplit = (b: Booking) => {
+    const sheet = runsheets.filter(r => r.booking_id === b.id || (b.lead_id && r.lead_id === b.lead_id)).sort((a, z) => Number(z.revision || 0) - Number(a.revision || 0))[0];
+    return { adults: Number(sheet?.adult_guests ?? b.adults ?? b.guest_count ?? 0), kids: Number(sheet?.kids_guests ?? b.kids ?? 0) };
+  };
+  const guestCount = (b: Booking) => guestSplit(b).adults + guestSplit(b).kids;
   const dateCount = filtered.filter(b => String(b.event_date).startsWith(format(month, "yyyy-MM"))).length;
 
   return <>
@@ -64,17 +69,17 @@ export default function MonthCalendar({ bookings, leads, customers, venues, onVi
           <span className="whitespace-nowrap text-xs font-medium">{dateCount} {dateCount === 1 ? "event" : "events"}</span>
         </div>
       </div>
-      <div className="overflow-x-auto"><div className="min-w-[700px] p-2 sm:p-3">
+      <div className="p-2 sm:p-3">
         <div className="mb-2 grid grid-cols-7 rounded-full bg-primary/15 py-2 text-center text-xs font-semibold text-primary">{["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"].map(day => <span key={day}>{day}</span>)}</div>
-        <div className="grid grid-cols-7 gap-1.5">{days.map(d => {
+        <div className="grid grid-cols-7 gap-1 sm:gap-1.5">{days.map(d => {
           const key = format(d, "yyyy-MM-dd"); const list = eventsOn(key);
-          return <Button key={key} variant="ghost" aria-label={`${format(d, "EEE, MMM d, yyyy")}, ${list.length} ${list.length === 1 ? "event" : "events"}`} onClick={() => list.length && setSelectedDate(key)} disabled={!list.length} className={cn("h-auto min-h-[125px] min-w-0 flex-col items-stretch justify-start gap-0 overflow-hidden rounded-md border border-border p-2 text-left hover:border-primary/60 hover:bg-primary/5 sm:min-h-[168px] xl:min-h-[205px]", !isSameMonth(d, month) && "bg-muted/25 text-muted-foreground", isToday(d) && "border-primary bg-primary/5", !list.length && "cursor-default opacity-75 disabled:opacity-75")}>
-            <span className={cn("mb-2 self-start text-sm font-semibold", isToday(d) && "text-primary")}>{format(d, "d")}{isToday(d) && <span className="ml-1 text-[10px]">(today)</span>}</span>
-            {list.slice(0, 3).map(b => <span key={b.id} className="mb-1 flex w-full items-center gap-1 overflow-hidden text-[11px] font-normal"><span className={cn("h-1.5 w-1.5 shrink-0 rounded-full", tone(typeOf(b)))} /><span className="shrink-0 text-muted-foreground">{String(b.start_time || "").slice(0, 5)}</span><span className={cn("min-w-0 truncate rounded px-1 font-medium", tone(typeOf(b)))}>{nameOf(b)}</span></span>)}
-            {list.length > 3 && <span className="text-[11px] font-semibold text-primary">+{list.length - 3} more</span>}
+          return <Button key={key} variant="ghost" aria-label={`${format(d, "EEE, MMM d, yyyy")}, ${list.length} ${list.length === 1 ? "event" : "events"}`} onClick={() => list.length && setSelectedDate(key)} disabled={!list.length} className={cn("h-auto min-h-[76px] min-w-0 flex-col items-stretch justify-start gap-0 overflow-hidden rounded-md border border-border p-1 text-left hover:border-primary/60 hover:bg-primary/5 sm:min-h-[168px] sm:p-2 xl:min-h-[205px]", !isSameMonth(d, month) && "bg-muted/25 text-muted-foreground", isToday(d) && "border-primary bg-primary/5", !list.length && "cursor-default opacity-75 disabled:opacity-75")}>
+            <span className={cn("mb-1 self-start text-xs font-semibold sm:mb-2 sm:text-sm", isToday(d) && "text-primary")}>{format(d, "d")}{isToday(d) && <span className="hidden text-[10px] sm:ml-1 sm:inline">(today)</span>}</span>
+            {list.slice(0, 3).map(b => <span key={b.id} className="mb-1 flex w-full items-center gap-1 overflow-hidden text-[11px] font-normal"><span className={cn("h-1.5 w-1.5 shrink-0 rounded-full bg-primary", tone(typeOf(b)))} /><span className="hidden shrink-0 text-muted-foreground sm:inline">{String(b.start_time || "").slice(0, 5)}</span><span className={cn("hidden min-w-0 truncate rounded px-1 font-medium sm:inline", tone(typeOf(b)))}>{nameOf(b)}</span></span>)}
+            {list.length > 3 && <span className="text-[10px] font-semibold text-primary">+{list.length - 3}</span>}
           </Button>;
         })}</div>
-      </div></div>
+      </div>
     </div>
 
     <Dialog open={!!selectedDate} onOpenChange={open => !open && setSelectedDate(null)}>
@@ -90,7 +95,7 @@ export default function MonthCalendar({ bookings, leads, customers, venues, onVi
                 <div className="flex justify-between gap-4 py-2"><dt className="flex items-center gap-2 text-muted-foreground"><Tag className="h-4 w-4" />Event type</dt><dd className="text-right">{prettyCrmValue(typeOf(b))}</dd></div>
                 <div className="flex justify-between gap-4 py-2"><dt className="flex items-center gap-2 text-muted-foreground"><MapPin className="h-4 w-4" />{b.booking_kind === "catering" ? "Location" : "Venue"}</dt><dd className="text-right">{place}</dd></div>
                 <div className="flex justify-between gap-4 py-2"><dt className="flex items-center gap-2 text-muted-foreground"><Clock3 className="h-4 w-4" />Time</dt><dd className="text-right">{time}</dd></div>
-                <div className="flex justify-between gap-4 py-2"><dt className="flex items-center gap-2 text-muted-foreground"><Users className="h-4 w-4" />Guests</dt><dd className="text-right">{guestCount(b)}{b.kids ? ` · ${b.adults ?? b.guest_count ?? 0} adults, ${b.kids} kids` : ""}</dd></div>
+                <div className="flex justify-between gap-4 py-2"><dt className="flex items-center gap-2 text-muted-foreground"><Users className="h-4 w-4" />Guests</dt><dd className="text-right">{guestCount(b)}{guestSplit(b).kids ? ` · ${guestSplit(b).adults} adults, ${guestSplit(b).kids} kids` : ""}</dd></div>
                 <div className="flex items-center justify-between gap-3 py-2"><dt className="flex items-center gap-2 text-muted-foreground"><UserRound className="h-4 w-4" />Organizer</dt><dd className="flex min-w-0 items-center gap-2 text-right"><span className="min-w-0 break-words">{customer?.full_name || "—"}{customer?.phone && <span className="block text-xs text-muted-foreground">{customer.phone}</span>}</span>{customer?.phone && <Button asChild size="icon" variant="outline" className="h-8 w-8 shrink-0"><a href={`tel:${customer.phone}`} aria-label={`Call ${customer.full_name}`}><Phone className="h-3.5 w-3.5" /></a></Button>}{customer?.email && <Button asChild size="icon" variant="outline" className="h-8 w-8 shrink-0"><a href={`mailto:${customer.email}`} aria-label={`Email ${customer.full_name}`}><Mail className="h-3.5 w-3.5" /></a></Button>}</dd></div>
                 <div className="flex justify-between gap-4 py-2"><dt className="text-muted-foreground">Notes</dt><dd className="max-w-[65%] whitespace-pre-wrap text-right">{b.notes || "No notes added"}</dd></div>
               </dl>
