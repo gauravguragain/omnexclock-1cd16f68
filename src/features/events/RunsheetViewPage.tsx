@@ -47,6 +47,9 @@ export function RunsheetDocument({ rs, lead, b, items, selection, businessName }
     .reduce((m: Record<string, any[]>, i) => { const c = i.course || "Other"; (m[c] ||= []).push(i); return m; }, {});
   const schedule: any[] = rs.service_schedule || [];
   const fohSchedule: any[] = rs.service_schedule_foh || [];
+  const matchesCourse = (s: any, course: string) => { const c = course.toLowerCase(); const l = String(s.label || "").toLowerCase(); return l && (l.includes(c) || c.includes(l)); };
+  const courseTime = (course: string) => { const hit = schedule.find((s: any) => matchesCourse(s, course)); return hit?.time ? to12(hit.time) : ""; };
+  const otherSchedule = schedule.filter((s: any) => !Object.keys(courses).some((c) => matchesCourse(s, c)));
   const setup: string[] = rs.setup_items || [];
   const date = b?.event_date ? format(new Date(`${b.event_date}T00:00:00`), "EEEE, d MMMM yyyy") : "Date to be confirmed";
   const start = b?.start_time ? String(b.start_time).slice(0, 5) : "";
@@ -104,7 +107,8 @@ export function RunsheetDocument({ rs, lead, b, items, selection, businessName }
         <div className="min-w-0 border-r border-border p-4">
           {stalls.length > 0 && <div className="mb-4 break-inside-avoid"><h2 className="font-bold">Live Stalls{stalls[0].service_start_time ? ` — ${to12(stalls[0].service_start_time)}${stalls[0].service_end_time ? ` to ${to12(stalls[0].service_end_time)}` : ""}` : ""}</h2>{stalls.map(s => <p key={s.id} className="pl-3">• {String(s.item_name || "").replace(/_/g, " ")}</p>)}</div>}
           <h2 className="font-bold">Menu selection{pkgs.length ? ` – ${pkgs.map(p => p.item_name).join(" · ")}` : ""}</h2>
-           {Object.entries(courses as Record<string, any[]>).map(([course, dishes]) => <div key={course} className="mt-2 break-inside-avoid"><h3 className="pl-3 font-semibold">{course}</h3>{dishes.map(d => <p key={d.id} className="pl-6">- {d.item_name}</p>)}</div>)}
+           {Object.entries(courses as Record<string, any[]>).map(([course, dishes]) => <div key={course} className="mt-2 break-inside-avoid"><h3 className="pl-3 font-semibold">{course}{courseTime(course) ? ` — ${courseTime(course)}` : ""}</h3>{dishes.map(d => <p key={d.id} className="pl-6">- {d.item_name}</p>)}</div>)}
+          {otherSchedule.length > 0 && <div className="mt-2 break-inside-avoid">{otherSchedule.map((s, i) => <p key={i} className="pl-3">• {s.time ? to12(s.time) : "—"} – {s.label}{s.detail ? ` (${s.detail})` : ""}</p>)}</div>}
           {kidsRow && !courses["Kids Menu"] && <p className="mt-2">Kids menu: {kidsRow.quantity || rs.kids_guests || 0} kids</p>}
           {selection?.beverage_package && <p className="mt-2">Beverages: {prettyCrmValue(selection.beverage_package)}</p>}
           {selection?.corkage_enabled && <p className="mt-1">Host is bringing their own drinks.</p>}
@@ -119,8 +123,6 @@ export function RunsheetDocument({ rs, lead, b, items, selection, businessName }
           {rs.setup_notes && <p className="mt-2 whitespace-pre-line pl-3">{rs.setup_notes}</p>}
           {rs.access_time && <p className="mt-2">Decor / vendor access: {to12(rs.access_time)}</p>}
           {rs.special_requests && <p className="mt-2">Special requests: {rs.special_requests}</p>}
-          <h2 className="mt-4 font-bold">Food serving schedule</h2>
-          {schedule.length ? schedule.map((s, i) => <p key={i} className="pl-3">• {s.time ? to12(s.time) : "—"} – {s.label}{s.detail ? ` (${s.detail})` : ""}</p>) : <p className="pl-3 text-muted-foreground">No food timings set.</p>}
           <h2 className="mt-4 font-bold">FOH service schedule</h2>
           {fohSchedule.length ? fohSchedule.map((s, i) => <p key={i} className="pl-3">• {s.time ? to12(s.time) : "—"} – {s.label}{s.detail ? ` (${s.detail})` : ""}</p>) : <p className="pl-3 text-muted-foreground">No floor timings set.</p>}
           {rs.client_notes && <div className="mt-4 break-inside-avoid"><h2 className="font-bold">Client notes</h2><p className="whitespace-pre-line pl-3">{rs.client_notes}</p></div>}
