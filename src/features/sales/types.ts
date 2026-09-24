@@ -5,6 +5,7 @@ export type CrmLead = {
   budget_max: number | null; status: string; lost_reason: string | null; assigned_to: string | null;
   tags: string[]; venue_space: string | null; estimated_value: number; last_contact_at: string | null;
   calendly_source: boolean; created_at: string; updated_at: string;
+  lead_kind?: string; service_location?: string | null; customer_id?: string | null; decline_reason?: string | null; lead_outcome?: string;
 };
 
 export type CrmOption = {
