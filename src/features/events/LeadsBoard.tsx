@@ -28,10 +28,10 @@ export default function LeadsBoard({ kind }: { kind: "event" | "catering" }) {
 
   const decline = async () => {
     if (!declining) return;
-    const { error } = await supabase.from("crm_leads").update({ lead_outcome: "declined", decline_reason: reason || null, lost_reason: reason || null } as any).eq("id", declining.id);
+    const { error } = await supabase.from("crm_leads").update({ lead_outcome: "declined", decline_reason: reason || null, lost_reason: reason || null, status: "cold" } as any).eq("id", declining.id);
     if (error) toast.error(error.message); else { toast.success("Lead declined"); setDeclining(null); setReason(""); crm.refresh(); }
   };
-  const reopen = async (l: CrmLead) => { await supabase.from("crm_leads").update({ lead_outcome: "new", decline_reason: null } as any).eq("id", l.id); crm.refresh(); };
+  const reopen = async (l: CrmLead) => { await supabase.from("crm_leads").update({ lead_outcome: "new", decline_reason: null, status: "new" } as any).eq("id", l.id); crm.refresh(); };
   const exportCsv = () => {
     const q = (v: unknown) => `"${String(v ?? "").replace(/"/g, '""')}"`;
     const rows = [["Name", "Phone", "Email", "Source", "Event type", "Preferred date", "Guests", "Service location", "Outcome", "Stage"], ...shown.map(l => [l.full_name, l.phone, l.email, l.source, l.event_type, l.preferred_dates?.[0], l.estimated_guest_count, l.service_location, outcome(l), l.status])];
