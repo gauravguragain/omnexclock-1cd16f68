@@ -60,6 +60,7 @@ export default function RunsheetTab({ lead, booking, options, onSaved }: {
   const [extraSetupItems, setExtraSetupItems] = useState<string[]>([]);
   const [newSetupItem, setNewSetupItem] = useState("");
   const [schedule, setSchedule] = useState<ScheduleRow[]>([]);
+  const [fohSchedule, setFohSchedule] = useState<ScheduleRow[]>([]);
 
   const setupOptions = useMemo(() => {
     const configured = options.filter((o) => o.option_type === "setup_item" && o.active).map((o) => o.label);
@@ -103,6 +104,7 @@ export default function RunsheetTab({ lead, booking, options, onSaved }: {
       setAccessEnabled(Boolean(row.access_time));
       setSetupItems(row.setup_items || []);
       setSchedule(((row.service_schedule || []) as RunsheetScheduleLine[]).map((line, index) => ({ ...line, key: `s${index}` })));
+      setFohSchedule(((row.service_schedule_foh || []) as RunsheetScheduleLine[]).map((line, index) => ({ ...line, key: `f${index}` })));
     } else {
       setAccessEnabled(false);
       setForm((prev) => ({
