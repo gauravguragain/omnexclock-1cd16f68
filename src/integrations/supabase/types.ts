@@ -1134,6 +1134,68 @@ export type Database = {
           },
         ]
       }
+      crm_lead_stakeholders: {
+        Row: {
+          arrival_time: string | null
+          business_id: string
+          created_at: string
+          id: string
+          lead_id: string
+          notes: string | null
+          role: string | null
+          stakeholder_id: string
+        }
+        Insert: {
+          arrival_time?: string | null
+          business_id: string
+          created_at?: string
+          id?: string
+          lead_id: string
+          notes?: string | null
+          role?: string | null
+          stakeholder_id: string
+        }
+        Update: {
+          arrival_time?: string | null
+          business_id?: string
+          created_at?: string
+          id?: string
+          lead_id?: string
+          notes?: string | null
+          role?: string | null
+          stakeholder_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_lead_stakeholders_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_lead_stakeholders_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses_public"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_lead_stakeholders_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "crm_leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_lead_stakeholders_stakeholder_id_fkey"
+            columns: ["stakeholder_id"]
+            isOneToOne: false
+            referencedRelation: "crm_stakeholders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       crm_leads: {
         Row: {
           assigned_to: string | null
