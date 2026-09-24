@@ -173,7 +173,7 @@ export function TimeDropdownPicker({ value, onChange, placeholder = "Select time
           {displayValue || placeholder}
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-auto p-0" align="start" onOpenAutoFocus={(e) => e.preventDefault()}>
+      <PopoverContent className="z-[60] w-auto p-0" align="start" onOpenAutoFocus={(e) => e.preventDefault()}>
         <div className="flex divide-x divide-border">
           <div>
             <p className="text-xs font-medium text-muted-foreground px-3 py-2 border-b border-border text-center">HR</p>
