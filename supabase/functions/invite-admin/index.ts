@@ -102,6 +102,7 @@ serve(async (req) => {
       viewer: "Viewer",
       roster_admin: "Roster Admin",
       sales_marketing_manager: "Sales & Marketing Manager",
+      food_safety_manager: "Food Safety Manager",
     };
     const roleLabel = roleLabels[role] || role;
 
@@ -116,6 +117,7 @@ serve(async (req) => {
       viewer: "/induction-guide-viewer.html",
       roster_admin: "/induction-guide-roster-admin.html",
       sales_marketing_manager: "/induction-guide-admin.html",
+      food_safety_manager: "/induction-guide-admin.html",
     };
     const guideUrl = `${publishedUrl}${inductionGuides[role] || "/induction-guide.html"}`;
     const signupUrl = `${publishedUrl}/auth?invite=${token}`;
