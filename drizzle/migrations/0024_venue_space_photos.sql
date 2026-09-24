@@ -1,0 +1,4 @@
+ALTER TABLE public.crm_venue_spaces ADD COLUMN IF NOT EXISTS cover_url text, ADD COLUMN IF NOT EXISTS photos text[] NOT NULL DEFAULT '{}';
+CREATE POLICY "venue photos read" ON storage.objects FOR SELECT USING (bucket_id = 'venue-photos');
+CREATE POLICY "venue photos insert" ON storage.objects FOR INSERT TO authenticated WITH CHECK (bucket_id = 'venue-photos' AND public.can_access_crm(((storage.foldername(name))[1])::uuid));
+CREATE POLICY "venue photos delete" ON storage.objects FOR DELETE TO authenticated USING (bucket_id = 'venue-photos' AND public.can_access_crm(((storage.foldername(name))[1])::uuid));
