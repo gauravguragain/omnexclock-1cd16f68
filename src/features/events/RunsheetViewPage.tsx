@@ -169,19 +169,22 @@ export default function RunsheetViewPage() {
   const lead: any = crm.leads.find(l => l.id === rs.lead_id);
   const b: any = crm.bookings.find(x => x.id === rs.booking_id) || crm.bookings.find(x => x.lead_id === rs.lead_id);
   const title = runsheetTitle(lead, b);
+  const isCatering = b?.booking_kind === "catering";
+  const backTo = isCatering && b ? `/b/${businessCode}/events/catering-bookings/${b.id}` : back;
+  const issueCatering = async () => { const { data, error } = await supabase.from("crm_runsheets").update({ status: "sent", sent_at: new Date().toISOString(), generated_at: new Date().toISOString() } as any).eq("id", rs.id).select().single(); if (error) { toast.error(error.message); return null; } setRs(data); crm.refresh(); return data; };
   const copyLink = async () => { await navigator.clipboard.writeText(runsheetPublicUrl(rs)); toast.success("Web link copied"); };
 
   return <div className="mx-auto w-full max-w-[210mm] space-y-6">
-    <p className="flex items-center gap-1 text-sm text-muted-foreground print:hidden"><Link to={back} className="hover:text-primary">Events</Link><ChevronRight className="h-3 w-3" /><span>Run Sheet</span><ChevronRight className="h-3 w-3" /><span className="font-medium text-foreground">Details</span></p>
+    <p className="flex items-center gap-1 text-sm text-muted-foreground print:hidden"><Link to={backTo} className="hover:text-primary">{isCatering ? "Catering" : "Events"}</Link><ChevronRight className="h-3 w-3" /><span>Run Sheet</span><ChevronRight className="h-3 w-3" /><span className="font-medium text-foreground">Details</span></p>
     <div className="flex flex-wrap gap-2 print:hidden">
-      <Button variant="outline" asChild><Link to={back}><ArrowLeft className="mr-2 h-4 w-4" />Back to event</Link></Button>
+      <Button variant="outline" asChild><Link to={backTo}><ArrowLeft className="mr-2 h-4 w-4" />{isCatering ? "Back to booking" : "Back to event"}</Link></Button>
       <Button variant="outline" onClick={copyLink}><LinkIcon className="mr-2 h-4 w-4" />Copy web link</Button>
       <Button variant="outline" onClick={() => window.print()}><Printer className="mr-2 h-4 w-4" />Print</Button>
       <Button variant="outline" disabled={dl} onClick={async () => { if (!docRef.current) return; setDl(true); try { await downloadRunsheetPdf(docRef.current, `Run sheet - ${title}`); } catch { toast.error("Could not create PDF"); } setDl(false); }}><Download className="mr-2 h-4 w-4" />{dl ? "Preparing…" : "Download PDF"}</Button>
-      {lead && rs.sent_at && <Button onClick={() => setSendOpen(true)}><Mail className="mr-2 h-4 w-4" />Resend Email</Button>}
+      {lead && (rs.sent_at || isCatering) && <Button onClick={() => setSendOpen(true)}><Mail className="mr-2 h-4 w-4" />{rs.sent_at ? "Resend Email" : "Send run sheet"}</Button>}
     </div>
     <A4Preview documentRef={docRef}><RunsheetDocument rs={rs} lead={lead} b={b} items={items} selection={selection} businessName={crm.business?.name} /></A4Preview>
-    {lead && <SendRunsheetDialog open={sendOpen} onOpenChange={setSendOpen} rs={rs} lead={lead} booking={b} businessName={crm.business?.name || ""} />}
+    {lead && <SendRunsheetDialog mode={isCatering && !rs.sent_at ? "issue" : "resend"} onIssue={issueCatering} open={sendOpen} onOpenChange={setSendOpen} rs={rs} lead={lead} booking={b} businessName={crm.business?.name || ""} />}
   </div>;
 }
 
