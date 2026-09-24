@@ -12,13 +12,13 @@ import { prettyCrmValue } from "@/features/sales/types";
 import { to12 } from "./useEventsData";
 
 const Box = ({ icon: Icon, title, children, className = "" }: any) => (
-  <div className={`rounded-lg border border-primary/40 bg-card p-2.5 ${className}`}>
-    <p className="mb-1.5 inline-flex items-center gap-1.5 border-b-2 border-primary pb-1 text-[10px] font-semibold uppercase tracking-widest"><Icon className="h-3.5 w-3.5 text-primary" />{title}</p>
+  <div className={`rounded-xl border border-primary/40 bg-card p-4 ${className}`}>
+    <p className="mb-3 inline-flex items-center gap-2 border-b-2 border-primary pb-1.5 text-xs font-semibold uppercase tracking-widest"><Icon className="h-4 w-4 text-primary" />{title}</p>
     {children}
   </div>
 );
-const Info = ({ k, v }: { k: string; v: any }) => v ? <p className="flex items-center gap-1.5 py-px text-xs"><User className="h-3 w-3 text-muted-foreground" /><span className="text-muted-foreground">{k}:</span><span className="font-medium">{v}</span></p> : null;
-const Empty = ({ children }: any) => <p className="text-xs italic text-muted-foreground">{children}</p>;
+const Info = ({ k, v }: { k: string; v: any }) => v ? <p className="flex items-center gap-2 py-0.5 text-sm"><User className="h-3.5 w-3.5 text-muted-foreground" /><span className="text-muted-foreground">{k}:</span><span className="font-medium">{v}</span></p> : null;
+const Empty = ({ children }: any) => <p className="text-sm italic text-muted-foreground">{children}</p>;
 
 export function runsheetTitle(lead: any, b: any) { return `${prettyCrmValue(lead?.event_type || b?.event_type || "Event")} — ${lead?.full_name || "Client"}`; }
 
@@ -40,13 +40,13 @@ export function RunsheetDocument({ rs, lead, b, items, selection, businessName }
   const hasSetup = rs.access_time || setup.length || rs.setup_notes || rs.special_requests;
 
   return <>
-    <div className="space-y-2.5 rounded-xl border border-border bg-card p-4 text-xs shadow-sm sm:p-5 print:border-0 print:p-0 print:shadow-none">
-      <div className="flex items-center gap-3 border-b border-border pb-2.5">
-        <img src="/regal-logo.png" alt={businessName || "Logo"} className="h-11 w-11 rounded-full border border-primary/50 object-contain p-1" />
+    <div className="space-y-4 rounded-xl border border-border bg-card p-5 text-sm shadow-sm sm:p-7 print:border-0 print:p-0 print:shadow-none">
+      <div className="flex items-center gap-4 border-b border-border pb-4">
+        <img src="/regal-logo.png" alt={businessName || "Logo"} className="h-14 w-14 rounded-full border border-primary/50 object-contain p-1" />
         <div>
-          <h2 className="text-lg font-semibold leading-tight">{title} Event Order</h2>
-          <p className="text-xs text-primary">{date}</p>
-          <p className="text-[11px] text-muted-foreground">{businessName || "Pro Regal Pavilion"}</p>
+          <h2 className="text-xl font-semibold leading-tight sm:text-2xl">{title} Event Order</h2>
+          <p className="text-sm text-primary">{date}</p>
+          <p className="text-xs text-muted-foreground">{businessName || "Pro Regal Pavilion"}</p>
         </div>
       </div>
 
