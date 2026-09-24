@@ -20,6 +20,12 @@ export default function MenuBookPicker({ packages, onAdd }: { packages: Pkg[]; o
     if (!pkg) return;
     const over = pkg.courses.find((c: any) => c.picks && (picks[c.id]?.length || 0) > c.picks);
     if (over) return;
+    const dietOver = pkg.courses.find((c: any) => {
+      const chosen = (picks[c.id] || []).map(id => c.dishes.find((d: any) => d.id === id)).filter(Boolean);
+      return (c.veg_picks != null && chosen.filter((d: any) => d.diet === "veg").length > c.veg_picks)
+        || (c.non_veg_picks != null && chosen.filter((d: any) => d.diet !== "veg").length > c.non_veg_picks);
+    });
+    if (dietOver) { toast.error(`Too many vegetarian or non-vegetarian choices for ${dietOver.name}`); return; }
     const missing = pkg.courses.some((c: any) => (picks[c.id] || []).some(id => { const d = c.dishes.find((x: any) => x.id === id); return d?.protein_options?.length && !proteins[`${c.id}:${id}`]; }));
     if (missing) { toast.error("Choose a protein for each dish that needs one"); return; }
     const chosen = pkg.courses.flatMap((c: any) => (picks[c.id] || []).map(id => { const d = c.dishes.find((x: any) => x.id === id); const pr = proteins[`${c.id}:${id}`]; return { course: c.name, dish: d && pr ? { ...d, name: `${d.name} (${pr})` } : d }; }).filter((x: any) => x.dish));
@@ -34,15 +40,15 @@ export default function MenuBookPicker({ packages, onAdd }: { packages: Pkg[]; o
     </div>
     {pkg && <div className="space-y-3">
       {pkg.description && <p className="text-xs text-muted-foreground">{pkg.description}</p>}
-      {pkg.courses.map((c: any) => { const chosen = picks[c.id] || []; const full = c.picks && chosen.length >= c.picks; return <div key={c.id} className="space-y-1.5">
-        <div className="flex items-center justify-between text-sm"><span className="font-medium">{c.name}</span><span className="text-xs text-muted-foreground">{c.picks ? `Choose ${c.picks} · ${chosen.length} chosen` : `${chosen.length} chosen`}</span></div>
+      {pkg.courses.map((c: any) => { const chosen = picks[c.id] || []; const chosenDishes = chosen.map(id => c.dishes.find((d: any) => d.id === id)).filter(Boolean); const vegCount = chosenDishes.filter((d: any) => d.diet === "veg").length; const nonVegCount = chosenDishes.length - vegCount; const full = Boolean(c.picks && chosen.length >= c.picks) || (c.veg_picks != null && c.non_veg_picks != null && vegCount >= c.veg_picks && nonVegCount >= c.non_veg_picks); return <div key={c.id} className="space-y-1.5">
+        <div className="flex flex-wrap items-center justify-between gap-1 text-sm"><span className="font-medium">{c.name}</span><span className="text-xs text-muted-foreground">{c.veg_picks != null || c.non_veg_picks != null ? `Veg ${vegCount}/${c.veg_picks ?? "∞"} · Non-veg ${nonVegCount}/${c.non_veg_picks ?? "∞"}${c.picks ? ` · Total ${chosen.length}/${c.picks}` : ""}` : c.picks ? `Choose ${c.picks} · ${chosen.length} chosen` : `${chosen.length} chosen`}</span></div>
         <div className="flex flex-wrap gap-1.5">{chosen.map(id => { const d = c.dishes.find((x: any) => x.id === id); return <Badge key={id} variant="outline" className="gap-1">{d?.diet && <span className="text-primary">{d.diet === "veg" ? "V" : "N"}</span>}{d?.name}{d?.protein_options?.length > 0 && <select aria-label="Protein" className={`ml-1 h-6 rounded border bg-background px-1 text-xs ${proteins[`${c.id}:${id}`] ? "border-input" : "border-destructive"}`} value={proteins[`${c.id}:${id}`] || ""} onChange={e => setProteins(p => ({ ...p, [`${c.id}:${id}`]: e.target.value }))}><option value="">Protein…</option>{d.protein_options.map((o: string) => <option key={o} value={o}>{o}</option>)}</select>}<button type="button" onClick={() => setPicks(p => ({ ...p, [c.id]: chosen.filter(x => x !== id) }))}><X className="h-3 w-3" /></button></Badge>; })}</div>
-        {!full && <select className={sel} value="" onChange={e => e.target.value && setPicks(p => ({ ...p, [c.id]: [...chosen, e.target.value] }))}><option value="">{c.dishes.length ? `Add a ${c.name.toLowerCase()} dish…` : "No dishes in this course"}</option>{c.dishes.filter((d: any) => !chosen.includes(d.id)).map((d: any) => <option key={d.id} value={d.id}>{d.name} ({d.diet === "veg" ? "Veg" : "Non-veg"}){d.protein_options?.length ? " · choose protein" : ""}</option>)}</select>}
+        {!full && <select className={sel} value="" onChange={e => e.target.value && setPicks(p => ({ ...p, [c.id]: [...chosen, e.target.value] }))}><option value="">{c.dishes.length ? `Add a ${c.name.toLowerCase()} dish…` : "No dishes in this course"}</option>{c.dishes.filter((d: any) => !chosen.includes(d.id) && (d.diet === "veg" ? c.veg_picks == null || vegCount < c.veg_picks : c.non_veg_picks == null || nonVegCount < c.non_veg_picks)).map((d: any) => <option key={d.id} value={d.id}>{d.name} ({d.diet === "veg" ? "Veg" : "Non-veg"}){d.protein_options?.length ? " · choose protein" : ""}</option>)}</select>}
       </div>; })}
       <div className="flex flex-wrap items-center gap-2">
         <div className="flex items-center gap-1.5"><span className="text-xs text-muted-foreground">$</span><input type="number" min="0" step="0.01" value={price} onChange={e => setPrice(e.target.value)} placeholder="Price per guest" className="h-9 w-32 rounded-md border border-input bg-background px-3 text-sm" /></div>
         <Button type="button" size="sm" onClick={add}><Plus className="mr-1 h-4 w-4" />Add package to menu</Button>
-        <Button type="button" size="sm" variant="ghost" onClick={() => setPicks(Object.fromEntries(pkg.courses.map((c: any) => [c.id, c.dishes.slice(0, c.picks || c.dishes.length).map((d: any) => d.id)])))}>Fill with defaults</Button>
+        <Button type="button" size="sm" variant="ghost" onClick={() => setPicks(Object.fromEntries(pkg.courses.map((c: any) => { const veg = c.dishes.filter((d: any) => d.diet === "veg").slice(0, c.veg_picks ?? c.dishes.length); const nonVeg = c.dishes.filter((d: any) => d.diet !== "veg").slice(0, c.non_veg_picks ?? c.dishes.length); return [c.id, [...veg, ...nonVeg].slice(0, c.picks || undefined).map((d: any) => d.id)]; })))}>Fill with defaults</Button>
       </div>
     </div>}
   </div>;

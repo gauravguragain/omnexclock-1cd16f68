@@ -10,9 +10,9 @@ import { toast } from "sonner";
 import { signDishPhotos } from "@/features/events/dishPhotos";
 
 type Dish = { id: string; name: string; diet: string; photo_path: string | null };
-type Course = { id: string; name: string; picks: number | null; dishes: Dish[] };
+type Course = { id: string; name: string; picks: number | null; veg_picks: number | null; non_veg_picks: number | null; dishes: Dish[] };
 
-function DishPicker({ course, value, onChange, urls, taken }: { course: Course; value: string; onChange: (id: string) => void; urls: Record<string, string>; taken: string[] }) {
+function DishPicker({ course, value, onChange, urls, taken, diet }: { course: Course; value: string; onChange: (id: string) => void; urls: Record<string, string>; taken: string[]; diet?: "veg" | "nonveg" }) {
   const [open, setOpen] = useState(false);
   const [hover, setHover] = useState<Dish | null>(null);
   const selected = course.dishes.find((d) => d.id === value);
@@ -33,7 +33,7 @@ function DishPicker({ course, value, onChange, urls, taken }: { course: Course; 
         <div className="flex">
           <ul className="max-h-72 flex-1 overflow-y-auto py-1" onMouseLeave={() => setHover(null)}>
             {selected && <li><button type="button" className="flex w-full items-center gap-2 px-3 py-2 text-left text-xs text-muted-foreground hover:bg-muted" onClick={() => { onChange(""); setOpen(false); }}><X className="h-3 w-3" />Clear choice</button></li>}
-            {course.dishes.map((d) => {
+            {course.dishes.filter((d) => !diet || (diet === "veg" ? d.diet === "veg" : d.diet !== "veg")).map((d) => {
               const disabled = taken.includes(d.id) && d.id !== value;
               return (
                 <li key={d.id}>
@@ -80,7 +80,11 @@ export default function GuestMenuPage() {
       setData(r); setLoading(false);
       if (r?.package?.courses) {
         const courses: Course[] = r.package.courses;
-        setPicks(Object.fromEntries(courses.map((c) => [c.id, Array(Math.max(1, c.picks || 1)).fill("")])));
+        setPicks(Object.fromEntries(courses.map((c) => {
+          const separate = c.veg_picks != null || c.non_veg_picks != null;
+          const slots = separate ? [...Array(c.veg_picks || 0).fill("veg:"), ...Array(c.non_veg_picks || 0).fill("nonveg:")] : Array(Math.max(1, c.picks || 1)).fill("");
+          return [c.id, slots];
+        })));
         setUrls(await signDishPhotos(courses.flatMap((c) => c.dishes.map((d) => d.photo_path))));
       }
       if (r?.status === "submitted") setDone(true);
@@ -93,7 +97,7 @@ export default function GuestMenuPage() {
     const missing = courses.find((c) => (picks[c.id] || []).some((v) => !v));
     if (missing && !confirm(`You haven't chosen every dish for ${missing.name}. Submit anyway?`)) return;
     setSaving(true);
-    const clean = Object.fromEntries(Object.entries(picks).map(([k, v]) => [k, v.filter(Boolean)]));
+    const clean = Object.fromEntries(Object.entries(picks).map(([k, v]) => [k, v.map(x => x.replace(/^(veg|nonveg):/, "")).filter(Boolean)]));
     const { error } = await (supabase.rpc as any)("submit_guest_menu", { _token: token, _picks: clean, _dietary: dietary, _allergies: allergies });
     setSaving(false);
     if (error) toast.error(error.message); else setDone(true);
@@ -119,18 +123,26 @@ export default function GuestMenuPage() {
         ) : (
           <div className="space-y-6">
             {courses.length === 0 && <p className="text-center text-sm text-muted-foreground">This package has no dishes to choose from yet.</p>}
-            {courses.map((c) => (
+            {courses.map((c) => {
+              const separate = c.veg_picks != null || c.non_veg_picks != null;
+              const coursePicks = picks[c.id] || [];
+              return (
               <section key={c.id} className="rounded-lg border border-border bg-card p-5">
                 <div className="mb-3 flex items-center gap-2"><UtensilsCrossed className="h-4 w-4 text-primary" /><h2 className="font-semibold">{c.name}</h2>
-                  <span className="ml-auto text-xs text-muted-foreground">Choose {Math.max(1, c.picks || 1)}</span></div>
+                  <span className="ml-auto text-xs text-muted-foreground">{separate ? `${c.veg_picks || 0} veg · ${c.non_veg_picks || 0} non-veg` : `Choose ${Math.max(1, c.picks || 1)}`}</span></div>
                 <div className="space-y-2">
-                  {(picks[c.id] || []).map((v, i) => (
-                    <DishPicker key={i} course={c} value={v} urls={urls} taken={picks[c.id] || []}
-                      onChange={(id) => setPicks((p) => ({ ...p, [c.id]: p[c.id].map((x, j) => (j === i ? id : x)) }))} />
-                  ))}
+                  {coursePicks.map((v, i) => {
+                    const diet = v.startsWith("veg:") ? "veg" : v.startsWith("nonveg:") ? "nonveg" : undefined;
+                    const value = v.replace(/^(veg|nonveg):/, "");
+                    return <div key={i} className="space-y-1">
+                      {diet && <p className="text-xs font-medium text-muted-foreground">{diet === "veg" ? "Vegetarian choice" : "Non-vegetarian choice"}</p>}
+                      <DishPicker course={c} value={value} urls={urls} taken={coursePicks.map(x => x.replace(/^(veg|nonveg):/, ""))} diet={diet}
+                        onChange={(id) => setPicks((p) => ({ ...p, [c.id]: p[c.id].map((x, j) => (j === i ? `${diet ? `${diet}:` : ""}${id}` : x)) }))} />
+                    </div>;
+                  })}
                 </div>
               </section>
-            ))}
+            ); })}
             <section className="space-y-4 rounded-lg border border-border bg-card p-5">
               <div className="space-y-1.5"><Label>Dietary requirements</Label><Textarea value={dietary} onChange={(e) => setDietary(e.target.value)} placeholder="e.g. 10 vegan guests" /></div>
               <div className="space-y-1.5"><Label>Allergies</Label><Textarea value={allergies} onChange={(e) => setAllergies(e.target.value)} placeholder="e.g. nut allergy" /></div>
