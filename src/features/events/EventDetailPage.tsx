@@ -25,12 +25,12 @@ export default function EventDetailPage({ kind }: { kind: "event" | "catering" }
   useEffect(() => {
     if (!b?.menu_selection_id && !b?.lead_id) return;
     (async () => {
-      const sel = b.menu_selection_id ? await supabase.from("crm_menu_selections").select("*").eq("id", b.menu_selection_id).maybeSingle()
-        : await supabase.from("crm_menu_selections").select("*").eq("lead_id", b.lead_id).order("updated_at", { ascending: false }).limit(1).maybeSingle();
+      const sel = b.lead_id ? await supabase.from("crm_menu_selections").select("*").eq("lead_id", b.lead_id).order("updated_at", { ascending: false }).limit(1).maybeSingle()
+        : await supabase.from("crm_menu_selections").select("*").eq("id", b.menu_selection_id).maybeSingle();
       setSelection(sel.data);
-      if (sel.data) { const r = await supabase.from("crm_menu_selection_items").select("*").eq("selection_id", sel.data.id).order("created_at"); setItems(r.data || []); }
+      if (!sel.data) setItems([]); else { const r = await supabase.from("crm_menu_selection_items").select("*").eq("selection_id", sel.data.id).order("created_at"); setItems(r.data || []); }
     })();
-  }, [b?.menu_selection_id, b?.lead_id]);
+  }, [b?.menu_selection_id, b?.lead_id, workflow, crm.leads]);
   if (!crm.business) return null;
   const list = `/b/${businessCode}/events/${kind === "event" ? "events" : "catering-bookings"}`;
   if (!b) return <div className="py-20 text-center text-muted-foreground">{crm.loading ? "Loading…" : <>Event not found. <Link to={list} className="text-primary">Back to list</Link></>}</div>;
@@ -40,11 +40,15 @@ export default function EventDetailPage({ kind }: { kind: "event" | "catering" }
   const rs: any = crm.runsheets.filter((r: any) => r.booking_id === b.id || r.lead_id === b.lead_id).sort((a: any, z: any) => (z.revision || 0) - (a.revision || 0))[0];
   const venue = ev.venues.find(v => v.id === b.venue_space_id || v.name === b.venue_space);
   const start = String(b.start_time).slice(0, 5); const end = bookingEnd(b); const hrs = minutesBetween(start, end) / 60;
-  const guests = (b.adults ?? b.guest_count) + (b.kids || 0);
+  const adults = rs?.adult_guests ?? b.adults ?? selection?.guest_count ?? b.guest_count; const kidsN = rs?.kids_guests ?? b.kids ?? kidsRow?.quantity ?? 0;
+  const guests = Number(adults || 0) + Number(kidsN || 0);
   const date = new Date(`${b.event_date}T00:00:00`);
   const cancelled = b.status === "cancelled";
   const title = b.event_name || lead?.full_name || "Event";
-  const courses = items.reduce((m: Record<string, any[]>, i) => { const c = i.course || "Other"; (m[c] ||= []).push(i); return m; }, {});
+  const PKG = ["package", "kids_package", "manual"];
+  const pkgs = items.filter(i => PKG.includes(i.course)); const stalls = items.filter(i => i.course === "live_stall");
+  const kidsRow = items.find(i => i.course === "kids_package");
+  const courses = items.filter(i => !PKG.includes(i.course) && i.course !== "live_stall").reduce((m: Record<string, any[]>, i) => { const c = i.course || "Other"; (m[c] ||= []).push(i); return m; }, {});
   const schedule: any[] = rs?.service_schedule || [];
   const setStatus = async (status: string) => { const { error } = await supabase.from("crm_bookings").update({ status }).eq("id", b.id); if (error) toast.error(error.message); else { toast.success(status === "cancelled" ? "Event cancelled" : "Event restored"); crm.refresh(); } };
 
@@ -58,7 +62,7 @@ export default function EventDetailPage({ kind }: { kind: "event" | "catering" }
     </div>
 
     <Card><CardContent className="grid divide-y divide-border p-0 sm:grid-cols-4 sm:divide-x sm:divide-y-0">
-      {[[CalendarDays, "Date", format(date, "EEEE, d MMMM yyyy"), isToday(date) ? "Today" : format(date, "EEE")], [Clock, "Time", `${to12(start)} – ${to12(end)}`, `${+hrs.toFixed(2)} hours`], [MapPin, kind === "event" ? "Venue" : "Location", kind === "event" ? (venue?.name || prettyCrmValue(b.venue_space)) : b.service_location || "—", venue?.capacity ? `Capacity ${venue.capacity}` : ""], [Users, "Guests", guests, `${b.adults ?? b.guest_count} adults · ${b.kids || 0} kids`]].map(([I, l, v, s]: any, i) => <div key={l} className="p-5">
+      {[[CalendarDays, "Date", format(date, "EEEE, d MMMM yyyy"), isToday(date) ? "Today" : format(date, "EEE")], [Clock, "Time", `${to12(start)} – ${to12(end)}`, `${+hrs.toFixed(2)} hours`], [MapPin, kind === "event" ? "Venue" : "Location", kind === "event" ? (venue?.name || prettyCrmValue(b.venue_space)) : b.service_location || "—", venue?.capacity ? `Capacity ${venue.capacity}` : ""], [Users, "Guests", guests, `${adults || 0} adults · ${kidsN || 0} kids`]].map(([I, l, v, s]: any, i) => <div key={l} className="p-5">
         <p className="flex items-center gap-1.5 text-xs text-muted-foreground"><I className="h-3.5 w-3.5" />{l}</p><p className="mt-1 font-medium">{v}</p><p className="text-xs text-muted-foreground">{s}</p>
         {i === 3 && venue?.capacity && <div className="mt-2 h-1 rounded-full bg-muted"><div className="h-full rounded-full bg-primary" style={{ width: `${Math.min(100, guests / venue.capacity * 100)}%` }} /></div>}</div>)}
     </CardContent></Card>
@@ -67,8 +71,11 @@ export default function EventDetailPage({ kind }: { kind: "event" | "catering" }
       <div className="space-y-6">
         <Section icon={CalendarDays} title="Schedule"><p className="font-medium">{title}</p><p className="text-sm">{format(date, "EEEE, d MMMM yyyy")} · {to12(start)} – {to12(end)}</p><p className="text-xs text-muted-foreground">{venue?.name || prettyCrmValue(b.venue_space) || b.service_location} · {guests} guests</p></Section>
 
-        <Section icon={UtensilsCrossed} title="Menu selection" action={<span className="text-xs text-muted-foreground">{selection?.package_name ? `${selection.package_name} · ` : ""}{items.length} items</span>}>
+        <Section icon={UtensilsCrossed} title="Menu selection" action={<span className="text-xs text-muted-foreground">{selection?.package_name ? `${selection.package_name} · ` : ""}{pkgs.length} packages</span>}>
           {items.length ? <div className="space-y-4">{selection?.beverage_package && <div><p className="text-sm font-medium">Beverages</p><p className="text-sm text-muted-foreground">{prettyCrmValue(selection.beverage_package)}</p></div>}
+            {pkgs.length > 0 && <div><p className="text-sm font-medium">Packages</p><p className="text-sm text-muted-foreground">{pkgs.map(i => i.course === "kids_package" ? `Kids menu (${i.quantity} kids)` : i.item_name).join(" · ")}</p></div>}
+            {stalls.length > 0 && <div><p className="text-sm font-medium">Live stalls</p>{stalls.map(i => <p key={i.id} className="text-sm text-muted-foreground">{i.item_name}{i.service_start_time && ` · ${to12(String(i.service_start_time).slice(0, 5))}${i.service_end_time ? ` – ${to12(String(i.service_end_time).slice(0, 5))}` : ""}`}</p>)}</div>}
+            {selection?.corkage_enabled && <p className="text-sm text-muted-foreground">Host bringing own drinks (corkage)</p>}
             {(Object.entries(courses) as [string, any[]][]).map(([c, list]) => <div key={c}><p className="text-sm font-medium">{prettyCrmValue(c)}{list[0].service_start_time && <span className="ml-2 text-xs text-muted-foreground">{to12(String(list[0].service_start_time).slice(0, 5))}{list[0].service_end_time ? ` – ${to12(String(list[0].service_end_time).slice(0, 5))}` : ""}</span>}</p><p className="text-sm text-muted-foreground">{list.map(i => i.item_name).join(" · ")}</p></div>)}
             {(selection?.dietary_requirements || selection?.allergies) && <p className="text-xs text-muted-foreground">Dietary: {[selection.dietary_requirements, selection.allergies].filter(Boolean).join(" · ")}</p>}</div>
             : <Empty title="No menu selected yet" text="Choose the menu in the lead workflow; it prints on the run sheet." />}
