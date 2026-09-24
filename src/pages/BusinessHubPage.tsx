@@ -170,6 +170,19 @@ export default function BusinessHubPage() {
             </CardContent>
           </Card>
         </Link>
+        <Link to={`/b/${businessCode}/catering`} onClick={() => applyTheme(business.theme)} className="mt-4 block">
+          <Card className="border border-border/50 cursor-pointer hover:border-primary/40 transition-all duration-300 group card-lift">
+            <CardContent className="p-8 flex flex-col items-center text-center space-y-4">
+              <div className="h-14 w-14 rounded-2xl bg-primary/8 flex items-center justify-center group-hover:bg-primary/15 group-hover:scale-110 transition-all duration-300">
+                <Utensils className="h-7 w-7 text-primary" />
+              </div>
+              <div>
+                <h2 className="text-base font-semibold text-foreground">Catering</h2>
+                <p className="text-xs text-muted-foreground mt-1.5 leading-relaxed">Catering leads, bookings and run sheets</p>
+              </div>
+            </CardContent>
+          </Card>
+        </Link>
       </div>
 
       <Button variant="ghost" className="mt-10 text-muted-foreground hover:text-foreground transition-colors" onClick={signOut}>
