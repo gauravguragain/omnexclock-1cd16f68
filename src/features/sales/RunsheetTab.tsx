@@ -307,7 +307,7 @@ export default function RunsheetTab({ lead, booking, options, onSaved }: {
           <div className="flex flex-wrap gap-2">
             <Button size="sm" variant="outline" onClick={buildFromBooking}><Sparkles className="mr-2 h-4 w-4" />Build from booking</Button>
             <Button size="sm" onClick={save} disabled={saving}><Save className="mr-2 h-4 w-4" />Save</Button>
-            {runsheet?.id && <Button size="sm" variant="outline" onClick={() => window.open(`/b/${window.location.pathname.split("/")[2]}/events/runsheet/${runsheet.id}`, "_blank")}><Eye className="mr-2 h-4 w-4" />View run sheet</Button>}
+            {runsheet?.id && <Button size="sm" variant="outline" onClick={() => window.open(`${window.location.origin}/runsheet/${runsheet.id}?t=${runsheet.share_token}`, "_blank", "noopener")}><Eye className="mr-2 h-4 w-4" />View run sheet</Button>}
             {runsheet?.sent_at && <Button size="sm" variant="outline" onClick={() => setSendOpen(true)}><Mail className="mr-2 h-4 w-4" />Resend Email</Button>}
             <Button size="sm" variant="secondary" onClick={() => setIssueOpen(true)} disabled={saving || !readyToSend} title={readyToSend ? "" : "Complete the checklist first"}>
               <Send className="mr-2 h-4 w-4" />{runsheet?.sent_at ? "Re-issue & send" : "Confirm & send"}
