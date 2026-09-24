@@ -2,10 +2,8 @@ import { useEffect, useRef, useState } from "react";
 import { downloadRunsheetPdf } from "@/lib/runsheetDownload";
 import { Link, useParams } from "react-router-dom";
 import { format } from "date-fns";
-import { ChevronRight, Clock, MapPin, Phone, Users, UtensilsCrossed, ListChecks, FileText, ArrowLeft, Printer, Mail, Link as LinkIcon, Download } from "lucide-react";
+import { ChevronRight, ArrowLeft, Printer, Mail, Link as LinkIcon, Download } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import SendRunsheetDialog, { runsheetPublicUrl } from "./SendRunsheetDialog";
@@ -13,19 +11,11 @@ import { useCrmData } from "@/features/sales/useCrmData";
 import { prettyCrmValue } from "@/features/sales/types";
 import { to12 } from "./useEventsData";
 
-const Section = ({ icon: Icon, title, children }: any) => (
-  <Card><CardContent className="p-6">
-    <p className="mb-3 flex items-center gap-2 text-lg font-semibold"><Icon className="h-4 w-4 text-primary" />{title}</p>
-    {children}
-  </CardContent></Card>
-);
-const Row = ({ k, v }: { k: string; v: any }) => v ? <div className="flex justify-between gap-4 py-1 text-sm"><span className="text-muted-foreground">{k}</span><span className="text-right">{v}</span></div> : null;
-
 export function runsheetTitle(lead: any, b: any) { return `${prettyCrmValue(lead?.event_type || b?.event_type || "Event")} — ${lead?.full_name || "Client"}`; }
 
 export function RunsheetDocument({ rs, lead, b, items, selection, businessName }: { rs: any; lead: any; b: any; items: any[]; selection: any; businessName?: string }) {
   const PKG = ["package", "kids_package", "manual"];
-  const pkgs = items.filter(i => PKG.includes(i.course));
+  const pkgs = items.filter(i => i.course === "package" || i.course === "kids_package");
   const stalls = items.filter(i => i.course === "live_stall");
   const kidsRow = items.find(i => i.course === "kids_package");
   const courses = items.filter(i => !PKG.includes(i.course) && i.course !== "live_stall" && i.course !== "beverage" && (kidsRow || i.course !== "Kids Menu"))
@@ -33,76 +23,87 @@ export function RunsheetDocument({ rs, lead, b, items, selection, businessName }
   const schedule: any[] = rs.service_schedule || [];
   const setup: string[] = rs.setup_items || [];
   const date = b?.event_date ? format(new Date(`${b.event_date}T00:00:00`), "EEEE, d MMMM yyyy") : "Date to be confirmed";
-
-  return <div className="space-y-6">
-    <div className="flex flex-col gap-4 border-b-2 border-primary pb-5 sm:flex-row sm:items-end sm:justify-between">
-      <div>
-        <p className="text-xs font-medium uppercase tracking-widest text-primary">Event run sheet</p>
-        <h1 className="font-serif text-3xl font-semibold">{runsheetTitle(lead, b)}</h1>
-        <p className="text-sm text-muted-foreground">{date}{b?.start_time ? ` · ${to12(String(b.start_time).slice(0, 5))}` : ""}</p>
-      </div>
-      <div className="text-right text-sm">
-        <img src="/regal-logo.png" alt={businessName || "Logo"} className="ml-auto mb-2 h-12 object-contain" />
-        <p className="text-muted-foreground">Event Order {rs.event_order_number || "—"} · Revision {rs.revision || 1}</p>
-        <Badge variant="secondary">{rs.status === "sent" ? "Issued" : prettyCrmValue(rs.status || "draft")}</Badge>
-      </div>
-    </div>
-
-    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-      <Card><CardContent className="p-4"><p className="flex items-center gap-1 text-xs text-muted-foreground"><MapPin className="h-3 w-3" />Venue</p><p className="font-medium">{prettyCrmValue(b?.venue_space || lead?.venue_space || "—")}</p></CardContent></Card>
-      <Card><CardContent className="p-4"><p className="flex items-center gap-1 text-xs text-muted-foreground"><Users className="h-3 w-3" />Guests</p><p className="font-medium">{rs.adult_guests ?? "—"} adults · {rs.kids_guests ?? 0} kids</p></CardContent></Card>
-      <Card><CardContent className="p-4"><p className="flex items-center gap-1 text-xs text-muted-foreground"><Clock className="h-3 w-3" />Time</p><p className="font-medium">{b?.start_time ? to12(String(b.start_time).slice(0, 5)) : "—"}{b?.duration_minutes ? ` · ${(b.duration_minutes / 60).toFixed(1)} hrs` : ""}</p></CardContent></Card>
-      <Card><CardContent className="p-4"><p className="flex items-center gap-1 text-xs text-muted-foreground"><FileText className="h-3 w-3" />Booking ref</p><p className="font-medium">{rs.booking_reference || "—"}</p></CardContent></Card>
-    </div>
-
-    <div className="grid gap-6 lg:grid-cols-[1.4fr_1fr]">
-      <div className="space-y-6">
-        {stalls.length > 0 && <Section icon={UtensilsCrossed} title="Live stalls">
-          {stalls.map(s => <div key={s.id} className="flex justify-between border-b border-border py-1.5 text-sm last:border-0"><span>{s.item_name}</span><span className="text-muted-foreground">{s.service_start_time ? to12(s.service_start_time) : ""}{s.service_end_time ? ` – ${to12(s.service_end_time)}` : ""}</span></div>)}
-        </Section>}
-
-        <Section icon={UtensilsCrossed} title="Menu selection">
-          {pkgs.length > 0 && <p className="mb-2 text-sm font-medium">{pkgs.map(p => p.item_name).join(" · ")}</p>}
-          {selection?.corkage_enabled && <p className="mb-2 text-sm text-muted-foreground">Host is bringing their own drinks.</p>}
-          {(Object.entries(courses) as [string, any[]][]).map(([c, l]) => <p key={c} className="py-0.5 text-sm"><span className="text-muted-foreground">{c}: </span>{l.map(d => d.item_name).join(" · ")}</p>)}
-          {kidsRow && <p className="py-0.5 text-sm"><span className="text-muted-foreground">Kids menu: </span>{items.filter(i => i.course === "Kids Menu").map(d => d.item_name).join(" · ") || `${kidsRow.quantity || ""} kids`}</p>}
-          {selection?.beverage_package && <p className="py-0.5 text-sm"><span className="text-muted-foreground">Beverages: </span>{prettyCrmValue(selection.beverage_package)}</p>}
-          {(selection?.dietary_requirements || selection?.allergies) && <p className="mt-2 text-sm text-muted-foreground">{[selection.dietary_requirements && `Dietary: ${selection.dietary_requirements}`, selection.allergies && `Allergies: ${selection.allergies}`].filter(Boolean).join(" · ")}</p>}
-          {!items.length && <p className="text-sm text-muted-foreground">No menu saved yet.</p>}
-        </Section>
-
-        <Section icon={Clock} title="Service timings">
-          {schedule.length ? schedule.map((s, i) => <div key={i} className="flex gap-4 border-b border-border py-1.5 text-sm last:border-0"><span className="w-20 shrink-0 font-medium">{s.time ? to12(s.time) : "—"}</span><span>{s.label}{s.detail ? <span className="text-muted-foreground"> — {s.detail}</span> : null}</span></div>) : <p className="text-sm text-muted-foreground">No timings set.</p>}
-        </Section>
-      </div>
-
-      <div className="space-y-6">
-        <Section icon={ListChecks} title="Setup & additional information">
-          {rs.access_time && <Row k="Decor / vendor access" v={to12(rs.access_time)} />}
-          {setup.length > 0 && <div className="py-1">{setup.map(s => <p key={s} className="py-0.5 text-sm">• {s}</p>)}</div>}
-          {rs.setup_notes && <p className="whitespace-pre-line py-1 text-sm text-muted-foreground">{rs.setup_notes}</p>}
-          {rs.special_requests && <Row k="Special requests" v={rs.special_requests} />}
-        </Section>
-
-        <Section icon={Phone} title="Contacts">
-          <Row k="Client" v={lead?.full_name} />
-          <Row k="Client phone" v={lead?.phone} />
-          <Row k="Sales person" v={rs.sales_person} />
-          <Row k="Sales phone" v={rs.sales_person_phone} />
-          <Row k="Event coordinator" v={rs.event_coordinator} />
-          <Row k="Coordinator phone" v={rs.event_coordinator_phone} />
-          <Row k="On-site contact" v={rs.onsite_contact_name} />
-          <Row k="On-site phone" v={rs.onsite_contact_phone} />
-        </Section>
-
-        {(rs.client_notes || rs.ops_notes || rs.distributed_to) && <Section icon={FileText} title="Notes">
-          {rs.client_notes && <Row k="Client notes" v={rs.client_notes} />}
-          {rs.ops_notes && <Row k="Internal notes" v={rs.ops_notes} />}
-          {rs.distributed_to && <Row k="Distributed to" v={rs.distributed_to} />}
-        </Section>}
-      </div>
-    </div>
+  const start = b?.start_time ? String(b.start_time).slice(0, 5) : "";
+  const end = start && b?.duration_minutes ? (() => { const [h, m] = start.split(":").map(Number); const total = (h * 60 + m + b.duration_minutes) % 1440; return `${String(Math.floor(total / 60)).padStart(2, "0")}:${String(total % 60).padStart(2, "0")}`; })() : "";
+  const time = start ? `${to12(start)}${end ? ` – ${to12(end)}` : ""}` : "—";
+  const eventType = prettyCrmValue(lead?.event_type || b?.event_type || "Event");
+  const eventTitle = runsheetTitle(lead, b);
+  const contacts = [
+    ["Sales Person:", rs.sales_person, rs.sales_person_phone],
+    ["Event Coordinator:", rs.event_coordinator, rs.event_coordinator_phone],
+    ["Client:", lead?.full_name, lead?.phone],
+    ["Onsite Contact:", rs.onsite_contact_name, rs.onsite_contact_phone],
+  ];
+  const summary = <div className="grid grid-cols-[20%_30%_20%_30%] divide-x divide-border border border-border text-xs">
+    <div className="p-2 font-medium">{time}</div>
+    <div className="p-2 font-medium">{eventTitle}</div>
+    <div className="p-2">Adults: {rs.adult_guests ?? "—"}<br />Kids: {rs.kids_guests ?? 0}</div>
+    <div className="p-2"><span className="block text-[10px]">Venue</span><span className="font-medium">{prettyCrmValue(b?.venue_space || lead?.venue_space || "—")}</span></div>
   </div>;
+
+  return <article className="runsheet-monochrome min-w-[680px] bg-background px-8 py-7 font-sans text-foreground">
+    <header className="flex items-start justify-between gap-6">
+      <div>
+        <h1 className="text-2xl font-bold">{eventType} Event Order</h1>
+        <p className="mt-1 text-base font-bold">{date}</p>
+        <p className="mt-1 text-xs text-muted-foreground">{businessName || "Pro Regal Pavilion"}</p>
+      </div>
+      <img src="/regal-logo.png" alt={businessName || "Logo"} className="h-16 w-28 object-contain object-right" />
+    </header>
+
+    <div className="mt-5 grid grid-cols-[1.1fr_1fr] gap-5 text-xs">
+      <div className="space-y-1">
+        {contacts.map(([label, name, phone]) => <div key={label} className="grid grid-cols-[110px_1fr] gap-2"><span>{label}</span><span>{name || "—"}{phone ? ` (${phone})` : ""}</span></div>)}
+      </div>
+      <div className="flex flex-col justify-center gap-2 border-l border-border pl-5 text-right">
+        <p>Event Order: <strong>{rs.event_order_number || "—"}</strong></p>
+        <p>Booking Reference: <strong>{rs.booking_reference || "—"}</strong></p>
+        <p>Revision: {rs.revision || 1}</p>
+      </div>
+    </div>
+
+    <section className="mt-5">
+      <div className="flex justify-between bg-primary px-3 py-2 text-sm font-semibold text-primary-foreground"><span>Event Summary – {date}</span><span>Day 1 of 1</span></div>
+      {summary}
+    </section>
+
+    <section className="mt-4">
+      <div className="flex justify-between bg-primary px-3 py-2 text-sm font-semibold text-primary-foreground"><span>Agenda – {date}</span><span>Day 1 of 1</span></div>
+      <div className="bg-muted">{summary}</div>
+      <div className="grid grid-cols-2 border-x border-b border-border text-xs leading-relaxed">
+        <div className="min-w-0 border-r border-border p-4">
+          {stalls.length > 0 && <div className="mb-4 break-inside-avoid"><h2 className="font-bold">Live Stalls</h2>{stalls.map(s => <p key={s.id} className="pl-3">• {s.item_name}{s.service_start_time ? ` — ${to12(s.service_start_time)}${s.service_end_time ? ` to ${to12(s.service_end_time)}` : ""}` : ""}</p>)}</div>}
+          <h2 className="font-bold">Menu selection{pkgs.length ? ` – ${pkgs.map(p => p.item_name).join(" · ")}` : ""}</h2>
+          {Object.entries(courses).map(([course, dishes]) => <div key={course} className="mt-2 break-inside-avoid"><h3 className="pl-3 font-semibold">{course}</h3>{dishes.map(d => <p key={d.id} className="pl-6">- {d.item_name}</p>)}</div>)}
+          {kidsRow && !courses["Kids Menu"] && <p className="mt-2">Kids menu: {kidsRow.quantity || rs.kids_guests || 0} kids</p>}
+          {selection?.beverage_package && <p className="mt-2">Beverages: {prettyCrmValue(selection.beverage_package)}</p>}
+          {selection?.corkage_enabled && <p className="mt-1">Host is bringing their own drinks.</p>}
+          {selection?.dietary_requirements && <p className="mt-2">Dietary: {selection.dietary_requirements}</p>}
+          {selection?.allergies && <p className="mt-1 font-semibold">ALLERGIES: {selection.allergies}</p>}
+          {!items.length && <p className="mt-2 text-muted-foreground">No menu saved yet.</p>}
+        </div>
+        <div className="min-w-0 p-4">
+          <h2 className="font-bold">Setup & Additional Information</h2>
+          <p className="mt-1 font-semibold">{eventTitle}</p>
+          {setup.map(s => <p key={s} className="pl-3">• {s}</p>)}
+          {rs.setup_notes && <p className="mt-2 whitespace-pre-line pl-3">{rs.setup_notes}</p>}
+          {rs.access_time && <p className="mt-2">Decor / vendor access: {to12(rs.access_time)}</p>}
+          {rs.special_requests && <p className="mt-2">Special requests: {rs.special_requests}</p>}
+          <h2 className="mt-4 font-bold">Service timings</h2>
+          {schedule.length ? schedule.map((s, i) => <p key={i} className="pl-3">• {s.time ? to12(s.time) : "—"} – {s.label}{s.detail ? ` (${s.detail})` : ""}</p>) : <p className="pl-3 text-muted-foreground">No timings set.</p>}
+          {rs.client_notes && <div className="mt-4 break-inside-avoid"><h2 className="font-bold">Client notes</h2><p className="whitespace-pre-line pl-3">{rs.client_notes}</p></div>}
+        </div>
+      </div>
+    </section>
+
+    <footer className="mt-6 text-xs">
+      <p className="text-center font-medium">END DAY 1 OF 1</p>
+      <div className="mt-3 border-t border-dashed border-border pt-6">
+        <p className="text-right text-[10px] text-muted-foreground">Printed Date: {format(new Date(), "dd/MM/yyyy")}</p>
+        <div className="mt-4 grid grid-cols-[1fr_1fr_1fr] gap-6"><p>Name: <span className="inline-block w-24 border-b border-border" /></p><p>Signature: <span className="inline-block w-20 border-b border-border" /></p><p>Date: <span className="inline-block w-20 border-b border-border" /></p></div>
+      </div>
+    </footer>
+  </article>;
 }
 
 export default function RunsheetViewPage() {
@@ -147,7 +148,7 @@ export default function RunsheetViewPage() {
       <Button variant="outline" disabled={dl} onClick={async () => { if (!docRef.current) return; setDl(true); try { await downloadRunsheetPdf(docRef.current, `Run sheet - ${title}`); } catch { toast.error("Could not create PDF"); } setDl(false); }}><Download className="mr-2 h-4 w-4" />{dl ? "Preparing…" : "Download PDF"}</Button>
       {lead && rs.sent_at && <Button onClick={() => setSendOpen(true)}><Mail className="mr-2 h-4 w-4" />Resend Email</Button>}
     </div>
-    <div ref={docRef}><RunsheetDocument rs={rs} lead={lead} b={b} items={items} selection={selection} businessName={crm.business?.name} /></div>
+    <div ref={docRef} className="overflow-x-auto"><RunsheetDocument rs={rs} lead={lead} b={b} items={items} selection={selection} businessName={crm.business?.name} /></div>
     {lead && <SendRunsheetDialog open={sendOpen} onOpenChange={setSendOpen} rs={rs} lead={lead} booking={b} businessName={crm.business?.name || ""} />}
   </div>;
 }
@@ -169,7 +170,7 @@ export function PublicRunsheetPage() {
         <Button variant="outline" onClick={() => window.print()}><Printer className="mr-2 h-4 w-4" />Print</Button>
         <Button disabled={dl} onClick={async () => { if (!docRef.current) return; setDl(true); try { await downloadRunsheetPdf(docRef.current, `Run sheet - ${runsheetTitle(data.lead, data.booking)}`); } catch { toast.error("Could not create PDF"); } setDl(false); }}><Download className="mr-2 h-4 w-4" />{dl ? "Preparing…" : "Download PDF"}</Button>
       </div>
-      <div ref={docRef}><RunsheetDocument rs={data.rs} lead={data.lead} b={data.booking} items={data.items || []} selection={data.selection} businessName={data.businessName} /></div>
+       <div ref={docRef} className="overflow-x-auto"><RunsheetDocument rs={data.rs} lead={data.lead} b={data.booking} items={data.items || []} selection={data.selection} businessName={data.businessName} /></div>
     </div>
   </div>;
 }

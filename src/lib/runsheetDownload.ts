@@ -2,7 +2,7 @@ import html2canvas from "html2canvas";
 import jsPDF from "jspdf";
 
 export async function downloadRunsheetPdf(el: HTMLElement, fileName: string) {
-  const canvas = await html2canvas(el, { scale: 2, useCORS: true, backgroundColor: getComputedStyle(document.body).backgroundColor || "#ffffff" });
+  const canvas = await html2canvas(el, { scale: 2, useCORS: true, backgroundColor: getComputedStyle(el.firstElementChild || el).backgroundColor });
   const pdf = new jsPDF({ unit: "mm", format: "a4", orientation: "portrait" });
   const pw = pdf.internal.pageSize.getWidth(), ph = pdf.internal.pageSize.getHeight();
   const margin = 6, w = pw - margin * 2;
