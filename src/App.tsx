@@ -65,6 +65,7 @@ function CateringRedirect({ destination, withId = false, withRunsheet = false }:
   return <Navigate to={`/b/${businessCode}/catering/${destination}${suffix}${window.location.search}`} replace />;
 }
 const PublicEnquiryPage = React.lazy(() => import("./pages/PublicEnquiryPage"));
+const GuestMenuPage = React.lazy(() => import("./pages/GuestMenuPage"));
 const BookingConfirmationPage = React.lazy(() => import("./pages/BookingConfirmationPage"));
 const MasterDashboardPage = React.lazy(() => import("./pages/master/MasterDashboardPage"));
 const MasterBusinessesPage = React.lazy(() => import("./pages/master/MasterBusinessesPage"));
@@ -99,6 +100,7 @@ const App = () => (
                   <Route path="/" element={<Index />} />
                   <Route path="/auth" element={<AuthPage />} />
                   <Route path="/runsheet/:runsheetId" element={<PublicRunsheetPage />} />
+                  <Route path="/menu/:token" element={<GuestMenuPage />} />
                   <Route path="/reset-password" element={<ResetPasswordPage />} />
                   <Route path="/register-business" element={<RegisterBusinessPage />} />
                   <Route path="/hub" element={<BusinessHubPage />} />

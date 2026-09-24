@@ -1,5 +1,6 @@
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import MenuBookPicker from "./MenuBookPicker";
+import GuestMenuLinkCard from "./GuestMenuLinkCard";
 import { supabase } from "@/integrations/supabase/client"; import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button"; import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"; import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input"; import { Label } from "@/components/ui/label"; import { Textarea } from "@/components/ui/textarea"; import { Badge } from "@/components/ui/badge"; import { Checkbox } from "@/components/ui/checkbox";
@@ -15,7 +16,7 @@ export default function LeadDetailDialog({ lead, open, onOpenChange, initialTab,
   const [dishes,setDishes]=useState<{key:string;course:string;name:string;pkg?:string}[]>([]);
   const [kids,setKids]=useState({enabled:false,count:"",price:""}); const [kidDraft,setKidDraft]=useState("");
   const [manual,setManual]=useState<{key:string;name:string;pricePerHead:number;flatPrice:number}[]>([]); const [manualDraft,setManualDraft]=useState({name:"",pricePerHead:"",flatPrice:""});
-  const [bookPackages,setBookPackages]=useState<any[]>([]);
+  const [bookPackages,setBookPackages]=useState<any[]>([]); const [menuReload,setMenuReload]=useState(0);
   useEffect(()=>{if(!open||!lead)return;(async()=>{const bid=lead.business_id;const q=(t:string)=>(supabase.from(t as any) as any).select("*").eq("business_id",bid);const[p,b,c,ci,d]=await Promise.all([q("crm_packages").eq("active",true),q("crm_menu_books"),q("crm_package_courses").order("sort_order"),q("crm_package_course_items"),q("crm_dishes")]);setBookPackages((p.data||[]).map((x:any)=>({...x,book:(b.data||[]).find((y:any)=>y.id===x.book_id)?.name||"Menu",courses:(c.data||[]).filter((y:any)=>y.package_id===x.id).map((y:any)=>({...y,dishes:(ci.data||[]).filter((z:any)=>z.course_id===y.id&&z.dish_id).map((z:any)=>(d.data||[]).find((w:any)=>w.id===z.dish_id)).filter(Boolean)}))})));})();},[open,lead?.id]);
   const loadBookPackage=(p:any,picked:{course:string;dish:any}[],pricePerHead:number)=>{const pkg=`${Date.now()}`;setCustomItems(v=>[...v,{key:pkg,name:p.name,pricePerHead:Number(pricePerHead||0),flatPrice:0}]);setDishes(v=>[...v,...picked.map((x,i)=>({key:`${pkg}-${i}`,course:x.course.trim(),name:x.dish.name,pkg}))]);toast.success(`${p.name} loaded`);};
   const removePackage=(key:string)=>{setCustomItems(v=>v.filter(c=>c.key!==key));setDishes(v=>v.filter(d=>(d as any).pkg?((d as any).pkg!==key):!key.startsWith("l")));};
@@ -62,7 +63,7 @@ export default function LeadDetailDialog({ lead, open, onOpenChange, initialTab,
     setManual(rows.filter(i=>i.course==="manual").map((i,n)=>({key:`m${n}`,name:i.item_name,pricePerHead:Number(i.price_per_head||0),flatPrice:Number(i.flat_price||0)})));
     const bev=rows.find(i=>i.course==="beverage");if(bev)setBevPrice({perHead:bev.price_per_head!=null?String(bev.price_per_head):"",flat:bev.flat_price!=null?String(bev.flat_price):""});
     setDishes(rows.filter(i=>!i.menu_item_id&&i.course&&!["package","live_stall","kids_package","manual","beverage"].includes(i.course)).map((i,n)=>({key:`d${n}`,course:i.course,name:i.item_name})));
-  })();return()=>{cancelled=true;};},[lead?.id,open]);
+  })();return()=>{cancelled=true;};},[lead?.id,open,menuReload]);
   if(!lead)return null;
   const addInteraction=async(e:FormEvent<HTMLFormElement>)=>{e.preventDefault();setBusy(true);const f=new FormData(e.currentTarget);const notes=String(f.get("notes"));const {error}=await supabase.from("crm_interactions").insert({business_id:lead.business_id,lead_id:lead.id,interaction_type:String(f.get("type")),notes,duration_minutes:f.get("duration")?Number(f.get("duration")):null,follow_up_required:f.get("follow_up")==="on",follow_up_at:followDate?`${followDate}T${followTime}`:null,shareable_feedback:f.get("shareable")==="on",logged_by:user?.id} as any);setBusy(false);if(error)toast.error(error.message);else{toast.success("Interaction logged");(e.target as HTMLFormElement).reset();setFollowDate("");onSaved();}};
   const analyse=async(notes:string)=>{if(notes.trim().length<10){toast.error("Add more notes first");return;}setBusy(true);const{data,error}=await supabase.functions.invoke("crm-ai-notes",{body:{businessId:lead.business_id,notes}});setBusy(false);if(error)toast.error("Could not analyse notes");else setAi(data);};
@@ -135,6 +136,7 @@ export default function LeadDetailDialog({ lead, open, onOpenChange, initialTab,
 
       <section className="rounded-lg border border-dashed border-border p-4">
         <h3 className="font-serif text-lg">Package selection</h3>
+        {bookPackages.length>0&&<div className="my-3"><GuestMenuLinkCard lead={lead} packages={bookPackages} onSubmitted={()=>{setDishes([]);setCustomItems([]);setMenuReload(n=>n+1);onSaved();}}/></div>}
         {bookPackages.length>0&&<MenuBookPicker packages={bookPackages} onAdd={loadBookPackage}/>}
         <p className="mt-1 text-xs text-muted-foreground">Pick a menu book and package above — dishes are chosen from each course's dropdown.</p>
       </section>
