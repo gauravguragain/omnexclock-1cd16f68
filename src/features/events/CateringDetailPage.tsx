@@ -27,6 +27,9 @@ export default function CateringDetailPage({ view }: { view: "lead" | "booking" 
   const nav = useNavigate();
   const crm = useCrmData();
   const [editOpen, setEditOpen] = useState(false);
+  const [editBkOpen, setEditBkOpen] = useState(false);
+  const [bk, setBk] = useState({ event_name: "", event_date: "", start_time: "18:00", end_time: "23:00", fulfilment_method: "delivery", service_location: "", adults: "", kids: "", notes: "" });
+  const [bkSaving, setBkSaving] = useState(false);
   const [sendOpen, setSendOpen] = useState(false);
   const [selection, setSelection] = useState<any>(null);
   const [items, setItems] = useState<any[]>([]);
