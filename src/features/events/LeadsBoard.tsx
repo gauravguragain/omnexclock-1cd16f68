@@ -19,7 +19,7 @@ export default function LeadsBoard({ kind }: { kind: "event" | "catering" }) {
   const [tab, setTab] = useState("new"); const [search, setSearch] = useState("");
   const [formOpen, setFormOpen] = useState(false); const [editing, setEditing] = useState<CrmLead | null>(null); const [detail, setDetail] = useState<CrmLead | null>(null);
   const [declining, setDeclining] = useState<CrmLead | null>(null); const [reason, setReason] = useState(""); const fileRef = useRef<HTMLInputElement>(null);
-  const mine = useMemo(() => crm.leads.filter(l => (l.lead_kind || "event") === kind), [crm.leads, kind]);
+  const mine = useMemo(() => crm.leads.filter(l => (l.lead_kind || (l.event_type === "catering" ? "catering" : "event")) === kind), [crm.leads, kind]);
   const outcome = (l: CrmLead) => l.lead_outcome || "new";
   const shown = mine.filter(l => (tab === "all" || outcome(l) === tab) && `${l.full_name} ${l.email || ""} ${l.phone || ""} ${l.event_type} ${l.service_location || ""}`.toLowerCase().includes(search.toLowerCase()));
   const reasons = crm.options.filter(o => o.option_type === "lost_reason" && o.active);

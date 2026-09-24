@@ -134,7 +134,7 @@ export default function CreateEventWizard({ kind }: { kind: "event" | "catering"
     <div className="flex justify-end gap-2"><Button variant="outline" onClick={() => nav(-1)}>Cancel</Button><Button disabled={!ready || saving} onClick={save}>{saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}{kind === "event" ? "Save event" : "Create booking"}</Button></div>
   </div>
   <aside className="space-y-4 lg:sticky lg:top-4 lg:self-start"><Card><CardContent className="space-y-3 p-5">
-    <div className="flex items-center justify-between"><p className="font-serif text-xl">Event summary</p><span className="text-xs text-primary">Live</span></div>
+     <div className="flex items-center justify-between"><p className="font-serif text-xl">{kind === "catering" ? "Catering summary" : "Event summary"}</p><span className="text-xs text-primary">Live</span></div>
     <Sum l="Reference" v="" empty="Assigned on save" /><Sum l="Customer" v={custName} empty="Not chosen yet" /><Sum l="Event" v={f.event_name && `${f.event_name}${f.date ? ` · ${f.date} · ${kind === "catering" ? (f.method === "pickup" ? "pickup " : "delivery ") : ""}${to12(f.start)}–${to12(f.end)}` : ""}`} empty="Not named yet" />
     <Sum l={kind === "event" ? "Venue" : f.method === "pickup" ? "Pickup" : "Delivery to"} v={kind === "event" ? venue?.name : f.method === "pickup" ? "Client collects" : f.location} empty="Not entered yet" /><Sum l="Guests" v={total ? `${f.adults || 0} adults · ${f.kids || 0} children` : ""} empty="Not set yet" />
     {kind === "catering" && <><Sum l="Coordinator" v={coord?.name} empty="None" /><Sum l="Catering" v={pkgs.filter(p => p.packageId).map(p => ev.packages.find(x => x.id === p.packageId)?.name).join(", ")} empty="No catering added" /></>}
