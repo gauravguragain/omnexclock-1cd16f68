@@ -39,6 +39,10 @@ export default function EventsDashboard() {
   const cUp = cat.filter(b => b.event_date >= today).sort((a, b) => (a.event_date + a.start_time).localeCompare(b.event_date + b.start_time));
   const cToday = cUp.filter(b => b.event_date === today);
   const cWeek = cUp.filter(b => b.event_date > today && b.event_date <= in7);
+  const cLater = cUp.filter(b => b.event_date > in7);
+  const cTotal = cUp.length || 1;
+  const cRing = [{ n: cToday.length, c: "hsl(var(--foreground))" }, { n: cWeek.length, c: "hsl(var(--primary))" }, { n: cLater.length, c: "hsl(var(--destructive))" }];
+  let cOff = 0;
   const cLeads = crm.leads.filter((l: any) => (l.lead_kind === "catering" || l.event_type === "catering") && !["cold", "lost", "declined", "full_payment_received"].includes(l.status));
 
   const Stat = ({ title, sub, value, unit, icon: Icon, children, link, to }: any) => <Card><CardContent className="flex h-full flex-col p-5">
@@ -111,6 +115,19 @@ export default function EventsDashboard() {
     <div className="space-y-4 border-t border-border pt-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between"><div><h2 className="font-serif text-2xl font-semibold">Catering</h2><p className="text-sm text-muted-foreground">Deliveries and pickups, kept separate from venue events.</p></div>
         <Button asChild variant="outline"><Link to={`${cBase}/leads`}><UserPlus className="mr-2 h-4 w-4" />New catering lead</Link></Button></div>
+      <div className="grid min-w-0 gap-4 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
+        <Card><CardContent className="p-6">
+          <div className="flex items-start justify-between"><div><p className="text-lg font-semibold">Catering load</p><p className="text-xs text-muted-foreground">How the catering work is spread</p></div><span className="rounded-full border border-border px-3 py-1 text-xs">{cUp.length} upcoming jobs</span></div>
+          <div className="mt-6 flex flex-col items-center gap-8 sm:flex-row">
+            <div className="relative h-40 w-40 shrink-0"><svg viewBox="0 0 100 100" className="-rotate-90"><circle cx="50" cy="50" r="40" fill="none" stroke="hsl(var(--muted))" strokeWidth="8" />
+              {cRing.map((r, i) => { const len = (r.n / cTotal) * C; const el = <circle key={i} cx="50" cy="50" r="40" fill="none" stroke={r.c} strokeWidth="8" strokeDasharray={`${len} ${C - len}`} strokeDashoffset={-cOff} />; cOff += len; return el; })}</svg>
+              <div className="absolute inset-0 flex flex-col items-center justify-center"><span className="text-3xl font-semibold">{cUp.length}</span><span className="text-xs text-muted-foreground">Upcoming jobs</span></div></div>
+            <div className="w-full space-y-4">{[["Today", cToday.length, cRing[0].c], ["Next 7 days", cWeek.length, cRing[1].c], ["Further out", cLater.length, cRing[2].c]].map(([l, n, c]: any) => <div key={l}>
+              <div className="flex items-baseline justify-between text-sm"><span><span className="mr-2 text-2xl font-semibold">{n}</span><span className="text-muted-foreground">{l}</span></span><span className="text-xs">{Math.round((n / cTotal) * 100)}%</span></div>
+              <div className="mt-1 h-1.5 rounded-full bg-muted"><div className="h-full rounded-full" style={{ width: `${(n / cTotal) * 100}%`, background: c }} /></div></div>)}</div>
+          </div>
+        </CardContent></Card>
+      </div>
       <div className="grid min-w-0 gap-4 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
         <div className="grid gap-4 sm:grid-cols-2">
           <Stat title="Catering today" sub={format(new Date(), "EEE d MMM")} value={cToday.length} unit="jobs scheduled" icon={UtensilsCrossed} link="View catering bookings" to={`${cBase}/bookings`}>{cToday[0] ? `${to12(String(cToday[0].start_time).slice(0, 5))} · ${cToday[0].event_name || "Catering"}` : "Nothing on today"}</Stat>
