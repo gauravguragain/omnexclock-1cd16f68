@@ -99,6 +99,13 @@
       "when": 1790239643415,
       "tag": "0013_crm_lead_stakeholders",
       "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1790239957462,
+      "tag": "0014_allow_stakeholder_type_option",
+      "breakpoints": true
     }
   ]
 }
