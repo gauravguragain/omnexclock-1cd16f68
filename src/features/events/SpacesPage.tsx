@@ -144,10 +144,18 @@ export default function SpacesPage() {
   };
 
   const openGallery = (space: Row) => {
-    const paths = space.photo_paths || [];
+    const paths = Array.from(new Set([coverPath(space), ...(space.photo_paths || [])].filter(Boolean)));
     const initial = Math.max(0, paths.indexOf(coverPath(space)));
     setGalleryIndex(initial);
-    setGallerySpace(space);
+    setGallerySpace({ ...space, photo_paths: paths });
+  };
+
+  const addGalleryPhotos = () => {
+    const space = gallerySpace;
+    if (!space) return;
+    setGallerySpace(null);
+    openEditor(space);
+    window.setTimeout(() => inputRef.current?.click(), 100);
   };
 
   const galleryPaths = (gallerySpace?.photo_paths || []) as string[];
@@ -165,9 +173,10 @@ export default function SpacesPage() {
     </div>
     {shown.length ? <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
       {shown.map(space => <Card key={space.id} className="overflow-hidden">
-        <Button type="button" variant="ghost" onClick={() => (space.photo_paths?.length ? openGallery(space) : openEditor(space))} className="group relative block h-auto aspect-[16/10] w-full overflow-hidden rounded-none bg-muted p-0 text-left hover:bg-muted" aria-label={space.photo_paths?.length ? `Open ${space.name} photo gallery` : `Add photos for ${space.name}`}>
+        <Button type="button" variant="ghost" onClick={() => ((space.photo_paths?.length || space.cover_photo_path) ? openGallery(space) : openEditor(space))} className="group relative block h-auto aspect-[16/10] w-full cursor-pointer overflow-hidden rounded-none bg-muted p-0 text-left hover:bg-muted" aria-label={(space.photo_paths?.length || space.cover_photo_path) ? `Open ${space.name} photo gallery` : `Add photos for ${space.name}`}>
           {coverUrl(space) ? <img src={coverUrl(space)} alt={`${space.name} cover`} className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.03]" /> : <span className="flex h-full flex-col items-center justify-center gap-2 text-muted-foreground"><Building2 className="h-10 w-10" /><span className="text-sm">Add venue photos</span></span>}
           {!!space.photo_paths?.length && <Badge className="absolute bottom-3 right-3 gap-1 bg-background/90 text-foreground shadow-sm hover:bg-background"><Images className="h-3.5 w-3.5" />{space.photo_paths.length}</Badge>}
+           {coverUrl(space) && <span className="absolute inset-x-0 bottom-0 flex items-center justify-center gap-2 bg-background/85 py-2 text-xs font-medium text-foreground opacity-0 transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100"><Images className="h-3.5 w-3.5" />View gallery</span>}
           {space.active === false && <Badge variant="secondary" className="absolute left-3 top-3">Archived</Badge>}
         </Button>
         <CardContent className="space-y-4 p-5">
@@ -194,8 +203,8 @@ export default function SpacesPage() {
       </form>
     </DialogContent></Dialog>
 
-    <Dialog open={!!gallerySpace} onOpenChange={open => !open && setGallerySpace(null)}><DialogContent className="max-w-5xl overflow-hidden p-0"><DialogHeader className="px-5 pt-5"><DialogTitle className="font-serif text-2xl">{gallerySpace?.name}</DialogTitle></DialogHeader>
-      {galleryPaths.length > 0 && <div className="space-y-3 px-5 pb-5"><div className="relative flex aspect-[16/10] items-center justify-center overflow-hidden rounded-md bg-muted"><img src={signedUrls[galleryPaths[galleryIndex]]} alt={`${gallerySpace?.name} photo ${galleryIndex + 1}`} className="h-full w-full object-contain" />{galleryPaths.length > 1 && <><Button type="button" size="icon" variant="secondary" className="absolute left-3" onClick={() => moveGallery(-1)} aria-label="Previous photo"><ChevronLeft className="h-5 w-5" /></Button><Button type="button" size="icon" variant="secondary" className="absolute right-3" onClick={() => moveGallery(1)} aria-label="Next photo"><ChevronRight className="h-5 w-5" /></Button></>}</div>
+    <Dialog open={!!gallerySpace} onOpenChange={open => !open && setGallerySpace(null)}><DialogContent className="w-[calc(100vw-1.5rem)] max-w-6xl overflow-hidden p-0"><DialogHeader className="flex-row items-center justify-between gap-3 px-5 pt-5 pr-12"><DialogTitle className="font-serif text-2xl">{gallerySpace?.name}</DialogTitle><Button type="button" size="sm" onClick={addGalleryPhotos}><ImagePlus className="mr-2 h-4 w-4" />Add photos</Button></DialogHeader>
+      {galleryPaths.length > 0 && <div className="space-y-3 px-5 pb-5"><div className="relative flex h-[60vh] min-h-72 max-h-[760px] items-center justify-center overflow-hidden rounded-md bg-muted"><img src={signedUrls[galleryPaths[galleryIndex]]} alt={`${gallerySpace?.name} photo ${galleryIndex + 1}`} className="h-full w-full object-contain" />{galleryPaths.length > 1 && <><Button type="button" size="icon" variant="secondary" className="absolute left-3" onClick={() => moveGallery(-1)} aria-label="Previous photo"><ChevronLeft className="h-5 w-5" /></Button><Button type="button" size="icon" variant="secondary" className="absolute right-3" onClick={() => moveGallery(1)} aria-label="Next photo"><ChevronRight className="h-5 w-5" /></Button></>}</div>
         <div className="flex gap-2 overflow-x-auto pb-1">{galleryPaths.map((path, index) => <Button key={path} type="button" variant="ghost" onClick={() => setGalleryIndex(index)} className={`h-16 w-24 shrink-0 overflow-hidden rounded-md border-2 p-0 ${index === galleryIndex ? "border-primary" : "border-transparent"}`} aria-label={`View photo ${index + 1}`}><img src={signedUrls[path]} alt="" className="h-full w-full object-cover" /></Button>)}</div><p className="text-center text-xs text-muted-foreground">{galleryIndex + 1} of {galleryPaths.length}</p></div>}
     </DialogContent></Dialog>
   </div>;
