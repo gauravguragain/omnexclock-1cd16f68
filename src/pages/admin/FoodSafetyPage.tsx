@@ -298,13 +298,7 @@ export default function FoodSafetyPage() {
         <Input placeholder="manager@example.com, chef@example.com" value={settings.alert_emails.join(", ")} onChange={(e) => setSettings((s) => ({ ...s, alert_emails: e.target.value.split(",").map((x) => x.trim()).filter(Boolean) }))} />
         <p className="text-xs text-muted-foreground">Admins also get in-app notifications. Each form can add its own emails and switch alert types in the Form Editor.</p>
       </CardContent></Card>
-      <Card className="lg:col-span-2"><CardHeader className="pb-2"><CardTitle className="text-base">Supervisors</CardTitle></CardHeader><CardContent>
-        <p className="text-sm text-muted-foreground mb-3">Supervisors can fill in forms and edit saved entries (with a reason).</p>
-        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-2 max-h-72 overflow-auto">{employees.map((e) => (
-          <label key={e.id} className="flex items-center gap-2 text-sm"><Checkbox checked={settings.supervisor_employee_ids.includes(e.id)} onCheckedChange={(v) => setSettings((s) => ({ ...s, supervisor_employee_ids: v ? [...s.supervisor_employee_ids, e.id] : s.supervisor_employee_ids.filter((x) => x !== e.id) }))} />{e.name}<span className="text-xs text-muted-foreground">{e.department}</span></label>
-        ))}</div>
-      </CardContent></Card>
-      <div className="lg:col-span-2"><Button onClick={async () => { const { error } = await supabase.from("fsl_settings").upsert({ business_id: bid!, ...settings, updated_at: new Date().toISOString() }); error ? toast.error(error.message) : toast.success("Settings saved"); }}>Save settings</Button></div>
+      <div className="lg:col-span-2"><Button onClick={async () => { const { error } = await supabase.from("fsl_settings").upsert({ business_id: bid!, alert_emails: settings.alert_emails, supervisor_employee_ids: [], updated_at: new Date().toISOString() }); error ? toast.error(error.message) : toast.success("Settings saved"); }}>Save settings</Button></div>
     </div>
   );
 
