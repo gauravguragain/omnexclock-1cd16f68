@@ -1876,6 +1876,7 @@ export type Database = {
           sales_person_phone: string | null
           sent_at: string | null
           service_schedule: Json
+          service_schedule_foh: Json
           setup_items: string[]
           setup_notes: string | null
           share_token: string
@@ -1911,6 +1912,7 @@ export type Database = {
           sales_person_phone?: string | null
           sent_at?: string | null
           service_schedule?: Json
+          service_schedule_foh?: Json
           setup_items?: string[]
           setup_notes?: string | null
           share_token?: string
@@ -1946,6 +1948,7 @@ export type Database = {
           sales_person_phone?: string | null
           sent_at?: string | null
           service_schedule?: Json
+          service_schedule_foh?: Json
           setup_items?: string[]
           setup_notes?: string | null
           share_token?: string

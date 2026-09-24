@@ -1,0 +1,1 @@
+alter table public.crm_runsheets add column if not exists service_schedule_foh jsonb not null default '[]'::jsonb;
