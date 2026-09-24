@@ -1,2 +1,0 @@
-DROP POLICY IF EXISTS "venue photos read" ON storage.objects;
-CREATE POLICY "venue photos read" ON storage.objects FOR SELECT TO authenticated USING (bucket_id = 'venue-photos' AND public.can_access_crm(((storage.foldername(name))[1])::uuid));

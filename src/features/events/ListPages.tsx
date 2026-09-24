@@ -2,7 +2,6 @@ import { useMemo, useState } from "react";
 import { useCrmData } from "@/features/sales/useCrmData";
 import { useEventsData, type Row } from "./useEventsData";
 import SimpleList from "./SimpleList";
-import SpacesCards from "./SpacesCards";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { format } from "date-fns";
@@ -66,5 +65,7 @@ export function SpacesPage() {
   const month = format(new Date(), "yyyy-MM");
   const thisMonth = useMemo(() => (r: Row) => crm.bookings.filter(b => (b.venue_space_id === r.id || b.venue_space === r.name) && String(b.event_date).startsWith(month) && b.status !== "cancelled").length, [crm.bookings, month]);
   if (!d.business) return null;
-  return <SpacesCards businessId={d.business.id} rows={d.venues} refresh={d.refresh} eventsThisMonth={thisMonth} />;
+  return <SimpleList title="Spaces" subtitle="Halls and rooms, their capacity and the layouts they suit." table="crm_venue_spaces" businessId={d.business.id} rows={d.venues} refresh={d.refresh} archivable
+    fields={[{ key: "name", label: "Space name", required: true }, { key: "capacity", label: "Holds (guests)", type: "number" }, { key: "layouts", label: "Layouts", type: "tags", placeholder: "Banquet, Cocktail, Theatre" }, { key: "description", label: "Description" }]}
+    columns={[{ label: "Space", render: r => r.name }, { label: "Holds", render: r => r.capacity || "—" }, { label: "Layouts", render: r => <div className="flex flex-wrap gap-1">{(r.layouts || []).map((l: string) => <Badge key={l} variant="outline">{l}</Badge>)}</div> }, { label: "Events this month", render: r => thisMonth(r) }]} />;
 }

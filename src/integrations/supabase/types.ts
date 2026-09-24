@@ -2317,13 +2317,11 @@ export type Database = {
           active: boolean
           business_id: string
           capacity: number | null
-          cover_url: string | null
           created_at: string
           description: string | null
           id: string
           layouts: string[]
           name: string
-          photos: string[]
           sort_order: number
           updated_at: string
         }
@@ -2331,13 +2329,11 @@ export type Database = {
           active?: boolean
           business_id: string
           capacity?: number | null
-          cover_url?: string | null
           created_at?: string
           description?: string | null
           id?: string
           layouts?: string[]
           name: string
-          photos?: string[]
           sort_order?: number
           updated_at?: string
         }
@@ -2345,13 +2341,11 @@ export type Database = {
           active?: boolean
           business_id?: string
           capacity?: number | null
-          cover_url?: string | null
           created_at?: string
           description?: string | null
           id?: string
           layouts?: string[]
           name?: string
-          photos?: string[]
           sort_order?: number
           updated_at?: string
         }
