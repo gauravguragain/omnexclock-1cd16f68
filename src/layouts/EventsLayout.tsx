@@ -4,14 +4,14 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useBusiness } from "@/contexts/BusinessContext";
 import { Button } from "@/components/ui/button";
 import { useSessionGuard } from "@/hooks/useSessionGuard";
-import { BarChart3, BookOpen, CalendarDays, ChefHat, ClipboardList, Contact, GlassWater, Home, LayoutDashboard, ListFilter, LogOut, Menu, PartyPopper, PlusCircle, Settings, Truck, UserPlus, Users, Warehouse, X, CalendarCheck, Utensils } from "lucide-react";
+import { BarChart3, BookOpen, CalendarDays, ChefHat, ClipboardList, Contact, GlassWater, Home, LayoutDashboard, ListFilter, LogOut, Menu, PartyPopper, PlusCircle, Settings, Truck, UserPlus, Users, Warehouse, X, CalendarCheck, Utensils, UserCheck } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const SECTIONS: { title: string; items: { to: string; label: string; icon: any }[] }[] = [
   { title: "", items: [{ to: "", label: "Dashboard", icon: LayoutDashboard }] },
   { title: "Leads", items: [{ to: "leads/events", label: "Event leads", icon: UserPlus }, { to: "leads/catering", label: "Catering leads", icon: Utensils }, { to: "pipeline", label: "Pipeline", icon: ListFilter }] },
   { title: "Events", items: [{ to: "events", label: "Events", icon: PartyPopper }, { to: "catering-bookings", label: "Catering bookings", icon: Truck }, { to: "calendar", label: "Calendar", icon: CalendarDays }, { to: "inspections", label: "Inspections", icon: CalendarCheck }, { to: "tasks", label: "Tasks", icon: ClipboardList }] },
-  { title: "People", items: [{ to: "customers", label: "Customers", icon: Users }, { to: "stakeholders", label: "Stakeholders", icon: Contact }] },
+  { title: "People", items: [{ to: "customers", label: "Customers", icon: Users }, { to: "coordinators", label: "Coordinators", icon: UserCheck }, { to: "stakeholders", label: "Stakeholders & vendors", icon: Contact }] },
   { title: "Catering", items: [{ to: "menu-books", label: "Menu books", icon: BookOpen }, { to: "dishes", label: "Dishes", icon: ChefHat }, { to: "drinks", label: "Drinks", icon: GlassWater }] },
   { title: "Venue", items: [{ to: "spaces", label: "Spaces", icon: Warehouse }] },
   { title: "", items: [{ to: "reports", label: "Reports", icon: BarChart3 }, { to: "settings", label: "Settings", icon: Settings }] },

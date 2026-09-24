@@ -27,10 +27,16 @@ export function CustomersPage() {
   </>;
 }
 
-const STAKE_TYPES = [{ value: "vendor", label: "Vendor" }, { value: "kitchen", label: "Kitchen" }, { value: "coordinator", label: "Coordinator" }, { value: "sales", label: "Sales" }, { value: "supplier", label: "Supplier" }];
+const STAKE_TYPES = [{ value: "vendor", label: "Vendor" }, { value: "decorator", label: "Decorator" }, { value: "dj", label: "DJ / Entertainment" }, { value: "photographer", label: "Photographer" }, { value: "florist", label: "Florist" }, { value: "kitchen", label: "Kitchen" }, { value: "supplier", label: "Supplier" }, { value: "sales", label: "Sales" }, { value: "other", label: "Other" }];
+export function CoordinatorsPage() {
+  const d = useEventsData(); if (!d.business) return null;
+  return <SimpleList title="Coordinators" subtitle="The people who run events and catering jobs on the day. Pick one when booking — their name and number print on the run sheet." table="crm_stakeholders" businessId={d.business.id} rows={d.stakeholders.filter(r => r.stakeholder_type === "coordinator")} refresh={d.refresh} archivable nameKey="full_name" defaults={{ stakeholder_type: "coordinator" }}
+    fields={[{ key: "full_name", label: "Name", required: true }, { key: "position", label: "Position" }, { key: "phone", label: "Phone" }, { key: "email", label: "Email", type: "email" }, { key: "notes", label: "Notes" }]}
+    columns={[{ label: "Name", render: r => r.full_name }, { label: "Position", render: r => r.position || "—" }, { label: "Phone", render: r => r.phone || "—" }, { label: "Email", render: r => r.email || "—" }]} />;
+}
 export function StakeholdersPage() {
   const d = useEventsData(); if (!d.business) return null;
-  return <SimpleList title="Stakeholders" subtitle="The vendors, kitchen staff and coordinators the venue works with, and how to reach them." table="crm_stakeholders" businessId={d.business.id} rows={d.stakeholders} refresh={d.refresh} archivable nameKey="full_name" filterKey="stakeholder_type" filterOptions={STAKE_TYPES}
+  return <SimpleList title="Stakeholders" subtitle="Vendors, decorators, DJs, photographers and suppliers the venue works with. Attach them to a lead from its Stakeholders tab." table="crm_stakeholders" businessId={d.business.id} rows={d.stakeholders.filter(r => r.stakeholder_type !== "coordinator")} refresh={d.refresh} archivable nameKey="full_name" filterKey="stakeholder_type" filterOptions={STAKE_TYPES}
     fields={[{ key: "full_name", label: "Name", required: true }, { key: "position", label: "Position" }, { key: "stakeholder_type", label: "Type", type: "select", options: STAKE_TYPES }, { key: "phone", label: "Phone" }, { key: "email", label: "Email", type: "email" }, { key: "notes", label: "Notes" }]}
     columns={[{ label: "Name", render: r => r.full_name }, { label: "Position", render: r => r.position || "—" }, { label: "Type", render: r => <Badge variant="outline">{prettyCrmValue(r.stakeholder_type)}</Badge> }, { label: "Phone", render: r => r.phone || "—" }, { label: "Email", render: r => r.email || "—" }]} />;
 }

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { useNavigate, useParams, useSearchParams } from "react-router-dom";
+import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
@@ -28,14 +28,13 @@ export default function CreateEventWizard({ kind }: { kind: "event" | "catering"
   const [cust, setCust] = useState({ full_name: "", phone: "", email: "", address: "" });
   const [f, setF] = useState({ event_name: "", event_type: "", date: "", start: "18:00", end: "23:00", adults: "", kids: "", venue: "", location: "", notes: "" });
   const [saving, setSaving] = useState(false);
-  const [staff, setStaff] = useState<{ id: string; name: string; phone: string | null; job_title: string | null }[]>([]);
   const [coordId, setCoordId] = useState("");
   const [pkgs, setPkgs] = useState<{ key: string; packageId: string; dishes: Record<string, string[]> }[]>([{ key: "p1", packageId: "", dishes: {} }]);
-  useEffect(() => { if (!crm.business) return; supabase.from("employees").select("id,name,phone,job_title").eq("business_id", crm.business.id).eq("active", true).order("name").then(({ data }) => setStaff((data as any) || [])); }, [crm.business?.id]);
   const itemName = (ci: any) => ci.dish_id ? ev.dishes.find(x => x.id === ci.dish_id)?.name : ev.drinks.find(x => x.id === ci.drink_id)?.name;
   const courseOpts = (courseId: string) => ev.courseItems.filter(ci => ci.course_id === courseId).map(ci => ({ id: ci.id, name: itemName(ci) as string })).filter(o => o.name);
   const activePkgs = ev.packages.filter(p => p.active);
   const updPkg = (key: string, patch: any) => setPkgs(ps => ps.map(p => p.key === key ? { ...p, ...patch } : p));
+  const staff = ev.stakeholders.filter(s => s.stakeholder_type === "coordinator" && s.active !== false).map(s => ({ id: s.id, name: s.full_name, phone: s.phone, job_title: s.position }));
   const coord = staff.find(s => s.id === coordId);
   const set = (k: keyof typeof f, v: string) => setF(p => ({ ...p, [k]: v }));
 
@@ -116,7 +115,7 @@ export default function CreateEventWizard({ kind }: { kind: "event" | "catering"
       </button>; })}{!ev.venues.length && <p className="text-sm text-muted-foreground">Add halls under Venue → Spaces first.</p>}</div>
     </Step> : <><Step n="03" title="Service location" sub="Where the food is being served — there is no hall to choose."><Label>Service location *</Label><Input value={f.location} onChange={e => set("location", e.target.value)} placeholder="Full address" /></Step>
     <Step n="04" title="Coordinator" sub="Optional. Printed on the event order as the event's coordinator, and their number as the onsite contact.">
-      <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">{staff.map(s => <button key={s.id} type="button" onClick={() => setCoordId(coordId === s.id ? "" : s.id)} className={cn("rounded-md border p-3 text-left text-sm", coordId === s.id ? "border-primary bg-primary/5" : "border-border hover:bg-muted/40")}><p className="font-medium">{s.name}</p><p className="text-xs text-muted-foreground">{s.job_title || "Staff"}{s.phone ? ` · ${s.phone}` : ""}</p></button>)}{!staff.length && <p className="text-sm text-muted-foreground">No active staff found.</p>}</div>
+      <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">{staff.map(s => <button key={s.id} type="button" onClick={() => setCoordId(coordId === s.id ? "" : s.id)} className={cn("rounded-md border p-3 text-left text-sm", coordId === s.id ? "border-primary bg-primary/5" : "border-border hover:bg-muted/40")}><p className="font-medium">{s.name}</p><p className="text-xs text-muted-foreground">{s.job_title || "Coordinator"}{s.phone ? ` · ${s.phone}` : ""}</p></button>)}{!staff.length && <p className="text-sm text-muted-foreground">No coordinators yet. Add them under People → <Link to={`/b/${businessCode}/events/coordinators`} className="text-primary underline">Coordinators</Link>.</p>}</div>
     </Step>
     <Step n="05" title="Catering" sub="The packages the client ordered, and the dishes they chose. Prints on the run sheet.">
       <div className="space-y-4">{pkgs.map((cp, i) => { const courses = ev.courses.filter(c => c.package_id === cp.packageId); return <div key={cp.key} className="space-y-3 rounded-md border p-4">

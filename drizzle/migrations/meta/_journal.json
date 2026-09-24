@@ -92,6 +92,13 @@
       "when": 1790238326678,
       "tag": "0012_remove_legacy_dish_courses",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1790239643415,
+      "tag": "0013_crm_lead_stakeholders",
+      "breakpoints": true
     }
   ]
 }
