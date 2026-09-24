@@ -40,7 +40,7 @@ export default function SpacesPage() {
   }), [d.venues, search, status]);
 
   useEffect(() => {
-    const paths = Array.from(new Set(d.venues.flatMap(space => space.photo_paths || []).filter(Boolean))) as string[];
+    const paths = Array.from(new Set(d.venues.flatMap(space => [space.cover_photo_path, ...(space.photo_paths || [])]).filter(Boolean))) as string[];
     if (!paths.length) { setSignedUrls({}); return; }
     let active = true;
     void Promise.all(paths.map(async path => {
