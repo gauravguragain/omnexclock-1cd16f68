@@ -94,7 +94,7 @@ export default function GuestMenuPage() {
   const courses: Course[] = useMemo(() => (data?.package?.courses || []).filter((c: Course) => c.dishes.length), [data]);
 
   const submit = async () => {
-    const missing = courses.find((c) => (picks[c.id] || []).some((v) => !v));
+    const missing = courses.find((c) => (picks[c.id] || []).some((v) => !v.replace(/^(veg|nonveg):/, "")));
     if (missing && !confirm(`You haven't chosen every dish for ${missing.name}. Submit anyway?`)) return;
     setSaving(true);
     const clean = Object.fromEntries(Object.entries(picks).map(([k, v]) => [k, v.map(x => x.replace(/^(veg|nonveg):/, "")).filter(Boolean)]));
