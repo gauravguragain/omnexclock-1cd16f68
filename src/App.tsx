@@ -156,7 +156,7 @@ const App = () => (
                     <Route path="settings" element={<EventsPages.Settings />} />
                   </Route>
 
-                  <Route path="/b/:businessCode/catering" element={<EventsLayout mode="catering" />}>
+                  <Route path="/b/:businessCode/catering" element={<EventsLayout />}>
                     <Route index element={<Navigate to="leads" replace />} />
                     <Route path="leads" element={<EventsPages.CateringLeads />} />
                     <Route path="leads/:id" element={<EventsPages.CateringLeadDetail />} />
