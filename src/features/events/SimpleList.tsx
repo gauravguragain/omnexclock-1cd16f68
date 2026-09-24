@@ -8,6 +8,8 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Archive, ArchiveRestore, Pencil, Plus, Search, Trash2 } from "lucide-react";
 import type { Row } from "./useEventsData";
+import OptionSelect from "@/features/sales/OptionSelect";
+const isOther = (v: string) => /^others?$/i.test(v.trim());
 
 export type Field = { key: string; label: string; type?: "text" | "number" | "select" | "email" | "tags"; options?: { value: string; label: string }[]; required?: boolean; placeholder?: string };
 
@@ -65,7 +67,8 @@ export default function SimpleList({ title, subtitle, table, businessId, rows, f
     <Dialog open={open} onOpenChange={setOpen}><DialogContent className="sm:max-w-lg"><DialogHeader><DialogTitle className="font-serif text-2xl">{editing ? "Edit" : "New"} {title.replace(/s$/, "").toLowerCase()}</DialogTitle></DialogHeader>
       <form key={editing?.id || "new"} onSubmit={save} className="grid gap-3">
         {fields.map(fd => <div key={fd.key} className="space-y-1.5"><Label>{fd.label}{fd.required && " *"}</Label>
-          {fd.type === "select" ? <select name={fd.key} defaultValue={editing?.[fd.key] ?? fd.options?.[0]?.value} className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm">{fd.options?.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}</select>
+          {fd.type === "select" && fd.options?.some(o => isOther(o.value) || isOther(o.label)) ? <OptionSelect name={fd.key} required={fd.required} options={fd.options.filter(o => !isOther(o.value) && !isOther(o.label))} defaultValue={editing?.[fd.key] ?? fd.options.find(o => !isOther(o.value))?.value ?? ""} />
+          : fd.type === "select" ? <select name={fd.key} defaultValue={editing?.[fd.key] ?? fd.options?.[0]?.value} className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm">{fd.options?.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}</select>
             : <Input name={fd.key} type={fd.type === "number" ? "number" : fd.type === "email" ? "email" : "text"} required={fd.required} placeholder={fd.placeholder} defaultValue={fd.type === "tags" ? (editing?.[fd.key] || []).join(", ") : editing?.[fd.key] ?? ""} />}</div>)}
         <DialogFooter><Button type="button" variant="outline" onClick={() => setOpen(false)}>Cancel</Button><Button>Save</Button></DialogFooter>
       </form></DialogContent></Dialog>
