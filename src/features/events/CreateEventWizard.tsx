@@ -26,7 +26,7 @@ export default function CreateEventWizard({ kind }: { kind: "event" | "catering"
   const leadId = params.get("lead");
   const [mode, setMode] = useState<"existing" | "new">("new"); const [customerId, setCustomerId] = useState(""); const [cSearch, setCSearch] = useState("");
   const [cust, setCust] = useState({ full_name: "", phone: "", email: "", address: "" });
-  const [f, setF] = useState({ event_name: "", event_type: "", date: "", start: "18:00", end: "23:00", adults: "", kids: "", venue: "", location: "", notes: "" });
+  const [f, setF] = useState({ event_name: "", event_type: "", date: "", start: "18:00", end: "23:00", adults: "", kids: "", venue: "", location: "", notes: "", method: "delivery" as "delivery" | "pickup" });
   const [saving, setSaving] = useState(false);
   const [coordId, setCoordId] = useState("");
   const [pkgs, setPkgs] = useState<{ key: string; packageId: string; dishes: Record<string, string[]> }[]>([{ key: "p1", packageId: "", dishes: {} }]);
@@ -56,7 +56,7 @@ export default function CreateEventWizard({ kind }: { kind: "event" | "catering"
   const customers = ev.customers.filter(c => `${c.full_name} ${c.phone || ""} ${c.email || ""}`.toLowerCase().includes(cSearch.toLowerCase())).slice(0, 8);
   const custOk = mode === "existing" ? !!customerId : !!(cust.full_name && cust.phone && cust.email);
   const cateringOk = kind === "event" || pkgs.some(p => p.packageId);
-  const ready = cateringOk && custOk && f.event_name && f.date && Number(f.adults) > 0 && (kind === "event" ? !!f.venue : !!f.location);
+  const ready = cateringOk && custOk && f.event_name && f.date && Number(f.adults) > 0 && (kind === "event" ? !!f.venue : (f.method === "pickup" || !!f.location));
 
   const save = async () => {
     if (!crm.business || !ready) return; setSaving(true);
@@ -66,9 +66,9 @@ export default function CreateEventWizard({ kind }: { kind: "event" | "catering"
       const c = mode === "new" ? cust : ev.customers.find(x => x.id === cid)!;
       let lid = leadId;
       if (lid) { const { error } = await supabase.from("crm_leads").update({ customer_id: cid, lead_outcome: "confirmed", lead_kind: kind, service_location: f.location || null } as any).eq("id", lid); if (error) throw error; }
-      else { const { data, error } = await supabase.from("crm_leads").insert({ business_id: bid, full_name: c.full_name, phone: c.phone || null, email: c.email || null, source: "direct", event_type: f.event_type || "other", preferred_dates: [f.date], estimated_guest_count: total, venue_space: venue?.name || null, status: "menu_selected", lead_kind: kind, service_location: f.location || null, customer_id: cid, lead_outcome: "confirmed", created_by: user?.id } as any).select().single(); if (error) throw error; lid = data.id; }
+      else { const { data, error } = await supabase.from("crm_leads").insert({ business_id: bid, full_name: c.full_name, phone: c.phone || null, email: c.email || null, source: "direct", event_type: kind === "catering" ? "catering" : (f.event_type || "other"), preferred_dates: [f.date], estimated_guest_count: total, venue_space: venue?.name || null, status: "menu_selected", lead_kind: kind, service_location: f.location || null, customer_id: cid, lead_outcome: "confirmed", created_by: user?.id } as any).select().single(); if (error) throw error; lid = data.id; }
       const { data: order } = await supabase.rpc("crm_next_event_order" as any, { _business_id: bid });
-      const { data: bk, error } = await supabase.from("crm_bookings").insert({ business_id: bid, lead_id: lid, customer_id: cid, booking_kind: kind, event_name: f.event_name, event_type: f.event_type || null, event_date: f.date, start_time: f.start, end_time: f.end, duration_minutes: minutesBetween(f.start, f.end), guest_count: total, adults: Number(f.adults) || 0, kids: Number(f.kids) || 0, venue_space: kind === "event" ? venue!.name : "Off-site catering", venue_space_id: kind === "event" ? venue!.id : null, service_location: f.location || null, notes: f.notes || null, status: "confirmed", event_order_number: order as any, created_by: user?.id } as any).select("id").single();
+      const { data: bk, error } = await supabase.from("crm_bookings").insert({ business_id: bid, lead_id: lid, customer_id: cid, booking_kind: kind, event_name: f.event_name, event_type: kind === "catering" ? "catering" : (f.event_type || null), fulfilment_method: kind === "catering" ? f.method : "delivery", event_date: f.date, start_time: f.start, end_time: f.end, duration_minutes: minutesBetween(f.start, f.end), guest_count: total, adults: Number(f.adults) || 0, kids: Number(f.kids) || 0, venue_space: kind === "event" ? venue!.name : "Off-site catering", venue_space_id: kind === "event" ? venue!.id : null, service_location: kind === "catering" && f.method === "pickup" ? null : (f.location || null), notes: f.notes || null, status: "confirmed", event_order_number: order as any, created_by: user?.id } as any).select("id").single();
       if (error) throw error;
       const chosen = pkgs.filter(p => p.packageId);
       if (chosen.length) {
@@ -80,13 +80,13 @@ export default function CreateEventWizard({ kind }: { kind: "event" | "catering"
           ev.courses.filter(c => c.package_id === cp.packageId).forEach(c => (cp.dishes[c.id] || []).forEach(ciId => { const o = courseOpts(c.id).find(x => x.id === ciId); if (o) rows.push({ business_id: bid, selection_id: sel.id, item_name: o.name, course: String(c.name).trim(), notes: `pkg:${cp.key}` }); })); });
         if (rows.length) await supabase.from("crm_menu_selection_items").insert(rows);
       }
-      if (coord || f.notes) await supabase.from("crm_runsheets").insert({ business_id: bid, lead_id: lid!, booking_id: bk?.id, event_order_number: order as any, adult_guests: Number(f.adults) || 0, kids_guests: Number(f.kids) || 0, event_coordinator: coord?.name || null, event_coordinator_phone: coord?.phone || null, onsite_contact_name: coord?.name || null, onsite_contact_phone: coord?.phone || null, client_notes: f.notes || null, status: "draft", created_by: user?.id } as any);
+      if (kind === "catering" || coord || f.notes) await supabase.from("crm_runsheets").insert({ business_id: bid, lead_id: lid!, booking_id: bk?.id, event_order_number: order as any, adult_guests: Number(f.adults) || 0, kids_guests: Number(f.kids) || 0, event_coordinator: coord?.name || null, event_coordinator_phone: coord?.phone || null, onsite_contact_name: coord?.name || null, onsite_contact_phone: coord?.phone || null, client_notes: f.notes || null, status: "draft", created_by: user?.id } as any);
       toast.success(kind === "event" ? "Event created" : "Catering booking created");
       nav(`/b/${businessCode}/events/${kind === "event" ? "events" : "catering-bookings"}`);
     } catch (e: any) { toast.error(e.message); } finally { setSaving(false); }
   };
 
-  const checks: [string, boolean][] = [["Customer", custOk], ["Booking & schedule", !!(f.event_name && f.date && Number(f.adults) > 0)], [kind === "event" ? "Venue" : "Service location", kind === "event" ? !!f.venue : !!f.location], ...(kind === "catering" ? [["Coordinator", true], ["Catering", cateringOk]] as [string, boolean][] : []), ["Notes", true]];
+  const checks: [string, boolean][] = [["Customer", custOk], ["Booking & schedule", !!(f.event_name && f.date && Number(f.adults) > 0)], [kind === "event" ? "Venue" : "Delivery or pickup", kind === "event" ? !!f.venue : (f.method === "pickup" || !!f.location)], ...(kind === "catering" ? [["Coordinator", true], ["Catering", cateringOk]] as [string, boolean][] : []), ["Notes", true]];
   const custName = mode === "existing" ? ev.customers.find(x => x.id === customerId)?.full_name : cust.full_name;
   const Sum = ({ l, v, empty }: { l: string; v?: any; empty: string }) => <div className="border-t pt-2"><p className="text-xs uppercase tracking-widest text-muted-foreground">{l}</p><p className={cn("text-sm", !v && "text-muted-foreground")}>{v || empty}</p></div>;
   return <div className="mx-auto grid max-w-6xl gap-6 lg:grid-cols-[1fr_300px]"><div className="space-y-5">
@@ -99,9 +99,9 @@ export default function CreateEventWizard({ kind }: { kind: "event" | "catering"
     <Step n="02" title="Event & schedule" sub="What is being held, when, and how many are coming.">
       <div className="grid gap-3 sm:grid-cols-2">
         <div className="space-y-1.5"><Label>Event name *</Label><Input value={f.event_name} onChange={e => set("event_name", e.target.value)} /></div>
-        <div className="space-y-1.5"><Label>Event type</Label><select value={f.event_type} onChange={e => set("event_type", e.target.value)} className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"><option value="">Choose type</option>{crm.options.filter(o => o.option_type === "event_type" && o.active).map(o => <option key={o.id} value={o.value}>{o.label}</option>)}</select></div>
+        {kind === "event" && <div className="space-y-1.5"><Label>Event type</Label><select value={f.event_type} onChange={e => set("event_type", e.target.value)} className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"><option value="">Choose type</option>{crm.options.filter(o => o.option_type === "event_type" && o.active).map(o => <option key={o.id} value={o.value}>{o.label}</option>)}</select></div>}
         <div className="space-y-1.5"><Label>Date *</Label><DateField value={f.date} onChange={v => set("date", v)} /></div>
-        <div className="grid grid-cols-2 gap-2"><div className="space-y-1.5"><Label>Start *</Label><TimeDropdownPicker value={f.start} onChange={v => set("start", v)} /></div><div className="space-y-1.5"><Label>End *</Label><TimeDropdownPicker value={f.end} onChange={v => set("end", v)} /></div></div>
+        <div className="grid grid-cols-2 gap-2"><div className="space-y-1.5"><Label>{kind === "catering" ? (f.method === "pickup" ? "Pickup from *" : "Delivery from *") : "Start *"}</Label><TimeDropdownPicker value={f.start} onChange={v => set("start", v)} /></div><div className="space-y-1.5"><Label>{kind === "catering" ? (f.method === "pickup" ? "Pickup until *" : "Delivery until *") : "End *"}</Label><TimeDropdownPicker value={f.end} onChange={v => set("end", v)} /></div></div>
         <div className="space-y-1.5"><Label>Adults *</Label><Input type="number" min="0" value={f.adults} onChange={e => set("adults", e.target.value)} /></div>
         <div className="space-y-1.5"><Label>Children</Label><Input type="number" min="0" value={f.kids} onChange={e => set("kids", e.target.value)} /></div>
       </div>
@@ -113,7 +113,10 @@ export default function CreateEventWizard({ kind }: { kind: "event" | "catering"
         {c.length ? <p className="mt-2 flex items-center gap-1 text-xs text-destructive"><AlertTriangle className="h-3 w-3" />Booked: {c.map(b => b.event_name || "event").join(", ")}</p> : f.date ? <p className="mt-2 flex items-center gap-1 text-xs text-primary"><CheckCircle2 className="h-3 w-3" />Free</p> : null}
         {over && <p className="mt-1 text-xs text-destructive">Over capacity by {total - v.capacity}</p>}
       </button>; })}{!ev.venues.length && <p className="text-sm text-muted-foreground">Add halls under Venue → Spaces first.</p>}</div>
-    </Step> : <><Step n="03" title="Service location" sub="Where the food is being served — there is no hall to choose."><Label>Service location *</Label><Input value={f.location} onChange={e => set("location", e.target.value)} placeholder="Full address" /></Step>
+    </Step> : <><Step n="03" title="Delivery or pickup" sub="Will we deliver the food, or will the client collect it?">
+      <div className="mb-3 flex gap-2">{(["delivery", "pickup"] as const).map(m => <Button key={m} type="button" size="sm" variant={f.method === m ? "default" : "outline"} onClick={() => setF(p => ({ ...p, method: m }))}>{m === "delivery" ? "Delivery" : "Pickup"}</Button>)}</div>
+      {f.method === "delivery" ? <><Label>Delivery address *</Label><Input value={f.location} onChange={e => set("location", e.target.value)} placeholder="Full address" /></> : <p className="text-sm text-muted-foreground">The client collects from the venue during the pickup window.</p>}
+    </Step>
     <Step n="04" title="Coordinator" sub="Optional. Printed on the event order as the event's coordinator, and their number as the onsite contact.">
       <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">{staff.map(s => <button key={s.id} type="button" onClick={() => setCoordId(coordId === s.id ? "" : s.id)} className={cn("rounded-md border p-3 text-left text-sm", coordId === s.id ? "border-primary bg-primary/5" : "border-border hover:bg-muted/40")}><p className="font-medium">{s.name}</p><p className="text-xs text-muted-foreground">{s.job_title || "Coordinator"}{s.phone ? ` · ${s.phone}` : ""}</p></button>)}{!staff.length && <p className="text-sm text-muted-foreground">No coordinators yet. Add them under People → <Link to={`/b/${businessCode}/events/coordinators`} className="text-primary underline">Coordinators</Link>.</p>}</div>
     </Step>
@@ -132,8 +135,8 @@ export default function CreateEventWizard({ kind }: { kind: "event" | "catering"
   </div>
   <aside className="space-y-4 lg:sticky lg:top-4 lg:self-start"><Card><CardContent className="space-y-3 p-5">
     <div className="flex items-center justify-between"><p className="font-serif text-xl">Event summary</p><span className="text-xs text-primary">Live</span></div>
-    <Sum l="Reference" v="" empty="Assigned on save" /><Sum l="Customer" v={custName} empty="Not chosen yet" /><Sum l="Event" v={f.event_name && `${f.event_name}${f.date ? ` · ${f.date} · ${to12(f.start)}–${to12(f.end)}` : ""}`} empty="Not named yet" />
-    <Sum l={kind === "event" ? "Venue" : "Service location"} v={kind === "event" ? venue?.name : f.location} empty="Not entered yet" /><Sum l="Guests" v={total ? `${f.adults || 0} adults · ${f.kids || 0} children` : ""} empty="Not set yet" />
+    <Sum l="Reference" v="" empty="Assigned on save" /><Sum l="Customer" v={custName} empty="Not chosen yet" /><Sum l="Event" v={f.event_name && `${f.event_name}${f.date ? ` · ${f.date} · ${kind === "catering" ? (f.method === "pickup" ? "pickup " : "delivery ") : ""}${to12(f.start)}–${to12(f.end)}` : ""}`} empty="Not named yet" />
+    <Sum l={kind === "event" ? "Venue" : f.method === "pickup" ? "Pickup" : "Delivery to"} v={kind === "event" ? venue?.name : f.method === "pickup" ? "Client collects" : f.location} empty="Not entered yet" /><Sum l="Guests" v={total ? `${f.adults || 0} adults · ${f.kids || 0} children` : ""} empty="Not set yet" />
     {kind === "catering" && <><Sum l="Coordinator" v={coord?.name} empty="None" /><Sum l="Catering" v={pkgs.filter(p => p.packageId).map(p => ev.packages.find(x => x.id === p.packageId)?.name).join(", ")} empty="No catering added" /></>}
     <Sum l="Notes" v={f.notes} empty="No notes added" />
   </CardContent></Card>
