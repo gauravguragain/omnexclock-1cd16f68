@@ -218,6 +218,13 @@
       "when": 1790274406864,
       "tag": "0030_align_partial_course_diet_limits",
       "breakpoints": true
+    },
+    {
+      "idx": 31,
+      "version": "7",
+      "when": 1790274719403,
+      "tag": "0031_add_package_item_per_person_surcharges",
+      "breakpoints": true
     }
   ]
 }

@@ -1750,6 +1750,7 @@ export type Database = {
           created_at: string
           dish_id: string | null
           drink_id: string | null
+          extra_price_per_head: number
           id: string
           protein_options: string[]
         }
@@ -1759,6 +1760,7 @@ export type Database = {
           created_at?: string
           dish_id?: string | null
           drink_id?: string | null
+          extra_price_per_head?: number
           id?: string
           protein_options?: string[]
         }
@@ -1768,6 +1770,7 @@ export type Database = {
           created_at?: string
           dish_id?: string | null
           drink_id?: string | null
+          extra_price_per_head?: number
           id?: string
           protein_options?: string[]
         }
