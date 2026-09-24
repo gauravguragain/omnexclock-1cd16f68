@@ -76,6 +76,23 @@ export default function CateringDetailPage({ view }: { view: "lead" | "booking" 
     await crm.refresh();
     return data;
   };
+  const openBkEdit = () => {
+    if (!booking) return;
+    setBk({ event_name: booking.event_name || "", event_date: booking.event_date || "", start_time: String(booking.start_time || "18:00").slice(0, 5), end_time: String(booking.end_time || bookingEnd(booking) || "23:00").slice(0, 5), fulfilment_method: booking.fulfilment_method || "delivery", service_location: booking.service_location || "", adults: String(booking.adults ?? booking.guest_count ?? ""), kids: String(booking.kids ?? 0), notes: booking.notes || "" });
+    setEditBkOpen(true);
+  };
+  const saveBk = async () => {
+    if (!booking) return;
+    if (!bk.event_name || !bk.event_date || !(Number(bk.adults) > 0) || (bk.fulfilment_method === "delivery" && !bk.service_location)) { toast.error("Name, date, adults and delivery address are required."); return; }
+    setBkSaving(true);
+    const total = (Number(bk.adults) || 0) + (Number(bk.kids) || 0);
+    const { error } = await supabase.from("crm_bookings").update({ event_name: bk.event_name, event_date: bk.event_date, start_time: bk.start_time, end_time: bk.end_time, duration_minutes: minutesBetween(bk.start_time, bk.end_time), fulfilment_method: bk.fulfilment_method, service_location: bk.fulfilment_method === "pickup" ? null : bk.service_location || null, adults: Number(bk.adults) || 0, kids: Number(bk.kids) || 0, guest_count: total, notes: bk.notes || null } as any).eq("id", booking.id);
+    setBkSaving(false);
+    if (error) { toast.error(error.message); return; }
+    toast.success("Catering booking updated.");
+    setEditBkOpen(false);
+    await crm.refresh();
+  };
 
   return <div className="mx-auto max-w-5xl space-y-5">
     <Button variant="ghost" asChild className="px-0"><Link to={view === "lead" ? `${base}/leads` : `${base}/bookings`}><ArrowLeft className="mr-2 h-4 w-4" />{view === "lead" ? "Catering leads" : "Catering bookings"}</Link></Button>
