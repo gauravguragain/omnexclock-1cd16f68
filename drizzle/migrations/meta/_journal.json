@@ -85,6 +85,13 @@
       "when": 1790234236619,
       "tag": "0011_events_workspace",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1790238326678,
+      "tag": "0012_remove_legacy_dish_courses",
+      "breakpoints": true
     }
   ]
 }
