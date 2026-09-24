@@ -41,7 +41,7 @@ export default function EventsList({ kind }: { kind: "event" | "catering" }) {
   return <div className="space-y-5">
     <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
       <div><p className="text-xs font-medium uppercase tracking-widest text-primary">Events</p><h1 className="font-serif text-3xl font-semibold">{kind === "event" ? "Events" : "Catering bookings"}</h1><p className="text-sm text-muted-foreground">{kind === "event" ? "Every function the venue has agreed to host, soonest first." : "Catering jobs with no hall hire, soonest first."}</p></div>
-      <Button asChild><Link to={`/b/${businessCode}/events/${kind === "event" ? "leads/events" : "leads/catering"}`}><Plus className="mr-2 h-4 w-4" />Start with a lead</Link></Button>
+      {kind === "catering" ? <Button asChild><Link to={`/b/${businessCode}/events/catering-bookings/new`}><Plus className="mr-2 h-4 w-4" />New catering booking</Link></Button> : <Button asChild><Link to={`/b/${businessCode}/events/leads/events`}><Plus className="mr-2 h-4 w-4" />Start with a lead</Link></Button>}
     </div>
     <div className="flex flex-wrap items-center gap-2">{["upcoming", "past", "cancelled", "all"].map(t => <Button key={t} size="sm" variant={tab === t ? "default" : "outline"} className="capitalize" onClick={() => setTab(t)}>{t} ({t === "all" ? mine.length : mine.filter(b => bucket(b) === t).length})</Button>)}
       <div className="relative ml-auto w-full max-w-xs"><Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" /><Input className="h-9 pl-9" placeholder="Search name, customer, reference or hall" value={search} onChange={e => setSearch(e.target.value)} /></div></div>
