@@ -207,11 +207,11 @@ export default function RunsheetTab({ lead, booking, options, onSaved }: {
     setExtraSetupItems((v) => Array.from(new Set([...v, label])));
     setSetupItems((v) => Array.from(new Set([...v, label])));
     setNewSetupItem("");
-    const { error } = await supabase.from("crm_options").insert({
+    const { error } = await supabase.from("crm_options").upsert({
       business_id: lead.business_id, option_type: "setup_item", label,
       value: label.toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_|_$/g, ""),
-      sort_order: 900, created_by: user?.id,
-    } as any);
+      sort_order: 900, created_by: user?.id, active: true,
+    } as any, { onConflict: "business_id,option_type,value" });
     toast.success(error ? "Added to this runsheet" : "Added to your setup list");
   };
 
