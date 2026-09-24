@@ -103,6 +103,6 @@ export default function EventDetailPage({ kind }: { kind: "event" | "catering" }
         <Section icon={History} title="Record"><Row k="Event Order" v={b.event_order_number} /><Row k="Run sheet" v={rs ? `Revision ${rs.revision || 1}${rs.sent_at ? " · issued" : " · draft"}` : "Not started"} /><Row k="Created" v={format(new Date(b.created_at), "d MMM yyyy, h:mm a")} /></Section>
       </div>
     </div>
-    {lead && <LeadDetailDialog lead={lead} open={workflow} onOpenChange={setWorkflow} options={crm.options} interactions={crm.interactions} inspections={crm.inspections} tasks={crm.tasks} menuItems={crm.menuItems} booking={b} businessName={crm.business.name} onSaved={crm.refresh} />}
+    {lead && <LeadDetailDialog lead={lead} open={workflow} onOpenChange={setWorkflow} initialTab={workflowTab} options={crm.options} interactions={crm.interactions} inspections={crm.inspections} tasks={crm.tasks} menuItems={crm.menuItems} booking={b} businessName={crm.business.name} onSaved={crm.refresh} />}
   </div>;
 }
