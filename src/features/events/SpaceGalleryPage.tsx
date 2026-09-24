@@ -70,12 +70,12 @@ export default function SpaceGalleryPage() {
   };
 
   if (!d.business) return null;
-  if (!space) return <div className="space-y-4 py-16 text-center"><p className="font-medium">Venue space not found</p><Button variant="outline" onClick={() => navigate("../spaces")}><ArrowLeft className="mr-2 h-4 w-4" />Back to venue spaces</Button></div>;
+  if (!space) return <div className="space-y-4 py-16 text-center"><p className="font-medium">Venue space not found</p><Button variant="outline" onClick={() => navigate(`/b/${window.location.pathname.split("/")[2]}/events/spaces`)}><ArrowLeft className="mr-2 h-4 w-4" />Back to venue spaces</Button></div>;
 
   return <div className="space-y-5">
     <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
       <div>
-        <Button variant="ghost" size="sm" className="-ml-2 mb-1" onClick={() => navigate("../spaces")}><ArrowLeft className="mr-2 h-4 w-4" />Venue spaces</Button>
+        <Button variant="ghost" size="sm" className="-ml-2 mb-1" onClick={() => navigate(`/b/${window.location.pathname.split("/")[2]}/events/spaces`)}><ArrowLeft className="mr-2 h-4 w-4" />Venue spaces</Button>
         <h1 className="font-serif text-3xl font-semibold">{space.name}</h1>
         <p className="text-sm text-muted-foreground">{paths.length ? `${paths.length} photo${paths.length === 1 ? "" : "s"} — select any photo to view it full screen.` : "No photos yet."}</p>
       </div>
