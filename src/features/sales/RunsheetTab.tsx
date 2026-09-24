@@ -41,6 +41,8 @@ export default function RunsheetTab({ lead, booking, options, onSaved }: {
 }) {
   const { user } = useAuth();
   const { business } = useBusiness();
+  const [stakeholders, setStakeholders] = useState<any[]>([]);
+  useEffect(() => { if (!business?.id) return; (supabase.from("crm_stakeholders" as any) as any).select("*").eq("business_id", business.id).eq("active", true).order("full_name").then(({ data }: any) => setStakeholders(data || [])); }, [business?.id]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [runsheet, setRunsheet] = useState<any>(null);
