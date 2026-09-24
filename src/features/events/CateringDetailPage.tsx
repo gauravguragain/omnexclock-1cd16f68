@@ -120,5 +120,21 @@ export default function CateringDetailPage({ view }: { view: "lead" | "booking" 
     </div>
     <LeadFormDialog open={editOpen} onOpenChange={setEditOpen} businessId={crm.business.id} options={crm.options} lead={lead} leads={crm.leads} onSaved={crm.refresh} defaultKind="catering" lockedKind="catering" />
     {booking && rs && <SendRunsheetDialog mode={rs.sent_at ? "resend" : "issue"} onIssue={issue} open={sendOpen} onOpenChange={setSendOpen} rs={rs} lead={lead} booking={booking} businessName={crm.business.name} />}
+    <Dialog open={editBkOpen} onOpenChange={setEditBkOpen}><DialogContent className="max-h-[90vh] max-w-lg overflow-y-auto"><DialogHeader><DialogTitle>Edit catering booking</DialogTitle></DialogHeader>
+      <div className="space-y-4">
+        <div><Label>Booking name</Label><Input value={bk.event_name} onChange={e => setBk(p => ({ ...p, event_name: e.target.value }))} /></div>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div><Label>Date</Label><DateField value={bk.event_date} onChange={v => setBk(p => ({ ...p, event_date: v }))} /></div>
+          <div><Label>Service</Label><Select value={bk.fulfilment_method} onValueChange={v => setBk(p => ({ ...p, fulfilment_method: v }))}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="delivery">Delivery</SelectItem><SelectItem value="pickup">Pickup</SelectItem></SelectContent></Select></div>
+          <div><Label>{bk.fulfilment_method === "pickup" ? "Pickup from" : "Delivery from"}</Label><TimeDropdownPicker value={bk.start_time} onChange={v => setBk(p => ({ ...p, start_time: v }))} /></div>
+          <div><Label>{bk.fulfilment_method === "pickup" ? "Pickup by" : "Delivery by"}</Label><TimeDropdownPicker value={bk.end_time} onChange={v => setBk(p => ({ ...p, end_time: v }))} /></div>
+          <div><Label>Adults</Label><Input type="number" min={1} value={bk.adults} onChange={e => setBk(p => ({ ...p, adults: e.target.value }))} /></div>
+          <div><Label>Kids</Label><Input type="number" min={0} value={bk.kids} onChange={e => setBk(p => ({ ...p, kids: e.target.value }))} /></div>
+        </div>
+        {bk.fulfilment_method === "delivery" && <div><Label>Delivery address</Label><Input value={bk.service_location} onChange={e => setBk(p => ({ ...p, service_location: e.target.value }))} /></div>}
+        <div><Label>Notes</Label><Textarea rows={3} value={bk.notes} onChange={e => setBk(p => ({ ...p, notes: e.target.value }))} /></div>
+        <div className="flex justify-end gap-2"><Button variant="outline" onClick={() => setEditBkOpen(false)}>Cancel</Button><Button onClick={saveBk} disabled={bkSaving}>{bkSaving ? "Saving…" : "Save changes"}</Button></div>
+      </div>
+    </DialogContent></Dialog>
   </div>;
 }
