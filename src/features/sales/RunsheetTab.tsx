@@ -10,12 +10,13 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { TimeDropdownPicker } from "@/components/TimeDropdownPicker";
-import { CheckCircle2, Circle, Download, Plus, Save, Send, Sparkles, X } from "lucide-react";
+import { CheckCircle2, Circle, Eye, Mail, Plus, Save, Send, Sparkles, X } from "lucide-react";
 import { toast } from "sonner";
 import { format, subDays } from "date-fns";
 import type { CrmLead, CrmOption } from "./types";
 import { prettyCrmValue } from "./types";
-import { buildRunsheetPdf, type RunsheetScheduleLine } from "@/lib/runsheetPdf";
+import SendRunsheetDialog from "@/features/events/SendRunsheetDialog";
+type RunsheetScheduleLine = { time: string; label: string; detail?: string };
 
 const FALLBACK_SETUP_ITEMS = [
   "Black tablecloths", "White tablecloths", "Red carpet", "Smoke machine", "Cold sparkles", "Dry ice",
@@ -45,6 +46,7 @@ export default function RunsheetTab({ lead, booking, options, onSaved }: {
   useEffect(() => { if (!business?.id) return; (supabase.from("crm_stakeholders" as any) as any).select("*").eq("business_id", business.id).eq("active", true).order("full_name").then(({ data }: any) => setStakeholders(data || [])); }, [business?.id]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [sendOpen, setSendOpen] = useState(false);
   const [runsheet, setRunsheet] = useState<any>(null);
   const [menu, setMenu] = useState<{ selection: any; items: any[]; catalogue: Record<string, string> }>({ selection: null, items: [], catalogue: {} });
 
@@ -240,48 +242,11 @@ export default function RunsheetTab({ lead, booking, options, onSaved }: {
     onSaved();
   };
 
-  const buildPdf = (revision: number) => buildRunsheetPdf({
-    businessName: business?.name || "",
-    businessPhone: business?.phone, businessEmail: business?.email,
-    logoUrl: business?.logo_url || "/regal-logo.png",
-    eventTitle: `${prettyCrmValue(lead.event_type)} — ${lead.full_name}`,
-    eventTypeLabel: prettyCrmValue(lead.event_type),
-    eventDateLabel: booking?.event_date ? format(new Date(`${booking.event_date}T00:00:00`), "EEEE, d MMMM yyyy") : "Date to be confirmed",
-    startTime: prettyTime(startTime), endTime: prettyTime(endTime),
-    venueSpace: prettyCrmValue(booking?.venue_space || lead.venue_space || "—"),
-    adultGuests: Number(form.adult_guests || 0), kidsGuests: Number(form.kids_guests || 0),
-    clientName: lead.full_name, clientPhone: lead.phone,
-    salesPerson: form.sales_person, salesPersonPhone: form.sales_person_phone,
-    eventCoordinator: form.event_coordinator, eventCoordinatorPhone: form.event_coordinator_phone,
-    onsiteContactName: form.onsite_contact_name, onsiteContactPhone: form.onsite_contact_phone,
-    eventOrderNumber: form.event_order_number ? `${form.event_order_number} · v${revision}` : `v${revision}`,
-    bookingReference: form.booking_reference,
-    schedule: schedule.map(({ time, label, detail }) => ({ time: prettyTime(time), label, detail })),
-    menuByCategory, packageName, corkageNote, liveStalls,
-    kidsMenuNote: Number(form.kids_guests || 0) > 0 ? menuByCategory.find((g) => g.category === "Kids Menu")?.items.join(", ") || `${form.kids_guests} kids` : null,
-    beveragePackage: menu.selection?.beverage_package ? prettyCrmValue(menu.selection.beverage_package) : null,
-    dietaryRequirements: menu.selection?.dietary_requirements, allergies: menu.selection?.allergies,
-    specialRequests: [form.special_requests, form.client_notes].filter(Boolean).join(" · "),
-    setupItems, setupNotes: [form.setup_notes, form.ops_notes].filter(Boolean).join("\n"),
-    accessTime: accessEnabled && form.access_time ? prettyTime(form.access_time) : null,
-  });
-
-  const fileName = (revision: number) => `Runsheet-v${revision}-${lead.full_name.replace(/\s+/g, "-")}-${booking?.event_date || "draft"}.pdf`;
-
-  const download = async () => {
-    const revision = Number(runsheet?.revision || 1);
-    const pdf = await buildPdf(revision);
-    pdf.save(fileName(revision));
-  };
-
   const issueRunsheet = async () => {
     setSaving(true);
     const revision = Number(runsheet?.revision || 1);
     const saved = await persist({ status: "sent", sent_at: new Date().toISOString(), generated_at: new Date().toISOString(), revision });
     if (!saved) { setSaving(false); return; }
-
-    const pdf = await buildPdf(revision);
-    pdf.save(fileName(revision));
 
     const audience = form.distributed_to || "the operations team";
     await supabase.from("crm_interactions").insert({
@@ -340,7 +305,8 @@ export default function RunsheetTab({ lead, booking, options, onSaved }: {
           <div className="flex flex-wrap gap-2">
             <Button size="sm" variant="outline" onClick={buildFromBooking}><Sparkles className="mr-2 h-4 w-4" />Build from booking</Button>
             <Button size="sm" onClick={save} disabled={saving}><Save className="mr-2 h-4 w-4" />Save</Button>
-            <Button size="sm" variant="outline" onClick={download}><Download className="mr-2 h-4 w-4" />Preview PDF</Button>
+            {runsheet?.id && <Button size="sm" variant="outline" onClick={() => window.open(`/b/${window.location.pathname.split("/")[2]}/events/runsheet/${runsheet.id}`, "_blank")}><Eye className="mr-2 h-4 w-4" />View run sheet</Button>}
+            {runsheet?.sent_at && <Button size="sm" variant="outline" onClick={() => setSendOpen(true)}><Mail className="mr-2 h-4 w-4" />Email run sheet</Button>}
             <Button size="sm" variant="secondary" onClick={issueRunsheet} disabled={saving || !readyToSend} title={readyToSend ? "" : "Complete the checklist first"}>
               <Send className="mr-2 h-4 w-4" />{runsheet?.status === "sent" ? "Re-issue" : "Issue runsheet"}
             </Button>
@@ -453,6 +419,7 @@ export default function RunsheetTab({ lead, booking, options, onSaved }: {
           <div className="space-y-1.5"><Label>Special requests</Label><Textarea rows={3} value={form.special_requests} onChange={set("special_requests")} placeholder="Host has requested tea…" /></div>
         </div>
       </section>
+      {runsheet?.id && <SendRunsheetDialog open={sendOpen} onOpenChange={setSendOpen} rs={runsheet} lead={lead} booking={booking} businessName={business?.name || ""} />}
     </div>
   );
 }
