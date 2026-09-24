@@ -128,6 +128,7 @@ const App = () => (
                     <Route path="pipeline" element={<EventsPages.Pipeline />} />
                     <Route path="events" element={<EventsPages.Events />} />
                     <Route path="events/:id" element={<EventsPages.EventDetail />} />
+                    <Route path="runsheet/:runsheetId" element={<EventsPages.RunsheetView />} />
                     <Route path="events/new" element={<Navigate to="../leads/events" replace />} />
                     <Route path="catering-bookings" element={<EventsPages.CateringBookings />} />
                     <Route path="catering-bookings/:id" element={<EventsPages.CateringDetail />} />
