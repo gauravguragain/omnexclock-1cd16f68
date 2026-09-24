@@ -676,6 +676,8 @@
 
 @media print {
   html, body, #root { min-height: 0 !important; height: auto !important; background: hsl(var(--background)); }
+  body { margin: 0 !important; }
+  .runsheet-preview, .runsheet-page { break-inside: avoid; }
   .runsheet-preview { height: auto !important; overflow: visible; }
   .runsheet-page { width: 190mm; transform: none !important; }
   .runsheet-monochrome { width: 190mm; min-height: 277mm; padding: 0; print-color-adjust: exact; -webkit-print-color-adjust: exact; }
