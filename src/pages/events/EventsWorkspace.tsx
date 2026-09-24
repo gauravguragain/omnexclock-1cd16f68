@@ -1,3 +1,4 @@
+import EventsDashboard from "@/features/events/EventsDashboard";
 import SalesMarketingPage from "@/pages/admin/SalesMarketingPage";
 import LeadsBoard from "@/features/events/LeadsBoard";
 import EventsList from "@/features/events/EventsList";
@@ -17,7 +18,7 @@ function CalendarPage() {
 }
 
 export const EventsPages = {
-  Dashboard: () => <SalesMarketingPage view="dashboard" />,
+  Dashboard: EventsDashboard,
   Pipeline: () => <SalesMarketingPage view="pipeline" />,
   Inspections: () => <SalesMarketingPage view="inspections" />,
   Tasks: () => <SalesMarketingPage view="tasks" />,
