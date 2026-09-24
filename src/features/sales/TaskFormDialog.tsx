@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { TimeDropdownPicker } from "@/components/TimeDropdownPicker";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { buildAusTimestamp, getAusDateString } from "@/lib/dateUtils";
+import { ausToday, buildAusTimestamp } from "@/lib/dateUtils";
 import DateField from "./DateField";
 import type { CrmLead } from "./types";
 
@@ -20,14 +20,14 @@ export default function TaskFormDialog({ open, onOpenChange, businessId, leads, 
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [leadId, setLeadId] = useState("none");
-  const [date, setDate] = useState(getAusDateString());
+  const [date, setDate] = useState(ausToday());
   const [time, setTime] = useState("09:00");
   const [priority, setPriority] = useState("medium");
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
     if (!open) return;
-    setTitle(""); setDescription(""); setLeadId("none"); setDate(getAusDateString()); setTime("09:00"); setPriority("medium");
+    setTitle(""); setDescription(""); setLeadId("none"); setDate(ausToday()); setTime("09:00"); setPriority("medium");
   }, [open]);
 
   const submit = async (event: FormEvent) => {
