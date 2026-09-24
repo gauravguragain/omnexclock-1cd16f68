@@ -47,7 +47,7 @@ export function RunsheetDocument({ rs, lead, b, items, selection, businessName }
     .reduce((m: Record<string, any[]>, i) => { const c = i.course || "Other"; (m[c] ||= []).push(i); return m; }, {});
   const schedule: any[] = rs.service_schedule || [];
   const fohSchedule: any[] = rs.service_schedule_foh || [];
-  const normCourse = (v: string) => v.trim().toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/s$/, "");
+  const normCourse = (v: string) => v.trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/s$/, "");
   const matchesCourse = (s: any, course: string) => { const c = normCourse(course); const l = normCourse(String(s.label || "")); return l && (l.includes(c) || c.includes(l)); };
   const courseTime = (course: string) => { const hit = schedule.find((s: any) => matchesCourse(s, course)); return hit?.time ? to12(hit.time) : ""; };
   const otherSchedule = schedule.filter((s: any) => !Object.keys(courses).some((c) => matchesCourse(s, c)));
