@@ -1610,10 +1610,12 @@ export type Database = {
           created_at: string
           created_by: string | null
           description: string | null
+          flat_price: number | null
           id: string
           image_url: string | null
           label: string
           option_type: string
+          price_per_head: number | null
           sort_order: number
           updated_at: string
           value: string
@@ -1624,10 +1626,12 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           description?: string | null
+          flat_price?: number | null
           id?: string
           image_url?: string | null
           label: string
           option_type: string
+          price_per_head?: number | null
           sort_order?: number
           updated_at?: string
           value: string
@@ -1638,10 +1642,12 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           description?: string | null
+          flat_price?: number | null
           id?: string
           image_url?: string | null
           label?: string
           option_type?: string
+          price_per_head?: number | null
           sort_order?: number
           updated_at?: string
           value?: string
