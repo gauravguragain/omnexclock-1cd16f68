@@ -11,7 +11,7 @@ export const DISH_COURSES=["Entrees (Veg)","Entrees (Non-veg)","Veg Mains","Non-
 import type { CrmInspection, CrmInteraction, CrmLead, CrmOption, CrmTask } from "./types"; import { CRM_LEAD_STATUSES, prettyCrmValue } from "./types"; import { buildBookingConfirmationPdf } from "@/lib/bookingConfirmationPdf"; import RunsheetTab from "./RunsheetTab";
 
 export default function LeadDetailDialog({ lead, open, onOpenChange, options, interactions, inspections, tasks, menuItems, booking, businessName, onSaved }:{ lead:CrmLead|null; open:boolean; onOpenChange:(v:boolean)=>void; options:CrmOption[]; interactions:CrmInteraction[]; inspections:CrmInspection[]; tasks:CrmTask[]; menuItems:any[]; booking:any; businessName:string; onSaved:()=>void }) {
-  const { user } = useAuth(); const [busy,setBusy]=useState(false); const [ai,setAi]=useState<any>(null); const [selectedMenu,setSelectedMenu]=useState<string[]>([]); const [customItems,setCustomItems]=useState<{key:string;name:string;pricePerHead:number;flatPrice:number}[]>([]); const [guestOverride,setGuestOverride]=useState<number|null>(null); const [draft,setDraft]=useState({name:"",pricePerHead:"",flatPrice:""});
+  const { user } = useAuth(); const [busy,setBusy]=useState(false); const [ai,setAi]=useState<any>(null); const [selectedMenu,setSelectedMenu]=useState<string[]>([]); const [customItems,setCustomItems]=useState<{key:string;name:string;pricePerHead:number;flatPrice:number}[]>([]); const [guestOverride,setGuestOverride]=useState<number|null>(null);
   const [dishes,setDishes]=useState<{key:string;course:string;name:string}[]>([]);
   const [bookPackages,setBookPackages]=useState<any[]>([]);
   useEffect(()=>{if(!open||!lead)return;(async()=>{const bid=lead.business_id;const q=(t:string)=>(supabase.from(t as any) as any).select("*").eq("business_id",bid);const[p,b,c,ci,d]=await Promise.all([q("crm_packages").eq("active",true),q("crm_menu_books"),q("crm_package_courses").order("sort_order"),q("crm_package_course_items"),q("crm_dishes")]);setBookPackages((p.data||[]).map((x:any)=>({...x,book:(b.data||[]).find((y:any)=>y.id===x.book_id)?.name||"Menu",courses:(c.data||[]).filter((y:any)=>y.package_id===x.id).map((y:any)=>({...y,dishes:(ci.data||[]).filter((z:any)=>z.course_id===y.id&&z.dish_id).map((z:any)=>(d.data||[]).find((w:any)=>w.id===z.dish_id)).filter(Boolean)}))})));})();},[open,lead?.id]);
@@ -54,11 +54,9 @@ export default function LeadDetailDialog({ lead, open, onOpenChange, options, in
   const analyse=async(notes:string)=>{if(notes.trim().length<10){toast.error("Add more notes first");return;}setBusy(true);const{data,error}=await supabase.functions.invoke("crm-ai-notes",{body:{businessId:lead.business_id,notes}});setBusy(false);if(error)toast.error("Could not analyse notes");else setAi(data);};
   const addInspection=async(e:FormEvent<HTMLFormElement>)=>{e.preventDefault();const f=new FormData(e.currentTarget);if(!insDate){toast.error("Pick an inspection date");return;}if(insEnd<=insStart){toast.error("End time must be after the start time");return;}const start=`${insDate}T${insStart}`;const end=`${insDate}T${insEnd}`;const venue=String(f.get("venue_space"));const conflict=inspections.find(i=>i.venue_space===venue&&i.status!=="cancelled"&&i.starts_at&&i.ends_at&&start<i.ends_at&&end>i.starts_at);if(conflict&&!confirm("This overlaps another inspection in the same venue. Save anyway?"))return;const{error}=await supabase.from("crm_inspections").insert({business_id:lead.business_id,lead_id:lead.id,starts_at:start,ends_at:end,status:"confirmed",venue_space:venue,pre_notes:f.get("notes")?String(f.get("notes")):null,assigned_to:user?.id,created_by:user?.id} as any);if(error)toast.error(error.message);else{await supabase.from("crm_leads").update({status:"inspection_booked"}).eq("id",lead.id);toast.success("Inspection booked");onSaved();}};
   const saveMenu=async(e:FormEvent<HTMLFormElement>)=>{e.preventDefault();const f=new FormData(e.currentTarget);
-    const pendingPackage=draft.name.trim()?[{key:`p${Date.now()}`,name:draft.name.trim(),pricePerHead:Number(draft.pricePerHead||0),flatPrice:Number(draft.flatPrice||0)}]:[];
     const pendingStallName=String((document.querySelector('input[name="live_stall_draft"]') as HTMLInputElement|null)?.value||"").trim();
     const pendingStall=stallsRequired&&pendingStallName&&!liveStalls.some(v=>v.name===pendingStallName)?[{key:`s${Date.now()}`,name:pendingStallName,pricePerHead:Number(stallDraft.pricePerHead||0),flatPrice:Number(stallDraft.flatPrice||0),startTime:stallDraft.startTime,endTime:stallDraft.endTime}]:[];
-    const allCustom=[...customItems,...pendingPackage]; const allStalls=stallsRequired?[...liveStalls,...pendingStall]:[];
-    if(pendingPackage.length){setCustomItems(allCustom);setDraft({name:"",pricePerHead:"",flatPrice:""});}
+    const allCustom=customItems; const allStalls=stallsRequired?[...liveStalls,...pendingStall]:[];
     if(pendingStall.length){setLiveStalls(allStalls);setStallDraft({name:"",pricePerHead:"",flatPrice:"",startTime:"17:30",endTime:"18:30"});}
     const stallsSum=allStalls.reduce((sum,i)=>sum+lineTotal(i.pricePerHead,i.flatPrice),0);
     const grandTotal=chosenItems.reduce((sum,i)=>sum+lineTotal(Number(i.price_per_head||0),Number(i.flat_price||0)),0)+allCustom.reduce((sum,i)=>sum+lineTotal(i.pricePerHead,i.flatPrice),0)+corkageTotal+stallsSum;
@@ -110,14 +108,7 @@ export default function LeadDetailDialog({ lead, open, onOpenChange, options, in
       <section className="rounded-lg border border-dashed border-border p-4">
         <h3 className="font-serif text-lg">Package selection</h3>
         {bookPackages.length>0&&<MenuBookPicker packages={bookPackages} onAdd={loadBookPackage}/>}
-        <p className="text-xs text-muted-foreground">Name the package the client has chosen and the amount per guest — the total is worked out for you.</p>
-        <div className="mt-3 grid gap-2 sm:grid-cols-[2fr_1fr_1fr_auto]">
-          <Input value={draft.name} onChange={e=>setDraft({...draft,name:e.target.value})} placeholder="Package selection e.g. Indian Tier 1"/>
-          <Input value={draft.pricePerHead} onChange={e=>setDraft({...draft,pricePerHead:e.target.value})} type="number" min="0" step="0.01" placeholder="Amount per guest"/>
-          <Input value={draft.flatPrice} onChange={e=>setDraft({...draft,flatPrice:e.target.value})} type="number" min="0" step="0.01" placeholder="$ flat (optional)"/>
-          <Button type="button" variant="secondary" onClick={()=>{if(!draft.name.trim()){toast.error("Name the package first");return;}setCustomItems(v=>[...v,{key:`${Date.now()}`,name:draft.name.trim(),pricePerHead:Number(draft.pricePerHead||0),flatPrice:Number(draft.flatPrice||0)}]);setDraft({name:"",pricePerHead:"",flatPrice:""});}}><Plus className="h-4 w-4"/></Button>
-        </div>
-        {draft.pricePerHead&&<p className="mt-2 text-xs text-muted-foreground">${Number(draft.pricePerHead||0).toFixed(2)} × {guests} guests = ${(Number(draft.pricePerHead||0)*guests+Number(draft.flatPrice||0)).toFixed(2)}</p>}
+        <p className="mt-1 text-xs text-muted-foreground">Pick a menu book and package above — dishes are chosen from each course's dropdown.</p>
       </section>
 
 
