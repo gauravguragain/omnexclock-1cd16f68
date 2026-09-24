@@ -74,7 +74,7 @@ export default function SendRunsheetDialog({ open, onOpenChange, rs, lead, booki
       eventTitle: `${prettyCrmValue(lead.event_type || booking?.event_type || "Event")} — ${lead.full_name}`,
       dateLabel: booking?.event_date ? format(new Date(`${booking.event_date}T00:00:00`), "EEEE, d MMMM yyyy") : "",
       timeLabel: start ? `${to12(start)}${endMin ? ` – ${to12(endMin)}` : ""}` : "",
-      venue: booking?.booking_kind === "catering" ? (booking?.fulfilment_method === "pickup" ? "Client pickup" : `Delivery to ${booking?.service_location || ""}`) : prettyCrmValue(booking?.venue_space || lead.venue_space || ""),
+      venue: prettyCrmValue(booking?.venue_space || lead.venue_space || ""),
       guestsLabel: sheet.adult_guests != null ? `${sheet.adult_guests} adults${sheet.kids_guests ? ` + ${sheet.kids_guests} kids` : ""}` : "",
       eventOrder: sheet.event_order_number ? `${sheet.event_order_number}-${sheet.revision || 1}` : "",
       viewUrl: runsheetPublicUrl(sheet),
