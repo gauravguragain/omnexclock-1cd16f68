@@ -10,7 +10,7 @@ import { cn } from "@/lib/utils";
 const SECTIONS: { title: string; items: { to: string; label: string; icon: any }[] }[] = [
   { title: "", items: [{ to: "", label: "Dashboard", icon: LayoutDashboard }] },
   { title: "Leads", items: [{ to: "leads/events", label: "Event leads", icon: UserPlus }, { to: "leads/catering", label: "Catering leads", icon: Utensils }, { to: "pipeline", label: "Pipeline", icon: ListFilter }] },
-  { title: "Events", items: [{ to: "events", label: "Events", icon: PartyPopper }, { to: "catering-bookings", label: "Catering bookings", icon: Truck }, { to: "calendar", label: "Calendar", icon: CalendarDays }, { to: "events/new", label: "Create event", icon: PlusCircle }, { to: "inspections", label: "Inspections", icon: CalendarCheck }, { to: "tasks", label: "Tasks", icon: ClipboardList }] },
+  { title: "Events", items: [{ to: "events", label: "Events", icon: PartyPopper }, { to: "catering-bookings", label: "Catering bookings", icon: Truck }, { to: "calendar", label: "Calendar", icon: CalendarDays }, { to: "inspections", label: "Inspections", icon: CalendarCheck }, { to: "tasks", label: "Tasks", icon: ClipboardList }] },
   { title: "People", items: [{ to: "customers", label: "Customers", icon: Users }, { to: "stakeholders", label: "Stakeholders", icon: Contact }] },
   { title: "Catering", items: [{ to: "menu-books", label: "Menu books", icon: BookOpen }, { to: "dishes", label: "Dishes", icon: ChefHat }, { to: "drinks", label: "Drinks", icon: GlassWater }] },
   { title: "Venue", items: [{ to: "spaces", label: "Spaces", icon: Warehouse }] },
