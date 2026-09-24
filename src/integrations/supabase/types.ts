@@ -4056,6 +4056,10 @@ export type Database = {
         Args: { _business_code: string; _code: string; _entry: Json }
         Returns: Json
       }
+      get_crm_calendar_token: {
+        Args: { _business_id: string }
+        Returns: string
+      }
       get_employee_business_id: {
         Args: { _employee_id: string }
         Returns: string
