@@ -20,7 +20,7 @@ type CalendarProps = {
   onEdit: (booking: Booking) => void;
 };
 
-const TONES = [
+  const TONES = [
   "bg-primary/15 text-primary",
   "bg-secondary text-secondary-foreground",
   "bg-accent text-accent-foreground",
