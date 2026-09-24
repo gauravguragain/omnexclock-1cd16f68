@@ -11,6 +11,7 @@ export type CrmLead = {
 export type CrmOption = {
   id: string; option_type: string; label: string; value: string; description: string | null;
   image_url: string | null; sort_order: number; active: boolean;
+  price_per_head: number | null; flat_price: number | null;
 };
 
 export type CrmInspection = {

@@ -49,7 +49,7 @@ export default function RunsheetViewPage() {
   const pkgs = items.filter(i => PKG.includes(i.course));
   const stalls = items.filter(i => i.course === "live_stall");
   const kidsRow = items.find(i => i.course === "kids_package");
-  const courses = items.filter(i => !PKG.includes(i.course) && i.course !== "live_stall" && (kidsRow || i.course !== "Kids Menu"))
+  const courses = items.filter(i => !PKG.includes(i.course) && i.course !== "live_stall" && i.course !== "beverage" && (kidsRow || i.course !== "Kids Menu"))
     .reduce((m: Record<string, any[]>, i) => { const c = i.course || "Other"; (m[c] ||= []).push(i); return m; }, {});
   const schedule: any[] = rs.service_schedule || [];
   const setup: string[] = rs.setup_items || [];

@@ -118,7 +118,7 @@ export default function RunsheetTab({ lead, booking, options, onSaved }: {
 
   const menuByCategory = useMemo(() => {
     const groups = new Map<string, string[]>();
-    menu.items.filter((item: any) => !["package", "live_stall", "kids_package", "manual"].includes(item.course)).forEach((item: any) => {
+    menu.items.filter((item: any) => !["package", "live_stall", "kids_package", "manual", "beverage"].includes(item.course)).forEach((item: any) => {
       const category = item.course || (item.menu_item_id ? prettyCrmValue(menu.catalogue[item.menu_item_id] || "other") : "Menu items");
       groups.set(category, [...(groups.get(category) || []), item.item_name]);
     });

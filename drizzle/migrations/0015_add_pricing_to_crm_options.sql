@@ -1,0 +1,1 @@
+ALTER TABLE public.crm_options ADD COLUMN price_per_head numeric, ADD COLUMN flat_price numeric;

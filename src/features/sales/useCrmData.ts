@@ -24,7 +24,7 @@ export function useCrmData() {
       supabase.from("crm_runsheets").select("*").eq("business_id", business.id),
       (supabase.from("crm_venue_spaces" as any) as any).select("*").eq("business_id", business.id).eq("active", true).order("sort_order"),
     ]);
-    setLeads((leadRes.data || []) as CrmLead[]); const spaces = (spaceRes.data || []) as any[]; const baseOpts = (optionRes.data || []) as CrmOption[]; setOptions(spaces.length ? [...baseOpts.filter(o => o.option_type !== "venue_space"), ...spaces.map((v, i) => ({ id: v.id, option_type: "venue_space", label: v.name, value: v.name, description: v.capacity ? `Holds ${v.capacity}` : null, image_url: null, sort_order: i, active: true }))] : baseOpts);
+    setLeads((leadRes.data || []) as CrmLead[]); const spaces = (spaceRes.data || []) as any[]; const baseOpts = (optionRes.data || []) as CrmOption[]; setOptions(spaces.length ? [...baseOpts.filter(o => o.option_type !== "venue_space"), ...spaces.map((v, i) => ({ id: v.id, option_type: "venue_space", label: v.name, value: v.name, description: v.capacity ? `Holds ${v.capacity}` : null, image_url: null, sort_order: i, active: true, price_per_head: null, flat_price: null }))] : baseOpts);
     setInspections((inspectionRes.data || []) as CrmInspection[]); setTasks((taskRes.data || []) as CrmTask[]);
     setInteractions((interactionRes.data || []) as unknown as CrmInteraction[]); setSettings(settingRes.data);
     setBookings(bookingRes.data || []); setMenuItems(menuRes.data || []); setRunsheets(runsheetRes.data || []); setLoading(false);

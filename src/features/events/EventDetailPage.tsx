@@ -48,7 +48,7 @@ export default function EventDetailPage({ kind }: { kind: "event" | "catering" }
   const PKG = ["package", "kids_package", "manual"];
   const pkgs = items.filter(i => PKG.includes(i.course)); const stalls = items.filter(i => i.course === "live_stall");
   const kidsRow = items.find(i => i.course === "kids_package");
-  const courses = items.filter(i => !PKG.includes(i.course) && i.course !== "live_stall" && (kidsRow || i.course !== "Kids Menu")).reduce((m: Record<string, any[]>, i) => { const c = i.course || "Other"; (m[c] ||= []).push(i); return m; }, {});
+  const courses = items.filter(i => !PKG.includes(i.course) && i.course !== "live_stall" && i.course !== "beverage" && (kidsRow || i.course !== "Kids Menu")).reduce((m: Record<string, any[]>, i) => { const c = i.course || "Other"; (m[c] ||= []).push(i); return m; }, {});
   const schedule: any[] = rs?.service_schedule || [];
   const setStatus = async (status: string) => { const { error } = await supabase.from("crm_bookings").update({ status }).eq("id", b.id); if (error) toast.error(error.message); else { toast.success(status === "cancelled" ? "Event cancelled" : "Event restored"); crm.refresh(); } };
 
