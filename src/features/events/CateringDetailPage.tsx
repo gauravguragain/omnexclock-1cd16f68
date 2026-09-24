@@ -157,8 +157,9 @@ export default function CateringDetailPage({ view }: { view: "lead" | "booking" 
     </div>
     <LeadFormDialog open={editOpen} onOpenChange={setEditOpen} businessId={crm.business.id} options={crm.options} lead={lead} leads={crm.leads} onSaved={crm.refresh} defaultKind="catering" lockedKind="catering" />
     {booking && rs && <SendRunsheetDialog mode={rs.sent_at ? "resend" : "issue"} onIssue={issue} open={sendOpen} onOpenChange={setSendOpen} rs={rs} lead={lead} booking={booking} businessName={crm.business.name} />}
-    <Dialog open={editBkOpen} onOpenChange={setEditBkOpen}><DialogContent className="max-h-[90vh] max-w-lg overflow-y-auto"><DialogHeader><DialogTitle>Edit catering booking</DialogTitle></DialogHeader>
-      <div className="space-y-4">
+    <Dialog open={editBkOpen} onOpenChange={setEditBkOpen}><DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto"><DialogHeader><DialogTitle>Edit catering booking</DialogTitle></DialogHeader>
+      <div className="flex gap-2 border-b border-border pb-3">{([["details", "Details"], ["menu", "Menu selection"], ["team", "Team & schedule"]] as const).map(([k, l]) => <Button key={k} size="sm" variant={bkTab === k ? "default" : "outline"} onClick={() => setBkTab(k)}>{l}</Button>)}</div>
+      {bkTab === "details" && <div className="space-y-4">
         <div><Label>Booking name</Label><Input value={bk.event_name} onChange={e => setBk(p => ({ ...p, event_name: e.target.value }))} /></div>
         <div className="grid gap-4 sm:grid-cols-2">
           <div><Label>Date</Label><DateField value={bk.event_date} onChange={v => setBk(p => ({ ...p, event_date: v }))} /></div>
@@ -170,8 +171,34 @@ export default function CateringDetailPage({ view }: { view: "lead" | "booking" 
         </div>
         {bk.fulfilment_method === "delivery" && <div><Label>Delivery address</Label><Input value={bk.service_location} onChange={e => setBk(p => ({ ...p, service_location: e.target.value }))} /></div>}
         <div><Label>Notes</Label><Textarea rows={3} value={bk.notes} onChange={e => setBk(p => ({ ...p, notes: e.target.value }))} /></div>
-        <div className="flex justify-end gap-2"><Button variant="outline" onClick={() => setEditBkOpen(false)}>Cancel</Button><Button onClick={saveBk} disabled={bkSaving}>{bkSaving ? "Saving…" : "Save changes"}</Button></div>
-      </div>
+      </div>}
+      {bkTab === "menu" && <div className="space-y-4">
+        {pkgs.map((p, idx) => { const pk = ev.packages.find(x => x.id === p.packageId); const pCourses = pk ? ev.courses.filter(c => c.package_id === pk.id) : [];
+          return <div key={p.key} className="space-y-3 rounded-lg border border-border p-4">
+            <div className="flex items-center gap-2"><div className="flex-1"><Label>Package</Label><Select value={p.packageId} onValueChange={v => setPkgs(ps => ps.map(x => x.key === p.key ? { ...x, packageId: v, dishes: {} } : x))}><SelectTrigger><SelectValue placeholder="Choose a package" /></SelectTrigger><SelectContent>{ev.packages.filter(x => x.active).map(x => <SelectItem key={x.id} value={x.id}>{x.name}</SelectItem>)}</SelectContent></Select></div>
+              <Button size="sm" variant="ghost" className="mt-5" onClick={() => setPkgs(ps => ps.filter(x => x.key !== p.key))}>Remove</Button></div>
+            {pCourses.map(c => <div key={c.id}><Label>{c.name}{c.choose_count ? ` (choose ${c.choose_count})` : ""}</Label>
+              <div className="mt-1 flex flex-wrap gap-2">{courseOpts(c.id).map(o => { const on = (p.dishes[c.id] || []).includes(o.id); return <Button key={o.id} size="sm" variant={on ? "default" : "outline"} onClick={() => setPkgs(ps => ps.map(x => { if (x.key !== p.key) return x; const cur = x.dishes[c.id] || []; const next = on ? cur.filter(i => i !== o.id) : [...cur, o.id]; return { ...x, dishes: { ...x.dishes, [c.id]: next } }; }))}>{o.name}</Button>; })}</div></div>)}
+          </div>; })}
+        <Button variant="outline" onClick={() => setPkgs(ps => [...ps, { key: `p${Date.now()}`, packageId: "", dishes: {} }])}>Add package</Button>
+        {!pkgs.length && <p className="text-sm text-muted-foreground">No packages selected — add one to choose dishes.</p>}
+      </div>}
+      {bkTab === "team" && <div className="space-y-4">
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div><Label>Coordinator</Label><Select value={team.coordinator || "none"} onValueChange={v => { const s = ev.stakeholders.find(x => x.full_name === v); setTeam(p => ({ ...p, coordinator: v === "none" ? "" : v, coordinator_phone: v === "none" ? "" : (s?.phone || p.coordinator_phone) })); }}><SelectTrigger><SelectValue placeholder="Choose coordinator" /></SelectTrigger><SelectContent><SelectItem value="none">None</SelectItem>{ev.stakeholders.filter(s => s.stakeholder_type === "coordinator" && s.active !== false).map(s => <SelectItem key={s.id} value={s.full_name}>{s.full_name}</SelectItem>)}</SelectContent></Select></div>
+          <div><Label>Coordinator phone</Label><Input value={team.coordinator_phone} onChange={e => setTeam(p => ({ ...p, coordinator_phone: e.target.value }))} /></div>
+          <div><Label>Delivery / pickup contact</Label><Input value={team.onsite_name} onChange={e => setTeam(p => ({ ...p, onsite_name: e.target.value }))} /></div>
+          <div><Label>Contact phone</Label><Input value={team.onsite_phone} onChange={e => setTeam(p => ({ ...p, onsite_phone: e.target.value }))} /></div>
+        </div>
+        {([["Food serving schedule", foodRows, setFoodRows], ["FOH service schedule", fohRows, setFohRows]] as const).map(([title, rows, setRows]) => <div key={title} className="space-y-2">
+          <div className="flex items-center justify-between"><Label>{title}</Label><Button size="sm" variant="outline" onClick={() => setRows([...rows, { time: "", label: "" }] as any)}>Add row</Button></div>
+          {rows.map((r, i) => <div key={i} className="flex items-center gap-2"><div className="w-36"><TimeDropdownPicker value={r.time} onChange={v => setRows(rows.map((x, xi) => xi === i ? { ...x, time: v } : x) as any)} /></div><Input className="flex-1" placeholder="e.g. Entrees served" value={r.label} onChange={e => setRows(rows.map((x, xi) => xi === i ? { ...x, label: e.target.value } : x) as any)} /><Button size="sm" variant="ghost" onClick={() => setRows(rows.filter((_, xi) => xi !== i) as any)}>×</Button></div>)}
+          {!rows.length && <p className="text-xs text-muted-foreground">No timings set.</p>}
+        </div>)}
+        <div><Label>Client notes (shown on run sheet)</Label><Textarea rows={3} value={team.client_notes} onChange={e => setTeam(p => ({ ...p, client_notes: e.target.value }))} /></div>
+        {!rs && <p className="text-xs text-muted-foreground">Team and schedule save once a run sheet exists — preview the run sheet first.</p>}
+      </div>}
+      <div className="flex justify-end gap-2 border-t border-border pt-4"><Button variant="outline" onClick={() => setEditBkOpen(false)}>Cancel</Button><Button onClick={saveBk} disabled={bkSaving}>{bkSaving ? "Saving…" : "Save changes"}</Button></div>
     </DialogContent></Dialog>
   </div>;
 }
