@@ -25,6 +25,7 @@ const PageLoader = () => (
 );
 
 // Lazy-load all page components for faster initial load
+const PublicRunsheetPage = React.lazy(() => import("./features/events/RunsheetViewPage").then(m => ({ default: m.PublicRunsheetPage })));
 const NotFound = React.lazy(() => import("./pages/NotFound"));
 const Index = React.lazy(() => import("./pages/Index"));
 const AuthPage = React.lazy(() => import("./pages/AuthPage"));
@@ -90,6 +91,7 @@ const App = () => (
                 <Routes>
                   <Route path="/" element={<Index />} />
                   <Route path="/auth" element={<AuthPage />} />
+                  <Route path="/runsheet/:runsheetId" element={<PublicRunsheetPage />} />
                   <Route path="/reset-password" element={<ResetPasswordPage />} />
                   <Route path="/register-business" element={<RegisterBusinessPage />} />
                   <Route path="/hub" element={<BusinessHubPage />} />

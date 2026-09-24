@@ -1876,6 +1876,7 @@ export type Database = {
           service_schedule: Json
           setup_items: string[]
           setup_notes: string | null
+          share_token: string
           special_requests: string | null
           status: string
           updated_at: string
@@ -1908,6 +1909,7 @@ export type Database = {
           service_schedule?: Json
           setup_items?: string[]
           setup_notes?: string | null
+          share_token?: string
           special_requests?: string | null
           status?: string
           updated_at?: string
@@ -1940,6 +1942,7 @@ export type Database = {
           service_schedule?: Json
           setup_items?: string[]
           setup_notes?: string | null
+          share_token?: string
           special_requests?: string | null
           status?: string
           updated_at?: string

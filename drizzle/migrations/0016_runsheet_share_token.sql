@@ -1,0 +1,1 @@
+ALTER TABLE public.crm_runsheets ADD COLUMN IF NOT EXISTS share_token uuid NOT NULL DEFAULT gen_random_uuid();

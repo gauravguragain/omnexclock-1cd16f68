@@ -2,3 +2,6 @@ project_id = "fhotpjcgoyuqyhttawef"
 
 [functions.crm-calendar-feed]
 verify_jwt = false
+
+[functions.crm-runsheet-public]
+verify_jwt = false
