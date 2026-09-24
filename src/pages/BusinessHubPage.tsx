@@ -3,7 +3,7 @@ import { useBusiness } from "@/contexts/BusinessContext";
 import { Navigate, Link } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ShieldCheck, LogOut, Building2, PartyPopper } from "lucide-react";
+import { ShieldCheck, LogOut, Building2, PartyPopper, Utensils } from "lucide-react";
 import { useEffect } from "react";
 
 export default function BusinessHubPage() {
