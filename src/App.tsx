@@ -57,6 +57,11 @@ const EventsLayout = React.lazy(() => import("./layouts/EventsLayout"));
 const ev = (k: string) => React.lazy(() => import("./pages/events/EventsWorkspace").then(m => ({ default: (m.EventsPages as any)[k] })));
 const EventsPages: Record<string, React.ComponentType> = Object.fromEntries(["Dashboard","Pipeline","Inspections","Tasks","Settings","EventLeads","CateringLeads","CateringLeadDetail","Events","CateringBookings","NewEvent","NewCatering","Calendar","EventDetail","CateringDetail","Customers","Stakeholders","Coordinators","MenuBooks","Dishes","Drinks","Spaces","Reports","RunsheetView"].map(k => [k, ev(k)]));
 function SalesRedirect() { const { businessCode } = useParams(); return <Navigate to={`/b/${businessCode}/events`} replace />; }
+function CateringRedirect({ destination, withId = false, withRunsheet = false }: { destination: string; withId?: boolean; withRunsheet?: boolean }) {
+  const { businessCode, id, runsheetId } = useParams();
+  const suffix = `${withId && id ? `/${id}` : ""}${withRunsheet && runsheetId ? `/runsheet/${runsheetId}` : ""}`;
+  return <Navigate to={`/b/${businessCode}/catering/${destination}${suffix}${window.location.search}`} replace />;
+}
 const PublicEnquiryPage = React.lazy(() => import("./pages/PublicEnquiryPage"));
 const BookingConfirmationPage = React.lazy(() => import("./pages/BookingConfirmationPage"));
 const MasterDashboardPage = React.lazy(() => import("./pages/master/MasterDashboardPage"));

@@ -26,7 +26,7 @@ export default function CateringDetailPage({ view }: { view: "lead" | "booking" 
   const booking: any = view === "booking" ? crm.bookings.find(b => b.id === id && b.booking_kind === "catering") : null;
   const lead = crm.leads.find(l => l.id === (view === "lead" ? id : booking?.lead_id) && (l.lead_kind === "catering" || booking?.booking_kind === "catering" || l.event_type === "catering"));
   const rs: any = crm.runsheets.filter((r: any) => booking && (r.booking_id === booking.id || r.lead_id === booking.lead_id)).sort((a: any, b: any) => (b.revision || 0) - (a.revision || 0))[0];
-  const base = `/b/${businessCode}/events`;
+  const base = `/b/${businessCode}/catering`;
 
   useEffect(() => {
     if (!lead?.id) return;
@@ -44,7 +44,7 @@ export default function CateringDetailPage({ view }: { view: "lead" | "booking" 
   }, [lead?.id]);
 
   if (!crm.business || crm.loading) return <div className="py-16 text-center text-muted-foreground">Loading…</div>;
-  if ((view === "booking" && !booking) || !lead) return <div className="space-y-3 py-16 text-center"><p>Catering {view === "lead" ? "lead" : "booking"} not found.</p><Button variant="outline" asChild><Link to={`${base}/leads/catering`}>Back to catering leads</Link></Button></div>;
+  if ((view === "booking" && !booking) || !lead) return <div className="space-y-3 py-16 text-center"><p>Catering {view === "lead" ? "lead" : "booking"} not found.</p><Button variant="outline" asChild><Link to={`${base}/leads`}>Back to catering leads</Link></Button></div>;
 
   const pickup = booking?.fulfilment_method === "pickup";
   const method = pickup ? "Pickup" : "Delivery";
@@ -53,11 +53,11 @@ export default function CateringDetailPage({ view }: { view: "lead" | "booking" 
 
   const preview = async () => {
     if (!booking) return;
-    if (rs) { nav(`${base}/catering-bookings/${booking.id}/runsheet/${rs.id}`); return; }
+    if (rs) { nav(`${base}/bookings/${booking.id}/runsheet/${rs.id}`); return; }
     const { data, error } = await supabase.from("crm_runsheets").insert({ business_id: booking.business_id, lead_id: lead.id, booking_id: booking.id, event_order_number: booking.event_order_number, adult_guests: booking.adults || 0, kids_guests: booking.kids || 0, status: "draft" } as any).select("id").single();
     if (error) { toast.error(error.message); return; }
     await crm.refresh();
-    nav(`${base}/catering-bookings/${booking.id}/runsheet/${data.id}`);
+    nav(`${base}/bookings/${booking.id}/runsheet/${data.id}`);
   };
   const issue = async () => {
     if (!rs) return null;
@@ -68,11 +68,11 @@ export default function CateringDetailPage({ view }: { view: "lead" | "booking" 
   };
 
   return <div className="mx-auto max-w-5xl space-y-5">
-    <Button variant="ghost" asChild className="px-0"><Link to={view === "lead" ? `${base}/leads/catering` : `${base}/catering-bookings`}><ArrowLeft className="mr-2 h-4 w-4" />{view === "lead" ? "Catering leads" : "Catering bookings"}</Link></Button>
+    <Button variant="ghost" asChild className="px-0"><Link to={view === "lead" ? `${base}/leads` : `${base}/bookings`}><ArrowLeft className="mr-2 h-4 w-4" />{view === "lead" ? "Catering leads" : "Catering bookings"}</Link></Button>
     <header className="flex flex-wrap items-end justify-between gap-4 border-b border-border pb-5">
       <div><p className="text-xs font-semibold uppercase text-primary">{view === "lead" ? "Catering enquiry" : "Catering booking"}</p><h1 className="font-serif text-3xl font-semibold">{booking?.event_name || lead.full_name}</h1><p className="mt-1 text-sm text-muted-foreground">{lead.full_name}{booking?.event_order_number ? ` · Order ${booking.event_order_number}` : ""}</p></div>
       <div className="flex flex-wrap gap-2"><Badge variant={view === "lead" ? "outline" : "default"}>{view === "lead" ? prettyCrmValue(lead.lead_outcome === "declined" ? "declined" : "lead") : prettyCrmValue(booking.status)}</Badge>
-        {view === "lead" ? <><Button variant="outline" onClick={() => setEditOpen(true)}><Pencil className="mr-2 h-4 w-4" />Edit lead</Button>{lead.lead_outcome !== "declined" && <Button asChild><Link to={`${base}/catering-bookings/new?lead=${lead.id}`}>Confirm as catering job</Link></Button>}</> : <><Button variant="outline" onClick={preview}><FileText className="mr-2 h-4 w-4" />Preview run sheet</Button>{rs && <Button onClick={() => setSendOpen(true)}><Mail className="mr-2 h-4 w-4" />{rs.sent_at ? "Resend run sheet" : "Send run sheet"}</Button>}</>}
+        {view === "lead" ? <><Button variant="outline" onClick={() => setEditOpen(true)}><Pencil className="mr-2 h-4 w-4" />Edit lead</Button>{lead.lead_outcome !== "declined" && <Button asChild><Link to={`${base}/bookings/new?lead=${lead.id}`}>Confirm as catering job</Link></Button>}</> : <><Button variant="outline" onClick={preview}><FileText className="mr-2 h-4 w-4" />Preview run sheet</Button>{rs && <Button onClick={() => setSendOpen(true)}><Mail className="mr-2 h-4 w-4" />{rs.sent_at ? "Resend run sheet" : "Send run sheet"}</Button>}</>}
       </div>
     </header>
     <div className="grid gap-x-10 lg:grid-cols-[1.4fr_1fr]">
