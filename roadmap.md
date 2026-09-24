@@ -31,3 +31,8 @@
 - [x] Match the draft's monthly event grid and day snapshot in the existing theme
 - [x] Open event details or the existing editing workflow from the day snapshot
 - [x] Check desktop and mobile calendar interaction
+
+# Lead menu tasting
+- [x] Place Confirmation before Menu and offer an optional tasting step before Menu
+- [x] Save, change, or remove a tasting date and time as a calendar reminder
+- [x] Verify tasting scheduling and the lead tabs on mobile and desktop

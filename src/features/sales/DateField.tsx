@@ -29,7 +29,7 @@ export default function DateField({ name, value, defaultValue, onChange, require
             {current ? format(new Date(`${current}T00:00:00`), "dd MMM yyyy") : <span>{placeholder}</span>}
           </Button>
         </PopoverTrigger>
-        <PopoverContent className="w-auto p-0" align="start">
+        <PopoverContent className="z-[60] w-auto p-0" align="start">
           <Calendar
             mode="single"
             selected={current ? new Date(`${current}T00:00:00`) : undefined}

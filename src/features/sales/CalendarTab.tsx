@@ -14,6 +14,16 @@ type AgendaEntry = { id: string; kind: "inspection" | "event" | "task"; start: D
 
 const KIND_LABEL = { inspection: "Inspection", event: "Event", task: "Task" } as const;
 
+// CRM task timestamps are stored in UTC; display their Sydney wall time in the venue calendar.
+function sydneyWallDate(timestamp: string) {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Australia/Sydney", year: "numeric", month: "2-digit", day: "2-digit",
+    hour: "2-digit", minute: "2-digit", second: "2-digit", hourCycle: "h23",
+  }).formatToParts(new Date(timestamp));
+  const part = (type: string) => parts.find((item) => item.type === type)?.value || "00";
+  return new Date(Number(part("year")), Number(part("month")) - 1, Number(part("day")), Number(part("hour")), Number(part("minute")), Number(part("second")));
+}
+
 export default function CalendarTab({ businessId, businessName, leads, inspections, bookings, tasks }: {
   businessId: string; businessName: string; leads: CrmLead[]; inspections: CrmInspection[]; bookings: any[]; tasks: CrmTask[];
 }) {
@@ -51,7 +61,7 @@ export default function CalendarTab({ businessId, businessName, leads, inspectio
       list.push({ id: `b-${b.id}`, kind: "event", start, end: new Date(start.getTime() + Number(b.duration_minutes || 300) * 60000), title: `Event — ${nameOf(b.lead_id)}`, detail: `${b.guest_count || 0} guests`, place: b.venue_space?prettyCrmValue(b.venue_space):businessName });
     });
     tasks.filter((t) => t.status === "open").forEach((t) => {
-      const start = new Date(t.due_at);
+      const start = sydneyWallDate(t.due_at);
       list.push({ id: `t-${t.id}`, kind: "task", start, end: new Date(start.getTime() + 1800000), title: `Task — ${t.title}`, detail: t.description || (t.lead_id ? nameOf(t.lead_id) : "Follow-up"), place: businessName });
     });
     return list.filter((e) => !Number.isNaN(e.start.getTime())).sort((a, b) => a.start.getTime() - b.start.getTime());
