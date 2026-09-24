@@ -19,7 +19,7 @@ export default function LeadsBoard({ kind }: { kind: "event" | "catering" }) {
   const [tab, setTab] = useState("new"); const [search, setSearch] = useState("");
   const [formOpen, setFormOpen] = useState(false); const [editing, setEditing] = useState<CrmLead | null>(null); const [detail, setDetail] = useState<CrmLead | null>(null);
   const [declining, setDeclining] = useState<CrmLead | null>(null); const [reason, setReason] = useState(""); const fileRef = useRef<HTMLInputElement>(null);
-  const mine = useMemo(() => crm.leads.filter(l => (l.lead_kind || (l.event_type === "catering" ? "catering" : "event")) === kind), [crm.leads, kind]);
+   const mine = useMemo(() => crm.leads.filter(l => (l.lead_kind === "catering" || l.event_type === "catering" ? "catering" : "event") === kind), [crm.leads, kind]);
   const outcome = (l: CrmLead) => l.lead_outcome || "new";
   const shown = mine.filter(l => (tab === "all" || outcome(l) === tab) && `${l.full_name} ${l.email || ""} ${l.phone || ""} ${l.event_type} ${l.service_location || ""}`.toLowerCase().includes(search.toLowerCase()));
   const reasons = crm.options.filter(o => o.option_type === "lost_reason" && o.active);
@@ -45,7 +45,7 @@ export default function LeadsBoard({ kind }: { kind: "event" | "catering" }) {
     const idx = (n: string) => head.findIndex(h => h.includes(n));
     const rows = lines.slice(1).map(parse).filter(r => r[idx("name")]).map(r => ({
       business_id: crm.business!.id, full_name: r[idx("name")], phone: r[idx("phone")] || null, email: r[idx("email")] || null,
-      source: (r[idx("source")] || "import").toLowerCase().replace(/\s+/g, "_"), event_type: (r[idx("event")] || "other").toLowerCase().replace(/\s+/g, "_"),
+       source: (r[idx("source")] || "import").toLowerCase().replace(/\s+/g, "_"), event_type: kind === "catering" ? "catering" : (r[idx("event")] || "other").toLowerCase().replace(/\s+/g, "_"),
       preferred_dates: idx("date") >= 0 && r[idx("date")] ? [r[idx("date")]] : [], estimated_guest_count: Number(r[idx("guest")]) || null,
       service_location: idx("location") >= 0 ? r[idx("location")] || null : null, lead_kind: kind,
     }));
@@ -74,7 +74,7 @@ export default function LeadsBoard({ kind }: { kind: "event" | "catering" }) {
     <Dialog open={!!declining} onOpenChange={o => !o && setDeclining(null)}><DialogContent><DialogHeader><DialogTitle>Decline {declining?.full_name}</DialogTitle></DialogHeader>
       <select value={reason} onChange={e => setReason(e.target.value)} className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"><option value="">Choose a reason</option>{reasons.map(r => <option key={r.id} value={r.value}>{r.label}</option>)}</select>
       <DialogFooter><Button variant="outline" onClick={() => setDeclining(null)}>Cancel</Button><Button variant="destructive" onClick={decline}>Decline lead</Button></DialogFooter></DialogContent></Dialog>
-    <LeadFormDialog open={formOpen} onOpenChange={setFormOpen} businessId={crm.business.id} options={crm.options} lead={editing} leads={crm.leads} onSaved={crm.refresh} defaultKind={kind} />
+     <LeadFormDialog open={formOpen} onOpenChange={setFormOpen} businessId={crm.business.id} options={crm.options} lead={editing} leads={crm.leads} onSaved={crm.refresh} defaultKind={kind} lockedKind={kind} />
     {kind === "event" && <LeadDetailDialog lead={detail} open={!!detail} onOpenChange={o => !o && setDetail(null)} options={crm.options} interactions={crm.interactions} inspections={crm.inspections} tasks={crm.tasks} menuItems={crm.menuItems} booking={crm.bookings.find(b => b.lead_id === detail?.id)} businessName={crm.business.name} onSaved={crm.refresh} />}
   </div>;
 }

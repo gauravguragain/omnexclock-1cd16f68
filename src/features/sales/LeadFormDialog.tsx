@@ -8,9 +8,9 @@ import type { CrmLead, CrmOption } from "./types";
 import OptionSelect from "./OptionSelect";
 import DateField from "./DateField";
 
-export default function LeadFormDialog({ open, onOpenChange, businessId, options, lead, leads, onSaved, defaultKind = "event" }: { open: boolean; onOpenChange: (open:boolean)=>void; businessId:string; options:CrmOption[]; lead?:CrmLead|null; leads:CrmLead[]; onSaved:()=>void; defaultKind?: string }) {
-   const { user } = useAuth(); const [saving, setSaving] = useState(false); const [email, setEmail] = useState(""); const [phone, setPhone] = useState(""); const [kind, setKind] = useState(lead?.lead_kind || defaultKind);
-   useEffect(() => { setEmail(lead?.email || ""); setPhone(lead?.phone || ""); setKind(lead?.lead_kind || defaultKind); }, [lead, open, defaultKind]);
+export default function LeadFormDialog({ open, onOpenChange, businessId, options, lead, leads, onSaved, defaultKind = "event", lockedKind }: { open: boolean; onOpenChange: (open:boolean)=>void; businessId:string; options:CrmOption[]; lead?:CrmLead|null; leads:CrmLead[]; onSaved:()=>void; defaultKind?: string; lockedKind?: "event" | "catering" }) {
+   const { user } = useAuth(); const [saving, setSaving] = useState(false); const [email, setEmail] = useState(""); const [phone, setPhone] = useState(""); const [kind, setKind] = useState(lockedKind || lead?.lead_kind || defaultKind);
+   useEffect(() => { setEmail(lead?.email || ""); setPhone(lead?.phone || ""); setKind(lockedKind || lead?.lead_kind || defaultKind); }, [lead, open, defaultKind, lockedKind]);
   const duplicate = useMemo(() => leads.find((row) => row.id !== lead?.id && ((email && row.email?.toLowerCase() === email.toLowerCase()) || (phone && row.phone?.replace(/\D/g, "") === phone.replace(/\D/g, "")))), [email, phone, leads, lead?.id]);
   const list = (type:string) => options.filter((option) => option.option_type === type && option.active);
    const isCatering = kind === "catering";
@@ -40,7 +40,7 @@ export default function LeadFormDialog({ open, onOpenChange, businessId, options
          <section className="space-y-4" aria-labelledby="lead-event-heading">
            <div className="flex items-center gap-2 border-b border-border pb-2"><CalendarDays className="h-4 w-4 text-primary"/><h3 id="lead-event-heading" className="text-sm font-semibold">Event details</h3></div>
            <div className="grid gap-4 sm:grid-cols-2">
-             <div className="space-y-1.5"><Label htmlFor="lead-kind">Enquiry type</Label><select id="lead-kind" name="lead_kind" value={kind} onChange={e => setKind(e.target.value)} className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"><option value="event">Event (hall hire)</option><option value="catering">Catering only</option></select></div>
+              {lockedKind ? <input type="hidden" name="lead_kind" value={lockedKind} /> : <div className="space-y-1.5"><Label htmlFor="lead-kind">Enquiry type</Label><select id="lead-kind" name="lead_kind" value={kind} onChange={e => setKind(e.target.value)} className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"><option value="event">Event (hall hire)</option><option value="catering">Catering only</option></select></div>}
               {!isCatering && <div className="space-y-1.5"><Label>Event type</Label><OptionSelect name="event_type" options={list("event_type")} defaultValue={lead?.event_type || "wedding"} required/></div>}
              <div className="space-y-1.5"><Label>Preferred date</Label><DateField name="preferred_date" defaultValue={lead?.preferred_dates?.[0] || ""} placeholder="Not set"/></div>
              <div className="space-y-1.5"><Label htmlFor="lead-guests">Estimated guests</Label><Input id="lead-guests" name="guests" type="number" min="1" defaultValue={lead?.estimated_guest_count || ""}/></div>
