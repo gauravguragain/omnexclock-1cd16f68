@@ -99,7 +99,7 @@ export function RunsheetDocument({ rs, lead, b, items, selection, businessName }
         <div className="min-w-0 border-r border-border p-4">
           {stalls.length > 0 && <div className="mb-4 break-inside-avoid"><h2 className="font-bold">Live Stalls</h2>{stalls.map(s => <p key={s.id} className="pl-3">• {s.item_name}{s.service_start_time ? ` — ${to12(s.service_start_time)}${s.service_end_time ? ` to ${to12(s.service_end_time)}` : ""}` : ""}</p>)}</div>}
           <h2 className="font-bold">Menu selection{pkgs.length ? ` – ${pkgs.map(p => p.item_name).join(" · ")}` : ""}</h2>
-          {Object.entries(courses).map(([course, dishes]) => <div key={course} className="mt-2 break-inside-avoid"><h3 className="pl-3 font-semibold">{course}</h3>{dishes.map(d => <p key={d.id} className="pl-6">- {d.item_name}</p>)}</div>)}
+           {Object.entries(courses as Record<string, any[]>).map(([course, dishes]) => <div key={course} className="mt-2 break-inside-avoid"><h3 className="pl-3 font-semibold">{course}</h3>{dishes.map(d => <p key={d.id} className="pl-6">- {d.item_name}</p>)}</div>)}
           {kidsRow && !courses["Kids Menu"] && <p className="mt-2">Kids menu: {kidsRow.quantity || rs.kids_guests || 0} kids</p>}
           {selection?.beverage_package && <p className="mt-2">Beverages: {prettyCrmValue(selection.beverage_package)}</p>}
           {selection?.corkage_enabled && <p className="mt-1">Host is bringing their own drinks.</p>}
