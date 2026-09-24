@@ -55,7 +55,7 @@ const PayDetailsPage = React.lazy(() => import("./pages/admin/PayDetailsPage"));
 const InvoicesPage = React.lazy(() => import("./pages/admin/InvoicesPage"));
 const EventsLayout = React.lazy(() => import("./layouts/EventsLayout"));
 const ev = (k: string) => React.lazy(() => import("./pages/events/EventsWorkspace").then(m => ({ default: (m.EventsPages as any)[k] })));
-const EventsPages: Record<string, React.ComponentType> = Object.fromEntries(["Dashboard","Pipeline","Inspections","Tasks","Settings","EventLeads","CateringLeads","Events","CateringBookings","NewEvent","NewCatering","Calendar","EventDetail","CateringDetail","Customers","Stakeholders","Coordinators","MenuBooks","Dishes","Drinks","Spaces","Reports","RunsheetView"].map(k => [k, ev(k)]));
+const EventsPages: Record<string, React.ComponentType> = Object.fromEntries(["Dashboard","Pipeline","Inspections","Tasks","Settings","EventLeads","CateringLeads","CateringLeadDetail","Events","CateringBookings","NewEvent","NewCatering","Calendar","EventDetail","CateringDetail","Customers","Stakeholders","Coordinators","MenuBooks","Dishes","Drinks","Spaces","Reports","RunsheetView"].map(k => [k, ev(k)]));
 function SalesRedirect() { const { businessCode } = useParams(); return <Navigate to={`/b/${businessCode}/events`} replace />; }
 const PublicEnquiryPage = React.lazy(() => import("./pages/PublicEnquiryPage"));
 const BookingConfirmationPage = React.lazy(() => import("./pages/BookingConfirmationPage"));
@@ -127,10 +127,12 @@ const App = () => (
                     <Route index element={<EventsPages.Dashboard />} />
                     <Route path="leads/events" element={<EventsPages.EventLeads />} />
                     <Route path="leads/catering" element={<EventsPages.CateringLeads />} />
+                    <Route path="leads/catering/:id" element={<EventsPages.CateringLeadDetail />} />
                     <Route path="pipeline" element={<EventsPages.Pipeline />} />
                     <Route path="events" element={<EventsPages.Events />} />
                     <Route path="events/:id" element={<EventsPages.EventDetail />} />
                     <Route path="runsheet/:runsheetId" element={<EventsPages.RunsheetView />} />
+                    <Route path="catering-bookings/:id/runsheet/:runsheetId" element={<EventsPages.RunsheetView />} />
                     <Route path="events/new" element={<Navigate to="../leads/events" replace />} />
                     <Route path="catering-bookings" element={<EventsPages.CateringBookings />} />
                     <Route path="catering-bookings/:id" element={<EventsPages.CateringDetail />} />
