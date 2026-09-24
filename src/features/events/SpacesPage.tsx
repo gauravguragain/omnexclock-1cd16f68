@@ -143,7 +143,7 @@ export default function SpacesPage() {
     if (error) toast.error(error.message); else await d.refresh();
   };
 
-  const openGallery = (space: Row) => navigate(`spaces/${space.id}`);
+  const openGallery = (space: Row) => navigate(`/b/${window.location.pathname.split("/")[2]}/events/spaces/${space.id}`);
 
   if (!d.business) return null;
   return <div className="space-y-5">
