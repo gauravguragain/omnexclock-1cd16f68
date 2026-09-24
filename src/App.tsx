@@ -2,7 +2,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, useParams } from "react-router-dom";
 import { ThemeProvider } from "next-themes";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { BusinessProvider } from "@/contexts/BusinessContext";
@@ -52,7 +52,10 @@ const ServiceMaintenancePage = React.lazy(() => import("./pages/admin/ServiceMai
 
 const PayDetailsPage = React.lazy(() => import("./pages/admin/PayDetailsPage"));
 const InvoicesPage = React.lazy(() => import("./pages/admin/InvoicesPage"));
-const SalesMarketingPage = React.lazy(() => import("./pages/admin/SalesMarketingPage"));
+const EventsLayout = React.lazy(() => import("./layouts/EventsLayout"));
+const ev = (k: string) => React.lazy(() => import("./pages/events/EventsWorkspace").then(m => ({ default: (m.EventsPages as any)[k] })));
+const EventsPages: Record<string, React.ComponentType> = Object.fromEntries(["Dashboard","Pipeline","Inspections","Tasks","Settings","EventLeads","CateringLeads","Events","CateringBookings","NewEvent","NewCatering","Calendar","Customers","Stakeholders","MenuBooks","Dishes","Drinks","Spaces","Reports"].map(k => [k, ev(k)]));
+function SalesRedirect() { const { businessCode } = useParams(); return <Navigate to={`/b/${businessCode}/events`} replace />; }
 const PublicEnquiryPage = React.lazy(() => import("./pages/PublicEnquiryPage"));
 const BookingConfirmationPage = React.lazy(() => import("./pages/BookingConfirmationPage"));
 const MasterDashboardPage = React.lazy(() => import("./pages/master/MasterDashboardPage"));
