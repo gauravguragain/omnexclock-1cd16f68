@@ -48,7 +48,7 @@ export default function LeadDetailDialog({ lead, open, onOpenChange, initialTab,
     if(cancelled||!sel)return;const s:any=sel;
     if(s.guest_count)setGuestOverride(Number(s.guest_count));
     setCorkage({enabled:!!s.corkage_enabled,perHead:s.corkage_per_head!=null?String(s.corkage_per_head):"",flat:s.corkage_flat!=null?String(s.corkage_flat):""});
-    setExtras({dietary:s.dietary_requirements||"",allergies:s.allergies||"",beverage:s.beverage_package||""});setBeverageChoice(s.beverage_package||"");
+    setExtras({dietary:s.dietary_requirements||"",allergies:s.allergies||"",beverage:s.beverage_package||""});setBeverageChoice(s.beverage_package||"");setBevPrice({perHead:"",flat:""});
     const{data:items}=await supabase.from("crm_menu_selection_items").select("*").eq("selection_id",s.id);
     if(cancelled)return;const rows:any[]=items||[];
     setSelectedMenu(rows.filter(i=>i.menu_item_id).map(i=>i.menu_item_id));
@@ -57,7 +57,8 @@ export default function LeadDetailDialog({ lead, open, onOpenChange, initialTab,
     setLiveStalls(stalls); setStallsRequired(stalls.length>0);
     const k=rows.find(i=>i.course==="kids_package");setKids(k?{enabled:true,count:String(k.quantity||""),price:k.price_per_head!=null?String(k.price_per_head):""}:{enabled:false,count:"",price:""});
     setManual(rows.filter(i=>i.course==="manual").map((i,n)=>({key:`m${n}`,name:i.item_name,pricePerHead:Number(i.price_per_head||0),flatPrice:Number(i.flat_price||0)})));
-    setDishes(rows.filter(i=>!i.menu_item_id&&i.course&&!["package","live_stall","kids_package","manual"].includes(i.course)).map((i,n)=>({key:`d${n}`,course:i.course,name:i.item_name})));
+    const bev=rows.find(i=>i.course==="beverage");if(bev)setBevPrice({perHead:bev.price_per_head!=null?String(bev.price_per_head):"",flat:bev.flat_price!=null?String(bev.flat_price):""});
+    setDishes(rows.filter(i=>!i.menu_item_id&&i.course&&!["package","live_stall","kids_package","manual","beverage"].includes(i.course)).map((i,n)=>({key:`d${n}`,course:i.course,name:i.item_name})));
   })();return()=>{cancelled=true;};},[lead?.id,open]);
   if(!lead)return null;
   const addInteraction=async(e:FormEvent<HTMLFormElement>)=>{e.preventDefault();setBusy(true);const f=new FormData(e.currentTarget);const notes=String(f.get("notes"));const {error}=await supabase.from("crm_interactions").insert({business_id:lead.business_id,lead_id:lead.id,interaction_type:String(f.get("type")),notes,duration_minutes:f.get("duration")?Number(f.get("duration")):null,follow_up_required:f.get("follow_up")==="on",follow_up_at:followDate?`${followDate}T${followTime}`:null,shareable_feedback:f.get("shareable")==="on",logged_by:user?.id} as any);setBusy(false);if(error)toast.error(error.message);else{toast.success("Interaction logged");(e.target as HTMLFormElement).reset();setFollowDate("");onSaved();}};
