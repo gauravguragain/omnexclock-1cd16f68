@@ -8,7 +8,7 @@ const corsHeaders = {
 };
 
 interface EmailRequest {
-  type: "roster_notification" | "csv_export" | "employee_induction" | "roster_pdf" | "report_pdf";
+  type: "roster_notification" | "csv_export" | "employee_induction" | "roster_pdf" | "report_pdf" | "runsheet";
   // roster_notification fields
   to?: string;
   employeeName?: string;
@@ -451,6 +451,43 @@ serve(async (req) => {
             type: "application/pdf",
           },
         ],
+      };
+    } else if (body.type === "runsheet") {
+      const b = body as any;
+      if (!b.to || !b.viewUrl || !b.eventTitle) throw new Error("Missing required fields for run sheet email");
+      if (!/^https:\/\/[^\s"'<>]+$/.test(b.viewUrl)) throw new Error("Missing required fields for run sheet email");
+      const esc = (s: unknown) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]!));
+      const biz = esc(b.businessName || "Pro Regal Pavilion");
+      const row = (k: string, v: unknown) => v ? `<tr><td style="padding:6px 0;color:#777;font-size:13px;width:38%;">${k}</td><td style="padding:6px 0;font-size:13px;color:#1a1a1a;">${esc(v)}</td></tr>` : "";
+      const html = `
+        <div style="font-family:'Segoe UI',Arial,sans-serif;max-width:600px;margin:0 auto;color:#1a1a1a;background:#ffffff;">
+          <div style="text-align:center;padding:28px 20px 16px;background:#1a1a1a;border-radius:12px 12px 0 0;">
+            <h1 style="color:#ac845d;font-size:22px;margin:0;letter-spacing:1px;">${biz}</h1>
+            <p style="color:#a0a0a0;font-size:11px;margin:6px 0 0;text-transform:uppercase;letter-spacing:2px;">Event Order &amp; Run Sheet</p>
+          </div>
+          <div style="padding:24px 30px;">
+            <p style="font-size:14px;">Hi ${esc(b.recipientName || "there")},</p>
+            <p style="font-size:14px;line-height:1.6;color:#444;">${b.resend ? "Here is the run sheet again" : "Here is the run sheet"} for <strong>${esc(b.eventTitle)}</strong>. Please review it before the event.</p>
+            <div style="margin:18px 0;padding:14px 18px;border:1px solid #e8dcc8;border-left:4px solid #ac845d;border-radius:6px;background:#fbf8f2;">
+              <table style="width:100%;border-collapse:collapse;">
+                ${row("Date", b.dateLabel)}${row("Time", b.timeLabel)}${row("Venue", b.venue)}${row("Guests", b.guestsLabel)}${row("Event order", b.eventOrder)}
+              </table>
+            </div>
+            <div style="text-align:center;margin:26px 0;">
+              <a href="${esc(b.viewUrl)}" style="display:inline-block;background:#ac845d;color:#000;text-decoration:none;padding:13px 34px;border-radius:8px;font-weight:bold;font-size:14px;">View run sheet</a>
+            </div>
+            <p style="font-size:12px;color:#888;line-height:1.5;">The link always shows the latest version. You can print it or save it as a PDF from that page.</p>
+            ${b.message ? `<p style="font-size:13px;color:#444;white-space:pre-line;border-top:1px solid #eee;padding-top:12px;">${esc(b.message)}</p>` : ""}
+          </div>
+          <div style="text-align:center;padding:14px 30px;background:#f8f9fa;border-radius:0 0 12px 12px;">
+            <p style="color:#999;font-size:11px;margin:0;">Sent by ${biz}.</p>
+          </div>
+        </div>`;
+      emailPayload = {
+        from: `${b.businessName || "Pro Regal Pavilion"} <noreply@omnexventures.com>`,
+        to: [b.to],
+        subject: `Run sheet — ${b.eventTitle}${b.dateLabel ? ` (${b.dateLabel})` : ""}`,
+        html,
       };
     } else {
       throw new Error("Invalid email type");
