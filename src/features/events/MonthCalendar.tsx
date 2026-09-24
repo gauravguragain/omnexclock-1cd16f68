@@ -55,6 +55,22 @@ export default function MonthCalendar({ bookings, leads, runsheets, customers, v
   const guestCount = (b: Booking) => guestSplit(b).adults + guestSplit(b).kids;
   const dateCount = filtered.filter(b => String(b.event_date).startsWith(format(month, "yyyy-MM"))).length;
 
+  const renderEventDetail = (b: Booking) => {
+    const place = placeOf(b); const customer = customerOf(b); const time = `${to12(String(b.start_time || "").slice(0, 5))} – ${to12(bookingEnd(b))}`;
+    return <div className="space-y-3 px-5 py-4">
+      <div className="rounded-md border border-border bg-primary/5 p-3"><p className="text-xs font-semibold">{time}</p><p className="mt-1 font-semibold">{nameOf(b)}</p><p className="mt-1 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground"><span className="flex items-center gap-1"><MapPin className="h-3 w-3" />{place}</span><span className="flex items-center gap-1"><Users className="h-3 w-3" />{guestCount(b)} guests</span></p></div>
+      <dl className="divide-y divide-border text-sm">
+        <div className="flex justify-between gap-4 py-2"><dt className="flex items-center gap-2 text-muted-foreground"><Tag className="h-4 w-4" />Event type</dt><dd className="text-right">{prettyCrmValue(typeOf(b))}</dd></div>
+        <div className="flex justify-between gap-4 py-2"><dt className="flex items-center gap-2 text-muted-foreground"><MapPin className="h-4 w-4" />{b.booking_kind === "catering" ? "Location" : "Venue"}</dt><dd className="text-right">{place}</dd></div>
+        <div className="flex justify-between gap-4 py-2"><dt className="flex items-center gap-2 text-muted-foreground"><Clock3 className="h-4 w-4" />Time</dt><dd className="text-right">{time}</dd></div>
+        <div className="flex justify-between gap-4 py-2"><dt className="flex items-center gap-2 text-muted-foreground"><Users className="h-4 w-4" />Guests</dt><dd className="text-right">{guestCount(b)}{guestSplit(b).kids ? ` · ${guestSplit(b).adults} adults, ${guestSplit(b).kids} kids` : ""}</dd></div>
+        <div className="flex items-center justify-between gap-3 py-2"><dt className="flex items-center gap-2 text-muted-foreground"><UserRound className="h-4 w-4" />Organizer</dt><dd className="flex min-w-0 items-center gap-2 text-right"><span className="min-w-0 break-words">{customer?.full_name || "—"}{customer?.phone && <span className="block text-xs text-muted-foreground">{customer.phone}</span>}</span>{customer?.phone && <Button asChild size="icon" variant="outline" className="h-8 w-8 shrink-0"><a href={`tel:${customer.phone}`} aria-label={`Call ${customer.full_name}`}><Phone className="h-3.5 w-3.5" /></a></Button>}{customer?.email && <Button asChild size="icon" variant="outline" className="h-8 w-8 shrink-0"><a href={`mailto:${customer.email}`} aria-label={`Email ${customer.full_name}`}><Mail className="h-3.5 w-3.5" /></a></Button>}</dd></div>
+        <div className="flex justify-between gap-4 py-2"><dt className="text-muted-foreground">Notes</dt><dd className="max-w-[65%] whitespace-pre-wrap text-right">{b.notes || "No notes added"}</dd></div>
+      </dl>
+      <div className="flex items-center justify-between gap-2 pt-1"><Button size="sm" variant="outline" onClick={() => { setSelectedDate(null); setSelectedBooking(null); onEdit(b); }}><Pencil className="mr-2 h-4 w-4" />Edit event</Button><Button size="sm" variant="outline" onClick={() => { setSelectedDate(null); setSelectedBooking(null); onView(b); }}>View details <ChevronRight className="ml-2 h-4 w-4" /></Button></div>
+    </div>;
+  };
+
   return <>
     <div className="overflow-hidden rounded-md border border-border bg-card">
       <div className="flex flex-wrap items-center gap-3 border-b border-border px-4 py-4 sm:px-5">
