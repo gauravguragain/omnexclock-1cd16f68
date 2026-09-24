@@ -40,6 +40,13 @@ export default function EventDetailPage({ kind }: { kind: "event" | "catering" }
   const customer: any = ev.customers.find(c => c.id === b.customer_id) || (lead && { full_name: lead.full_name, phone: lead.phone, email: lead.email });
   const rs: any = crm.runsheets.filter((r: any) => r.booking_id === b.id || r.lead_id === b.lead_id).sort((a: any, z: any) => (z.revision || 0) - (a.revision || 0))[0];
   const venue = ev.venues.find(v => v.id === b.venue_space_id || v.name === b.venue_space);
+  const openCateringSheet = async () => {
+    if (rs) return nav(`/b/${businessCode}/events/runsheet/${rs.id}`);
+    const { data, error } = await supabase.from("crm_runsheets").insert({ business_id: b.business_id, lead_id: b.lead_id, booking_id: b.id, event_order_number: b.event_order_number, adult_guests: b.adults || 0, kids_guests: b.kids || 0, status: "draft" } as any).select("id").single();
+    if (error) return toast.error(error.message);
+    await crm.refresh(); nav(`/b/${businessCode}/events/runsheet/${data.id}`);
+  };
+  const issueCatering = async () => { const { data, error } = await supabase.from("crm_runsheets").update({ status: "sent", sent_at: new Date().toISOString(), generated_at: new Date().toISOString() } as any).eq("id", rs.id).select().single(); if (error) { toast.error(error.message); return null; } await crm.refresh(); return data; };
   const start = String(b.start_time).slice(0, 5); const end = bookingEnd(b); const hrs = minutesBetween(start, end) / 60;
   const adults = rs?.adult_guests ?? b.adults ?? selection?.guest_count ?? b.guest_count; const kidsN = rs?.kids_guests ?? b.kids ?? items.find(i => i.course === "kids_package")?.quantity ?? 0;
   const guests = Number(adults || 0) + Number(kidsN || 0);
@@ -60,7 +67,7 @@ export default function EventDetailPage({ kind }: { kind: "event" | "catering" }
       <div className="border-l-2 border-primary pl-4"><p className="text-xs font-medium uppercase tracking-widest text-primary">{kind === "event" ? "Events" : "Catering"}</p>
         <h1 className="flex items-center gap-3 font-serif text-3xl font-semibold">{title}<Badge variant={cancelled ? "destructive" : "secondary"}>{cancelled ? "Cancelled" : "Live"}</Badge></h1>
         <p className="text-sm text-muted-foreground">Event Order {b.event_order_number || "—"} · {prettyCrmValue(b.event_type || lead?.event_type || "event")}</p></div>
-      <div className="flex flex-wrap gap-2">{lead && <><Button variant="outline" onClick={() => { if (rs?.sent_at) nav(`/b/${businessCode}/events/runsheet/${rs.id}`); else { setWorkflowTab("runsheet"); setWorkflow(true); } }}><FileText className="mr-2 h-4 w-4" />Run sheet</Button><Button onClick={() => { setWorkflowTab("timeline"); setWorkflow(true); }}><Pencil className="mr-2 h-4 w-4" />Edit</Button>{rs?.sent_at && <Button variant="outline" onClick={() => setSendOpen(true)}><Mail className="mr-2 h-4 w-4" />Resend Email</Button>}</>}</div>
+      <div className="flex flex-wrap gap-2">{lead && (kind === "catering" ? <><Button variant="outline" onClick={openCateringSheet}><FileText className="mr-2 h-4 w-4" />Preview run sheet</Button>{rs && <Button onClick={() => setSendOpen(true)}><Mail className="mr-2 h-4 w-4" />{rs.sent_at ? "Resend run sheet" : "Send run sheet"}</Button>}</> : <><Button variant="outline" onClick={() => { if (rs?.sent_at) nav(`/b/${businessCode}/events/runsheet/${rs.id}`); else { setWorkflowTab("runsheet"); setWorkflow(true); } }}><FileText className="mr-2 h-4 w-4" />Run sheet</Button><Button onClick={() => { setWorkflowTab("timeline"); setWorkflow(true); }}><Pencil className="mr-2 h-4 w-4" />Edit</Button>{rs?.sent_at && <Button variant="outline" onClick={() => setSendOpen(true)}><Mail className="mr-2 h-4 w-4" />Resend Email</Button>}</>)}</div>
     </div>
 
     <Card><CardContent className="grid divide-y divide-border p-0 sm:grid-cols-4 sm:divide-x sm:divide-y-0">
@@ -108,7 +115,7 @@ export default function EventDetailPage({ kind }: { kind: "event" | "catering" }
         <Section icon={History} title="Record"><Row k="Event Order" v={b.event_order_number} /><Row k="Run sheet" v={rs ? `Revision ${rs.revision || 1}${rs.sent_at ? " · issued" : " · draft"}` : "Not started"} /><Row k="Created" v={format(new Date(b.created_at), "d MMM yyyy, h:mm a")} /></Section>
       </div>
     </div>
-    {lead && rs && <SendRunsheetDialog open={sendOpen} onOpenChange={setSendOpen} rs={rs} lead={lead} booking={b} businessName={crm.business.name} />}
-    {lead && <LeadDetailDialog lead={lead} open={workflow} onOpenChange={setWorkflow} initialTab={workflowTab} options={crm.options} interactions={crm.interactions} inspections={crm.inspections} tasks={crm.tasks} menuItems={crm.menuItems} booking={b} businessName={crm.business.name} onSaved={crm.refresh} />}
+    {lead && rs && <SendRunsheetDialog mode={kind === "catering" && !rs.sent_at ? "issue" : "resend"} onIssue={issueCatering} open={sendOpen} onOpenChange={setSendOpen} rs={rs} lead={lead} booking={b} businessName={crm.business.name} />}
+    {lead && kind !== "catering" && <LeadDetailDialog lead={lead} open={workflow} onOpenChange={setWorkflow} initialTab={workflowTab} options={crm.options} interactions={crm.interactions} inspections={crm.inspections} tasks={crm.tasks} menuItems={crm.menuItems} booking={b} businessName={crm.business.name} onSaved={crm.refresh} />}
   </div>;
 }
