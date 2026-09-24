@@ -87,7 +87,7 @@ export default function RunsheetViewPage() {
         <Section icon={UtensilsCrossed} title="Menu selection">
           {pkgs.length > 0 && <p className="mb-2 text-sm font-medium">{pkgs.map(p => p.item_name).join(" · ")}</p>}
           {selection?.corkage_enabled && <p className="mb-2 text-sm text-muted-foreground">Host is bringing their own drinks.</p>}
-          {Object.entries(courses).map(([c, l]) => <p key={c} className="py-0.5 text-sm"><span className="text-muted-foreground">{c}: </span>{l.map(d => d.item_name).join(" · ")}</p>)}
+          {(Object.entries(courses) as [string, any[]][]).map(([c, l]) => <p key={c} className="py-0.5 text-sm"><span className="text-muted-foreground">{c}: </span>{l.map(d => d.item_name).join(" · ")}</p>)}
           {kidsRow && <p className="py-0.5 text-sm"><span className="text-muted-foreground">Kids menu: </span>{items.filter(i => i.course === "Kids Menu").map(d => d.item_name).join(" · ") || `${kidsRow.quantity || ""} kids`}</p>}
           {selection?.beverage_package && <p className="py-0.5 text-sm"><span className="text-muted-foreground">Beverages: </span>{prettyCrmValue(selection.beverage_package)}</p>}
           {(selection?.dietary_requirements || selection?.allergies) && <p className="mt-2 text-sm text-muted-foreground">{[selection.dietary_requirements && `Dietary: ${selection.dietary_requirements}`, selection.allergies && `Allergies: ${selection.allergies}`].filter(Boolean).join(" · ")}</p>}
