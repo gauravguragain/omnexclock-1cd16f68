@@ -1,7 +1,8 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { downloadRunsheetPdf } from "@/lib/runsheetDownload";
 import { Link, useParams } from "react-router-dom";
 import { format } from "date-fns";
-import { ChevronRight, Clock, MapPin, Users, UtensilsCrossed, Star, Settings, PenLine, CalendarDays, User, FileText, Bookmark, ArrowLeft, Printer, ClipboardList, Mic, Mail, Link as LinkIcon } from "lucide-react";
+import { ChevronRight, Clock, MapPin, Users, UtensilsCrossed, Star, Settings, PenLine, CalendarDays, User, FileText, Bookmark, ArrowLeft, Printer, ClipboardList, Mic, Mail, Link as LinkIcon, Download } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
@@ -135,6 +136,8 @@ export default function RunsheetViewPage() {
   const [selection, setSelection] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [sendOpen, setSendOpen] = useState(false);
+  const docRef = useRef<HTMLDivElement>(null);
+  const [dl, setDl] = useState(false);
 
   useEffect(() => {
     if (!runsheetId) return;
@@ -173,10 +176,11 @@ export default function RunsheetViewPage() {
         <Button variant="outline" asChild><Link to={back}><ArrowLeft className="mr-2 h-4 w-4" />Back to event</Link></Button>
         <Button variant="outline" onClick={copyLink}><LinkIcon className="mr-2 h-4 w-4" />Copy web link</Button>
         <Button variant="outline" onClick={() => window.print()}><Printer className="mr-2 h-4 w-4" />Print</Button>
+        <Button variant="outline" disabled={dl} onClick={async () => { if (!docRef.current) return; setDl(true); try { await downloadRunsheetPdf(docRef.current, `Run sheet - ${title}`); } catch { toast.error("Could not create PDF"); } setDl(false); }}><Download className="mr-2 h-4 w-4" />{dl ? "Preparing…" : "Download PDF"}</Button>
         {lead && rs.sent_at && <Button onClick={() => setSendOpen(true)}><Mail className="mr-2 h-4 w-4" />Resend Email</Button>}
       </div>
     </div>
-    <RunsheetDocument rs={rs} lead={lead} b={b} items={items} selection={selection} businessName={crm.business?.name} />
+    <div ref={docRef}><RunsheetDocument rs={rs} lead={lead} b={b} items={items} selection={selection} businessName={crm.business?.name} /></div>
     {lead && <SendRunsheetDialog open={sendOpen} onOpenChange={setSendOpen} rs={rs} lead={lead} booking={b} businessName={crm.business?.name || ""} />}
   </div>;
 }
@@ -185,6 +189,7 @@ export function PublicRunsheetPage() {
   const { runsheetId } = useParams();
   const t = new URLSearchParams(window.location.search).get("t") || "";
   const [data, setData] = useState<any>(null); const [err, setErr] = useState("");
+  const docRef = useRef<HTMLDivElement>(null); const [dl, setDl] = useState(false);
   useEffect(() => {
     const url = `https://${import.meta.env.VITE_SUPABASE_PROJECT_ID}.supabase.co/functions/v1/crm-runsheet-public?id=${encodeURIComponent(runsheetId || "")}&t=${encodeURIComponent(t)}`;
     fetch(url, { headers: { apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY } }).then(async r => { const j = await r.json(); if (!r.ok) setErr(j.error || "Run sheet not found"); else setData(j); }).catch(() => setErr("Unable to load run sheet"));
@@ -193,8 +198,11 @@ export function PublicRunsheetPage() {
   if (!data) return <div className="py-20 text-center text-muted-foreground">Loading…</div>;
   return <div className="min-h-screen bg-background px-4 py-8">
     <div className="mx-auto max-w-5xl space-y-4">
-      <div className="flex justify-end print:hidden"><Button variant="outline" onClick={() => window.print()}><Printer className="mr-2 h-4 w-4" />Print / Save PDF</Button></div>
-      <RunsheetDocument rs={data.rs} lead={data.lead} b={data.booking} items={data.items || []} selection={data.selection} businessName={data.businessName} />
+      <div className="flex justify-end gap-2 print:hidden">
+        <Button variant="outline" onClick={() => window.print()}><Printer className="mr-2 h-4 w-4" />Print</Button>
+        <Button disabled={dl} onClick={async () => { if (!docRef.current) return; setDl(true); try { await downloadRunsheetPdf(docRef.current, `Run sheet - ${runsheetTitle(data.lead, data.booking)}`); } catch { toast.error("Could not create PDF"); } setDl(false); }}><Download className="mr-2 h-4 w-4" />{dl ? "Preparing…" : "Download PDF"}</Button>
+      </div>
+      <div ref={docRef}><RunsheetDocument rs={data.rs} lead={data.lead} b={data.booking} items={data.items || []} selection={data.selection} businessName={data.businessName} /></div>
     </div>
   </div>;
 }
