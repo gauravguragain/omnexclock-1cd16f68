@@ -27,6 +27,7 @@ export default function SpacesPage() {
   const [editorOpen, setEditorOpen] = useState(false);
   const [gallerySpace, setGallerySpace] = useState<Row | null>(null);
   const [galleryIndex, setGalleryIndex] = useState(0);
+  const [galleryPhotoOpen, setGalleryPhotoOpen] = useState(false);
   const [signedUrls, setSignedUrls] = useState<Record<string, string>>({});
   const [keptPaths, setKeptPaths] = useState<string[]>([]);
   const [pending, setPending] = useState<PendingPhoto[]>([]);
@@ -147,6 +148,7 @@ export default function SpacesPage() {
     const paths = Array.from(new Set([coverPath(space), ...(space.photo_paths || [])].filter(Boolean)));
     const initial = Math.max(0, paths.indexOf(coverPath(space)));
     setGalleryIndex(initial);
+    setGalleryPhotoOpen(false);
     setGallerySpace({ ...space, photo_paths: paths });
   };
 
@@ -203,9 +205,8 @@ export default function SpacesPage() {
       </form>
     </DialogContent></Dialog>
 
-    <Dialog open={!!gallerySpace} onOpenChange={open => !open && setGallerySpace(null)}><DialogContent className="w-[calc(100vw-1.5rem)] max-w-6xl overflow-hidden p-0"><DialogHeader className="flex-row items-center justify-between gap-3 px-5 pt-5 pr-12"><DialogTitle className="font-serif text-2xl">{gallerySpace?.name}</DialogTitle><Button type="button" size="sm" onClick={addGalleryPhotos}><ImagePlus className="mr-2 h-4 w-4" />Add photos</Button></DialogHeader>
-      {galleryPaths.length > 0 && <div className="space-y-3 px-5 pb-5"><div className="relative flex h-[60vh] min-h-72 max-h-[760px] items-center justify-center overflow-hidden rounded-md bg-muted"><img src={signedUrls[galleryPaths[galleryIndex]]} alt={`${gallerySpace?.name} photo ${galleryIndex + 1}`} className="h-full w-full object-contain" />{galleryPaths.length > 1 && <><Button type="button" size="icon" variant="secondary" className="absolute left-3" onClick={() => moveGallery(-1)} aria-label="Previous photo"><ChevronLeft className="h-5 w-5" /></Button><Button type="button" size="icon" variant="secondary" className="absolute right-3" onClick={() => moveGallery(1)} aria-label="Next photo"><ChevronRight className="h-5 w-5" /></Button></>}</div>
-        <div className="flex gap-2 overflow-x-auto pb-1">{galleryPaths.map((path, index) => <Button key={path} type="button" variant="ghost" onClick={() => setGalleryIndex(index)} className={`h-16 w-24 shrink-0 overflow-hidden rounded-md border-2 p-0 ${index === galleryIndex ? "border-primary" : "border-transparent"}`} aria-label={`View photo ${index + 1}`}><img src={signedUrls[path]} alt="" className="h-full w-full object-cover" /></Button>)}</div><p className="text-center text-xs text-muted-foreground">{galleryIndex + 1} of {galleryPaths.length}</p></div>}
+    <Dialog open={!!gallerySpace} onOpenChange={open => !open && setGallerySpace(null)}><DialogContent className="w-[calc(100vw-1.5rem)] max-w-6xl overflow-hidden p-0"><DialogHeader className="flex-row items-center justify-between gap-3 px-5 pt-5 pr-12"><DialogTitle className="font-serif text-2xl">{gallerySpace?.name}</DialogTitle><div className="flex items-center gap-2">{galleryPhotoOpen && <Button type="button" size="sm" variant="outline" onClick={() => setGalleryPhotoOpen(false)}><Images className="mr-2 h-4 w-4" />All photos</Button>}<Button type="button" size="sm" onClick={addGalleryPhotos}><ImagePlus className="mr-2 h-4 w-4" />Add photos</Button></div></DialogHeader>
+      {galleryPaths.length > 0 && <div className="max-h-[78vh] overflow-y-auto px-5 pb-5">{galleryPhotoOpen ? <div className="space-y-3"><div className="relative flex h-[60vh] min-h-72 max-h-[760px] items-center justify-center overflow-hidden rounded-md bg-muted"><img src={signedUrls[galleryPaths[galleryIndex]]} alt={`${gallerySpace?.name} photo ${galleryIndex + 1}`} className="h-full w-full object-contain" />{galleryPaths.length > 1 && <><Button type="button" size="icon" variant="secondary" className="absolute left-3" onClick={() => moveGallery(-1)} aria-label="Previous photo"><ChevronLeft className="h-5 w-5" /></Button><Button type="button" size="icon" variant="secondary" className="absolute right-3" onClick={() => moveGallery(1)} aria-label="Next photo"><ChevronRight className="h-5 w-5" /></Button></>}</div><p className="text-center text-xs text-muted-foreground">{galleryIndex + 1} of {galleryPaths.length}</p></div> : <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">{galleryPaths.map((path, index) => <Button key={path} type="button" variant="ghost" onClick={() => { setGalleryIndex(index); setGalleryPhotoOpen(true); }} className="group relative h-auto aspect-[4/3] overflow-hidden rounded-md border border-border bg-muted p-0" aria-label={`Enlarge photo ${index + 1}`}><img src={signedUrls[path]} alt={`${gallerySpace?.name} photo ${index + 1}`} className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.03]" /><span className="absolute inset-x-0 bottom-0 bg-background/85 py-2 text-xs font-medium text-foreground opacity-0 transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100">Enlarge</span></Button>)}</div>}</div>}
     </DialogContent></Dialog>
   </div>;
 }
