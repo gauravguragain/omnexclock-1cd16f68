@@ -26,3 +26,8 @@
 - [x] Refine Events & Sales / Sales & Marketing navigation, pipeline, lists, and workflow for phone, tablet, and desktop
 - [x] Verify the web preview and download at mobile and desktop sizes
 - [x] Redesign the lead editing form for phone, tablet, and desktop while preserving the existing fields and workflow
+
+# Event calendar
+- [x] Match the draft's monthly event grid and day snapshot in the existing theme
+- [x] Open event details or the existing editing workflow from the day snapshot
+- [x] Check desktop and mobile calendar interaction
