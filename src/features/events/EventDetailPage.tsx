@@ -108,7 +108,7 @@ export default function EventDetailPage({ kind }: { kind: "event" | "catering" }
         <Section icon={History} title="Record"><Row k="Event Order" v={b.event_order_number} /><Row k="Run sheet" v={rs ? `Revision ${rs.revision || 1}${rs.sent_at ? " · issued" : " · draft"}` : "Not started"} /><Row k="Created" v={format(new Date(b.created_at), "d MMM yyyy, h:mm a")} /></Section>
       </div>
     </div>
-    {lead && rs && <SendRunsheetDialog open={sendOpen} onOpenChange={setSendOpen} rs={rs} lead={lead} booking={b} businessName={crm.business.name} mode={kind === "catering" && !rs.sent_at ? "issue" : "resend"} onIssue={async () => { const { data, error } = await supabase.from("crm_runsheets").update({ status: "issued", sent_at: new Date().toISOString() } as any).eq("id", rs.id).select().single(); if (error) { toast.error(error.message); return null; } return data; }} onSent={() => crm.refresh()} />}
+    {lead && rs && <SendRunsheetDialog open={sendOpen} onOpenChange={setSendOpen} rs={rs} lead={lead} booking={b} businessName={crm.business.name} mode={kind === "catering" && !rs.sent_at ? "issue" : "resend"} onIssue={async () => { const { data, error } = await supabase.from("crm_runsheets").update({ status: "sent", sent_at: new Date().toISOString() } as any).eq("id", rs.id).select().single(); if (error) { toast.error(error.message); return null; } return data; }} onSent={() => crm.refresh()} />}
     {lead && <LeadDetailDialog lead={lead} open={workflow} onOpenChange={setWorkflow} initialTab={workflowTab} options={crm.options} interactions={crm.interactions} inspections={crm.inspections} tasks={crm.tasks} menuItems={crm.menuItems} booking={b} businessName={crm.business.name} onSaved={crm.refresh} />}
   </div>;
 }
