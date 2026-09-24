@@ -127,9 +127,9 @@ const App = () => (
                     <Route path="leads/catering" element={<EventsPages.CateringLeads />} />
                     <Route path="pipeline" element={<EventsPages.Pipeline />} />
                     <Route path="events" element={<EventsPages.Events />} />
-                    <Route path="events/new" element={<Navigate to="../leads" replace />} />
+                    <Route path="events/new" element={<Navigate to="../leads/events" replace />} />
                     <Route path="catering-bookings" element={<EventsPages.CateringBookings />} />
-                    <Route path="catering-bookings/new" element={<Navigate to="../catering-leads" replace />} />
+                    <Route path="catering-bookings/new" element={<Navigate to="../leads/catering" replace />} />
                     <Route path="calendar" element={<EventsPages.Calendar />} />
                     <Route path="inspections" element={<EventsPages.Inspections />} />
                     <Route path="tasks" element={<EventsPages.Tasks />} />
