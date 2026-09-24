@@ -295,6 +295,18 @@ export default function RunsheetTab({ lead, booking, options, onSaved }: {
   if (loading) return <p className="py-8 text-sm text-muted-foreground">Loading runsheet…</p>;
 
   const pickPerson = (key: keyof typeof form, phoneKey: keyof typeof form) => (event: { target: { value: string } }) => { const v = event.target.value; const match = stakeholders.find((p) => p.full_name === v); setForm((prev) => ({ ...prev, [key]: v, ...(match?.phone ? { [phoneKey]: match.phone } : {}) })); };
+  const coordinators = useMemo(() => stakeholders.filter((p) => p.stakeholder_type === "coordinator"), [stakeholders]);
+  const PersonSelect = ({ value, personKey, phoneKey, placeholder }: { value: string; personKey: keyof typeof form; phoneKey: keyof typeof form; placeholder: string }) => (
+    <select
+      value={value}
+      onChange={pickPerson(personKey, phoneKey)}
+      className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+    >
+      <option value="">{placeholder}</option>
+      {value && !coordinators.some((p) => p.full_name === value) ? <option value={value}>{value}</option> : null}
+      {coordinators.map((p) => <option key={p.id} value={p.full_name}>{p.full_name}{p.phone ? ` — ${p.phone}` : ""}</option>)}
+    </select>
+  );
   const set = (key: keyof typeof form) => (event: { target: { value: string } }) => setForm((prev) => ({ ...prev, [key]: event.target.value }));
   const revision = Number(runsheet?.revision || 1);
 
