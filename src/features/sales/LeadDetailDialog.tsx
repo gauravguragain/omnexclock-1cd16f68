@@ -19,7 +19,7 @@ export default function LeadDetailDialog({ lead, open, onOpenChange, initialTab,
   useEffect(()=>{if(!open||!lead)return;(async()=>{const bid=lead.business_id;const q=(t:string)=>(supabase.from(t as any) as any).select("*").eq("business_id",bid);const[p,b,c,ci,d]=await Promise.all([q("crm_packages").eq("active",true),q("crm_menu_books"),q("crm_package_courses").order("sort_order"),q("crm_package_course_items"),q("crm_dishes")]);setBookPackages((p.data||[]).map((x:any)=>({...x,book:(b.data||[]).find((y:any)=>y.id===x.book_id)?.name||"Menu",courses:(c.data||[]).filter((y:any)=>y.package_id===x.id).map((y:any)=>({...y,dishes:(ci.data||[]).filter((z:any)=>z.course_id===y.id&&z.dish_id).map((z:any)=>(d.data||[]).find((w:any)=>w.id===z.dish_id)).filter(Boolean)}))})));})();},[open,lead?.id]);
   const loadBookPackage=(p:any,picked:{course:string;dish:any}[],pricePerHead:number)=>{const pkg=`${Date.now()}`;setCustomItems(v=>[...v,{key:pkg,name:p.name,pricePerHead:Number(pricePerHead||0),flatPrice:0}]);setDishes(v=>[...v,...picked.map((x,i)=>({key:`${pkg}-${i}`,course:x.course.trim(),name:x.dish.name,pkg}))]);toast.success(`${p.name} loaded`);};
   const removePackage=(key:string)=>{setCustomItems(v=>v.filter(c=>c.key!==key));setDishes(v=>v.filter(d=>(d as any).pkg?((d as any).pkg!==key):!key.startsWith("l")));};
-  const [corkage,setCorkage]=useState({enabled:false,perHead:"",flat:""}); const [extras,setExtras]=useState({dietary:"",allergies:"",beverage:""});
+  const [corkage,setCorkage]=useState({enabled:false,perHead:"",flat:""}); const [extras,setExtras]=useState({dietary:"",allergies:"",beverage:""}); const [beverageChoice,setBeverageChoice]=useState("");
   const [liveStalls,setLiveStalls]=useState<{key:string;name:string;pricePerHead:number;flatPrice:number;startTime:string;endTime:string}[]>([]); const [stallDraft,setStallDraft]=useState({name:"",pricePerHead:"",flatPrice:"",startTime:"17:30",endTime:"18:30"}); const [stallsRequired,setStallsRequired]=useState(false);
   const [insDate,setInsDate]=useState(""); const [insStart,setInsStart]=useState("10:00"); const [insEnd,setInsEnd]=useState("11:00"); const [followDate,setFollowDate]=useState(""); const [followTime,setFollowTime]=useState("09:00"); const [bookStart,setBookStart]=useState(String(booking?.start_time||"18:00").slice(0,5)); const [bookEnd,setBookEnd]=useState("23:00"); const [durationHours,setDurationHours]=useState<number|string>(booking?.duration_minutes?Number(booking.duration_minutes)/60:5);
   const timeToMin=(t:string)=>{const[h,m]=t.split(":").map(Number);return h*60+m;};
@@ -37,7 +37,9 @@ export default function LeadDetailDialog({ lead, open, onOpenChange, initialTab,
   const packageTotal=useMemo(()=>chosenItems.reduce((sum,i)=>sum+lineTotal(Number(i.price_per_head||0),Number(i.flat_price||0)),0)+customItems.reduce((sum,i)=>sum+lineTotal(i.pricePerHead,i.flatPrice),0),[chosenItems,customItems,guests]);
   const kidsTotal=kids.enabled?Number(kids.price||0)*Number(kids.count||0):0;
   const manualTotal=manual.reduce((sum,i)=>sum+lineTotal(i.pricePerHead,i.flatPrice),0);
-  const total=packageTotal+corkageTotal+stallTotal+kidsTotal+manualTotal;
+  const beverageOption=beverageOptions.find(o=>o.value===beverageChoice);
+  const beverageTotal=beverageOption?lineTotal(Number(beverageOption.price_per_head||0),Number(beverageOption.flat_price||0)):0;
+  const total=packageTotal+corkageTotal+stallTotal+kidsTotal+manualTotal+beverageTotal;
   const kidsCatalogue=Array.from(new Map(bookPackages.flatMap((p:any)=>(p.courses||[]).filter((c:any)=>/kid/i.test(c.name)).flatMap((c:any)=>c.dishes||[])).map((d:any)=>[d.name,d])).values());
   const dishCategories=new Set(Object.values(COURSE_CATEGORY));
   const groupedMenu=useMemo(()=>{const map=new Map<string,any[]>();menuItems.filter(i=>!dishCategories.has(i.category)).forEach(i=>{const key=i.category||"Other";map.set(key,[...(map.get(key)||[]),i]);});return Array.from(map.entries());},[menuItems]);
@@ -46,7 +48,7 @@ export default function LeadDetailDialog({ lead, open, onOpenChange, initialTab,
     if(cancelled||!sel)return;const s:any=sel;
     if(s.guest_count)setGuestOverride(Number(s.guest_count));
     setCorkage({enabled:!!s.corkage_enabled,perHead:s.corkage_per_head!=null?String(s.corkage_per_head):"",flat:s.corkage_flat!=null?String(s.corkage_flat):""});
-    setExtras({dietary:s.dietary_requirements||"",allergies:s.allergies||"",beverage:s.beverage_package||""});
+    setExtras({dietary:s.dietary_requirements||"",allergies:s.allergies||"",beverage:s.beverage_package||""});setBeverageChoice(s.beverage_package||"");
     const{data:items}=await supabase.from("crm_menu_selection_items").select("*").eq("selection_id",s.id);
     if(cancelled)return;const rows:any[]=items||[];
     setSelectedMenu(rows.filter(i=>i.menu_item_id).map(i=>i.menu_item_id));
