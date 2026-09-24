@@ -28,6 +28,6 @@
 - [x] Redesign the lead editing form for phone, tablet, and desktop while preserving the existing fields and workflow
 
 # Event calendar
-- [ ] Match the draft's monthly event grid and day snapshot in the existing theme
-- [ ] Open event details or the existing editing workflow from the day snapshot
-- [ ] Check desktop and mobile calendar interaction
+- [x] Match the draft's monthly event grid and day snapshot in the existing theme
+- [x] Open event details or the existing editing workflow from the day snapshot
+- [x] Check desktop and mobile calendar interaction

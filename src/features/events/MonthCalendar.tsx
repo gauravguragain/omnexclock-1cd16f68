@@ -27,6 +27,7 @@ type CalendarProps = {
   "bg-muted text-foreground",
   "bg-destructive/15 text-destructive",
 ];
+const DOT_TONES = ["bg-primary", "bg-secondary-foreground", "bg-accent-foreground", "bg-muted-foreground", "bg-destructive"];
 
 export default function MonthCalendar({ bookings, leads, runsheets, customers, venues, onView, onEdit }: CalendarProps) {
   const [month, setMonth] = useState(startOfMonth(new Date()));
@@ -40,6 +41,7 @@ export default function MonthCalendar({ bookings, leads, runsheets, customers, v
   const placeOf = (b: Booking) => venues.find(v => v.id === b.venue_space_id || v.name === b.venue_space || v.name.toLowerCase().replace(/\s+/g, "_") === b.venue_space)?.name || (b.booking_kind === "catering" ? b.service_location : null) || (b.venue_space ? prettyCrmValue(b.venue_space) : null) || "No venue selected";
   const allTypes = Array.from(new Set(active.map(typeOf)));
   const tone = (type: string) => TONES[Math.max(0, allTypes.indexOf(type)) % TONES.length];
+  const dotTone = (type: string) => DOT_TONES[Math.max(0, allTypes.indexOf(type)) % DOT_TONES.length];
   const filtered = active.filter(b => !types || types.includes(typeOf(b)));
   const days = eachDayOfInterval({ start: startOfWeek(month, { weekStartsOn: 1 }), end: endOfWeek(endOfMonth(month), { weekStartsOn: 1 }) });
   const eventsOn = (date: string) => filtered.filter(b => b.event_date === date).sort((a, b) => String(a.start_time || "").localeCompare(String(b.start_time || "")));
@@ -65,7 +67,7 @@ export default function MonthCalendar({ bookings, leads, runsheets, customers, v
         </div>
         <div className="ml-auto flex flex-wrap items-center gap-x-3 gap-y-2">
           <Popover><PopoverTrigger asChild><Button size="sm" variant="outline" className="sm:hidden">Categories</Button></PopoverTrigger><PopoverContent align="end" className="w-52 space-y-3">{allTypes.map(t => <label key={t} className="flex items-center gap-2 text-sm"><Checkbox checked={!types || types.includes(t)} onCheckedChange={checked => setTypes(current => checked ? [...(current || []), t] : (current || allTypes).filter(x => x !== t))} />{t === "no_type" ? "No type" : prettyCrmValue(t)}</label>)}</PopoverContent></Popover>
-          <div className="hidden flex-wrap gap-3 sm:flex">{allTypes.map(t => <label key={t} className="flex cursor-pointer items-center gap-1.5 text-xs text-muted-foreground"><Checkbox checked={!types || types.includes(t)} onCheckedChange={checked => setTypes(current => checked ? [...(current || []), t] : (current || allTypes).filter(x => x !== t))} className="h-3.5 w-3.5" /><span className={cn("h-2 w-2 rounded-full bg-primary", tone(t))} />{t === "no_type" ? "No type" : prettyCrmValue(t)}</label>)}</div>
+          <div className="hidden flex-wrap gap-3 sm:flex">{allTypes.map(t => <label key={t} className="flex cursor-pointer items-center gap-1.5 text-xs text-muted-foreground"><Checkbox checked={!types || types.includes(t)} onCheckedChange={checked => setTypes(current => checked ? [...(current || []), t] : (current || allTypes).filter(x => x !== t))} className="h-3.5 w-3.5" /><span className={cn("h-2 w-2 rounded-full", dotTone(t))} />{t === "no_type" ? "No type" : prettyCrmValue(t)}</label>)}</div>
           <span className="whitespace-nowrap text-xs font-medium">{dateCount} {dateCount === 1 ? "event" : "events"}</span>
         </div>
       </div>
@@ -75,7 +77,7 @@ export default function MonthCalendar({ bookings, leads, runsheets, customers, v
           const key = format(d, "yyyy-MM-dd"); const list = eventsOn(key);
           return <Button key={key} variant="ghost" aria-label={`${format(d, "EEE, MMM d, yyyy")}, ${list.length} ${list.length === 1 ? "event" : "events"}`} onClick={() => list.length && setSelectedDate(key)} disabled={!list.length} className={cn("h-auto min-h-[76px] min-w-0 flex-col items-stretch justify-start gap-0 overflow-hidden rounded-md border border-border p-1 text-left hover:border-primary/60 hover:bg-primary/5 sm:min-h-[168px] sm:p-2 xl:min-h-[205px]", !isSameMonth(d, month) && "bg-muted/25 text-muted-foreground", isToday(d) && "border-primary bg-primary/5", !list.length && "cursor-default opacity-75 disabled:opacity-75")}>
             <span className={cn("mb-1 self-start text-xs font-semibold sm:mb-2 sm:text-sm", isToday(d) && "text-primary")}>{format(d, "d")}{isToday(d) && <span className="hidden text-[10px] sm:ml-1 sm:inline">(today)</span>}</span>
-            {list.slice(0, 3).map(b => <span key={b.id} className="mb-1 flex w-full items-center gap-1 overflow-hidden text-[11px] font-normal"><span className={cn("h-1.5 w-1.5 shrink-0 rounded-full bg-primary", tone(typeOf(b)))} /><span className="hidden shrink-0 text-muted-foreground sm:inline">{String(b.start_time || "").slice(0, 5)}</span><span className={cn("hidden min-w-0 truncate rounded px-1 font-medium sm:inline", tone(typeOf(b)))}>{nameOf(b)}</span></span>)}
+            {list.slice(0, 3).map(b => <span key={b.id} className="mb-1 flex w-full items-center gap-1 overflow-hidden text-[11px] font-normal"><span className={cn("h-1.5 w-1.5 shrink-0 rounded-full", dotTone(typeOf(b)))} /><span className="hidden shrink-0 text-muted-foreground sm:inline">{String(b.start_time || "").slice(0, 5)}</span><span className={cn("hidden min-w-0 truncate rounded px-1 font-medium sm:inline", tone(typeOf(b)))}>{nameOf(b)}</span></span>)}
             {list.length > 3 && <span className="text-[10px] font-semibold text-primary">+{list.length - 3}</span>}
           </Button>;
         })}</div>
