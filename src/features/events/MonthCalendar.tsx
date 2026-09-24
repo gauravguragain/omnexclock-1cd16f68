@@ -32,6 +32,7 @@ const DOT_TONES = ["bg-primary", "bg-secondary-foreground", "bg-accent-foregroun
 export default function MonthCalendar({ bookings, leads, runsheets, customers, venues, onView, onEdit }: CalendarProps) {
   const [month, setMonth] = useState(startOfMonth(new Date()));
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
+  const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
   const [types, setTypes] = useState<string[] | null>(null);
   const active = bookings.filter(b => b.status !== "cancelled" && b.event_date);
   const leadOf = (b: Booking) => leads.find(l => l.id === b.lead_id);
