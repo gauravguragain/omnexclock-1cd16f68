@@ -17,7 +17,7 @@ import { useCrmData } from "@/features/sales/useCrmData";
 import LeadFormDialog from "@/features/sales/LeadFormDialog";
 import { prettyCrmValue } from "@/features/sales/types";
 import SendRunsheetDialog from "./SendRunsheetDialog";
-import { bookingEnd, minutesBetween, to12 } from "./useEventsData";
+import { bookingEnd, minutesBetween, to12, useEventsData } from "./useEventsData";
 
 const Section = ({ title, children }: { title: string; children: React.ReactNode }) => <section className="space-y-3 border-t border-border py-5"><h2 className="text-lg font-semibold">{title}</h2>{children}</section>;
 const Field = ({ label, value }: { label: string; value: React.ReactNode }) => <div className="min-w-0"><dt className="text-xs text-muted-foreground">{label}</dt><dd className="break-words text-sm font-medium">{value || "—"}</dd></div>;
@@ -26,9 +26,15 @@ export default function CateringDetailPage({ view }: { view: "lead" | "booking" 
   const { id, businessCode } = useParams();
   const nav = useNavigate();
   const crm = useCrmData();
+  const ev = useEventsData();
   const [editOpen, setEditOpen] = useState(false);
   const [editBkOpen, setEditBkOpen] = useState(false);
+  const [bkTab, setBkTab] = useState<"details" | "menu" | "team">("details");
   const [bk, setBk] = useState({ event_name: "", event_date: "", start_time: "18:00", end_time: "23:00", fulfilment_method: "delivery", service_location: "", adults: "", kids: "", notes: "" });
+  const [pkgs, setPkgs] = useState<{ key: string; packageId: string; dishes: Record<string, string[]> }[]>([]);
+  const [team, setTeam] = useState({ coordinator: "", coordinator_phone: "", onsite_name: "", onsite_phone: "", client_notes: "" });
+  const [foodRows, setFoodRows] = useState<{ time: string; label: string }[]>([]);
+  const [fohRows, setFohRows] = useState<{ time: string; label: string }[]>([]);
   const [bkSaving, setBkSaving] = useState(false);
   const [sendOpen, setSendOpen] = useState(false);
   const [selection, setSelection] = useState<any>(null);
