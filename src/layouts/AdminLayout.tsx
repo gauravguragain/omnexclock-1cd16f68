@@ -20,7 +20,7 @@ import {
 } from "@/components/ui/sheet";
 
 export default function AdminLayout() {
-  const { user, isAdminOf, isSuperAdminOf, isViewerOf, isRosterAdminOf, isSalesManagerOf, getRosterAdminDepartments, hasAccessTo, isApproved, loading, signOut } = useAuth();
+  const { user, isAdminOf, isSuperAdminOf, isViewerOf, isRosterAdminOf, isSalesManagerOf, isFoodSafetyManagerOf, getRosterAdminDepartments, hasAccessTo, isApproved, loading, signOut } = useAuth();
   const { business, businesses, setBusiness } = useBusiness();
   const location = useLocation();
   const { businessCode } = useParams();
@@ -65,6 +65,7 @@ export default function AdminLayout() {
   const isViewer = isViewerOf(currentBusinessId);
   const isRosterAdmin = isRosterAdminOf(currentBusinessId);
   const isSalesManager = isSalesManagerOf(currentBusinessId);
+  const isFoodSafety = isFoodSafetyManagerOf(currentBusinessId);
   const hasAccess = hasAccessTo(currentBusinessId);
   const rosterDepts = getRosterAdminDepartments(currentBusinessId);
 
@@ -83,7 +84,8 @@ export default function AdminLayout() {
     { path: `${basePath}/forum`, label: "Forum", icon: MessageSquare, tourId: "forum", access: "admin" },
     { path: `${basePath}/inventory`, label: "Inventory", icon: Package, tourId: "inventory", access: "inventory" },
     { path: `${basePath}/service`, label: "Service", icon: Wrench, tourId: "service", access: "admin" },
-    { path: `${basePath}/food-safety`, label: "Food Safety", icon: ShieldPlus, tourId: "food-safety", access: "admin" },
+    { path: `${basePath}/food-safety`, label: "Food Safety", icon: ShieldPlus, tourId: "food-safety", access: "food_safety" },
+    { path: `/b/${businessCode}/events`, label: "Sales & Marketing", icon: BriefcaseBusiness, tourId: "sales", access: "sales" },
     { path: `${basePath}/users`, label: "User Management", icon: UserCog, tourId: "users", access: "super_admin_only" },
     
     { path: `${basePath}/my-business`, label: "My Business", icon: Building2, tourId: "my-business", access: "admin" },
@@ -95,21 +97,18 @@ export default function AdminLayout() {
   const isRosterAdminBOH = isRosterAdmin && !isAdmin && !isSuperAdmin && rosterDepts.some(d => d.toUpperCase() === "BOH");
 
   // Filter nav items based on role
+  // Users can hold several roles; show the union of everything their roles allow.
   const navItems = allNavItems.filter(item => {
-    if (item.access === "super_admin_only") {
-      return isSuperAdmin;
-    }
+    if (item.access === "super_admin_only") return isSuperAdmin;
     if (isAdmin || isSuperAdmin) return true;
-    if (isSalesManager) return item.access === "sales";
-    if (isRosterAdmin && !isAdmin && !isSuperAdmin && !isViewer) {
+    if (item.access === "food_safety" && isFoodSafety) return true;
+    if (item.access === "sales") return isSalesManager;
+    if (isViewer && item.access !== "admin_only") return true;
+    if (isRosterAdmin) {
       if (item.access === "roster") return true;
       if (item.access === "inventory" && isRosterAdminFOH) return true;
-      return false;
     }
-    if (isViewer) {
-      return item.access !== "super_admin_only" && item.access !== "admin_only";
-    }
-    return true;
+    return false;
   });
 
   // Bottom nav: Dashboard, Timesheets, Roster, Live Monitor as primary; rest in More
@@ -160,7 +159,8 @@ export default function AdminLayout() {
   }
 
   if (!user) return <Navigate to="/auth" replace />;
-  if (isSalesManager && !isAdmin && !isSuperAdmin && !isViewer && !isRosterAdmin) return <Navigate to={`/b/${businessCode}/events`} replace />;
+  if (isSalesManager && !isAdmin && !isSuperAdmin && !isViewer && !isRosterAdmin && !isFoodSafety) return <Navigate to={`/b/${businessCode}/events`} replace />;
+  if (isFoodSafety && !isAdmin && !isSuperAdmin && !isViewer && !isRosterAdmin && !location.pathname.includes("/food-safety")) return <Navigate to={`/b/${businessCode}/admin/food-safety`} replace />;
 
   const businessStatus = business && (business as any).status;
   const isSuspended = businessStatus === "suspended" || businessStatus === "deactivated";
