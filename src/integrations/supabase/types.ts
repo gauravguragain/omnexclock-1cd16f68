@@ -515,6 +515,7 @@ export type Database = {
           event_name: string | null
           event_order_number: string | null
           event_type: string | null
+          fulfilment_method: string
           guest_count: number
           id: string
           kids: number | null
@@ -550,6 +551,7 @@ export type Database = {
           event_name?: string | null
           event_order_number?: string | null
           event_type?: string | null
+          fulfilment_method?: string
           guest_count: number
           id?: string
           kids?: number | null
@@ -585,6 +587,7 @@ export type Database = {
           event_name?: string | null
           event_order_number?: string | null
           event_type?: string | null
+          fulfilment_method?: string
           guest_count?: number
           id?: string
           kids?: number | null

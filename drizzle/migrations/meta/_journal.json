@@ -134,6 +134,13 @@
       "when": 1790252776084,
       "tag": "0018_split_service_schedule",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1790254366628,
+      "tag": "0019_catering_fulfilment_method",
+      "breakpoints": true
     }
   ]
 }
