@@ -8,7 +8,6 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Plus, Search } from "lucide-react";
 import { useCrmData } from "@/features/sales/useCrmData";
-import LeadDetailDialog from "@/features/sales/LeadDetailDialog";
 import { prettyCrmValue } from "@/features/sales/types";
 import { useEventsData, bookingEnd, to12 } from "./useEventsData";
 

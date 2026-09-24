@@ -24,7 +24,7 @@ export default function CateringDetailPage({ view }: { view: "lead" | "booking" 
   const [selection, setSelection] = useState<any>(null);
   const [items, setItems] = useState<any[]>([]);
   const booking: any = view === "booking" ? crm.bookings.find(b => b.id === id && b.booking_kind === "catering") : null;
-  const lead = crm.leads.find(l => l.id === (view === "lead" ? id : booking?.lead_id) && l.lead_kind === "catering");
+  const lead = crm.leads.find(l => l.id === (view === "lead" ? id : booking?.lead_id) && (l.lead_kind === "catering" || booking?.booking_kind === "catering" || l.event_type === "catering"));
   const rs: any = crm.runsheets.filter((r: any) => booking && (r.booking_id === booking.id || r.lead_id === booking.lead_id)).sort((a: any, b: any) => (b.revision || 0) - (a.revision || 0))[0];
   const base = `/b/${businessCode}/events`;
 
