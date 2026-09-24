@@ -10,7 +10,6 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import DateField from "@/features/sales/DateField";
 import TimeDropdownPicker from "@/components/TimeDropdownPicker";
-import OptionSelect from "@/features/sales/OptionSelect";
 import { useCrmData } from "@/features/sales/useCrmData";
 import { useEventsData, bookingEnd, minutesBetween, to12 } from "./useEventsData";
 import { AlertTriangle, CheckCircle2, Loader2 } from "lucide-react";
@@ -18,6 +17,8 @@ import { cn } from "@/lib/utils";
 
 const toMin = (t: string) => { const [h, m] = t.split(":").map(Number); return h * 60 + m; };
 const range = (s: string, e: string) => { const a = toMin(s); let b = toMin(e); if (b <= a) b += 1440; return [a, b]; };
+
+const Step = ({ n, title, sub, children }: any) => <Card><CardContent className="p-6"><div className="mb-4 flex gap-4"><span className="font-serif text-3xl text-primary">{n}</span><div><h2 className="text-lg font-semibold">{title}</h2><p className="text-sm text-muted-foreground">{sub}</p></div></div>{children}</CardContent></Card>;
 
 export default function CreateEventWizard({ kind }: { kind: "event" | "catering" }) {
   const crm = useCrmData(); const ev = useEventsData(); const { user } = useAuth();
@@ -65,8 +66,6 @@ export default function CreateEventWizard({ kind }: { kind: "event" | "catering"
     } catch (e: any) { toast.error(e.message); } finally { setSaving(false); }
   };
 
-  const Step = ({ n, title, sub, children }: any) => <Card><CardContent className="p-6"><div className="mb-4 flex gap-4"><span className="font-serif text-3xl text-primary">{n}</span><div><h2 className="text-lg font-semibold">{title}</h2><p className="text-sm text-muted-foreground">{sub}</p></div></div>{children}</CardContent></Card>;
-
   return <div className="mx-auto max-w-4xl space-y-5">
     <div><h1 className="font-serif text-3xl font-semibold">{kind === "event" ? "Create event" : "New catering booking"}</h1><p className="text-sm text-muted-foreground">Record a confirmed {kind === "event" ? "event" : "catering job"}. The customer, schedule and {kind === "event" ? "hall" : "service location"} are required; everything else can follow.</p></div>
     <Step n="01" title="Customer" sub="Search for an existing client, or add a new one. Name, phone and email are required.">
@@ -77,7 +76,7 @@ export default function CreateEventWizard({ kind }: { kind: "event" | "catering"
     <Step n="02" title="Event & schedule" sub="What is being held, when, and how many are coming.">
       <div className="grid gap-3 sm:grid-cols-2">
         <div className="space-y-1.5"><Label>Event name *</Label><Input value={f.event_name} onChange={e => set("event_name", e.target.value)} /></div>
-        <div className="space-y-1.5"><Label>Event type</Label><OptionSelect options={crm.options.filter(o => o.option_type === "event_type" && o.active)} value={f.event_type} onChange={(v: string) => set("event_type", v)} emptyLabel="Choose type" /></div>
+        <div className="space-y-1.5"><Label>Event type</Label><select value={f.event_type} onChange={e => set("event_type", e.target.value)} className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"><option value="">Choose type</option>{crm.options.filter(o => o.option_type === "event_type" && o.active).map(o => <option key={o.id} value={o.value}>{o.label}</option>)}</select></div>
         <div className="space-y-1.5"><Label>Date *</Label><DateField value={f.date} onChange={v => set("date", v)} /></div>
         <div className="grid grid-cols-2 gap-2"><div className="space-y-1.5"><Label>Start *</Label><TimeDropdownPicker value={f.start} onChange={v => set("start", v)} /></div><div className="space-y-1.5"><Label>End *</Label><TimeDropdownPicker value={f.end} onChange={v => set("end", v)} /></div></div>
         <div className="space-y-1.5"><Label>Adults *</Label><Input type="number" min="0" value={f.adults} onChange={e => set("adults", e.target.value)} /></div>
