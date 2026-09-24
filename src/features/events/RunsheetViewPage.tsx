@@ -123,8 +123,6 @@ export function RunsheetDocument({ rs, lead, b, items, selection, businessName }
           {rs.setup_notes && <p className="mt-2 whitespace-pre-line pl-3">{rs.setup_notes}</p>}
           {rs.access_time && <p className="mt-2">Decor / vendor access: {to12(rs.access_time)}</p>}
           {rs.special_requests && <p className="mt-2">Special requests: {rs.special_requests}</p>}
-          <h2 className="mt-4 font-bold">Food serving schedule</h2>
-          {schedule.length ? schedule.map((s, i) => <p key={i} className="pl-3">• {s.time ? to12(s.time) : "—"} – {s.label}{s.detail ? ` (${s.detail})` : ""}</p>) : <p className="pl-3 text-muted-foreground">No food timings set.</p>}
           <h2 className="mt-4 font-bold">FOH service schedule</h2>
           {fohSchedule.length ? fohSchedule.map((s, i) => <p key={i} className="pl-3">• {s.time ? to12(s.time) : "—"} – {s.label}{s.detail ? ` (${s.detail})` : ""}</p>) : <p className="pl-3 text-muted-foreground">No floor timings set.</p>}
           {rs.client_notes && <div className="mt-4 break-inside-avoid"><h2 className="font-bold">Client notes</h2><p className="whitespace-pre-line pl-3">{rs.client_notes}</p></div>}
