@@ -55,7 +55,10 @@ export default function EventsDashboard() {
   return <div className="space-y-6">
     <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
       <div><h1 className="font-serif text-3xl font-semibold">Welcome back</h1><p className="text-sm text-muted-foreground"><span className="font-medium text-foreground">{format(new Date(), "EEEE, d MMMM yyyy")}</span> · Venue events below, catering further down.</p></div>
-      <Button asChild><Link to={`${base}/leads/events`}><UserPlus className="mr-2 h-4 w-4" />New lead</Link></Button>
+      <div className="flex flex-col gap-2 sm:items-end">
+        <Button asChild><Link to={`${base}/leads/events`}><UserPlus className="mr-2 h-4 w-4" />New lead</Link></Button>
+        <Button asChild variant="outline"><Link to={`${cBase}/leads`}><UtensilsCrossed className="mr-2 h-4 w-4" />New catering lead</Link></Button>
+      </div>
     </div>
 
      <div className="grid min-w-0 gap-4 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
