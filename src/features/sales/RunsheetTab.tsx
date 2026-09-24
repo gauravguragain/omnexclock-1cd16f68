@@ -154,18 +154,21 @@ export default function RunsheetTab({ lead, booking, options, onSaved }: {
     const start = timeToMinutes(startTime);
     const hasStall = menu.items.some((i: any) => (menu.catalogue[i.menu_item_id] || "").includes("stall"));
     const hasKids = Number(form.kids_guests || 0) > 0;
-    const plan: { label: string; offset: number; detail?: string }[] = [
-      { label: "Guest arrival and beverages", offset: 0, detail: menu.selection?.beverage_package ? prettyCrmValue(menu.selection.beverage_package) : "" },
+    const foodPlan: { label: string; offset: number; detail?: string }[] = [
       ...(hasStall ? [{ label: courseOptions.find((c) => c.toLowerCase().includes("stall")) || "Live stall", offset: 30 }] : []),
       { label: courseOptions.find((c) => c.toLowerCase().includes("entree")) || "Entrees", offset: 45 },
       ...(hasKids ? [{ label: courseOptions.find((c) => c.toLowerCase().includes("kids")) || "Kids menu", offset: 60, detail: `${form.kids_guests} kids` }] : []),
-      { label: "Speeches", offset: 105 },
       { label: courseOptions.find((c) => c.toLowerCase().includes("main")) || "Mains", offset: 150 },
-      { label: "Cake cutting", offset: 210 },
       { label: courseOptions.find((c) => c.toLowerCase().includes("dessert")) || "Dessert", offset: 225 },
+    ];
+    const fohPlan: { label: string; offset: number; detail?: string }[] = [
+      { label: "Guest arrival and beverages", offset: 0, detail: menu.selection?.beverage_package ? prettyCrmValue(menu.selection.beverage_package) : "" },
+      { label: "Speeches", offset: 105 },
+      { label: "Cake cutting", offset: 210 },
       { label: "Carriages / pack down", offset: timeToMinutes(endTime) - start },
     ];
-    setSchedule(plan.map((line, index) => ({ key: `p${index}`, time: minutesToTime(start + line.offset), label: line.label, detail: line.detail || "" })));
+    setSchedule(foodPlan.map((line, index) => ({ key: `p${index}`, time: minutesToTime(start + line.offset), label: line.label, detail: line.detail || "" })));
+    setFohSchedule(fohPlan.map((line, index) => ({ key: `q${index}`, time: minutesToTime(start + line.offset), label: line.label, detail: line.detail || "" })));
   }, [startTime, endTime, courseOptions, menu, form.kids_guests]);
 
   const buildFromBooking = () => {
