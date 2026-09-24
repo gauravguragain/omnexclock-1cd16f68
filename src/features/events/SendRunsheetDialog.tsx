@@ -16,14 +16,16 @@ export const runsheetPublicUrl = (rs: any) => `${PUBLIC_ORIGIN}/runsheet/${rs.id
 
 type Person = { key: string; name: string; email: string };
 
-export default function SendRunsheetDialog({ open, onOpenChange, rs, lead, booking, businessName }: {
+export default function SendRunsheetDialog({ open, onOpenChange, rs, lead, booking, businessName, mode = "send", onIssue }: {
   open: boolean; onOpenChange: (v: boolean) => void; rs: any; lead: any; booking: any; businessName: string;
+  mode?: "send" | "issue"; onIssue?: () => Promise<any | null>;
 }) {
+  const issuing = mode === "issue";
   const [stakeholders, setStakeholders] = useState<any[]>([]);
   const [linked, setLinked] = useState<any[]>([]);
   const [picked, setPicked] = useState<Set<string>>(new Set());
   const [extra, setExtra] = useState(""); const [message, setMessage] = useState(""); const [sending, setSending] = useState(false);
-  const resend = !!rs.emailed_at || !!rs.sent_at;
+  const resend = !issuing && !!rs.sent_at;
 
   useEffect(() => {
     if (!open) return;
@@ -57,6 +59,12 @@ export default function SendRunsheetDialog({ open, onOpenChange, rs, lead, booki
 
   const send = async () => {
     setSending(true);
+    if (issuing) {
+      const issued = await onIssue?.();
+      if (!issued) { setSending(false); return; }
+      rs = issued;
+      if (!recipients.length) { setSending(false); onOpenChange(false); return; }
+    }
     const start = booking?.start_time ? String(booking.start_time).slice(0, 5) : "";
     const payload = {
       type: "runsheet", businessName, resend, message: message.trim() || undefined,
@@ -89,8 +97,10 @@ export default function SendRunsheetDialog({ open, onOpenChange, rs, lead, booki
 
   return <Dialog open={open} onOpenChange={onOpenChange}>
     <DialogContent className="max-h-[90vh] max-w-lg overflow-y-auto">
-      <DialogHeader><DialogTitle>{resend ? "Send this run sheet again?" : "Email the run sheet"}</DialogTitle></DialogHeader>
-      <p className="flex gap-2 text-sm text-muted-foreground"><RotateCcw className="mt-0.5 h-4 w-4 shrink-0" />Nothing about the event changes. Each person gets a link to the run sheet exactly as it stands — no prices shown.</p>
+      <DialogHeader><DialogTitle>{issuing ? (rs.sent_at ? "Re-issue the run sheet" : "Issue the run sheet") : resend ? "Send this run sheet again?" : "Email the run sheet"}</DialogTitle></DialogHeader>
+      {issuing ? <p className="flex gap-2 text-sm text-muted-foreground"><Mail className="mt-0.5 h-4 w-4 shrink-0" />Issuing locks in this version, creates the follow-up tasks and moves the lead to "Run sheet sent". Everyone ticked below gets an email with a link to the run sheet — no prices shown.</p>
+        : <><p className="flex gap-2 text-sm text-muted-foreground"><RotateCcw className="mt-0.5 h-4 w-4 shrink-0" />Nothing about the event changes. It sends the run sheet exactly as it stands — no prices shown.</p>
+        {resend && <p className="rounded-lg border border-border bg-muted/40 p-3 text-xs text-muted-foreground">Everyone ticked has likely been emailed already. Sending again puts a second, identical copy in their inbox — worth doing if the first didn't arrive.</p>}</>}
       <div>
         <p className="mb-2 text-sm font-medium">Who gets an email</p>
         <div className="overflow-hidden rounded-xl border border-border">
@@ -106,7 +116,7 @@ export default function SendRunsheetDialog({ open, onOpenChange, rs, lead, booki
       <Textarea value={message} onChange={e => setMessage(e.target.value)} placeholder="Optional message" rows={2} />
       <DialogFooter>
         <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
-        <Button disabled={!recipients.length || sending} onClick={send}><Mail className="mr-2 h-4 w-4" />{sending ? "Sending…" : `${resend ? "Resend" : "Send"} to ${recipients.length}`}</Button>
+        <Button disabled={(!issuing && !recipients.length) || sending} onClick={send}><Mail className="mr-2 h-4 w-4" />{sending ? "Working…" : issuing ? (recipients.length ? `Issue & send to ${recipients.length}` : "Issue without emailing") : `${resend ? "Resend" : "Send"} to ${recipients.length}`}</Button>
       </DialogFooter>
     </DialogContent>
   </Dialog>;

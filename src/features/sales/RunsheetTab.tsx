@@ -242,11 +242,11 @@ export default function RunsheetTab({ lead, booking, options, onSaved }: {
     onSaved();
   };
 
-  const issueRunsheet = async () => {
+  const issueRunsheet = async (): Promise<any | null> => {
     setSaving(true);
     const revision = Number(runsheet?.revision || 1);
     const saved = await persist({ status: "sent", sent_at: new Date().toISOString(), generated_at: new Date().toISOString(), revision });
-    if (!saved) { setSaving(false); return; }
+    if (!saved) { setSaving(false); return null; }
 
     const audience = form.distributed_to || "the operations team";
     await supabase.from("crm_interactions").insert({
@@ -280,9 +280,11 @@ export default function RunsheetTab({ lead, booking, options, onSaved }: {
     }
 
     setSaving(false);
-    toast.success(`Runsheet v${revision} issued — follow-up tasks created`);
+    toast.success(`Run sheet v${revision} issued — follow-up tasks created`);
     onSaved();
+    return saved;
   };
+  const [issueOpen, setIssueOpen] = useState(false);
 
   if (loading) return <p className="py-8 text-sm text-muted-foreground">Loading runsheet…</p>;
 
@@ -307,7 +309,7 @@ export default function RunsheetTab({ lead, booking, options, onSaved }: {
             <Button size="sm" onClick={save} disabled={saving}><Save className="mr-2 h-4 w-4" />Save</Button>
             {runsheet?.id && <Button size="sm" variant="outline" onClick={() => window.open(`/b/${window.location.pathname.split("/")[2]}/events/runsheet/${runsheet.id}`, "_blank")}><Eye className="mr-2 h-4 w-4" />View run sheet</Button>}
             {runsheet?.sent_at && <Button size="sm" variant="outline" onClick={() => setSendOpen(true)}><Mail className="mr-2 h-4 w-4" />Email run sheet</Button>}
-            <Button size="sm" variant="secondary" onClick={issueRunsheet} disabled={saving || !readyToSend} title={readyToSend ? "" : "Complete the checklist first"}>
+            <Button size="sm" variant="secondary" onClick={() => setIssueOpen(true)} disabled={saving || !readyToSend} title={readyToSend ? "" : "Complete the checklist first"}>
               <Send className="mr-2 h-4 w-4" />{runsheet?.status === "sent" ? "Re-issue" : "Issue runsheet"}
             </Button>
           </div>
@@ -419,6 +421,7 @@ export default function RunsheetTab({ lead, booking, options, onSaved }: {
           <div className="space-y-1.5"><Label>Special requests</Label><Textarea rows={3} value={form.special_requests} onChange={set("special_requests")} placeholder="Host has requested tea…" /></div>
         </div>
       </section>
+      <SendRunsheetDialog mode="issue" open={issueOpen} onOpenChange={setIssueOpen} rs={runsheet || {}} lead={lead} booking={booking} businessName={business?.name || ""} onIssue={issueRunsheet} />
       {runsheet?.id && <SendRunsheetDialog open={sendOpen} onOpenChange={setSendOpen} rs={runsheet} lead={lead} booking={booking} businessName={business?.name || ""} />}
     </div>
   );
