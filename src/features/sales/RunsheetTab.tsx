@@ -345,11 +345,6 @@ export default function RunsheetTab({ lead, booking, options, onSaved }: {
               ))}
             </div>
           </div>
-          <div className="space-y-2 rounded-md border border-dashed border-border p-3 text-sm">
-            <p className="font-medium">How this runs</p>
-            <p className="text-muted-foreground text-xs">Enquiry → inspection → menu → invoice → deposit → <strong>runsheet issued</strong> → final numbers → event day. Issuing the runsheet files a copy against the client, moves them to Runsheet Sent, and creates two reminders: final numbers a week out, and an operations brief the day before.</p>
-            <div className="space-y-1.5"><Label>Issue to</Label><Input value={form.distributed_to} onChange={set("distributed_to")} placeholder="Kitchen, floor team, AV" /></div>
-          </div>
         </div>
       </div>
 
