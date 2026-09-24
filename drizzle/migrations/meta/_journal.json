@@ -197,6 +197,13 @@
       "when": 1790273698516,
       "tag": "0027_sync_crm_leads_to_customers",
       "breakpoints": true
+    },
+    {
+      "idx": 28,
+      "version": "7",
+      "when": 1790274003865,
+      "tag": "0028_sync_event_lead_confirmation_outcome",
+      "breakpoints": true
     }
   ]
 }

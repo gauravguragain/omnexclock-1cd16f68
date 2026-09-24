@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Plus, Search } from "lucide-react";
 import { useCrmData } from "@/features/sales/useCrmData";
-import { prettyCrmValue } from "@/features/sales/types";
+import { isConfirmedLeadStage, prettyCrmValue } from "@/features/sales/types";
 import { useEventsData, bookingEnd, to12 } from "./useEventsData";
 
 export default function EventsList({ kind }: { kind: "event" | "catering" }) {
@@ -17,7 +17,12 @@ export default function EventsList({ kind }: { kind: "event" | "catering" }) {
    const [tab, setTab] = useState("upcoming"); const [search, setSearch] = useState("");
   if (!crm.business) return null;
   const today = format(new Date(), "yyyy-MM-dd");
-  const mine = crm.bookings.filter(b => (b.booking_kind || "event") === kind);
+  const mine = crm.bookings.filter(b => {
+    if ((b.booking_kind || "event") !== kind) return false;
+    if (kind === "catering" || !b.lead_id) return true;
+    const lead = crm.leads.find(item => item.id === b.lead_id);
+    return !!lead && isConfirmedLeadStage(lead.status);
+  });
   const bucket = (b: any) => b.status === "cancelled" ? "cancelled" : b.event_date < today ? "past" : "upcoming";
   const customer = (b: any) => ev.customers.find(c => c.id === b.customer_id)?.full_name || crm.leads.find(l => l.id === b.lead_id)?.full_name || "—";
   const shown = mine.filter(b => (tab === "all" || bucket(b) === tab) && `${b.event_name || ""} ${customer(b)} ${b.event_order_number || ""} ${b.venue_space} ${b.service_location || ""}`.toLowerCase().includes(search.toLowerCase()))

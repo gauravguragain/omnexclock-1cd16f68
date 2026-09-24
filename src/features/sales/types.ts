@@ -33,6 +33,15 @@ export type CrmInteraction = {
 
 export const CRM_STAGE_VALUES = ["new", "contacted", "inspection_booked", "inspected", "deposit_received", "menu_selected", "invoice_sent", "runsheet_sent", "full_payment_received"];
 
+export const CRM_CONFIRMED_STAGES = ["deposit_received", "menu_selected", "invoice_sent", "runsheet_sent", "full_payment_received"];
+
+export const isConfirmedLeadStage = (status: string) => CRM_CONFIRMED_STAGES.includes(status);
+
+export const leadStageUpdate = (status: string) => ({
+  status,
+  lead_outcome: isConfirmedLeadStage(status) ? "confirmed" : status === "cold" ? "declined" : "new",
+});
+
 /** Cold leads are parked, not part of the forward pipeline. */
 export const CRM_COLD_STATUS = "cold";
 export const CRM_LEAD_STATUSES = [...CRM_STAGE_VALUES, CRM_COLD_STATUS];
