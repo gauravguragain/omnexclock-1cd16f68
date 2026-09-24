@@ -189,7 +189,7 @@ export function PublicRunsheetPage() {
   }, [runsheetId, t]);
   if (err) return <div className="py-20 text-center text-muted-foreground">{err}</div>;
   if (!data) return <div className="py-20 text-center text-muted-foreground">Loading…</div>;
-  return <div className="min-h-screen bg-background px-4 py-8">
+   return <div className="min-h-screen bg-background px-4 py-8 print:!min-h-0 print:!p-0">
     <div className="mx-auto w-full max-w-[210mm] space-y-4">
       <div className="flex justify-end gap-2 print:hidden">
         <Button variant="outline" onClick={() => window.print()}><Printer className="mr-2 h-4 w-4" />Print</Button>

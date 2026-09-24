@@ -44,7 +44,7 @@ export default function EventsLayout() {
       <it.icon className="h-4 w-4" />{it.label}</NavLink>)}
   </div>)}</nav>;
 
-  return <div className="min-h-dvh bg-background lg:flex">
+   return <div className="min-h-dvh bg-background lg:flex print:!block print:!min-h-0">
     <aside className="hidden w-64 shrink-0 border-r border-border/40 lg:block print:!hidden"><div className="sticky top-0 h-dvh overflow-y-auto">
       <div className="flex items-center gap-3 border-b border-border/40 p-4">{business?.logo_url ? <img src={business.logo_url} alt="" className="h-9 w-9 rounded-lg object-cover" /> : <PartyPopper className="h-6 w-6 text-primary" />}<div><p className="text-sm font-semibold">{business?.name}</p><p className="text-[11px] text-primary">Events & Sales</p></div></div>
       {nav}
