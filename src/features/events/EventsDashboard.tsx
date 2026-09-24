@@ -34,6 +34,12 @@ export default function EventsDashboard() {
   const ring = [{ n: todays.length, c: "hsl(var(--foreground))" }, { n: week.length, c: "hsl(var(--primary))" }, { n: later.length, c: "hsl(var(--destructive))" }];
   let off = 0; const C = 2 * Math.PI * 40;
   const first = todays[0];
+  const cBase = `/b/${businessCode}/catering`;
+  const cat = crm.bookings.filter(b => b.status !== "cancelled" && b.booking_kind === "catering");
+  const cUp = cat.filter(b => b.event_date >= today).sort((a, b) => (a.event_date + a.start_time).localeCompare(b.event_date + b.start_time));
+  const cToday = cUp.filter(b => b.event_date === today);
+  const cWeek = cUp.filter(b => b.event_date > today && b.event_date <= in7);
+  const cLeads = crm.leads.filter((l: any) => (l.lead_kind === "catering" || l.event_type === "catering") && !["cold", "lost", "declined", "full_payment_received"].includes(l.status));
 
   const Stat = ({ title, sub, value, unit, icon: Icon, children, link, to }: any) => <Card><CardContent className="flex h-full flex-col p-5">
     <div className="flex items-start justify-between"><div><p className="font-medium">{title}</p><p className="text-xs text-muted-foreground">{sub}</p></div><span className="rounded-full bg-primary/15 p-2 text-primary"><Icon className="h-4 w-4" /></span></div>
@@ -44,7 +50,7 @@ export default function EventsDashboard() {
 
   return <div className="space-y-6">
     <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-      <div><h1 className="font-serif text-3xl font-semibold">Welcome back</h1><p className="text-sm text-muted-foreground"><span className="font-medium text-foreground">{format(new Date(), "EEEE, d MMMM yyyy")}</span> · Here's what's happening at your venue today.</p></div>
+      <div><h1 className="font-serif text-3xl font-semibold">Welcome back</h1><p className="text-sm text-muted-foreground"><span className="font-medium text-foreground">{format(new Date(), "EEEE, d MMMM yyyy")}</span> · Venue events below, catering further down.</p></div>
       <Button asChild><Link to={`${base}/leads/events`}><UserPlus className="mr-2 h-4 w-4" />New lead</Link></Button>
     </div>
 
@@ -101,6 +107,25 @@ export default function EventsDashboard() {
          <div className="mt-4 grid gap-3 sm:grid-cols-2">{[[UserPlus, "New lead", "Start the event workflow", `${base}/leads/events`], [Plus, "Add space", "Create or manage venue spaces", `${base}/spaces`], [CalendarPlus, "View calendar", "All events in calendar view", `${base}/calendar`], [UtensilsCrossed, "Menu books", "Menus and packages", `${base}/menu-books`]].map(([I, t, s, to]: any) => <Link key={t} to={to} className="flex items-center gap-3 rounded-lg border border-border p-3 hover:border-primary">
           <span className="rounded-full bg-primary/15 p-2 text-primary"><I className="h-4 w-4" /></span><div className="flex-1"><p className="text-sm font-medium">{t}</p><p className="text-xs text-muted-foreground">{s}</p></div><ChevronRight className="h-4 w-4 text-muted-foreground" /></Link>)}</div>
       </CardContent></Card>
+    </div>
+    <div className="space-y-4 border-t border-border pt-6">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between"><div><h2 className="font-serif text-2xl font-semibold">Catering</h2><p className="text-sm text-muted-foreground">Deliveries and pickups, kept separate from venue events.</p></div>
+        <Button asChild variant="outline"><Link to={`${cBase}/leads`}><UserPlus className="mr-2 h-4 w-4" />New catering lead</Link></Button></div>
+      <div className="grid min-w-0 gap-4 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Stat title="Catering today" sub={format(new Date(), "EEE d MMM")} value={cToday.length} unit="jobs scheduled" icon={UtensilsCrossed} link="View catering bookings" to={`${cBase}/bookings`}>{cToday[0] ? `${to12(String(cToday[0].start_time).slice(0, 5))} · ${cToday[0].event_name || "Catering"}` : "Nothing on today"}</Stat>
+          <Stat title="Catering next 7 days" sub={`${cUp.length} upcoming in total`} value={cWeek.length} unit="upcoming jobs" icon={CalendarClock} link="View catering bookings" to={`${cBase}/bookings`}>{cWeek[0] ? `Next: ${cWeek[0].event_name || "Catering"} on ${format(d(cWeek[0].event_date), "d MMM")}` : "Nothing booked in the next seven days"}</Stat>
+          <Stat title="Open catering leads" sub="Not yet confirmed" value={cLeads.length} unit="leads" icon={UserPlus} link="View catering leads" to={`${cBase}/leads`}>{cLeads.slice(0, 2).map((l: any) => <p key={l.id} className="truncate">{l.full_name}</p>)}</Stat>
+          <Stat title="Catering this month" sub={format(new Date(), "MMMM yyyy")} value={cat.filter(b => isSameMonth(d(b.event_date), new Date())).length} unit="jobs" icon={CalendarDays} link="View catering bookings" to={`${cBase}/bookings`}>{cat.length} catering jobs all time</Stat>
+        </div>
+        <Card><CardContent className="p-6">
+          <div className="flex items-start justify-between"><div className="border-l-2 border-primary pl-3"><p className="font-semibold">Upcoming catering</p><p className="text-xs text-muted-foreground">The next seven days</p></div><Link to={`${cBase}/bookings`} className="text-xs text-muted-foreground hover:text-primary">View all ›</Link></div>
+          <div className="mt-4 space-y-2">{[...cToday, ...cWeek].slice(0, 6).map(b => <Link key={b.id} to={`${cBase}/bookings/${b.id}`} className="flex min-w-0 items-center gap-3 rounded-lg border border-border p-3 hover:border-primary sm:gap-4">
+            <div className="text-center"><p className="text-lg font-semibold leading-none">{format(d(b.event_date), "dd")}</p><p className="text-[10px] uppercase text-muted-foreground">{format(d(b.event_date), "MMM")}</p></div>
+            <div className="min-w-0 flex-1"><p className="truncate font-medium">{b.event_name || crm.leads.find(l => l.id === b.lead_id)?.full_name || "Catering"}</p><p className="flex flex-wrap gap-x-3 text-xs text-muted-foreground"><span>{to12(String(b.start_time).slice(0, 5))}</span><span className="flex items-center gap-1"><Users className="h-3 w-3" />{guests(b)} guests</span></p></div>
+          </Link>)}{!cToday.length && !cWeek.length && <p className="py-8 text-center text-sm text-muted-foreground">No catering in the next seven days</p>}</div>
+        </CardContent></Card>
+      </div>
     </div>
   </div>;
 }
