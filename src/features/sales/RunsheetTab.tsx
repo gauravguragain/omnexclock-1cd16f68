@@ -60,6 +60,7 @@ export default function RunsheetTab({ lead, booking, options, onSaved }: {
   const [extraSetupItems, setExtraSetupItems] = useState<string[]>([]);
   const [newSetupItem, setNewSetupItem] = useState("");
   const [schedule, setSchedule] = useState<ScheduleRow[]>([]);
+  const [fohSchedule, setFohSchedule] = useState<ScheduleRow[]>([]);
 
   const setupOptions = useMemo(() => {
     const configured = options.filter((o) => o.option_type === "setup_item" && o.active).map((o) => o.label);
@@ -103,6 +104,7 @@ export default function RunsheetTab({ lead, booking, options, onSaved }: {
       setAccessEnabled(Boolean(row.access_time));
       setSetupItems(row.setup_items || []);
       setSchedule(((row.service_schedule || []) as RunsheetScheduleLine[]).map((line, index) => ({ ...line, key: `s${index}` })));
+      setFohSchedule(((row.service_schedule_foh || []) as RunsheetScheduleLine[]).map((line, index) => ({ ...line, key: `f${index}` })));
     } else {
       setAccessEnabled(false);
       setForm((prev) => ({
@@ -152,18 +154,21 @@ export default function RunsheetTab({ lead, booking, options, onSaved }: {
     const start = timeToMinutes(startTime);
     const hasStall = menu.items.some((i: any) => (menu.catalogue[i.menu_item_id] || "").includes("stall"));
     const hasKids = Number(form.kids_guests || 0) > 0;
-    const plan: { label: string; offset: number; detail?: string }[] = [
-      { label: "Guest arrival and beverages", offset: 0, detail: menu.selection?.beverage_package ? prettyCrmValue(menu.selection.beverage_package) : "" },
+    const foodPlan: { label: string; offset: number; detail?: string }[] = [
       ...(hasStall ? [{ label: courseOptions.find((c) => c.toLowerCase().includes("stall")) || "Live stall", offset: 30 }] : []),
       { label: courseOptions.find((c) => c.toLowerCase().includes("entree")) || "Entrees", offset: 45 },
       ...(hasKids ? [{ label: courseOptions.find((c) => c.toLowerCase().includes("kids")) || "Kids menu", offset: 60, detail: `${form.kids_guests} kids` }] : []),
-      { label: "Speeches", offset: 105 },
       { label: courseOptions.find((c) => c.toLowerCase().includes("main")) || "Mains", offset: 150 },
-      { label: "Cake cutting", offset: 210 },
       { label: courseOptions.find((c) => c.toLowerCase().includes("dessert")) || "Dessert", offset: 225 },
+    ];
+    const fohPlan: { label: string; offset: number; detail?: string }[] = [
+      { label: "Guest arrival and beverages", offset: 0, detail: menu.selection?.beverage_package ? prettyCrmValue(menu.selection.beverage_package) : "" },
+      { label: "Speeches", offset: 105 },
+      { label: "Cake cutting", offset: 210 },
       { label: "Carriages / pack down", offset: timeToMinutes(endTime) - start },
     ];
-    setSchedule(plan.map((line, index) => ({ key: `p${index}`, time: minutesToTime(start + line.offset), label: line.label, detail: line.detail || "" })));
+    setSchedule(foodPlan.map((line, index) => ({ key: `p${index}`, time: minutesToTime(start + line.offset), label: line.label, detail: line.detail || "" })));
+    setFohSchedule(fohPlan.map((line, index) => ({ key: `q${index}`, time: minutesToTime(start + line.offset), label: line.label, detail: line.detail || "" })));
   }, [startTime, endTime, courseOptions, menu, form.kids_guests]);
 
   const buildFromBooking = () => {
@@ -176,7 +181,7 @@ export default function RunsheetTab({ lead, booking, options, onSaved }: {
       onsite_contact_phone: prev.onsite_contact_phone || lead.phone || "",
       client_notes: prev.client_notes || [menu.selection?.dietary_requirements, menu.selection?.allergies ? `Allergies: ${menu.selection.allergies}` : ""].filter(Boolean).join(" · "),
     }));
-    if (!schedule.length) suggestSchedule();
+    if (!schedule.length && !fohSchedule.length) suggestSchedule();
     toast.success("Runsheet built from the booking and menu");
   };
 
@@ -187,11 +192,11 @@ export default function RunsheetTab({ lead, booking, options, onSaved }: {
     { label: "Beverage package chosen", done: Boolean(menu.selection?.beverage_package), hint: "Menu tab" },
     { label: "Event coordinator assigned", done: Boolean(form.event_coordinator.trim()) },
     { label: "Onsite contact on the day", done: Boolean(form.onsite_contact_name.trim() && form.onsite_contact_phone.trim()) },
-    { label: "Service schedule built", done: schedule.length > 0 },
+    { label: "Service schedule built", done: schedule.length > 0 || fohSchedule.length > 0 },
     { label: "Setup and styling ticked off", done: setupItems.length > 0 },
     ...(accessEnabled ? [{ label: "Vendor access time agreed", done: Boolean(form.access_time) }] : []),
     { label: "Deposit received", done: ["deposit_received", "runsheet_sent", "full_payment_received"].includes(lead.status) },
-  ]), [booking, form, menu, schedule, setupItems, lead.status, accessEnabled]);
+  ]), [booking, form, menu, schedule, fohSchedule, setupItems, lead.status, accessEnabled]);
 
   const completed = checklist.filter((c) => c.done).length;
   const readyToSend = completed === checklist.length;
@@ -221,6 +226,7 @@ export default function RunsheetTab({ lead, booking, options, onSaved }: {
       kids_guests: form.kids_guests ? Number(form.kids_guests) : null,
       access_time: accessEnabled ? (form.access_time || null) : null, setup_items: setupItems, setup_notes: form.setup_notes || null,
       service_schedule: schedule.map(({ time, label, detail }) => ({ time, label, detail })),
+      service_schedule_foh: fohSchedule.map(({ time, label, detail }) => ({ time, label, detail })),
       special_requests: form.special_requests || null, distributed_to: form.distributed_to || null,
       ops_notes: form.ops_notes || null, client_notes: form.client_notes || null,
       updated_by: user?.id, ...extra,
@@ -351,7 +357,7 @@ export default function RunsheetTab({ lead, booking, options, onSaved }: {
 
       <section className="space-y-3 rounded-lg border border-border p-4">
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <div><h3 className="font-serif text-lg">Service schedule</h3><p className="text-xs text-muted-foreground">What happens when, for the kitchen and floor team.</p></div>
+          <div><h3 className="font-serif text-lg">Food serving schedule</h3><p className="text-xs text-muted-foreground">When each course goes out, for the kitchen.</p></div>
           <Button type="button" size="sm" variant="outline" onClick={() => { suggestSchedule(); toast.success("Timings suggested — adjust as needed"); }}><Sparkles className="mr-2 h-4 w-4" />Suggest timings</Button>
         </div>
         <div className="space-y-2">
@@ -367,14 +373,30 @@ export default function RunsheetTab({ lead, booking, options, onSaved }: {
                 <option value="__custom__">Other (type your own)</option>
               </select>
               {!courseOptions.includes(row.label)
-                ? <Input value={row.label} placeholder="What is happening" onChange={(event) => setSchedule((v) => v.map((r, i) => (i === index ? { ...r, label: event.target.value } : r)))} />
+                ? <Input value={row.label} placeholder="What is being served" onChange={(event) => setSchedule((v) => v.map((r, i) => (i === index ? { ...r, label: event.target.value } : r)))} />
                 : <Input value={row.detail || ""} placeholder="Notes e.g. served on the table" onChange={(event) => setSchedule((v) => v.map((r, i) => (i === index ? { ...r, detail: event.target.value } : r)))} />}
               <Button type="button" variant="ghost" size="icon" title="Remove line" onClick={() => setSchedule((v) => v.filter((_, i) => i !== index))}><X className="h-4 w-4" /></Button>
             </div>
           ))}
-          {!schedule.length && <p className="text-sm text-muted-foreground">No timings yet.</p>}
+          {!schedule.length && <p className="text-sm text-muted-foreground">No food timings yet.</p>}
         </div>
-        <Button type="button" size="sm" variant="secondary" onClick={() => setSchedule((v) => [...v, { key: `n${Date.now()}`, time: startTime, label: courseOptions[0] || "", detail: "" }])}><Plus className="mr-2 h-4 w-4" />Add timing</Button>
+        <Button type="button" size="sm" variant="secondary" onClick={() => setSchedule((v) => [...v, { key: `n${Date.now()}`, time: startTime, label: courseOptions[0] || "", detail: "" }])}><Plus className="mr-2 h-4 w-4" />Add food timing</Button>
+      </section>
+
+      <section className="space-y-3 rounded-lg border border-border p-4">
+        <div><h3 className="font-serif text-lg">FOH service schedule</h3><p className="text-xs text-muted-foreground">What happens when on the floor — arrivals, speeches, cake, pack down.</p></div>
+        <div className="space-y-2">
+          {fohSchedule.map((row, index) => (
+            <div key={row.key} className="grid gap-2 sm:grid-cols-[9rem_1fr_1.4fr_auto]">
+              <TimeDropdownPicker value={row.time || startTime} onChange={(value) => setFohSchedule((v) => v.map((r, i) => (i === index ? { ...r, time: value } : r)))} />
+              <Input value={row.label} placeholder="What is happening" onChange={(event) => setFohSchedule((v) => v.map((r, i) => (i === index ? { ...r, label: event.target.value } : r)))} />
+              <Input value={row.detail || ""} placeholder="Notes e.g. at the entrance" onChange={(event) => setFohSchedule((v) => v.map((r, i) => (i === index ? { ...r, detail: event.target.value } : r)))} />
+              <Button type="button" variant="ghost" size="icon" title="Remove line" onClick={() => setFohSchedule((v) => v.filter((_, i) => i !== index))}><X className="h-4 w-4" /></Button>
+            </div>
+          ))}
+          {!fohSchedule.length && <p className="text-sm text-muted-foreground">No floor timings yet.</p>}
+        </div>
+        <Button type="button" size="sm" variant="secondary" onClick={() => setFohSchedule((v) => [...v, { key: `m${Date.now()}`, time: startTime, label: "", detail: "" }])}><Plus className="mr-2 h-4 w-4" />Add FOH timing</Button>
       </section>
 
       <section className="grid gap-4 lg:grid-cols-2">

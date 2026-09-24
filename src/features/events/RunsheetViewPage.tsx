@@ -46,6 +46,7 @@ export function RunsheetDocument({ rs, lead, b, items, selection, businessName }
   const courses = items.filter(i => !PKG.includes(i.course) && i.course !== "live_stall" && i.course !== "beverage" && (kidsRow || i.course !== "Kids Menu"))
     .reduce((m: Record<string, any[]>, i) => { const c = i.course || "Other"; (m[c] ||= []).push(i); return m; }, {});
   const schedule: any[] = rs.service_schedule || [];
+  const fohSchedule: any[] = rs.service_schedule_foh || [];
   const setup: string[] = rs.setup_items || [];
   const date = b?.event_date ? format(new Date(`${b.event_date}T00:00:00`), "EEEE, d MMMM yyyy") : "Date to be confirmed";
   const start = b?.start_time ? String(b.start_time).slice(0, 5) : "";
@@ -114,8 +115,10 @@ export function RunsheetDocument({ rs, lead, b, items, selection, businessName }
           {rs.setup_notes && <p className="mt-2 whitespace-pre-line pl-3">{rs.setup_notes}</p>}
           {rs.access_time && <p className="mt-2">Decor / vendor access: {to12(rs.access_time)}</p>}
           {rs.special_requests && <p className="mt-2">Special requests: {rs.special_requests}</p>}
-          <h2 className="mt-4 font-bold">Service timings</h2>
-          {schedule.length ? schedule.map((s, i) => <p key={i} className="pl-3">• {s.time ? to12(s.time) : "—"} – {s.label}{s.detail ? ` (${s.detail})` : ""}</p>) : <p className="pl-3 text-muted-foreground">No timings set.</p>}
+          <h2 className="mt-4 font-bold">Food serving schedule</h2>
+          {schedule.length ? schedule.map((s, i) => <p key={i} className="pl-3">• {s.time ? to12(s.time) : "—"} – {s.label}{s.detail ? ` (${s.detail})` : ""}</p>) : <p className="pl-3 text-muted-foreground">No food timings set.</p>}
+          <h2 className="mt-4 font-bold">FOH service schedule</h2>
+          {fohSchedule.length ? fohSchedule.map((s, i) => <p key={i} className="pl-3">• {s.time ? to12(s.time) : "—"} – {s.label}{s.detail ? ` (${s.detail})` : ""}</p>) : <p className="pl-3 text-muted-foreground">No floor timings set.</p>}
           {rs.client_notes && <div className="mt-4 break-inside-avoid"><h2 className="font-bold">Client notes</h2><p className="whitespace-pre-line pl-3">{rs.client_notes}</p></div>}
         </div>
       </div>

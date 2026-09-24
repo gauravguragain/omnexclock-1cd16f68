@@ -51,6 +51,7 @@ export default function EventDetailPage({ kind }: { kind: "event" | "catering" }
   const kidsRow = items.find(i => i.course === "kids_package");
   const courses = items.filter(i => !PKG.includes(i.course) && i.course !== "live_stall" && i.course !== "beverage" && (kidsRow || i.course !== "Kids Menu")).reduce((m: Record<string, any[]>, i) => { const c = i.course || "Other"; (m[c] ||= []).push(i); return m; }, {});
   const schedule: any[] = rs?.service_schedule || [];
+  const fohSchedule: any[] = rs?.service_schedule_foh || [];
   const setStatus = async (status: string) => { const { error } = await supabase.from("crm_bookings").update({ status }).eq("id", b.id); if (error) toast.error(error.message); else { toast.success(status === "cancelled" ? "Event cancelled" : "Event restored"); crm.refresh(); } };
 
   return <div className="space-y-6">
@@ -82,8 +83,11 @@ export default function EventDetailPage({ kind }: { kind: "event" | "catering" }
             : <Empty title="No menu selected yet" text="Choose the menu in the lead workflow; it prints on the run sheet." />}
         </Section>
 
-        <Section icon={ListChecks} title="Activities">{schedule.length ? <ol className="space-y-2">{schedule.map((s, i) => <li key={i} className="flex gap-4 text-sm"><span className="w-20 shrink-0 font-medium">{to12(s.time)}</span><span>{s.label}{s.detail && <span className="text-muted-foreground"> — {s.detail}</span>}</span></li>)}</ol>
-          : <Empty title="No activities yet" text="Arrivals, speeches, cake cutting — the running order prints on the run sheet. Add it in the Run sheet step." />}</Section>
+        <Section icon={ListChecks} title="Food serving schedule">{schedule.length ? <ol className="space-y-2">{schedule.map((s, i) => <li key={i} className="flex gap-4 text-sm"><span className="w-20 shrink-0 font-medium">{to12(s.time)}</span><span>{s.label}{s.detail && <span className="text-muted-foreground"> — {s.detail}</span>}</span></li>)}</ol>
+          : <Empty title="No food timings yet" text="When each course goes out — add it in the Run sheet step." />}</Section>
+
+        <Section icon={ListChecks} title="FOH service schedule">{fohSchedule.length ? <ol className="space-y-2">{fohSchedule.map((s, i) => <li key={i} className="flex gap-4 text-sm"><span className="w-20 shrink-0 font-medium">{to12(s.time)}</span><span>{s.label}{s.detail && <span className="text-muted-foreground"> — {s.detail}</span>}</span></li>)}</ol>
+          : <Empty title="No floor timings yet" text="Arrivals, speeches, cake cutting — the running order prints on the run sheet. Add it in the Run sheet step." />}</Section>
 
         <Section icon={ClipboardList} title="Setup & additional information">{rs?.setup_items?.length || rs?.setup_notes ? <div className="space-y-2">{rs.setup_items?.length > 0 && <div className="flex flex-wrap gap-1.5">{rs.setup_items.map((s: string) => <Badge key={s} variant="outline">{s}</Badge>)}</div>}{rs.setup_notes && <p className="whitespace-pre-wrap text-sm">{rs.setup_notes}</p>}{rs.access_time && <p className="text-xs text-muted-foreground">Decor / vendor access {to12(String(rs.access_time).slice(0, 5))}</p>}</div>
           : <Empty title="No setup information recorded" text="Prints on the Event Order in the right-hand column." />}</Section>
