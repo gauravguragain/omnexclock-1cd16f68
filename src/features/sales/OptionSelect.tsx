@@ -6,7 +6,7 @@ export type SelectableOption = { id?: string; value: string; label: string };
 const OTHER = "__other__";
 
 /** Dropdown backed by the configurable lists, with an "Other" choice that reveals a text input. */
-export default function OptionSelect({ name, options, defaultValue = "", emptyLabel, required, otherLabel = "Other (type your own)", otherPlaceholder = "Type your own" }: {
+export default function OptionSelect({ name, options, defaultValue = "", emptyLabel, required, otherLabel = "Other (type your own)", otherPlaceholder = "Type your own", onChange }: {
   name: string;
   options: SelectableOption[];
   defaultValue?: string;
@@ -14,6 +14,7 @@ export default function OptionSelect({ name, options, defaultValue = "", emptyLa
   required?: boolean;
   otherLabel?: string;
   otherPlaceholder?: string;
+  onChange?: (value: string) => void;
 }) {
   const known = (value: string) => options.some((option) => option.value === value);
   const [choice, setChoice] = useState(() => (defaultValue && !known(defaultValue) ? OTHER : defaultValue));
@@ -26,6 +27,8 @@ export default function OptionSelect({ name, options, defaultValue = "", emptyLa
   }, [defaultValue, options.length]);
 
   const resolved = choice === OTHER ? custom : choice;
+
+  useEffect(() => { onChange?.(resolved); }, [resolved]);
 
   return (
     <div className="space-y-2">
