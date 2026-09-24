@@ -50,8 +50,6 @@ export default function SpacesPage() {
     return () => { active = false; };
   }, [d.venues]);
 
-  useEffect(() => () => pending.forEach(photo => URL.revokeObjectURL(photo.preview)), [pending]);
-
   const eventCount = (space: Row) => crm.bookings.filter(booking =>
     (booking.venue_space_id === space.id || booking.venue_space === space.name)
     && String(booking.event_date).startsWith(month)
@@ -167,11 +165,11 @@ export default function SpacesPage() {
     </div>
     {shown.length ? <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
       {shown.map(space => <Card key={space.id} className="overflow-hidden">
-        <button type="button" onClick={() => (space.photo_paths?.length ? openGallery(space) : openEditor(space))} className="group relative block aspect-[16/10] w-full overflow-hidden bg-muted text-left" aria-label={space.photo_paths?.length ? `Open ${space.name} photo gallery` : `Add photos for ${space.name}`}>
+        <Button type="button" variant="ghost" onClick={() => (space.photo_paths?.length ? openGallery(space) : openEditor(space))} className="group relative block h-auto aspect-[16/10] w-full overflow-hidden rounded-none bg-muted p-0 text-left hover:bg-muted" aria-label={space.photo_paths?.length ? `Open ${space.name} photo gallery` : `Add photos for ${space.name}`}>
           {coverUrl(space) ? <img src={coverUrl(space)} alt={`${space.name} cover`} className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.03]" /> : <span className="flex h-full flex-col items-center justify-center gap-2 text-muted-foreground"><Building2 className="h-10 w-10" /><span className="text-sm">Add venue photos</span></span>}
           {!!space.photo_paths?.length && <Badge className="absolute bottom-3 right-3 gap-1 bg-background/90 text-foreground shadow-sm hover:bg-background"><Images className="h-3.5 w-3.5" />{space.photo_paths.length}</Badge>}
           {space.active === false && <Badge variant="secondary" className="absolute left-3 top-3">Archived</Badge>}
-        </button>
+        </Button>
         <CardContent className="space-y-4 p-5">
           <div className="flex items-start justify-between gap-3"><div className="min-w-0"><h2 className="break-words font-serif text-xl font-semibold">{space.name}</h2><p className="text-sm text-muted-foreground">{space.capacity ? `Up to ${space.capacity} guests` : "Capacity not set"}</p></div><Badge variant="outline" className="shrink-0">{eventCount(space)} this month</Badge></div>
           {space.description && <p className="line-clamp-2 text-sm text-muted-foreground">{space.description}</p>}
@@ -190,7 +188,7 @@ export default function SpacesPage() {
           {(keptPaths.length || pending.length) ? <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
             {keptPaths.map(path => <div key={path} className="relative aspect-[4/3] overflow-hidden rounded-md border border-border bg-muted"><img src={signedUrls[path]} alt="Venue" className="h-full w-full object-cover" />{coverKey === path && <Badge className="absolute left-2 top-2 gap-1"><Star className="h-3 w-3" />Cover</Badge>}<div className="absolute bottom-2 right-2 flex gap-1"><Button type="button" size="icon" variant="secondary" className="h-8 w-8" title="Use as cover" onClick={() => setCoverKey(path)}><Star className="h-3.5 w-3.5" /></Button><Button type="button" size="icon" variant="destructive" className="h-8 w-8" title="Remove photo" onClick={() => removeExisting(path)}><Trash2 className="h-3.5 w-3.5" /></Button></div></div>)}
             {pending.map(photo => <div key={photo.key} className="relative aspect-[4/3] overflow-hidden rounded-md border border-border bg-muted"><img src={photo.preview} alt={photo.file.name} className="h-full w-full object-cover" />{coverKey === photo.key && <Badge className="absolute left-2 top-2 gap-1"><Star className="h-3 w-3" />Cover</Badge>}<div className="absolute bottom-2 right-2 flex gap-1"><Button type="button" size="icon" variant="secondary" className="h-8 w-8" title="Use as cover" onClick={() => setCoverKey(photo.key)}><Star className="h-3.5 w-3.5" /></Button><Button type="button" size="icon" variant="destructive" className="h-8 w-8" title="Remove photo" onClick={() => removePending(photo.key)}><Trash2 className="h-3.5 w-3.5" /></Button></div></div>)}
-          </div> : <button type="button" onClick={() => inputRef.current?.click()} className="flex w-full flex-col items-center justify-center gap-2 rounded-md border border-dashed border-border py-10 text-muted-foreground hover:bg-muted/50"><ImagePlus className="h-8 w-8" /><span className="text-sm">Add a cover photo and gallery</span></button>}
+          </div> : <Button type="button" variant="ghost" onClick={() => inputRef.current?.click()} className="flex h-auto w-full flex-col items-center justify-center gap-2 rounded-md border border-dashed border-border py-10 text-muted-foreground hover:bg-muted/50"><ImagePlus className="h-8 w-8" /><span className="text-sm">Add a cover photo and gallery</span></Button>}
         </section>
         <DialogFooter><Button type="button" variant="outline" onClick={() => setEditorOpen(false)}>Cancel</Button><Button disabled={saving}>{saving ? "Saving…" : "Save space"}</Button></DialogFooter>
       </form>
@@ -198,7 +196,7 @@ export default function SpacesPage() {
 
     <Dialog open={!!gallerySpace} onOpenChange={open => !open && setGallerySpace(null)}><DialogContent className="max-w-5xl overflow-hidden p-0"><DialogHeader className="px-5 pt-5"><DialogTitle className="font-serif text-2xl">{gallerySpace?.name}</DialogTitle></DialogHeader>
       {galleryPaths.length > 0 && <div className="space-y-3 px-5 pb-5"><div className="relative flex aspect-[16/10] items-center justify-center overflow-hidden rounded-md bg-muted"><img src={signedUrls[galleryPaths[galleryIndex]]} alt={`${gallerySpace?.name} photo ${galleryIndex + 1}`} className="h-full w-full object-contain" />{galleryPaths.length > 1 && <><Button type="button" size="icon" variant="secondary" className="absolute left-3" onClick={() => moveGallery(-1)} aria-label="Previous photo"><ChevronLeft className="h-5 w-5" /></Button><Button type="button" size="icon" variant="secondary" className="absolute right-3" onClick={() => moveGallery(1)} aria-label="Next photo"><ChevronRight className="h-5 w-5" /></Button></>}</div>
-        <div className="flex gap-2 overflow-x-auto pb-1">{galleryPaths.map((path, index) => <button key={path} type="button" onClick={() => setGalleryIndex(index)} className={`h-16 w-24 shrink-0 overflow-hidden rounded-md border-2 ${index === galleryIndex ? "border-primary" : "border-transparent"}`} aria-label={`View photo ${index + 1}`}><img src={signedUrls[path]} alt="" className="h-full w-full object-cover" /></button>)}</div><p className="text-center text-xs text-muted-foreground">{galleryIndex + 1} of {galleryPaths.length}</p></div>}
+        <div className="flex gap-2 overflow-x-auto pb-1">{galleryPaths.map((path, index) => <Button key={path} type="button" variant="ghost" onClick={() => setGalleryIndex(index)} className={`h-16 w-24 shrink-0 overflow-hidden rounded-md border-2 p-0 ${index === galleryIndex ? "border-primary" : "border-transparent"}`} aria-label={`View photo ${index + 1}`}><img src={signedUrls[path]} alt="" className="h-full w-full object-cover" /></Button>)}</div><p className="text-center text-xs text-muted-foreground">{galleryIndex + 1} of {galleryPaths.length}</p></div>}
     </DialogContent></Dialog>
   </div>;
 }
