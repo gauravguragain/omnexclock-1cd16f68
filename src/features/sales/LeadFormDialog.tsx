@@ -9,11 +9,11 @@ import OptionSelect from "./OptionSelect";
 import DateField from "./DateField";
 
 export default function LeadFormDialog({ open, onOpenChange, businessId, options, lead, leads, onSaved, defaultKind = "event" }: { open: boolean; onOpenChange: (open:boolean)=>void; businessId:string; options:CrmOption[]; lead?:CrmLead|null; leads:CrmLead[]; onSaved:()=>void; defaultKind?: string }) {
-  const { user } = useAuth(); const [saving, setSaving] = useState(false); const [email, setEmail] = useState(""); const [phone, setPhone] = useState("");
-  useEffect(() => { setEmail(lead?.email || ""); setPhone(lead?.phone || ""); }, [lead, open]);
+   const { user } = useAuth(); const [saving, setSaving] = useState(false); const [email, setEmail] = useState(""); const [phone, setPhone] = useState(""); const [kind, setKind] = useState(lead?.lead_kind || defaultKind);
+   useEffect(() => { setEmail(lead?.email || ""); setPhone(lead?.phone || ""); setKind(lead?.lead_kind || defaultKind); }, [lead, open, defaultKind]);
   const duplicate = useMemo(() => leads.find((row) => row.id !== lead?.id && ((email && row.email?.toLowerCase() === email.toLowerCase()) || (phone && row.phone?.replace(/\D/g, "") === phone.replace(/\D/g, "")))), [email, phone, leads, lead?.id]);
   const list = (type:string) => options.filter((option) => option.option_type === type && option.active);
-  const isCatering = (lead?.lead_kind || defaultKind) === "catering";
+   const isCatering = kind === "catering";
   const submit = async (event:FormEvent<HTMLFormElement>) => { event.preventDefault(); setSaving(true); const form = new FormData(event.currentTarget);
     const values:any = { business_id: businessId, full_name: form.get("full_name"), email: email || null, phone: phone || null, company: form.get("company") || null, source: form.get("source"), event_type: form.get("event_type"), preferred_dates: form.get("preferred_date") ? [form.get("preferred_date")] : [], flexible_date: form.get("flexible_date") === "on", estimated_guest_count: form.get("guests") ? Number(form.get("guests")) : null, budget_min: isCatering ? null : (form.get("budget_min") ? Number(form.get("budget_min")) : null), budget_max: isCatering ? null : (form.get("budget_max") ? Number(form.get("budget_max")) : null), estimated_value: form.get("estimated_value") ? Number(form.get("estimated_value")) : 0, venue_space: isCatering ? null : (form.get("venue_space") || null), tags: String(form.get("tags") || "").split(",").map((v)=>v.trim()).filter(Boolean), lead_kind: form.get("lead_kind") || "event", service_location: isCatering ? null : (form.get("service_location") || null), updated_by:user?.id };
     const result = lead ? await supabase.from("crm_leads").update(values).eq("id", lead.id) : await supabase.from("crm_leads").insert({ ...values, created_by:user?.id });
@@ -40,7 +40,7 @@ export default function LeadFormDialog({ open, onOpenChange, businessId, options
          <section className="space-y-4" aria-labelledby="lead-event-heading">
            <div className="flex items-center gap-2 border-b border-border pb-2"><CalendarDays className="h-4 w-4 text-primary"/><h3 id="lead-event-heading" className="text-sm font-semibold">Event details</h3></div>
            <div className="grid gap-4 sm:grid-cols-2">
-             <div className="space-y-1.5"><Label>Enquiry type</Label><select name="lead_kind" defaultValue={lead?.lead_kind || defaultKind} className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"><option value="event">Event (hall hire)</option><option value="catering">Catering only</option></select></div>
+             <div className="space-y-1.5"><Label htmlFor="lead-kind">Enquiry type</Label><select id="lead-kind" name="lead_kind" value={kind} onChange={e => setKind(e.target.value)} className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"><option value="event">Event (hall hire)</option><option value="catering">Catering only</option></select></div>
              <div className="space-y-1.5"><Label>Event type</Label><OptionSelect name="event_type" options={list("event_type")} defaultValue={lead?.event_type || "wedding"} required/></div>
              <div className="space-y-1.5"><Label>Preferred date</Label><DateField name="preferred_date" defaultValue={lead?.preferred_dates?.[0] || ""} placeholder="Not set"/></div>
              <div className="space-y-1.5"><Label htmlFor="lead-guests">Estimated guests</Label><Input id="lead-guests" name="guests" type="number" min="1" defaultValue={lead?.estimated_guest_count || ""}/></div>
