@@ -655,3 +655,20 @@
   margin: 0 auto 8px;
 }
 @media print { @page { size: A4; margin: 10mm; } }
+
+/* The original banquet event order was monochrome, even in a dark workspace. */
+.runsheet-monochrome {
+  --background: 0 0% 100%;
+  --foreground: 0 0% 5%;
+  --primary: 0 0% 4%;
+  --primary-foreground: 0 0% 100%;
+  --muted: 0 0% 83%;
+  --muted-foreground: 0 0% 35%;
+  --border: 0 0% 20%;
+  color-scheme: light;
+}
+
+@media print {
+  .runsheet-monochrome { min-width: 0; padding: 0; print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+  .runsheet-monochrome section, .runsheet-monochrome header, .runsheet-monochrome footer { break-inside: avoid; }
+}
