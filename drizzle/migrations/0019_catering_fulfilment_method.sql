@@ -1,0 +1,1 @@
+ALTER TABLE public.crm_bookings ADD COLUMN IF NOT EXISTS fulfilment_method text NOT NULL DEFAULT 'delivery' CHECK (fulfilment_method IN ('delivery','pickup'));
