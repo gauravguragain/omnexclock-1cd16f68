@@ -678,7 +678,7 @@
   html, body, #root { min-height: 0 !important; height: auto !important; background: hsl(var(--background)); }
   body { margin: 0 !important; }
   .runsheet-preview, .runsheet-page { break-inside: avoid; }
-  .runsheet-preview { height: auto !important; overflow: visible; }
+  .runsheet-preview { height: auto !important; overflow: visible; margin-top: 0 !important; }
   .runsheet-page { width: 190mm; transform: none !important; }
   .runsheet-monochrome { width: 190mm; min-height: 277mm; padding: 0; print-color-adjust: exact; -webkit-print-color-adjust: exact; }
   .runsheet-monochrome header, .runsheet-monochrome footer, .runsheet-monochrome h2, .runsheet-monochrome h3 { break-inside: avoid; break-after: avoid; }
