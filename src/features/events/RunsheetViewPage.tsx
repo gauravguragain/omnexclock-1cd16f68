@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { downloadRunsheetPdf } from "@/lib/runsheetDownload";
-import { Link, useLocation, useParams } from "react-router-dom";
+import { Link, Navigate, useLocation, useParams } from "react-router-dom";
 import { format } from "date-fns";
 import { ChevronRight, ArrowLeft, Printer, Mail, Link as LinkIcon, Download } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -172,6 +172,7 @@ export default function RunsheetViewPage() {
   const b: any = crm.bookings.find(x => x.id === rs.booking_id) || crm.bookings.find(x => x.lead_id === rs.lead_id);
   const title = runsheetTitle(lead, b);
   const isCatering = b?.booking_kind === "catering" || lead?.lead_kind === "catering" || cateringRoute;
+  if (isCatering && !cateringRoute) return <Navigate to={b ? `/b/${businessCode}/catering/bookings/${b.id}/runsheet/${rs.id}` : `/b/${businessCode}/catering/leads/${rs.lead_id}`} replace />;
   const backTo = isCatering ? b ? `/b/${businessCode}/catering/bookings/${b.id}` : `/b/${businessCode}/catering/leads` : back;
   const issueCatering = async () => { const { data, error } = await supabase.from("crm_runsheets").update({ status: "sent", sent_at: new Date().toISOString(), generated_at: new Date().toISOString() } as any).eq("id", rs.id).select().single(); if (error) { toast.error(error.message); return null; } setRs(data); crm.refresh(); return data; };
   const copyLink = async () => { await navigator.clipboard.writeText(runsheetPublicUrl(rs)); toast.success("Web link copied"); };

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link, useNavigate, useParams } from "react-router-dom";
+import { Link, Navigate, useNavigate, useParams } from "react-router-dom";
 import { format, isToday } from "date-fns";
 import { toast } from "sonner";
 import { CalendarDays, ChevronRight, Clock, ClipboardList, FileText, ListChecks, MapPin, Pencil, User, Users, UtensilsCrossed, X, RotateCcw, History, Mail } from "lucide-react";
@@ -35,6 +35,7 @@ export default function EventDetailPage({ kind }: { kind: "event" | "catering" }
   if (!crm.business) return null;
   const list = `/b/${businessCode}/events/${kind === "event" ? "events" : "catering-bookings"}`;
   if (!b) return <div className="py-20 text-center text-muted-foreground">{crm.loading ? "Loading…" : <>Event not found. <Link to={list} className="text-primary">Back to list</Link></>}</div>;
+  if (b.booking_kind === "catering") return <Navigate to={`/b/${businessCode}/catering/bookings/${b.id}`} replace />;
 
   const lead: any = crm.leads.find(l => l.id === b.lead_id);
   const customer: any = ev.customers.find(c => c.id === b.customer_id) || (lead && { full_name: lead.full_name, phone: lead.phone, email: lead.email });

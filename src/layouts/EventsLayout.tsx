@@ -40,12 +40,11 @@ export default function EventsLayout({ mode = "events" }: { mode?: "events" | "c
      { title: "Catering", items: [{ to: "leads", label: "Catering leads", icon: Utensils }, { to: "bookings", label: "Catering bookings", icon: Truck }] },
      { title: "People", items: [{ to: "customers", label: "Customers", icon: Users }, { to: "coordinators", label: "Coordinators", icon: UserCheck }, { to: "stakeholders", label: "Stakeholders & vendors", icon: Contact }] },
      { title: "Menus", items: [{ to: "menu-books", label: "Menu books", icon: BookOpen }, { to: "dishes", label: "Dishes", icon: ChefHat }, { to: "drinks", label: "Drinks", icon: GlassWater }] },
-     { title: "", items: [{ to: "../events", label: "Events & Sales", icon: PartyPopper }] },
    ] : SECTIONS.map(s => ({ ...s, items: s.items.filter(it => it.to !== "leads/catering" && it.to !== "catering-bookings") }));
 
    const nav = <nav className="space-y-5 p-4">{sections.map((s, i) => <div key={i}>
     {s.title && <p className="mb-1 px-3 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">{s.title}</p>}
-     {s.items.map(it => <NavLink key={it.to} to={it.to === "../events" ? `/b/${businessCode}/events` : it.to ? `${base}/${it.to}` : base} end onClick={() => setOpen(false)}
+     {s.items.map(it => <NavLink key={it.to} to={it.to ? `${base}/${it.to}` : base} end onClick={() => setOpen(false)}
       className={({ isActive }) => cn("flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors", isActive ? "bg-primary/10 text-primary font-medium" : "text-muted-foreground hover:bg-muted hover:text-foreground")}>
       <it.icon className="h-4 w-4" />{it.label}</NavLink>)}
   </div>)}</nav>;
