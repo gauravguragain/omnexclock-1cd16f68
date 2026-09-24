@@ -3983,6 +3983,7 @@ export type Database = {
         Returns: boolean
       }
       can_access_crm: { Args: { _business_id: string }; Returns: boolean }
+      can_manage_fsl: { Args: { _business_id: string }; Returns: boolean }
       crm_event_managers: {
         Args: { _business_id: string }
         Returns: {
@@ -4429,6 +4430,7 @@ export type Database = {
         | "roster_admin"
         | "super_admin"
         | "sales_marketing_manager"
+        | "food_safety_manager"
       clock_event_type: "clock_in" | "clock_out" | "break_start" | "break_end"
     }
     CompositeTypes: {
@@ -4565,6 +4567,7 @@ export const Constants = {
         "roster_admin",
         "super_admin",
         "sales_marketing_manager",
+        "food_safety_manager",
       ],
       clock_event_type: ["clock_in", "clock_out", "break_start", "break_end"],
     },
