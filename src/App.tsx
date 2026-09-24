@@ -157,6 +157,7 @@ const App = () => (
                     <Route path="dishes" element={<EventsPages.Dishes />} />
                     <Route path="drinks" element={<EventsPages.Drinks />} />
                     <Route path="spaces" element={<EventsPages.Spaces />} />
+                    <Route path="spaces/:spaceId" element={<EventsPages.SpaceGallery />} />
                     <Route path="reports" element={<EventsPages.Reports />} />
                     <Route path="settings" element={<EventsPages.Settings />} />
                   </Route>

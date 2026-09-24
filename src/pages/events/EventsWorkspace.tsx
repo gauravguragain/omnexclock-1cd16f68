@@ -11,6 +11,7 @@ import ReportsPage from "@/features/events/ReportsPage";
 import MonthCalendar from "@/features/events/MonthCalendar";
 import CalendarTab from "@/features/sales/CalendarTab";
 import SpacesPage from "@/features/events/SpacesPage";
+import SpaceGalleryPage from "@/features/events/SpaceGalleryPage";
 import { useCrmData } from "@/features/sales/useCrmData";
 import { useEventsData } from "@/features/events/useEventsData";
 import LeadDetailDialog from "@/features/sales/LeadDetailDialog";
@@ -51,5 +52,5 @@ export const EventsPages = {
   CateringLeadDetail: () => <CateringDetailPage view="lead" />,
   RunsheetView: () => <RunsheetViewPage />,
   Calendar: CalendarPage,
-  Customers: CustomersPage, Stakeholders: StakeholdersPage, Coordinators: CoordinatorsPage, MenuBooks: MenuBooksPage, Dishes: DishesPage, Drinks: DrinksPage, Spaces: SpacesPage, Reports: ReportsPage,
+  Customers: CustomersPage, Stakeholders: StakeholdersPage, Coordinators: CoordinatorsPage, MenuBooks: MenuBooksPage, Dishes: DishesPage, Drinks: DrinksPage, Spaces: SpacesPage, SpaceGallery: SpaceGalleryPage, Reports: ReportsPage,
 };
