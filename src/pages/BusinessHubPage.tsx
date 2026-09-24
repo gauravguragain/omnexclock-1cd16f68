@@ -3,7 +3,7 @@ import { useBusiness } from "@/contexts/BusinessContext";
 import { Navigate, Link } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ShieldCheck, LogOut, Building2, PartyPopper, Utensils, ShieldPlus } from "lucide-react";
+import { ShieldCheck, LogOut, Building2, PartyPopper, Utensils } from "lucide-react";
 import { useEffect } from "react";
 
 export default function BusinessHubPage() {
@@ -122,7 +122,6 @@ export default function BusinessHubPage() {
   const bid = business.id;
   const showAdmin = isAdminOf(bid) || isViewerOf(bid) || isRosterAdminOf(bid);
   const showSales = isAdminOf(bid) || isSalesManagerOf(bid);
-  const showFood = isAdminOf(bid) || isFoodSafetyManagerOf(bid);
 
   return (
     <div className="min-h-[100dvh] flex flex-col items-center justify-center bg-background p-4 relative overflow-hidden standalone-top-pad safe-x">
