@@ -33,6 +33,6 @@
 - [x] Check desktop and mobile calendar interaction
 
 # Lead menu tasting
-- [ ] Place Confirmation before Menu and offer an optional tasting step before Menu
-- [ ] Save, change, or remove a tasting date and time as a calendar reminder
-- [ ] Verify tasting scheduling and the lead tabs on mobile and desktop
+- [x] Place Confirmation before Menu and offer an optional tasting step before Menu
+- [x] Save, change, or remove a tasting date and time as a calendar reminder
+- [x] Verify tasting scheduling and the lead tabs on mobile and desktop
