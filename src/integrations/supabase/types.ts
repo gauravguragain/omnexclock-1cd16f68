@@ -1518,11 +1518,16 @@ export type Database = {
           item_name: string
           menu_item_id: string | null
           notes: string | null
+          package_group_key: string | null
           price_per_head: number | null
           quantity: number
+          selected_protein: string | null
           selection_id: string
           service_end_time: string | null
           service_start_time: string | null
+          source_course_id: string | null
+          source_dish_id: string | null
+          source_package_id: string | null
         }
         Insert: {
           business_id: string
@@ -1533,11 +1538,16 @@ export type Database = {
           item_name: string
           menu_item_id?: string | null
           notes?: string | null
+          package_group_key?: string | null
           price_per_head?: number | null
           quantity?: number
+          selected_protein?: string | null
           selection_id: string
           service_end_time?: string | null
           service_start_time?: string | null
+          source_course_id?: string | null
+          source_dish_id?: string | null
+          source_package_id?: string | null
         }
         Update: {
           business_id?: string
@@ -1548,11 +1558,16 @@ export type Database = {
           item_name?: string
           menu_item_id?: string | null
           notes?: string | null
+          package_group_key?: string | null
           price_per_head?: number | null
           quantity?: number
+          selected_protein?: string | null
           selection_id?: string
           service_end_time?: string | null
           service_start_time?: string | null
+          source_course_id?: string | null
+          source_dish_id?: string | null
+          source_package_id?: string | null
         }
         Relationships: [
           {
@@ -1581,6 +1596,27 @@ export type Database = {
             columns: ["selection_id"]
             isOneToOne: false
             referencedRelation: "crm_menu_selections"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_menu_selection_items_source_course_id_fkey"
+            columns: ["source_course_id"]
+            isOneToOne: false
+            referencedRelation: "crm_package_courses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_menu_selection_items_source_dish_id_fkey"
+            columns: ["source_dish_id"]
+            isOneToOne: false
+            referencedRelation: "crm_dishes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_menu_selection_items_source_package_id_fkey"
+            columns: ["source_package_id"]
+            isOneToOne: false
+            referencedRelation: "crm_packages"
             referencedColumns: ["id"]
           },
         ]
