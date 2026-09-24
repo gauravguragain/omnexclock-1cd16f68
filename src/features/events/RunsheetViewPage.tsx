@@ -176,7 +176,9 @@ export default function RunsheetViewPage() {
   const title = runsheetTitle(lead, b);
   const isCatering = b?.booking_kind === "catering" || lead?.lead_kind === "catering" || cateringRoute;
   if (isCatering && !cateringRoute) return <Navigate to={b ? `/b/${businessCode}/catering/bookings/${b.id}/runsheet/${rs.id}` : `/b/${businessCode}/catering/leads/${rs.lead_id}`} replace />;
-  const backTo = isCatering ? b ? `/b/${businessCode}/catering/bookings/${b.id}` : `/b/${businessCode}/catering/leads` : back;
+  const backTo = isCatering
+    ? b ? `/b/${businessCode}/catering/bookings/${b.id}` : `/b/${businessCode}/catering/leads`
+    : b ? `/b/${businessCode}/events/events/${b.id}` : back;
   const issueCatering = async () => { const { data, error } = await supabase.from("crm_runsheets").update({ status: "sent", sent_at: new Date().toISOString(), generated_at: new Date().toISOString() } as any).eq("id", rs.id).select().single(); if (error) { toast.error(error.message); return null; } setRs(data); crm.refresh(); return data; };
   const copyLink = async () => { await navigator.clipboard.writeText(runsheetPublicUrl(rs)); toast.success("Web link copied"); };
 

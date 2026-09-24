@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useNavigate, useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useBusiness } from "@/contexts/BusinessContext";
@@ -10,7 +11,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { TimeDropdownPicker } from "@/components/TimeDropdownPicker";
-import { CheckCircle2, Circle, Eye, Mail, Plus, Save, Send, Sparkles, X } from "lucide-react";
+import { CheckCircle2, Circle, FileText, Mail, Plus, Save, Send, Sparkles, X } from "lucide-react";
 import { toast } from "sonner";
 import { format, subDays } from "date-fns";
 import type { CrmLead, CrmOption } from "./types";
@@ -42,6 +43,8 @@ export default function RunsheetTab({ lead, booking, options, onSaved }: {
 }) {
   const { user } = useAuth();
   const { business } = useBusiness();
+  const navigate = useNavigate();
+  const { businessCode } = useParams();
   const [stakeholders, setStakeholders] = useState<any[]>([]);
   useEffect(() => { if (!business?.id) return; (supabase.from("crm_stakeholders" as any) as any).select("*").eq("business_id", business.id).eq("active", true).order("full_name").then(({ data }: any) => setStakeholders(data || [])); }, [business?.id]);
   const [loading, setLoading] = useState(true);
@@ -329,7 +332,7 @@ export default function RunsheetTab({ lead, booking, options, onSaved }: {
           <div className="flex flex-wrap gap-2">
             <Button size="sm" variant="outline" onClick={buildFromBooking}><Sparkles className="mr-2 h-4 w-4" />Build from booking</Button>
             <Button size="sm" onClick={save} disabled={saving}><Save className="mr-2 h-4 w-4" />Save</Button>
-            {runsheet?.id && <Button size="sm" variant="outline" onClick={() => window.open(`${window.location.origin}/runsheet/${runsheet.id}?t=${runsheet.share_token}`, "_blank", "noopener")}><Eye className="mr-2 h-4 w-4" />View run sheet</Button>}
+            {runsheet?.id && businessCode && <Button size="sm" variant="outline" onClick={() => navigate(`/b/${businessCode}/events/runsheet/${runsheet.id}`)}><FileText className="mr-2 h-4 w-4" />Preview run sheet</Button>}
             {runsheet?.sent_at && <Button size="sm" variant="outline" onClick={() => setSendOpen(true)}><Mail className="mr-2 h-4 w-4" />Resend Email</Button>}
             <Button size="sm" variant="secondary" onClick={() => setIssueOpen(true)} disabled={saving || !readyToSend} title={readyToSend ? "" : "Complete the checklist first"}>
               <Send className="mr-2 h-4 w-4" />{runsheet?.sent_at ? "Re-issue & send" : "Confirm & send"}
