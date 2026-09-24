@@ -225,6 +225,13 @@
       "when": 1790274719403,
       "tag": "0031_add_package_item_per_person_surcharges",
       "breakpoints": true
+    },
+    {
+      "idx": 32,
+      "version": "7",
+      "when": 1790275028943,
+      "tag": "0032_preserve_editable_menu_package_selections",
+      "breakpoints": true
     }
   ]
 }
