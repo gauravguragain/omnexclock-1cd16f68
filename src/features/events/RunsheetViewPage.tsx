@@ -52,25 +52,29 @@ export function RunsheetDocument({ rs, lead, b, items, selection, businessName }
   const start = b?.start_time ? String(b.start_time).slice(0, 5) : "";
   const end = start && b?.duration_minutes ? (() => { const [h, m] = start.split(":").map(Number); const total = (h * 60 + m + b.duration_minutes) % 1440; return `${String(Math.floor(total / 60)).padStart(2, "0")}:${String(total % 60).padStart(2, "0")}`; })() : "";
   const time = start ? `${to12(start)}${end ? ` – ${to12(end)}` : ""}` : "—";
-  const eventType = prettyCrmValue(lead?.event_type || b?.event_type || "Event");
-  const eventTitle = runsheetTitle(lead, b);
+  const catering = b?.booking_kind === "catering";
+  const pickup = catering && b?.fulfilment_method === "pickup";
+  const eventType = catering ? "Catering" : prettyCrmValue(lead?.event_type || b?.event_type || "Event");
+  const eventTitle = catering ? `${b?.event_name || lead?.full_name || "Catering"}` : runsheetTitle(lead, b);
   const contacts = [
     ["Sales Person:", rs.sales_person, rs.sales_person_phone],
-    ["Event Coordinator:", rs.event_coordinator, rs.event_coordinator_phone],
+    [catering ? "Coordinator:" : "Event Coordinator:", rs.event_coordinator, rs.event_coordinator_phone],
     ["Client:", lead?.full_name, lead?.phone],
-    ["Onsite Contact:", rs.onsite_contact_name, rs.onsite_contact_phone],
+    [catering ? (pickup ? "Pickup Contact:" : "Delivery Contact:") : "Onsite Contact:", rs.onsite_contact_name, rs.onsite_contact_phone],
   ];
   const summary = <div className="grid grid-cols-[20%_30%_20%_30%] divide-x divide-border border border-border text-xs">
-    <div className="p-2 font-medium">{time}</div>
+    <div className="p-2 font-medium">{catering && <span className="block text-[10px] font-normal">{pickup ? "Pickup window" : "Delivery window"}</span>}{time}</div>
     <div className="p-2 font-medium">{eventTitle}</div>
-    <div className="p-2">Adults: {rs.adult_guests ?? "—"}<br />Kids: {rs.kids_guests ?? 0}</div>
-    <div className="p-2"><span className="block text-[10px]">Venue</span><span className="font-medium">{prettyCrmValue(b?.venue_space || lead?.venue_space || "—")}</span></div>
+    <div className="p-2">Adults: {rs.adult_guests ?? b?.adults ?? "—"}<br />Kids: {rs.kids_guests ?? b?.kids ?? 0}</div>
+    {catering
+      ? <div className="p-2"><span className="block text-[10px]">{pickup ? "Pickup" : "Delivery to"}</span><span className="font-medium">{pickup ? (businessName || "At venue") : (b?.service_location || lead?.service_location || "—")}</span></div>
+      : <div className="p-2"><span className="block text-[10px]">Venue</span><span className="font-medium">{prettyCrmValue(b?.venue_space || lead?.venue_space || "—")}</span></div>}
   </div>;
 
   return <article className="runsheet-monochrome bg-background font-sans text-foreground">
     <header className="flex items-start justify-between gap-6">
       <div>
-        <h1 className="text-2xl font-bold">{eventType} Event Order</h1>
+        <h1 className="text-2xl font-bold">{catering ? `Catering ${pickup ? "Pickup" : "Delivery"} Order` : `${eventType} Event Order`}</h1>
         <p className="mt-1 text-base font-bold">{date}</p>
         <p className="mt-1 text-xs text-muted-foreground">{businessName || "Pro Regal Pavilion"}</p>
       </div>
