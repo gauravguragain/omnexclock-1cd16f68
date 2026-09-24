@@ -115,7 +115,29 @@ const App = () => (
                     
                     <Route path="pay-details" element={<PayDetailsPage />} />
                     <Route path="invoices" element={<InvoicesPage />} />
-                    <Route path="sales/*" element={<SalesMarketingPage />} />
+                    <Route path="sales/*" element={<SalesRedirect />} />
+                  </Route>
+
+                  <Route path="/b/:businessCode/events" element={<EventsLayout />}>
+                    <Route index element={<EventsPages.Dashboard />} />
+                    <Route path="leads/events" element={<EventsPages.EventLeads />} />
+                    <Route path="leads/catering" element={<EventsPages.CateringLeads />} />
+                    <Route path="pipeline" element={<EventsPages.Pipeline />} />
+                    <Route path="events" element={<EventsPages.Events />} />
+                    <Route path="events/new" element={<EventsPages.NewEvent />} />
+                    <Route path="catering-bookings" element={<EventsPages.CateringBookings />} />
+                    <Route path="catering-bookings/new" element={<EventsPages.NewCatering />} />
+                    <Route path="calendar" element={<EventsPages.Calendar />} />
+                    <Route path="inspections" element={<EventsPages.Inspections />} />
+                    <Route path="tasks" element={<EventsPages.Tasks />} />
+                    <Route path="customers" element={<EventsPages.Customers />} />
+                    <Route path="stakeholders" element={<EventsPages.Stakeholders />} />
+                    <Route path="menu-books" element={<EventsPages.MenuBooks />} />
+                    <Route path="dishes" element={<EventsPages.Dishes />} />
+                    <Route path="drinks" element={<EventsPages.Drinks />} />
+                    <Route path="spaces" element={<EventsPages.Spaces />} />
+                    <Route path="reports" element={<EventsPages.Reports />} />
+                    <Route path="settings" element={<EventsPages.Settings />} />
                   </Route>
 
                   {/* Master admin routes */}
