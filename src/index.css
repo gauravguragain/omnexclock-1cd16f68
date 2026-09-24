@@ -658,6 +658,10 @@
 
 /* The original banquet event order was monochrome, even in a dark workspace. */
 .runsheet-monochrome {
+  box-sizing: border-box;
+  width: 210mm;
+  min-height: 297mm;
+  padding: 10mm;
   --background: 0 0% 100%;
   --foreground: 0 0% 5%;
   --primary: 0 0% 4%;
@@ -668,7 +672,11 @@
   color-scheme: light;
 }
 
+.runsheet-page { width: 210mm; transform-origin: top left; }
+
 @media print {
-  .runsheet-monochrome { min-width: 0; padding: 0; print-color-adjust: exact; -webkit-print-color-adjust: exact; }
-  .runsheet-monochrome section, .runsheet-monochrome header, .runsheet-monochrome footer { break-inside: avoid; }
+  .runsheet-preview { height: auto !important; overflow: visible; }
+  .runsheet-page { width: 190mm; transform: none !important; }
+  .runsheet-monochrome { width: 190mm; min-height: 277mm; padding: 0; print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+  .runsheet-monochrome header, .runsheet-monochrome footer, .runsheet-monochrome h2, .runsheet-monochrome h3 { break-inside: avoid; break-after: avoid; }
 }
