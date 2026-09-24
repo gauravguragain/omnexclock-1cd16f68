@@ -38,6 +38,6 @@
 - [x] Verify tasting scheduling and the lead tabs on mobile and desktop
 
 # Catering separation
-- [ ] Keep catering lead details, confirmation and editing inside Catering, without opening event workflow tabs
-- [ ] Give confirmed catering bookings and run sheets catering-only navigation and labels
-- [ ] Verify lead and confirmed booking paths on screen
+- [x] Keep catering lead details, confirmation and editing inside Catering, without opening event workflow tabs
+- [x] Give confirmed catering bookings and run sheets catering-only navigation and labels
+- [x] Verify lead and confirmed booking paths on screen
