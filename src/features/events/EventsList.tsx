@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { format, isToday } from "date-fns";
@@ -13,7 +13,7 @@ import { prettyCrmValue, type CrmLead } from "@/features/sales/types";
 import { useEventsData, bookingEnd, to12 } from "./useEventsData";
 
 export default function EventsList({ kind }: { kind: "event" | "catering" }) {
-  const crm = useCrmData(); const ev = useEventsData(); const { businessCode } = useParams();
+  const crm = useCrmData(); const ev = useEventsData(); const { businessCode } = useParams(); const nav = useNavigate();
   const [tab, setTab] = useState("upcoming"); const [search, setSearch] = useState(""); const [detail, setDetail] = useState<CrmLead | null>(null);
   if (!crm.business) return null;
   const today = format(new Date(), "yyyy-MM-dd");
@@ -26,8 +26,8 @@ export default function EventsList({ kind }: { kind: "event" | "catering" }) {
   const rest = shown.filter(b => !todays.includes(b));
   const setStatus = async (b: any, status: string) => { const { error } = await supabase.from("crm_bookings").update({ status }).eq("id", b.id); if (error) toast.error(error.message); else crm.refresh(); };
 
-  const rowsFor = (list: any[]) => list.map(b => <tr key={b.id} className="border-t border-border hover:bg-muted/30">
-    <td className="p-3"><button className="text-left font-medium hover:text-primary" onClick={() => setDetail(crm.leads.find(l => l.id === b.lead_id) || null)}>{b.event_name || customer(b)}</button><p className="text-xs text-muted-foreground">{prettyCrmValue(b.event_type || "event")}</p></td>
+  const rowsFor = (list: any[]) => list.map(b => <tr key={b.id} className="cursor-pointer border-t border-border hover:bg-muted/30" onClick={e => { if (!(e.target as HTMLElement).closest("button")) nav(`/b/${businessCode}/events/${kind === "event" ? "events" : "catering-bookings"}/${b.id}`); }}>
+    <td className="p-3"><button className="text-left font-medium hover:text-primary" onClick={() => nav(`/b/${businessCode}/events/${kind === "event" ? "events" : "catering-bookings"}/${b.id}`)}>{b.event_name || customer(b)}</button><p className="text-xs text-muted-foreground">{prettyCrmValue(b.event_type || "event")}</p></td>
     <td className="p-3">{format(new Date(`${b.event_date}T00:00:00`), "dd MMM")}<p className="text-xs text-muted-foreground">{format(new Date(`${b.event_date}T00:00:00`), "EEE")}</p></td>
     <td className="p-3 whitespace-nowrap">{to12(String(b.start_time).slice(0, 5))} – {to12(bookingEnd(b))}</td>
     <td className="p-3">{kind === "event" ? b.venue_space : b.service_location || "—"}</td>
