@@ -75,37 +75,37 @@ export function RunsheetDocument({ rs, lead, b, items, selection, businessName }
         </div>
       </div>
 
-      <div className="grid gap-2.5 grid-cols-1 sm:grid-cols-[1.7fr_1fr]">
+      <div className="grid gap-4 grid-cols-1 sm:grid-cols-[1.7fr_1fr]">
         <Box icon={UtensilsCrossed} title="Menu selection">
-          {stalls.length > 0 && <div className="mb-2">
-            <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">Live stalls</p>
-            {stalls.map(s => <p key={s.id} className="flex justify-between py-px text-xs"><span className="font-medium">{s.item_name}</span><span className="text-muted-foreground">{s.service_start_time ? to12(s.service_start_time) : ""}{s.service_end_time ? ` – ${to12(s.service_end_time)}` : ""}</span></p>)}
+          {stalls.length > 0 && <div className="mb-3">
+            <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Live stalls</p>
+            {stalls.map(s => <p key={s.id} className="flex justify-between py-0.5 text-sm"><span className="font-medium">{s.item_name}</span><span className="text-muted-foreground">{s.service_start_time ? to12(s.service_start_time) : ""}{s.service_end_time ? ` – ${to12(s.service_end_time)}` : ""}</span></p>)}
           </div>}
-          {pkgs.length > 0 && <p className="text-xs font-semibold">{pkgs.map(p => p.item_name).join(" · ")}</p>}
-          {Object.keys(courses).length > 0 && <p className="mb-1 mt-1 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">Items</p>}
-          <ul className="grid grid-cols-2 gap-x-3 gap-y-1.5">
+          {pkgs.length > 0 && <p className="text-sm font-semibold">{pkgs.map(p => p.item_name).join(" · ")}</p>}
+          {Object.keys(courses).length > 0 && <p className="mb-2 mt-2 text-xs font-semibold uppercase tracking-widest text-muted-foreground">Items</p>}
+          <ul className="space-y-3">
             {(Object.entries(courses) as [string, any[]][]).map(([c, l]) => <li key={c}>
-              <p className="flex items-center gap-1.5 text-xs font-semibold"><span className="h-1.5 w-1.5 rounded-full border border-primary" />{c}</p>
-              <ul className="ml-3 mt-0.5">{l.map(x => <li key={x.id} className="flex items-center gap-1.5 text-xs leading-snug"><span className="h-1 w-1 bg-muted-foreground" />{x.item_name}</li>)}</ul>
+              <p className="flex items-center gap-2 text-sm font-semibold"><span className="h-2 w-2 rounded-full border border-primary" />{c}</p>
+              <ul className="ml-4 mt-1 space-y-0.5">{l.map(x => <li key={x.id} className="flex items-center gap-2 text-sm"><span className="h-1 w-1 bg-muted-foreground" />{x.item_name}</li>)}</ul>
             </li>)}
           </ul>
-          {selection?.beverage_package && <p className="mt-2 text-xs"><span className="text-muted-foreground">Beverages: </span>{prettyCrmValue(selection.beverage_package)}</p>}
-          {selection?.corkage_enabled && <p className="mt-0.5 text-xs text-muted-foreground">Host is bringing their own drinks.</p>}
-          {(selection?.dietary_requirements || selection?.allergies) && <p className="mt-1 text-xs text-muted-foreground">{[selection.dietary_requirements && `Dietary: ${selection.dietary_requirements}`, selection.allergies && `Allergies: ${selection.allergies}`].filter(Boolean).join(" · ")}</p>}
+          {selection?.beverage_package && <p className="mt-3 text-sm"><span className="text-muted-foreground">Beverages: </span>{prettyCrmValue(selection.beverage_package)}</p>}
+          {selection?.corkage_enabled && <p className="mt-1 text-sm text-muted-foreground">Host is bringing their own drinks.</p>}
+          {(selection?.dietary_requirements || selection?.allergies) && <p className="mt-2 text-sm text-muted-foreground">{[selection.dietary_requirements && `Dietary: ${selection.dietary_requirements}`, selection.allergies && `Allergies: ${selection.allergies}`].filter(Boolean).join(" · ")}</p>}
           {!items.length && <Empty>No menu saved yet.</Empty>}
         </Box>
 
-        <div className="space-y-2.5">
+        <div className="space-y-4">
           <Box icon={Star} title="Activities">
-            {schedule.length ? <div className="space-y-1">{schedule.map((s, i) => <div key={i}>
-              <div className="flex items-center gap-2"><span className="rounded-full bg-primary/20 px-1.5 py-px text-[10px] font-medium text-primary">{s.time ? to12(s.time) : "—"}</span><span className="h-px flex-1 bg-primary/40" /><span className="h-1.5 w-1.5 rounded-full border border-primary" /></div>
-              <p className="text-xs leading-snug">{s.label}{s.detail ? <span className="text-muted-foreground"> — {s.detail}</span> : null}</p>
+            {schedule.length ? <div className="space-y-2">{schedule.map((s, i) => <div key={i}>
+              <div className="flex items-center gap-2"><span className="rounded-full bg-primary/20 px-2 py-0.5 text-xs font-medium text-primary">{s.time ? to12(s.time) : "—"}</span><span className="h-px flex-1 bg-primary/40" /><span className="h-2 w-2 rounded-full border border-primary" /></div>
+              <p className="mt-0.5 text-sm">{s.label}{s.detail ? <span className="text-muted-foreground"> — {s.detail}</span> : null}</p>
             </div>)}</div> : <Empty>No timings set.</Empty>}
           </Box>
           <Box icon={Settings} title="Setup & additional information">
-            {hasSetup ? <div className="space-y-0.5 text-xs">
+            {hasSetup ? <div className="space-y-1 text-sm">
               {rs.access_time && <p><span className="text-muted-foreground">Decor / vendor access: </span>{to12(rs.access_time)}</p>}
-              {setup.length > 0 && <p>{setup.join(" · ")}</p>}
+              {setup.map((s, i) => <p key={i} className="flex items-center gap-2"><span className="h-1 w-1 bg-muted-foreground" />{s}</p>)}
               {rs.setup_notes && <p className="whitespace-pre-line text-muted-foreground">{rs.setup_notes}</p>}
               {rs.special_requests && <p><span className="text-muted-foreground">Special requests: </span>{rs.special_requests}</p>}
             </div> : <Empty>Nothing recorded.</Empty>}
@@ -114,16 +114,16 @@ export function RunsheetDocument({ rs, lead, b, items, selection, businessName }
       </div>
 
       {(rs.client_notes || rs.ops_notes) && <Box icon={FileText} title="Notes">
-        {rs.client_notes && <p className="text-xs"><span className="text-muted-foreground">Client notes: </span>{rs.client_notes}</p>}
-        {rs.ops_notes && <p className="text-xs"><span className="text-muted-foreground">Internal notes: </span>{rs.ops_notes}</p>}
+        {rs.client_notes && <p className="text-sm"><span className="text-muted-foreground">Client notes: </span>{rs.client_notes}</p>}
+        {rs.ops_notes && <p className="text-sm"><span className="text-muted-foreground">Internal notes: </span>{rs.ops_notes}</p>}
       </Box>}
 
       <Box icon={PenLine} title="Authorized signatures">
-        <div className="mt-4 grid grid-cols-3 gap-6 text-center text-xs text-muted-foreground">
+        <div className="mt-6 grid grid-cols-3 gap-8 text-center text-sm text-muted-foreground">
           {["Name", "Signature", "Date"].map(l => <div key={l}><div className="mb-2 border-b border-muted-foreground/60" />{l}</div>)}
         </div>
       </Box>
-      <p className="flex items-center justify-end gap-1 text-xs text-muted-foreground"><CalendarDays className="h-3.5 w-3.5" />Printed Date: {format(new Date(), "dd/MM/yyyy")}</p>
+      <p className="flex items-center justify-end gap-1 text-sm text-muted-foreground"><CalendarDays className="h-4 w-4" />Printed Date: {format(new Date(), "dd/MM/yyyy")}</p>
     </div>
   </>;
 }
