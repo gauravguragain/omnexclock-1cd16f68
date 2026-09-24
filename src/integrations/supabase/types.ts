@@ -2841,6 +2841,318 @@ export type Database = {
           },
         ]
       }
+      fsl_entries: {
+        Row: {
+          admin_user_id: string | null
+          alert_sent: boolean
+          backfilled: boolean
+          business_id: string
+          check_key: string | null
+          client_id: string | null
+          created_at: string
+          edited: boolean
+          employee_id: string | null
+          entry_date: string
+          field_values: Json
+          finished_at: string | null
+          finished_by_name: string | null
+          finished_employee_id: string | null
+          form_id: string
+          form_version: number
+          header_values: Json
+          id: string
+          out_of_range: boolean
+          period_key: string
+          section_key: string | null
+          staff_name: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          admin_user_id?: string | null
+          alert_sent?: boolean
+          backfilled?: boolean
+          business_id: string
+          check_key?: string | null
+          client_id?: string | null
+          created_at?: string
+          edited?: boolean
+          employee_id?: string | null
+          entry_date: string
+          field_values?: Json
+          finished_at?: string | null
+          finished_by_name?: string | null
+          finished_employee_id?: string | null
+          form_id: string
+          form_version?: number
+          header_values?: Json
+          id?: string
+          out_of_range?: boolean
+          period_key: string
+          section_key?: string | null
+          staff_name?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          admin_user_id?: string | null
+          alert_sent?: boolean
+          backfilled?: boolean
+          business_id?: string
+          check_key?: string | null
+          client_id?: string | null
+          created_at?: string
+          edited?: boolean
+          employee_id?: string | null
+          entry_date?: string
+          field_values?: Json
+          finished_at?: string | null
+          finished_by_name?: string | null
+          finished_employee_id?: string | null
+          form_id?: string
+          form_version?: number
+          header_values?: Json
+          id?: string
+          out_of_range?: boolean
+          period_key?: string
+          section_key?: string | null
+          staff_name?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fsl_entries_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fsl_entries_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses_public"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fsl_entries_form_id_fkey"
+            columns: ["form_id"]
+            isOneToOne: false
+            referencedRelation: "fsl_forms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      fsl_entry_audit: {
+        Row: {
+          business_id: string
+          changed_at: string
+          changed_by: string
+          entry_id: string
+          field_key: string
+          id: string
+          new_value: string | null
+          old_value: string | null
+          reason: string
+        }
+        Insert: {
+          business_id: string
+          changed_at?: string
+          changed_by: string
+          entry_id: string
+          field_key: string
+          id?: string
+          new_value?: string | null
+          old_value?: string | null
+          reason: string
+        }
+        Update: {
+          business_id?: string
+          changed_at?: string
+          changed_by?: string
+          entry_id?: string
+          field_key?: string
+          id?: string
+          new_value?: string | null
+          old_value?: string | null
+          reason?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fsl_entry_audit_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fsl_entry_audit_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses_public"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fsl_entry_audit_entry_id_fkey"
+            columns: ["entry_id"]
+            isOneToOne: false
+            referencedRelation: "fsl_entries"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      fsl_form_versions: {
+        Row: {
+          business_id: string
+          config: Json
+          created_at: string
+          created_by: string | null
+          form_id: string
+          id: string
+          note: string | null
+          template_path: string | null
+          version: number
+        }
+        Insert: {
+          business_id: string
+          config: Json
+          created_at?: string
+          created_by?: string | null
+          form_id: string
+          id?: string
+          note?: string | null
+          template_path?: string | null
+          version: number
+        }
+        Update: {
+          business_id?: string
+          config?: Json
+          created_at?: string
+          created_by?: string | null
+          form_id?: string
+          id?: string
+          note?: string | null
+          template_path?: string | null
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fsl_form_versions_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fsl_form_versions_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses_public"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fsl_form_versions_form_id_fkey"
+            columns: ["form_id"]
+            isOneToOne: false
+            referencedRelation: "fsl_forms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      fsl_forms: {
+        Row: {
+          active: boolean
+          business_id: string
+          config: Json
+          created_at: string
+          form_type: string
+          id: string
+          name: string
+          sort_order: number
+          template_path: string | null
+          updated_at: string
+          version: number
+        }
+        Insert: {
+          active?: boolean
+          business_id: string
+          config?: Json
+          created_at?: string
+          form_type?: string
+          id?: string
+          name: string
+          sort_order?: number
+          template_path?: string | null
+          updated_at?: string
+          version?: number
+        }
+        Update: {
+          active?: boolean
+          business_id?: string
+          config?: Json
+          created_at?: string
+          form_type?: string
+          id?: string
+          name?: string
+          sort_order?: number
+          template_path?: string | null
+          updated_at?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fsl_forms_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fsl_forms_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses_public"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      fsl_settings: {
+        Row: {
+          alert_emails: string[]
+          business_id: string
+          supervisor_employee_ids: string[]
+          updated_at: string
+        }
+        Insert: {
+          alert_emails?: string[]
+          business_id: string
+          supervisor_employee_ids?: string[]
+          updated_at?: string
+        }
+        Update: {
+          alert_emails?: string[]
+          business_id?: string
+          supervisor_employee_ids?: string[]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fsl_settings_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: true
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fsl_settings_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: true
+            referencedRelation: "businesses_public"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       inventory_items: {
         Row: {
           business_id: string
@@ -3696,6 +4008,53 @@ export type Database = {
           _employee_code: string
         }
         Returns: string
+      }
+      fsl_resolve_staff: {
+        Args: { _business_code: string; _code: string }
+        Returns: {
+          business_id: string
+          employee_id: string
+          employee_name: string
+          is_supervisor: boolean
+        }[]
+      }
+      fsl_staff_data: {
+        Args: {
+          _business_code: string
+          _code: string
+          _from: string
+          _to: string
+        }
+        Returns: Json
+      }
+      fsl_staff_edit: {
+        Args: {
+          _business_code: string
+          _code: string
+          _entry_id: string
+          _out_of_range: boolean
+          _reason: string
+          _values: Json
+        }
+        Returns: Json
+      }
+      fsl_staff_finish: {
+        Args: {
+          _business_code: string
+          _code: string
+          _entry_id: string
+          _out_of_range: boolean
+          _values: Json
+        }
+        Returns: Json
+      }
+      fsl_staff_login: {
+        Args: { _business_code: string; _code: string }
+        Returns: Json
+      }
+      fsl_staff_save: {
+        Args: { _business_code: string; _code: string; _entry: Json }
+        Returns: Json
       }
       get_employee_business_id: {
         Args: { _employee_id: string }

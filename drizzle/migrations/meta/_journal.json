@@ -141,6 +141,13 @@
       "when": 1790254366628,
       "tag": "0019_catering_fulfilment_method",
       "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1790257724017,
+      "tag": "0020_food_safety_logs",
+      "breakpoints": true
     }
   ]
 }

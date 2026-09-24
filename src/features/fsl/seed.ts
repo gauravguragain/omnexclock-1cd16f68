@@ -1,0 +1,108 @@
+import type { FormConfig } from "./engine";
+
+const alerts = { outOfRange: true, overdue: true, openTooLong: true };
+const sig = { key: "signature", label: "Signature", type: "signature" as const, autofill: "staff" as const, required: true };
+
+export const SEED_FORMS: FormConfig[] = [
+  {
+    name: "Fridge Temp Logs", title: "PRO-REGAL Daily Fridge Temperature Log Sheet", form_type: "daily_grid", period: "monthly",
+    headers: [{ key: "month", label: "Month", type: "month" }],
+    sections: [
+      { key: "cold_room_1", label: "Cold Room 1", max: 5 }, { key: "cold_room_2", label: "Cold Room 2", max: 5 },
+      { key: "freezer_1", label: "Freezer 1", max: -15 }, { key: "freezer_2", label: "Freezer 2", max: -15 }, { key: "freezer_3", label: "Freezer 3", max: -15 },
+    ],
+    checks: [{ key: "am", label: "AM", due: "10:00" }, { key: "mid", label: "Mid shift", due: "14:00" }, { key: "pm", label: "PM", due: "20:00" }],
+    fields: [
+      { key: "temp", label: "Temperature °C", type: "temperature", required: true },
+      { key: "sig_ca", label: "Signature & Corrective Action", type: "text" },
+    ],
+    limitField: "temp",
+    corrective: { field: "sig_ca", triggers: [], defaultInRange: "NCAR" },
+    instructions: "Record the temperature of each unit at every check. Cold rooms must be 5°C or below; freezers -15°C or below.",
+    alerts,
+  },
+  {
+    name: "Cleaning Schedule", title: "PRO REGAL CLEANING SCHEDULE", form_type: "weekly_checklist", period: "weekly",
+    headers: [{ key: "week", label: "Week Commencing", type: "week" }, { key: "area", label: "Area", type: "dropdown", options: ["Kitchen"], default: "Kitchen" }],
+    sections: [],
+    sectionAttrs: [
+      { key: "frequency", label: "Frequency", options: ["After Use", "Daily", "Weekly"] },
+      { key: "person", label: "Person Responsible" }, { key: "chemicals", label: "Chemicals" }, { key: "method", label: "Method" },
+    ],
+    checks: [], fields: [sig], instructions: "Tap an item to sign it off for today once it has been cleaned.", alerts,
+  },
+  {
+    name: "Receiving Goods", title: "PRO REGAL RECEIVING RECORDS", code: "CCP2", form_type: "event_log", period: "monthly",
+    headers: [{ key: "month", label: "Month", type: "month" }], sections: [], checks: [],
+    fields: [
+      { key: "date", label: "Date", type: "date", autofill: "date" }, { key: "time", label: "Time", type: "time", autofill: "time" },
+      { key: "supplier", label: "Supplier", type: "dropdown", options: [], allowAdd: true, required: true },
+      { key: "goods_type", label: "Type of Goods", type: "text", required: true },
+      { key: "category", label: "Goods Category", type: "dropdown", options: ["Chilled", "Frozen", "Hot", "Dry"], required: true },
+      { key: "invoice", label: "Invoice Number", type: "text" },
+      { key: "temp", label: "Goods Temp °C", type: "temperature", required: true, hiddenWhen: [{ field: "category", value: "Dry" }],
+        conditionalLimits: [{ field: "category", value: "Chilled", max: 5 }, { field: "category", value: "Frozen", max: -15 }, { field: "category", value: "Hot", min: 60 }] },
+      { key: "packaging", label: "Packaging Standards", type: "dropdown", options: ["Good", "Poor"], required: true },
+      { key: "corrective", label: "Corrective Action", type: "text" },
+      sig,
+      { key: "photo", label: "Invoice photo", type: "photo" },
+    ],
+    corrective: { field: "corrective", triggers: [{ field: "packaging", value: "Poor" }] },
+    instructions: "Check every delivery. Chilled max 5°C, Frozen max -15°C, Hot min 60°C. Reject or record corrective action if out of range or packaging is poor.",
+    alerts,
+  },
+  {
+    name: "Hot and Cold Record", title: "PRO REGAL HOT AND COLD FOOD RECORDS", form_type: "event_log", period: "monthly",
+    headers: [{ key: "month", label: "Month", type: "month" }], sections: [], checks: [],
+    fields: [
+      { key: "kind", label: "Hot Food / Cold Food", type: "dropdown", options: ["Hot Food", "Cold Food"], required: true },
+      { key: "date", label: "Date", type: "date", autofill: "date" }, { key: "time", label: "Time", type: "time", autofill: "time" },
+      { key: "product", label: "Product", type: "text", required: true },
+      { key: "spot1", label: "Spot 1 Temp °C", type: "number", required: true },
+      { key: "spot2", label: "Spot 2 Temp °C", type: "number", required: true },
+      { key: "temp", label: "Temperature", type: "temperature", computed: { fn: "max", of: ["spot1", "spot2"], byField: { field: "kind", map: { "Hot Food": "min", "Cold Food": "max" } } },
+        conditionalLimits: [{ field: "kind", value: "Cold Food", min: 0, max: 5 }, { field: "kind", value: "Hot Food", min: 60 }] },
+      { key: "corrective", label: "Corrective Action", type: "text" },
+      { key: "chef", label: "Chef Name and Signature", type: "signature", autofill: "staff", required: true },
+    ],
+    corrective: { field: "corrective", triggers: [] },
+    instructions: "Check high-risk foods. Probe two spots of the product and record both. Sanitise the probe before and after every use. Do not use short forms. Inform your supervisor immediately if a temperature is out of range.",
+    alerts,
+  },
+  {
+    name: "Hot Food Monitoring", title: "PRO REGAL HOT FOOD MONITORING RECORDS", form_type: "event_log", period: "monthly",
+    headers: [{ key: "month", label: "Month", type: "month" }], sections: [], checks: [],
+    fields: [
+      { key: "date", label: "Date", type: "date", autofill: "date" },
+      { key: "food", label: "Food Item", type: "text", required: true },
+      { key: "process", label: "Process", type: "dropdown", options: ["Cooking", "Reheating"], required: true },
+      { key: "time", label: "Time", type: "time", autofill: "time" },
+      { key: "temp", label: "Final Temp °C", type: "temperature", required: true, min: 75 },
+      { key: "corrective", label: "Corrective Action", type: "text" },
+      { key: "sign", label: "Sign Name", type: "signature", autofill: "staff", required: true },
+    ],
+    exception: { label: "Rare cut (e.g. rare beef, rare lamb, fish)", noteLabel: "Exception note", appliesTo: "temp", neverForField: "food", neverFor: ["chicken", "poultry", "turkey", "duck"] },
+    corrective: { field: "corrective", triggers: [] },
+    instructions: "Cooked and reheated food must reach 75°C or above. Rare cuts may be below 75°C with a note — never poultry.",
+    alerts,
+  },
+  {
+    name: "Thawing Records", title: "PRO REGAL THAWING RECORDS", code: "CCP", form_type: "two_step", period: "monthly",
+    headers: [{ key: "month", label: "Month", type: "month" }], sections: [], checks: [],
+    fields: [
+      { key: "food", label: "Food Item", type: "text", required: true, step: "start" },
+      { key: "date", label: "Date", type: "date", autofill: "date", step: "start" },
+      { key: "start_at", label: "Start Time/Date", type: "datetime", autofill: "datetime", step: "start" },
+      { key: "start_temp", label: "Start Temp", type: "temperature", required: true, step: "start" },
+      { key: "finish_at", label: "Finish Time/Date", type: "datetime", autofill: "datetime", step: "finish" },
+      { key: "finish_temp", label: "Finish Temp", type: "temperature", required: true, max: 5, step: "finish" },
+      { key: "date_used", label: "Date used", type: "date", step: "finish" },
+      { key: "corrective", label: "Corrective Action", type: "text", step: "finish" },
+      { key: "sign", label: "Sign name", type: "signature", autofill: "staff", required: true, step: "finish" },
+    ],
+    corrective: { field: "corrective", triggers: [] },
+    openAlertHours: 48,
+    instructions: "All food is to be thawed in the refrigerator. Core temperature must be 5°C or below.",
+    alerts,
+  },
+];
