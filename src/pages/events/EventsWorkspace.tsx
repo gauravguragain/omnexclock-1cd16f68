@@ -1,4 +1,5 @@
 import EventDetailPage from "@/features/events/EventDetailPage";
+import RunsheetViewPage from "@/features/events/RunsheetViewPage";
 import EventsDashboard from "@/features/events/EventsDashboard";
 import SalesMarketingPage from "@/pages/admin/SalesMarketingPage";
 import LeadsBoard from "@/features/events/LeadsBoard";
@@ -32,6 +33,7 @@ export const EventsPages = {
   NewCatering: () => <CreateEventWizard kind="catering" />,
   EventDetail: () => <EventDetailPage kind="event" />,
   CateringDetail: () => <EventDetailPage kind="catering" />,
+  RunsheetView: () => <RunsheetViewPage />,
   Calendar: CalendarPage,
   Customers: CustomersPage, Stakeholders: StakeholdersPage, MenuBooks: MenuBooksPage, Dishes: DishesPage, Drinks: DrinksPage, Spaces: SpacesPage, Reports: ReportsPage,
 };
