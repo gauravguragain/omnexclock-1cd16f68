@@ -39,7 +39,7 @@ export default function FoodSafetyStaffPage() {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => { if (bc) localStorage.setItem(BC_KEY, bc); }, [bc]);
-  useEffect(() => { document.title = "Food Safety Logs"; }, []);
+  useEffect(() => { document.title = "Food Safety Logs"; document.documentElement.classList.add("dark"); }, []);
 
   const load = useCallback(async () => {
     if (!staff || !code) return;

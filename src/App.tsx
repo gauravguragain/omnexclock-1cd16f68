@@ -51,6 +51,8 @@ const MyBusinessPage = React.lazy(() => import("./pages/admin/MyBusinessPage"));
 const InventoryPage = React.lazy(() => import("./pages/admin/InventoryPage"));
 const ServiceMaintenancePage = React.lazy(() => import("./pages/admin/ServiceMaintenancePage"));
 
+const FoodSafetyPage = React.lazy(() => import("./pages/admin/FoodSafetyPage"));
+const FoodSafetyStaffPage = React.lazy(() => import("./pages/FoodSafetyStaffPage"));
 const PayDetailsPage = React.lazy(() => import("./pages/admin/PayDetailsPage"));
 const InvoicesPage = React.lazy(() => import("./pages/admin/InvoicesPage"));
 const EventsLayout = React.lazy(() => import("./layouts/EventsLayout"));
@@ -105,7 +107,9 @@ const App = () => (
                   <Route path="/b/:businessCode/kiosk" element={<KioskPage />} />
                   {/* Unique obfuscated kiosk URL — harder to guess */}
                   <Route path="/t/:businessCode/ck" element={<KioskPage />} />
-                  <Route path="/b/:businessCode/portal" element={<PortalPage />} />
+                  <Route path="/logs" element={<FoodSafetyStaffPage />} />
+                 <Route path="/b/:businessCode/logs" element={<FoodSafetyStaffPage />} />
+                 <Route path="/b/:businessCode/portal" element={<PortalPage />} />
                   <Route path="/b/:businessCode/enquire" element={<PublicEnquiryPage />} />
                   <Route path="/booking/confirm/:token" element={<BookingConfirmationPage />} />
                   <Route path="/b/:businessCode/admin" element={<AdminLayout />}>
@@ -122,6 +126,7 @@ const App = () => (
                     <Route path="my-business" element={<MyBusinessPage />} />
                     <Route path="inventory" element={<InventoryPage />} />
                     <Route path="service" element={<ServiceMaintenancePage />} />
+                   <Route path="food-safety" element={<FoodSafetyPage />} />
                     
                     <Route path="pay-details" element={<PayDetailsPage />} />
                     <Route path="invoices" element={<InvoicesPage />} />
