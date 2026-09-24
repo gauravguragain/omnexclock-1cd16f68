@@ -110,14 +110,7 @@ export default function LeadDetailDialog({ lead, open, onOpenChange, options, in
       <section className="rounded-lg border border-dashed border-border p-4">
         <h3 className="font-serif text-lg">Package selection</h3>
         {bookPackages.length>0&&<MenuBookPicker packages={bookPackages} onAdd={loadBookPackage}/>}
-        <p className="text-xs text-muted-foreground">Name the package the client has chosen and the amount per guest — the total is worked out for you.</p>
-        <div className="mt-3 grid gap-2 sm:grid-cols-[2fr_1fr_1fr_auto]">
-          <Input value={draft.name} onChange={e=>setDraft({...draft,name:e.target.value})} placeholder="Package selection e.g. Indian Tier 1"/>
-          <Input value={draft.pricePerHead} onChange={e=>setDraft({...draft,pricePerHead:e.target.value})} type="number" min="0" step="0.01" placeholder="Amount per guest"/>
-          <Input value={draft.flatPrice} onChange={e=>setDraft({...draft,flatPrice:e.target.value})} type="number" min="0" step="0.01" placeholder="$ flat (optional)"/>
-          <Button type="button" variant="secondary" onClick={()=>{if(!draft.name.trim()){toast.error("Name the package first");return;}setCustomItems(v=>[...v,{key:`${Date.now()}`,name:draft.name.trim(),pricePerHead:Number(draft.pricePerHead||0),flatPrice:Number(draft.flatPrice||0)}]);setDraft({name:"",pricePerHead:"",flatPrice:""});}}><Plus className="h-4 w-4"/></Button>
-        </div>
-        {draft.pricePerHead&&<p className="mt-2 text-xs text-muted-foreground">${Number(draft.pricePerHead||0).toFixed(2)} × {guests} guests = ${(Number(draft.pricePerHead||0)*guests+Number(draft.flatPrice||0)).toFixed(2)}</p>}
+        <p className="mt-1 text-xs text-muted-foreground">Pick a menu book and package above — dishes are chosen from each course's dropdown.</p>
       </section>
 
 
