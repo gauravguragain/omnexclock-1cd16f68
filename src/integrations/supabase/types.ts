@@ -1859,6 +1859,8 @@ export type Database = {
           created_at: string
           created_by: string | null
           distributed_to: string | null
+          emailed_at: string | null
+          emailed_to: string[]
           event_coordinator: string | null
           event_coordinator_phone: string | null
           event_order_number: string | null
@@ -1892,6 +1894,8 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           distributed_to?: string | null
+          emailed_at?: string | null
+          emailed_to?: string[]
           event_coordinator?: string | null
           event_coordinator_phone?: string | null
           event_order_number?: string | null
@@ -1925,6 +1929,8 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           distributed_to?: string | null
+          emailed_at?: string | null
+          emailed_to?: string[]
           event_coordinator?: string | null
           event_coordinator_phone?: string | null
           event_order_number?: string | null
@@ -3659,6 +3665,14 @@ export type Database = {
         Returns: boolean
       }
       can_access_crm: { Args: { _business_id: string }; Returns: boolean }
+      crm_event_managers: {
+        Args: { _business_id: string }
+        Returns: {
+          email: string
+          full_name: string
+          user_id: string
+        }[]
+      }
       crm_next_event_order: { Args: { _business_id: string }; Returns: string }
       delete_employee: { Args: { _employee_id: string }; Returns: boolean }
       delete_employee_request: {
