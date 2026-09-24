@@ -38,7 +38,7 @@ export default function SalesMarketingPage({view}:{view?:string}={}){
   </div>;
 }
 
-const OPTION_TYPES=[{value:"lead_source",label:"Lead sources"},{value:"event_type",label:"Event types"},{value:"venue_space",label:"Venue spaces"},{value:"beverage_package",label:"Beverage packages"},{value:"live_stall",label:"Live stalls"},{value:"lost_reason",label:"Lost reasons"},{value:"setup_item",label:"Runsheet setup items"},{value:"service_course",label:"Runsheet service courses"}];
+const OPTION_TYPES=[{value:"lead_source",label:"Lead sources"},{value:"event_type",label:"Event types"},{value:"beverage_package",label:"Beverage packages"},{value:"live_stall",label:"Live stalls"},{value:"lost_reason",label:"Lost reasons"},{value:"setup_item",label:"Runsheet setup items"},{value:"service_course",label:"Runsheet service courses"}];
 
 function OptionListManager({type,label,businessId,options,canConfigure,refresh}:{type:string;label:string;businessId:string;options:any[];canConfigure:boolean;refresh:()=>void}){
   const items=options.filter(o=>o.option_type===type&&o.active);
