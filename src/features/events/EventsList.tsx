@@ -9,12 +9,12 @@ import { Badge } from "@/components/ui/badge";
 import { Plus, Search } from "lucide-react";
 import { useCrmData } from "@/features/sales/useCrmData";
 import LeadDetailDialog from "@/features/sales/LeadDetailDialog";
-import { prettyCrmValue, type CrmLead } from "@/features/sales/types";
+import { prettyCrmValue } from "@/features/sales/types";
 import { useEventsData, bookingEnd, to12 } from "./useEventsData";
 
 export default function EventsList({ kind }: { kind: "event" | "catering" }) {
   const crm = useCrmData(); const ev = useEventsData(); const { businessCode } = useParams(); const nav = useNavigate();
-  const [tab, setTab] = useState("upcoming"); const [search, setSearch] = useState(""); const [detail, setDetail] = useState<CrmLead | null>(null);
+   const [tab, setTab] = useState("upcoming"); const [search, setSearch] = useState("");
   if (!crm.business) return null;
   const today = format(new Date(), "yyyy-MM-dd");
   const mine = crm.bookings.filter(b => (b.booking_kind || "event") === kind);
@@ -54,6 +54,5 @@ export default function EventsList({ kind }: { kind: "event" | "catering" }) {
     <div className="hidden overflow-x-auto rounded-md border md:block"><table className="w-full text-left text-sm"><thead className="bg-muted/60"><tr>{["Event", "Date", "Time", kind === "event" ? "Venue" : "Location", "Customer", "Guests", "Status", "Event order", ""].map(h => <th key={h} className="p-3">{h}</th>)}</tr></thead>
       <tbody>{todays.length > 0 && <tr className="bg-primary/5"><td colSpan={9} className="px-3 py-1.5 text-xs font-semibold text-primary">Today · {todays.length}</td></tr>}{rowsFor(todays)}{rowsFor(rest)}
         {!shown.length && <tr><td colSpan={9} className="p-10 text-center text-muted-foreground">Nothing here.</td></tr>}</tbody></table></div>
-    <LeadDetailDialog lead={detail} open={!!detail} onOpenChange={o => !o && setDetail(null)} options={crm.options} interactions={crm.interactions} inspections={crm.inspections} tasks={crm.tasks} menuItems={crm.menuItems} booking={crm.bookings.find(b => b.lead_id === detail?.id)} businessName={crm.business.name} onSaved={crm.refresh} />
   </div>;
 }

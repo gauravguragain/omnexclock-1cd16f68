@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { format } from "date-fns";
 import { toast } from "sonner";
-import { ArrowLeft, FileText, Mail, Pencil, Truck, Users, UtensilsCrossed } from "lucide-react";
+import { ArrowLeft, FileText, Mail, Pencil } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -49,7 +49,7 @@ export default function CateringDetailPage({ view }: { view: "lead" | "booking" 
   const pickup = booking?.fulfilment_method === "pickup";
   const method = pickup ? "Pickup" : "Delivery";
   const packages = items.filter(i => i.course === "package" || i.course === "kids_package");
-  const courses = items.filter(i => !["package", "kids_package", "manual", "beverage", "live_stall"].includes(i.course)).reduce((map: Record<string, any[]>, i) => { (map[i.course || "Other"] ||= []).push(i); return map; }, {});
+  const courses: Record<string, any[]> = items.filter(i => !["package", "kids_package", "manual", "beverage", "live_stall"].includes(i.course)).reduce((map: Record<string, any[]>, i) => { (map[i.course || "Other"] ||= []).push(i); return map; }, {});
 
   const preview = async () => {
     if (!booking) return;
