@@ -169,6 +169,13 @@
       "when": 1790259925041,
       "tag": "0023_fix_crm_calendar_token_generation",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1790261351516,
+      "tag": "0024_add_venue_space_photo_gallery",
+      "breakpoints": true
     }
   ]
 }
