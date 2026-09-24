@@ -40,7 +40,7 @@ export default function InspectionActions({ inspection, lead, onSaved }: {
     setDate(start.date); setStartTime(start.time); setEndTime(inspection.ends_at ? end.time : "11:00");
   }, [open, inspection.starts_at, inspection.proposed_at, inspection.ends_at]);
 
-  const setOutcome = async (status: "completed" | "no_show_needs_follow_up") => {
+  const setOutcome = async (status: "completed" | "no_show") => {
     setBusy(true);
     const { error } = await supabase.from("crm_inspections").update({ status, updated_by: user?.id } as any).eq("id", inspection.id);
     if (!error && status === "completed" && lead?.status === "inspection_booked") {
@@ -69,7 +69,7 @@ export default function InspectionActions({ inspection, lead, onSaved }: {
     <div className="mt-4 flex flex-wrap gap-2 border-t border-border pt-4">
       <Button size="sm" variant="outline" disabled={busy || inspection.status === "completed"} onClick={() => setOutcome("completed")}><Check className="mr-2 h-4 w-4" />Complete</Button>
       <Button size="sm" variant="outline" disabled={busy} onClick={() => setOpen(true)}><CalendarClock className="mr-2 h-4 w-4" />Reschedule</Button>
-      <Button size="sm" variant="outline" disabled={busy || inspection.status === "no_show_needs_follow_up"} onClick={() => setOutcome("no_show_needs_follow_up")}><UserX className="mr-2 h-4 w-4" />No show</Button>
+      <Button size="sm" variant="outline" disabled={busy || inspection.status === "no_show"} onClick={() => setOutcome("no_show")}><UserX className="mr-2 h-4 w-4" />No show</Button>
     </div>
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogContent>
