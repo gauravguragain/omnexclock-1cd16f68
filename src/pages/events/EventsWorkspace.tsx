@@ -10,6 +10,7 @@ import MenuBooksPage from "@/features/events/MenuBooksPage";
 import ReportsPage from "@/features/events/ReportsPage";
 import MonthCalendar from "@/features/events/MonthCalendar";
 import CalendarTab from "@/features/sales/CalendarTab";
+import SpacesPage from "@/features/events/SpacesPage";
 import { useCrmData } from "@/features/sales/useCrmData";
 import { useEventsData } from "@/features/events/useEventsData";
 import LeadDetailDialog from "@/features/sales/LeadDetailDialog";
@@ -17,7 +18,7 @@ import { useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { CalendarDays, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { CustomersPage, DishesPage, DrinksPage, SpacesPage, StakeholdersPage, CoordinatorsPage } from "@/features/events/ListPages";
+import { CustomersPage, DishesPage, DrinksPage, StakeholdersPage, CoordinatorsPage } from "@/features/events/ListPages";
 
 function CalendarPage() {
   const crm = useCrmData(); const ev = useEventsData(); const { businessCode } = useParams(); const navigate = useNavigate();
