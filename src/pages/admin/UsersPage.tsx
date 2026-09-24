@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { UserCheck, UserX, Shield, ShieldOff, Search, Eye, EyeOff, CalendarRange, X, Mail, Plus, Crown, Loader2, BriefcaseBusiness } from "lucide-react";
+import { UserCheck, UserX, Shield, ShieldOff, Search, Eye, EyeOff, CalendarRange, X, Mail, Plus, Crown, Loader2, BriefcaseBusiness, ShieldPlus } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -25,6 +25,8 @@ interface UserProfile {
   has_viewer_role: boolean;
   has_roster_admin_role: boolean;
   has_sales_manager_role: boolean;
+  has_food_safety_role: boolean;
+  roles: string[];
   roster_admin_departments: string[];
 }
 
@@ -37,6 +39,15 @@ interface Invitation {
   created_at: string;
   expires_at: string;
 }
+
+const ROLE_LABELS: Record<string, string> = {
+  super_admin: "Super Admin",
+  admin: "Admin",
+  viewer: "View Only",
+  roster_admin: "Roster Admin",
+  sales_marketing_manager: "Sales & Marketing",
+  food_safety_manager: "Food Safety",
+};
 
 export default function UsersPage() {
   const { isViewerOf, isAdminOf, isSuperAdminOf } = useAuth();
@@ -51,8 +62,8 @@ export default function UsersPage() {
   // Role assignment dialog state
   const [roleDialogOpen, setRoleDialogOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<UserProfile | null>(null);
-  type ManagedRole = "super_admin" | "admin" | "viewer" | "roster_admin" | "sales_marketing_manager";
-  const [selectedRole, setSelectedRole] = useState<ManagedRole>("admin");
+  type ManagedRole = "super_admin" | "admin" | "viewer" | "roster_admin" | "sales_marketing_manager" | "food_safety_manager";
+  const [selectedRoles, setSelectedRoles] = useState<ManagedRole[]>([]);
   const [selectedDepartments, setSelectedDepartments] = useState<string[]>([]);
   const [availableDepartments, setAvailableDepartments] = useState<string[]>([]);
   const [roleSaving, setRoleSaving] = useState(false);
@@ -112,6 +123,8 @@ export default function UsersPage() {
         has_viewer_role: viewerUserIds.has(p.id),
         has_roster_admin_role: rosterAdminMap.has(p.id),
         has_sales_manager_role: salesManagerUserIds.has(p.id),
+        has_food_safety_role: roles.some(r => r.user_id === p.id && (r.role as string) === "food_safety_manager"),
+        roles: roles.filter(r => r.user_id === p.id).map(r => r.role as string),
         roster_admin_departments: rosterAdminMap.get(p.id) || [],
       }))
     );
@@ -193,20 +206,8 @@ export default function UsersPage() {
 
   const openRoleDialog = (user: UserProfile) => {
     setSelectedUser(user);
-    if (user.has_super_admin_role) {
-      setSelectedRole("super_admin");
-    } else if (user.has_admin_role) {
-      setSelectedRole("admin");
-    } else if (user.has_roster_admin_role) {
-      setSelectedRole("roster_admin");
-      setSelectedDepartments(user.roster_admin_departments);
-    } else if (user.has_viewer_role) {
-      setSelectedRole("viewer");
-    } else if (user.has_sales_manager_role) {
-      setSelectedRole("sales_marketing_manager");
-    } else {
-      setSelectedRole("viewer");
-    }
+    setSelectedRoles(user.roles.filter(r => ROLE_LABELS[r]) as ManagedRole[]);
+    setSelectedDepartments(user.roster_admin_departments);
     setRoleDialogOpen(true);
   };
 
@@ -215,47 +216,27 @@ export default function UsersPage() {
     setRoleSaving(true);
 
     try {
-      await supabase
-        .from("user_roles")
-        .delete()
-        .eq("user_id", selectedUser.id)
-        .eq("business_id", businessId);
-
-      const roleData: any = { user_id: selectedUser.id, role: selectedRole, business_id: businessId };
-      if (selectedRole === "roster_admin") {
-        if (selectedDepartments.length === 0) {
-          toast({ title: "Select departments", description: "Roster Admin must have at least one department assigned.", variant: "destructive" });
-          setRoleSaving(false);
-          return;
-        }
-        roleData.departments = selectedDepartments;
+      if (selectedRoles.length === 0) {
+        toast({ title: "Pick at least one role", description: "Use Remove to take someone out of this business.", variant: "destructive" });
+        setRoleSaving(false);
+        return;
       }
-
-      await supabase.from("user_roles").insert(roleData);
-      await logAudit(`${selectedRole}_role_granted`, {
-        user_id: selectedUser.id,
-        email: selectedUser.email,
-        role: selectedRole,
-        departments: selectedRole === "roster_admin" ? selectedDepartments : undefined,
-        business_id: businessId,
-      });
-
-      logMasterAudit("role_changed", {
-        user_email: selectedUser.email,
-        business_name: business?.name,
-        role: selectedRole,
-        departments: selectedRole === "roster_admin" ? selectedDepartments : undefined,
-        action: "granted",
-      });
-
-      const roleLabels: Record<string, string> = {
-        super_admin: "Super Admin",
-        admin: "Admin",
-        viewer: "View Only",
-        roster_admin: "Roster Admin",
-        sales_marketing_manager: "Sales & Marketing Manager",
-      };
-      toast({ title: "Role updated", description: `${selectedUser.email} is now ${roleLabels[selectedRole]}.` });
+      if (selectedRoles.includes("roster_admin") && selectedDepartments.length === 0) {
+        toast({ title: "Select departments", description: "Roster Admin must have at least one department assigned.", variant: "destructive" });
+        setRoleSaving(false);
+        return;
+      }
+      const { error: delErr } = await supabase.from("user_roles").delete().eq("user_id", selectedUser.id).eq("business_id", businessId);
+      if (delErr) throw delErr;
+      const rows = selectedRoles.map(role => ({
+        user_id: selectedUser.id, role: role as any, business_id: businessId,
+        ...(role === "roster_admin" ? { departments: selectedDepartments } : {}),
+      }));
+      const { error: insErr } = await supabase.from("user_roles").insert(rows as any);
+      if (insErr) throw insErr;
+      await logAudit("roles_updated", { user_id: selectedUser.id, email: selectedUser.email, roles: selectedRoles, departments: selectedRoles.includes("roster_admin") ? selectedDepartments : undefined, business_id: businessId });
+      logMasterAudit("role_changed", { user_email: selectedUser.email, business_name: business?.name, roles: selectedRoles, action: "granted" });
+      toast({ title: "Access updated", description: `${selectedUser.email}: ${selectedRoles.map(r => ROLE_LABELS[r]).join(", ")}.` });
       setRoleDialogOpen(false);
       fetchUsers();
     } catch (err: any) {
@@ -329,23 +310,20 @@ export default function UsersPage() {
   };
 
   const getRoleBadge = (user: UserProfile) => {
-    if (user.has_super_admin_role) return <Badge className="bg-primary/20 text-primary"><Crown className="h-3 w-3 mr-1" />Super Admin</Badge>;
-    if (user.has_admin_role) return <Badge className="bg-primary/20 text-primary">Admin</Badge>;
-    if (user.has_roster_admin_role) return (
-      <div className="flex flex-col gap-1">
-        <Badge className="bg-accent/20 text-accent-foreground">Roster Admin</Badge>
-        {user.roster_admin_departments.length > 0 && (
-          <div className="flex flex-wrap gap-0.5">
-            {user.roster_admin_departments.map(d => (
-              <Badge key={d} variant="outline" className="text-[9px] px-1 py-0">{d}</Badge>
-            ))}
-          </div>
-        )}
+    const list = user.roles.filter(r => ROLE_LABELS[r]);
+    if (list.length === 0) return <Badge variant="secondary">No Role</Badge>;
+    return (
+      <div className="flex flex-wrap gap-1">
+        {list.map(r => (
+          <Badge key={r} className={r === "super_admin" || r === "admin" ? "bg-primary/20 text-primary" : "bg-primary/10 text-primary"}>
+            {r === "super_admin" && <Crown className="h-3 w-3 mr-1" />}{ROLE_LABELS[r]}
+          </Badge>
+        ))}
+        {user.has_roster_admin_role && user.roster_admin_departments.map(d => (
+          <Badge key={d} variant="outline" className="text-[9px] px-1 py-0">{d}</Badge>
+        ))}
       </div>
     );
-    if (user.has_sales_manager_role) return <Badge className="bg-primary/15 text-primary">Sales & Marketing Manager</Badge>;
-    if (user.has_viewer_role) return <Badge variant="outline" className="text-primary border-primary/30">View Only</Badge>;
-    return <Badge variant="secondary">No Role</Badge>;
   };
 
   const filtered = users.filter(
@@ -357,12 +335,12 @@ export default function UsersPage() {
   const pendingCount = users.filter((u) => !u.approved).length;
 
   const RoleSelector = ({
-    value,
+    selected,
     onChange,
     departments: depts,
     onToggleDept,
   }: {
-    value: string;
+    selected: string[];
     onChange: (v: ManagedRole) => void;
     departments: string[];
     onToggleDept: (d: string) => void;
@@ -373,7 +351,7 @@ export default function UsersPage() {
         type="button"
         onClick={() => onChange("super_admin")}
         className={`w-full text-left rounded-lg border p-3 transition-all ${
-          value === "super_admin"
+          selected.includes("super_admin")
             ? "border-primary bg-primary/5 ring-1 ring-primary/30"
             : "border-border hover:border-muted-foreground/30"
         }`}
@@ -392,7 +370,7 @@ export default function UsersPage() {
         type="button"
         onClick={() => onChange("admin")}
         className={`w-full text-left rounded-lg border p-3 transition-all ${
-          value === "admin"
+          selected.includes("admin")
             ? "border-primary bg-primary/5 ring-1 ring-primary/30"
             : "border-border hover:border-muted-foreground/30"
         }`}
@@ -411,7 +389,7 @@ export default function UsersPage() {
         type="button"
         onClick={() => onChange("viewer")}
         className={`w-full text-left rounded-lg border p-3 transition-all ${
-          value === "viewer"
+          selected.includes("viewer")
             ? "border-primary bg-primary/5 ring-1 ring-primary/30"
             : "border-border hover:border-muted-foreground/30"
         }`}
@@ -430,7 +408,7 @@ export default function UsersPage() {
         type="button"
         onClick={() => onChange("roster_admin")}
         className={`w-full text-left rounded-lg border p-3 transition-all ${
-          value === "roster_admin"
+          selected.includes("roster_admin")
             ? "border-primary bg-primary/5 ring-1 ring-primary/30"
             : "border-border hover:border-muted-foreground/30"
         }`}
@@ -448,7 +426,7 @@ export default function UsersPage() {
         type="button"
         onClick={() => onChange("sales_marketing_manager")}
         className={`w-full text-left rounded-lg border p-3 transition-all ${
-          value === "sales_marketing_manager"
+          selected.includes("sales_marketing_manager")
             ? "border-primary bg-primary/5 ring-1 ring-primary/30"
             : "border-border hover:border-muted-foreground/30"
         }`}
@@ -462,8 +440,26 @@ export default function UsersPage() {
         </p>
       </button>
 
+      <button
+        type="button"
+        onClick={() => onChange("food_safety_manager")}
+        className={`w-full text-left rounded-lg border p-3 transition-all ${
+          selected.includes("food_safety_manager")
+            ? "border-primary bg-primary/5 ring-1 ring-primary/30"
+            : "border-border hover:border-muted-foreground/30"
+        }`}
+      >
+        <div className="flex items-center gap-2">
+          <ShieldPlus className="h-4 w-4 text-primary" />
+          <span className="font-semibold text-sm text-foreground">Food Safety Manager</span>
+        </div>
+        <p className="text-xs text-muted-foreground mt-1">
+          Only the Food Safety Logs: fridge and temperature records, cleaning, receiving, forms, exports and alerts.
+        </p>
+      </button>
+
       {/* Department Selection (for Roster Admin) */}
-      {value === "roster_admin" && (
+      {selected.includes("roster_admin") && (
         <div className="space-y-2 pt-1">
           <Label className="text-sm font-medium">Assign Departments</Label>
           {availableDepartments.length === 0 ? (
@@ -561,7 +557,7 @@ export default function UsersPage() {
                       <TableCell className="text-sm">{inv.email}</TableCell>
                       <TableCell>
                         <Badge variant="outline" className="text-xs">
-                          {inv.role === "super_admin" ? "Super Admin" : inv.role === "roster_admin" ? "Roster Admin" : inv.role === "sales_marketing_manager" ? "Sales & Marketing Manager" : inv.role === "admin" ? "Admin" : "Viewer"}
+                          {inv.role === "super_admin" ? "Super Admin" : inv.role === "roster_admin" ? "Roster Admin" : inv.role === "sales_marketing_manager" ? "Sales & Marketing Manager" : inv.role === "food_safety_manager" ? "Food Safety Manager" : inv.role === "admin" ? "Admin" : "Viewer"}
                         </Badge>
                         {inv.departments && inv.departments.length > 0 && (
                           <div className="flex flex-wrap gap-0.5 mt-1">
@@ -696,10 +692,10 @@ export default function UsersPage() {
             <DialogTitle className="text-base">Manage Access — {selectedUser?.full_name || selectedUser?.email}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
-            <p className="text-sm text-muted-foreground">Select the access level for this user:</p>
+            <p className="text-sm text-muted-foreground">Tap to add or remove roles. One person can have several.</p>
             <RoleSelector
-              value={selectedRole}
-              onChange={setSelectedRole}
+              selected={selectedRoles}
+              onChange={r => setSelectedRoles(prev => prev.includes(r) ? prev.filter(x => x !== r) : [...prev, r])}
               departments={selectedDepartments}
               onToggleDept={toggleDepartment}
             />
@@ -738,7 +734,7 @@ export default function UsersPage() {
             <div>
               <Label className="text-sm font-medium mb-2 block">Select Role</Label>
               <RoleSelector
-                value={inviteRole}
+                selected={[inviteRole]}
                 onChange={setInviteRole}
                 departments={inviteDepartments}
                 onToggleDept={toggleInviteDepartment}
