@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { downloadRunsheetPdf } from "@/lib/runsheetDownload";
 import { Link, useParams } from "react-router-dom";
 import { format } from "date-fns";
-import { ChevronRight, Clock, MapPin, Phone, Users, UtensilsCrossed, ListChecks, FileText, ArrowLeft, Printer, Mail, Link as LinkIcon, Download, ClipboardList } from "lucide-react";
+import { ChevronRight, Clock, MapPin, Phone, Users, UtensilsCrossed, ListChecks, FileText, ArrowLeft, Printer, Mail, Link as LinkIcon, Download } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
