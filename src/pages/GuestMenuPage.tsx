@@ -9,7 +9,7 @@ import { Check, ChevronDown, ImageOff, Loader2, UtensilsCrossed, X } from "lucid
 import { toast } from "sonner";
 import { signDishPhotos } from "@/features/events/dishPhotos";
 
-type Dish = { id: string; name: string; diet: string; photo_path: string | null };
+type Dish = { id: string; name: string; diet: string; photo_path: string | null; extra_price_per_head: number | null };
 type Course = { id: string; name: string; picks: number | null; veg_picks: number | null; non_veg_picks: number | null; dishes: Dish[] };
 
 function DishPicker({ course, value, onChange, urls, taken, diet }: { course: Course; value: string; onChange: (id: string) => void; urls: Record<string, string>; taken: string[]; diet?: "veg" | "nonveg" }) {
@@ -24,7 +24,7 @@ function DishPicker({ course, value, onChange, urls, taken, diet }: { course: Co
         <button type="button" className="flex h-11 w-full items-center justify-between gap-2 rounded-md border border-input bg-background px-3 text-left text-sm hover:border-primary">
           <span className="flex min-w-0 items-center gap-2">
             {selected && img(selected) && <img src={img(selected)} alt="" className="h-7 w-7 shrink-0 rounded object-cover" />}
-            <span className={`truncate ${selected ? "" : "text-muted-foreground"}`}>{selected ? selected.name : "Choose a dish"}</span>
+             <span className={`truncate ${selected ? "" : "text-muted-foreground"}`}>{selected ? `${selected.name}${Number(selected.extra_price_per_head) > 0 ? ` · +$${Number(selected.extra_price_per_head).toFixed(2)} per person` : ""}` : "Choose a dish"}</span>
           </span>
           <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground" />
         </button>
@@ -42,7 +42,7 @@ function DishPicker({ course, value, onChange, urls, taken, diet }: { course: Co
                     className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-muted disabled:cursor-not-allowed disabled:opacity-40">
                     {img(d) ? <img src={img(d)} alt="" className="h-8 w-8 shrink-0 rounded object-cover sm:hidden" /> : null}
                     <span className={`inline-block h-2.5 w-2.5 shrink-0 rounded-sm border ${d.diet === "veg" ? "border-primary bg-primary/30" : "border-destructive bg-destructive/30"}`} />
-                    <span className="flex-1">{d.name}</span>
+                     <span className="flex-1">{d.name}{Number(d.extra_price_per_head) > 0 && <span className="ml-2 text-xs font-medium text-primary">+${Number(d.extra_price_per_head).toFixed(2)} per person</span>}</span>
                     {d.id === value && <Check className="h-4 w-4 text-primary" />}
                   </button>
                 </li>
@@ -55,7 +55,7 @@ function DishPicker({ course, value, onChange, urls, taken, diet }: { course: Co
                 : <div className="flex aspect-square w-full flex-col items-center justify-center gap-2 rounded-md bg-muted text-xs text-muted-foreground"><ImageOff className="h-5 w-5" />No photo yet</div>
             ) : <div className="flex aspect-square w-full items-center justify-center rounded-md bg-muted p-3 text-center text-xs text-muted-foreground">Hover over a dish to see a photo</div>}
             {preview && <p className="mt-2 text-sm font-medium">{preview.name}</p>}
-            {preview && <p className="text-xs text-muted-foreground">{preview.diet === "veg" ? "Vegetarian" : "Non-vegetarian"}</p>}
+             {preview && <p className="text-xs text-muted-foreground">{preview.diet === "veg" ? "Vegetarian" : "Non-vegetarian"}{Number(preview.extra_price_per_head) > 0 ? ` · +$${Number(preview.extra_price_per_head).toFixed(2)} per person` : ""}</p>}
           </div>
         </div>
       </PopoverContent>
