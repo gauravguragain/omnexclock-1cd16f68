@@ -884,6 +884,7 @@ export type Database = {
           diet: string
           id: string
           name: string
+          photo_path: string | null
           updated_at: string
         }
         Insert: {
@@ -893,6 +894,7 @@ export type Database = {
           diet?: string
           id?: string
           name: string
+          photo_path?: string | null
           updated_at?: string
         }
         Update: {
@@ -902,6 +904,7 @@ export type Database = {
           diet?: string
           id?: string
           name?: string
+          photo_path?: string | null
           updated_at?: string
         }
         Relationships: [
@@ -962,6 +965,74 @@ export type Database = {
             columns: ["business_id"]
             isOneToOne: false
             referencedRelation: "businesses_public"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      crm_guest_menu_links: {
+        Row: {
+          business_id: string
+          created_at: string
+          created_by: string | null
+          id: string
+          lead_id: string
+          package_id: string
+          status: string
+          submission: Json | null
+          submitted_at: string | null
+          token: string
+        }
+        Insert: {
+          business_id: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          lead_id: string
+          package_id: string
+          status?: string
+          submission?: Json | null
+          submitted_at?: string | null
+          token?: string
+        }
+        Update: {
+          business_id?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          lead_id?: string
+          package_id?: string
+          status?: string
+          submission?: Json | null
+          submitted_at?: string | null
+          token?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_guest_menu_links_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_guest_menu_links_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses_public"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_guest_menu_links_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "crm_leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_guest_menu_links_package_id_fkey"
+            columns: ["package_id"]
+            isOneToOne: false
+            referencedRelation: "crm_packages"
             referencedColumns: ["id"]
           },
         ]
@@ -4261,6 +4332,7 @@ export type Database = {
           title: string
         }[]
       }
+      get_guest_menu: { Args: { _token: string }; Returns: Json }
       get_my_employee_documents: {
         Args: { _business_code: string; _employee_code: string }
         Returns: {
@@ -4381,6 +4453,15 @@ export type Database = {
           _request_type: string
           _start_date?: string
           _start_time?: string
+        }
+        Returns: boolean
+      }
+      submit_guest_menu: {
+        Args: {
+          _allergies: string
+          _dietary: string
+          _picks: Json
+          _token: string
         }
         Returns: boolean
       }
