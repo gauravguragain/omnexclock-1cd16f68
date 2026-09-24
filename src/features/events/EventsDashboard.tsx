@@ -39,6 +39,10 @@ export default function EventsDashboard() {
   const cUp = cat.filter(b => b.event_date >= today).sort((a, b) => (a.event_date + a.start_time).localeCompare(b.event_date + b.start_time));
   const cToday = cUp.filter(b => b.event_date === today);
   const cWeek = cUp.filter(b => b.event_date > today && b.event_date <= in7);
+  const cLater = cUp.filter(b => b.event_date > in7);
+  const cTotal = cUp.length || 1;
+  const cRing = [{ n: cToday.length, c: "hsl(var(--foreground))" }, { n: cWeek.length, c: "hsl(var(--primary))" }, { n: cLater.length, c: "hsl(var(--destructive))" }];
+  let cOff = 0;
   const cLeads = crm.leads.filter((l: any) => (l.lead_kind === "catering" || l.event_type === "catering") && !["cold", "lost", "declined", "full_payment_received"].includes(l.status));
 
   const Stat = ({ title, sub, value, unit, icon: Icon, children, link, to }: any) => <Card><CardContent className="flex h-full flex-col p-5">
