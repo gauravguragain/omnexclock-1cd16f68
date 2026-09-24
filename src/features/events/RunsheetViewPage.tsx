@@ -1,9 +1,11 @@
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { format } from "date-fns";
-import { ChevronRight, Clock, MapPin, Users, UtensilsCrossed, Star, Settings, PenLine, CalendarDays, User, FileText, Bookmark, ArrowLeft, Printer, ClipboardList, Mic } from "lucide-react";
+import { ChevronRight, Clock, MapPin, Users, UtensilsCrossed, Star, Settings, PenLine, CalendarDays, User, FileText, Bookmark, ArrowLeft, Printer, ClipboardList, Mic, Mail, Link as LinkIcon } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
+import SendRunsheetDialog, { runsheetPublicUrl } from "./SendRunsheetDialog";
 import { useCrmData } from "@/features/sales/useCrmData";
 import { prettyCrmValue } from "@/features/sales/types";
 import { to12 } from "./useEventsData";
@@ -17,34 +19,9 @@ const Box = ({ icon: Icon, title, children, className = "" }: any) => (
 const Info = ({ k, v }: { k: string; v: any }) => v ? <p className="flex items-center gap-2 py-0.5 text-sm"><User className="h-3.5 w-3.5 text-muted-foreground" /><span className="text-muted-foreground">{k}:</span><span className="font-medium">{v}</span></p> : null;
 const Empty = ({ children }: any) => <p className="text-sm italic text-muted-foreground">{children}</p>;
 
-export default function RunsheetViewPage() {
-  const { businessCode, runsheetId } = useParams();
-  const crm = useCrmData();
-  const [rs, setRs] = useState<any>(null);
-  const [items, setItems] = useState<any[]>([]);
-  const [selection, setSelection] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
+export function runsheetTitle(lead: any, b: any) { return `${prettyCrmValue(lead?.event_type || b?.event_type || "Event")} — ${lead?.full_name || "Client"}`; }
 
-  useEffect(() => {
-    if (!runsheetId) return;
-    (async () => {
-      const { data } = await supabase.from("crm_runsheets").select("*").eq("id", runsheetId).maybeSingle();
-      setRs(data);
-      if (data?.lead_id) {
-        const sel = await supabase.from("crm_menu_selections").select("*").eq("lead_id", data.lead_id).order("updated_at", { ascending: false }).limit(1).maybeSingle();
-        setSelection(sel.data);
-        if (sel.data) { const r = await supabase.from("crm_menu_selection_items").select("*").eq("selection_id", sel.data.id).order("created_at"); setItems(r.data || []); }
-      }
-      setLoading(false);
-    })();
-  }, [runsheetId]);
-
-  if (loading || crm.loading) return <div className="py-20 text-center text-muted-foreground">Loading…</div>;
-  const back = `/b/${businessCode}/events/events`;
-  if (!rs) return <div className="py-20 text-center text-muted-foreground">Run sheet not found. <Link to={back} className="text-primary">Back to events</Link></div>;
-
-  const lead: any = crm.leads.find(l => l.id === rs.lead_id);
-  const b: any = crm.bookings.find(x => x.id === rs.booking_id) || crm.bookings.find(x => x.lead_id === rs.lead_id);
+export function RunsheetDocument({ rs, lead, b, items, selection, businessName }: { rs: any; lead: any; b: any; items: any[]; selection: any; businessName?: string }) {
   const PKG = ["package", "kids_package", "manual"];
   const pkgs = items.filter(i => PKG.includes(i.course) && i.course !== "manual");
   const stalls = items.filter(i => i.course === "live_stall");
@@ -61,31 +38,14 @@ export default function RunsheetViewPage() {
   const venue = prettyCrmValue(b?.venue_space || lead?.venue_space || "") || "Venue to be confirmed";
   const hasSetup = rs.access_time || setup.length || rs.setup_notes || rs.special_requests;
 
-  return <div className="mx-auto max-w-5xl space-y-6">
-    <p className="flex items-center gap-1 text-sm text-muted-foreground print:hidden"><Link to={back} className="hover:text-primary">Events</Link><ChevronRight className="h-3 w-3" /><span>Run Sheet</span><ChevronRight className="h-3 w-3" /><span className="font-medium text-foreground">Details</span></p>
-
-    <div className="flex flex-col gap-4 border-b border-border pb-4 sm:flex-row sm:items-center sm:justify-between print:hidden">
-      <div className="flex items-center gap-3">
-        <span className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/15 text-primary"><ClipboardList className="h-4 w-4" /></span>
-        <div className="border-l-2 border-primary pl-3">
-          <p className="text-[11px] font-semibold uppercase tracking-widest text-primary">Run sheet</p>
-          <h1 className="font-serif text-2xl sm:text-3xl">{title}</h1>
-          <p className="text-sm text-muted-foreground">Run sheet · Event Order {rs.event_order_number || "—"}-{rs.revision || 1}</p>
-        </div>
-      </div>
-      <div className="flex flex-wrap gap-2">
-        <Button variant="outline" asChild><Link to={back}><ArrowLeft className="mr-2 h-4 w-4" />Back to event</Link></Button>
-        <Button variant="outline" onClick={() => window.print()}><Printer className="mr-2 h-4 w-4" />Print</Button>
-      </div>
-    </div>
-
+  return <>
     <div className="space-y-4 rounded-2xl border border-border bg-card p-6 shadow-sm sm:p-8">
       <div className="flex items-center gap-5 border-b border-border pb-5">
-        <img src="/regal-logo.png" alt={crm.business?.name || "Logo"} className="h-16 w-16 rounded-full border border-primary/50 object-contain p-1" />
+        <img src="/regal-logo.png" alt={businessName || "Logo"} className="h-16 w-16 rounded-full border border-primary/50 object-contain p-1" />
         <div>
           <h2 className="text-2xl font-semibold">{title} Event Order</h2>
           <p className="text-primary">{date}</p>
-          <p className="text-sm text-muted-foreground">{crm.business?.name || "Pro Regal Pavilion"}</p>
+          <p className="text-sm text-muted-foreground">{businessName || "Pro Regal Pavilion"}</p>
         </div>
       </div>
 
@@ -163,6 +123,78 @@ export default function RunsheetViewPage() {
         </div>
       </Box>
       <p className="flex items-center justify-end gap-1 text-xs text-muted-foreground"><CalendarDays className="h-3.5 w-3.5" />Printed Date: {format(new Date(), "dd/MM/yyyy")}</p>
+    </div>
+  </>;
+}
+
+export default function RunsheetViewPage() {
+  const { businessCode, runsheetId } = useParams();
+  const crm = useCrmData();
+  const [rs, setRs] = useState<any>(null);
+  const [items, setItems] = useState<any[]>([]);
+  const [selection, setSelection] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [sendOpen, setSendOpen] = useState(false);
+
+  useEffect(() => {
+    if (!runsheetId) return;
+    (async () => {
+      const { data } = await supabase.from("crm_runsheets").select("*").eq("id", runsheetId).maybeSingle();
+      setRs(data);
+      if (data?.lead_id) {
+        const sel = await supabase.from("crm_menu_selections").select("*").eq("lead_id", data.lead_id).order("updated_at", { ascending: false }).limit(1).maybeSingle();
+        setSelection(sel.data);
+        if (sel.data) { const r = await supabase.from("crm_menu_selection_items").select("*").eq("selection_id", sel.data.id).order("created_at"); setItems(r.data || []); }
+      }
+      setLoading(false);
+    })();
+  }, [runsheetId]);
+
+  if (loading || crm.loading) return <div className="py-20 text-center text-muted-foreground">Loading…</div>;
+  const back = `/b/${businessCode}/events/events`;
+  if (!rs) return <div className="py-20 text-center text-muted-foreground">Run sheet not found. <Link to={back} className="text-primary">Back to events</Link></div>;
+  const lead: any = crm.leads.find(l => l.id === rs.lead_id);
+  const b: any = crm.bookings.find(x => x.id === rs.booking_id) || crm.bookings.find(x => x.lead_id === rs.lead_id);
+  const title = runsheetTitle(lead, b);
+  const copyLink = async () => { await navigator.clipboard.writeText(runsheetPublicUrl(rs)); toast.success("Web link copied"); };
+
+  return <div className="mx-auto max-w-5xl space-y-6">
+    <p className="flex items-center gap-1 text-sm text-muted-foreground print:hidden"><Link to={back} className="hover:text-primary">Events</Link><ChevronRight className="h-3 w-3" /><span>Run Sheet</span><ChevronRight className="h-3 w-3" /><span className="font-medium text-foreground">Details</span></p>
+    <div className="flex flex-col gap-4 border-b border-border pb-4 sm:flex-row sm:items-center sm:justify-between print:hidden">
+      <div className="flex items-center gap-3">
+        <span className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/15 text-primary"><ClipboardList className="h-4 w-4" /></span>
+        <div className="border-l-2 border-primary pl-3">
+          <p className="text-[11px] font-semibold uppercase tracking-widest text-primary">Run sheet</p>
+          <h1 className="font-serif text-2xl sm:text-3xl">{title}</h1>
+          <p className="text-sm text-muted-foreground">Run sheet · Event Order {rs.event_order_number || "—"}-{rs.revision || 1}</p>
+        </div>
+      </div>
+      <div className="flex flex-wrap gap-2">
+        <Button variant="outline" asChild><Link to={back}><ArrowLeft className="mr-2 h-4 w-4" />Back to event</Link></Button>
+        <Button variant="outline" onClick={copyLink}><LinkIcon className="mr-2 h-4 w-4" />Copy web link</Button>
+        <Button variant="outline" onClick={() => window.print()}><Printer className="mr-2 h-4 w-4" />Print</Button>
+        {lead && <Button onClick={() => setSendOpen(true)}><Mail className="mr-2 h-4 w-4" />Email run sheet</Button>}
+      </div>
+    </div>
+    <RunsheetDocument rs={rs} lead={lead} b={b} items={items} selection={selection} businessName={crm.business?.name} />
+    {lead && <SendRunsheetDialog open={sendOpen} onOpenChange={setSendOpen} rs={rs} lead={lead} booking={b} businessName={crm.business?.name || ""} />}
+  </div>;
+}
+
+export function PublicRunsheetPage() {
+  const { runsheetId } = useParams();
+  const t = new URLSearchParams(window.location.search).get("t") || "";
+  const [data, setData] = useState<any>(null); const [err, setErr] = useState("");
+  useEffect(() => {
+    const url = `https://${import.meta.env.VITE_SUPABASE_PROJECT_ID}.supabase.co/functions/v1/crm-runsheet-public?id=${encodeURIComponent(runsheetId || "")}&t=${encodeURIComponent(t)}`;
+    fetch(url, { headers: { apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY } }).then(async r => { const j = await r.json(); if (!r.ok) setErr(j.error || "Run sheet not found"); else setData(j); }).catch(() => setErr("Unable to load run sheet"));
+  }, [runsheetId, t]);
+  if (err) return <div className="py-20 text-center text-muted-foreground">{err}</div>;
+  if (!data) return <div className="py-20 text-center text-muted-foreground">Loading…</div>;
+  return <div className="min-h-screen bg-background px-4 py-8">
+    <div className="mx-auto max-w-5xl space-y-4">
+      <div className="flex justify-end print:hidden"><Button variant="outline" onClick={() => window.print()}><Printer className="mr-2 h-4 w-4" />Print / Save PDF</Button></div>
+      <RunsheetDocument rs={data.rs} lead={data.lead} b={data.booking} items={data.items || []} selection={data.selection} businessName={data.businessName} />
     </div>
   </div>;
 }
