@@ -102,7 +102,7 @@ export function RunsheetDocument({ rs, lead, b, items, selection, businessName }
       <div className="bg-muted">{summary}</div>
       <div className="grid grid-cols-2 border-x border-b border-border text-xs leading-relaxed">
         <div className="min-w-0 border-r border-border p-4">
-          {stalls.length > 0 && <div className="mb-4 break-inside-avoid"><h2 className="font-bold">Live Stalls</h2>{stalls.map(s => <p key={s.id} className="pl-3">• {s.item_name}{s.service_start_time ? ` — ${to12(s.service_start_time)}${s.service_end_time ? ` to ${to12(s.service_end_time)}` : ""}` : ""}</p>)}</div>}
+          {stalls.length > 0 && <div className="mb-4 break-inside-avoid"><h2 className="font-bold">Live Stalls{stalls[0].service_start_time ? ` — ${to12(stalls[0].service_start_time)}${stalls[0].service_end_time ? ` to ${to12(stalls[0].service_end_time)}` : ""}` : ""}</h2>{stalls.map(s => <p key={s.id} className="pl-3">• {String(s.item_name || "").replace(/_/g, " ")}</p>)}</div>}
           <h2 className="font-bold">Menu selection{pkgs.length ? ` – ${pkgs.map(p => p.item_name).join(" · ")}` : ""}</h2>
            {Object.entries(courses as Record<string, any[]>).map(([course, dishes]) => <div key={course} className="mt-2 break-inside-avoid"><h3 className="pl-3 font-semibold">{course}</h3>{dishes.map(d => <p key={d.id} className="pl-6">- {d.item_name}</p>)}</div>)}
           {kidsRow && !courses["Kids Menu"] && <p className="mt-2">Kids menu: {kidsRow.quantity || rs.kids_guests || 0} kids</p>}
