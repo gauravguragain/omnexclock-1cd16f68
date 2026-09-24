@@ -1,6 +1,7 @@
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { format } from "date-fns";
-import { Archive, ArchiveRestore, Building2, ChevronLeft, ChevronRight, ImagePlus, Images, Pencil, Search, Star, Trash2, Upload } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { Archive, ArchiveRestore, Building2, ImagePlus, Images, Pencil, Search, Star, Trash2, Upload } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useCrmData } from "@/features/sales/useCrmData";
 import { Badge } from "@/components/ui/badge";
@@ -20,14 +21,12 @@ type PendingPhoto = { file: File; preview: string; key: string };
 export default function SpacesPage() {
   const d = useEventsData();
   const crm = useCrmData();
+  const navigate = useNavigate();
   const inputRef = useRef<HTMLInputElement>(null);
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("active");
   const [editing, setEditing] = useState<Row | null>(null);
   const [editorOpen, setEditorOpen] = useState(false);
-  const [gallerySpace, setGallerySpace] = useState<Row | null>(null);
-  const [galleryIndex, setGalleryIndex] = useState(0);
-  const [galleryPhotoOpen, setGalleryPhotoOpen] = useState(false);
   const [signedUrls, setSignedUrls] = useState<Record<string, string>>({});
   const [keptPaths, setKeptPaths] = useState<string[]>([]);
   const [pending, setPending] = useState<PendingPhoto[]>([]);
@@ -144,24 +143,7 @@ export default function SpacesPage() {
     if (error) toast.error(error.message); else await d.refresh();
   };
 
-  const openGallery = (space: Row) => {
-    const paths = Array.from(new Set([coverPath(space), ...(space.photo_paths || [])].filter(Boolean)));
-    const initial = Math.max(0, paths.indexOf(coverPath(space)));
-    setGalleryIndex(initial);
-    setGalleryPhotoOpen(false);
-    setGallerySpace({ ...space, photo_paths: paths });
-  };
-
-  const addGalleryPhotos = () => {
-    const space = gallerySpace;
-    if (!space) return;
-    setGallerySpace(null);
-    openEditor(space);
-    window.setTimeout(() => inputRef.current?.click(), 100);
-  };
-
-  const galleryPaths = (gallerySpace?.photo_paths || []) as string[];
-  const moveGallery = (direction: number) => setGalleryIndex(index => (index + direction + galleryPaths.length) % galleryPaths.length);
+  const openGallery = (space: Row) => navigate(`spaces/${space.id}`);
 
   if (!d.business) return null;
   return <div className="space-y-5">
@@ -205,8 +187,5 @@ export default function SpacesPage() {
       </form>
     </DialogContent></Dialog>
 
-    <Dialog open={!!gallerySpace} onOpenChange={open => !open && setGallerySpace(null)}><DialogContent className="w-[calc(100vw-1.5rem)] max-w-6xl overflow-hidden p-0"><DialogHeader className="flex-row items-center justify-between gap-3 px-5 pt-5 pr-12"><DialogTitle className="font-serif text-2xl">{gallerySpace?.name}</DialogTitle><div className="flex items-center gap-2">{galleryPhotoOpen && <Button type="button" size="sm" variant="outline" onClick={() => setGalleryPhotoOpen(false)}><Images className="mr-2 h-4 w-4" />All photos</Button>}<Button type="button" size="sm" onClick={addGalleryPhotos}><ImagePlus className="mr-2 h-4 w-4" />Add photos</Button></div></DialogHeader>
-      {galleryPaths.length > 0 && <div className="max-h-[78vh] overflow-y-auto px-5 pb-5">{galleryPhotoOpen ? <div className="space-y-3"><div className="relative flex h-[60vh] min-h-72 max-h-[760px] items-center justify-center overflow-hidden rounded-md bg-muted"><img src={signedUrls[galleryPaths[galleryIndex]]} alt={`${gallerySpace?.name} photo ${galleryIndex + 1}`} className="h-full w-full object-contain" />{galleryPaths.length > 1 && <><Button type="button" size="icon" variant="secondary" className="absolute left-3" onClick={() => moveGallery(-1)} aria-label="Previous photo"><ChevronLeft className="h-5 w-5" /></Button><Button type="button" size="icon" variant="secondary" className="absolute right-3" onClick={() => moveGallery(1)} aria-label="Next photo"><ChevronRight className="h-5 w-5" /></Button></>}</div><p className="text-center text-xs text-muted-foreground">{galleryIndex + 1} of {galleryPaths.length}</p></div> : <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">{galleryPaths.map((path, index) => <Button key={path} type="button" variant="ghost" onClick={() => { setGalleryIndex(index); setGalleryPhotoOpen(true); }} className="group relative h-auto aspect-[4/3] overflow-hidden rounded-md border border-border bg-muted p-0" aria-label={`Enlarge photo ${index + 1}`}><img src={signedUrls[path]} alt={`${gallerySpace?.name} photo ${index + 1}`} className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.03]" /><span className="absolute inset-x-0 bottom-0 bg-background/85 py-2 text-xs font-medium text-foreground opacity-0 transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100">Enlarge</span></Button>)}</div>}</div>}
-    </DialogContent></Dialog>
   </div>;
 }
