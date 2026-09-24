@@ -132,7 +132,7 @@ const App = () => (
                     <Route path="events/new" element={<Navigate to="../leads/events" replace />} />
                     <Route path="catering-bookings" element={<EventsPages.CateringBookings />} />
                     <Route path="catering-bookings/:id" element={<EventsPages.CateringDetail />} />
-                    <Route path="catering-bookings/new" element={<Navigate to="../leads/catering" replace />} />
+                    <Route path="catering-bookings/new" element={<EventsPages.NewCatering />} />
                     <Route path="calendar" element={<EventsPages.Calendar />} />
                     <Route path="inspections" element={<EventsPages.Inspections />} />
                     <Route path="tasks" element={<EventsPages.Tasks />} />

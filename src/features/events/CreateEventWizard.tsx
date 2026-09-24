@@ -28,6 +28,15 @@ export default function CreateEventWizard({ kind }: { kind: "event" | "catering"
   const [cust, setCust] = useState({ full_name: "", phone: "", email: "", address: "" });
   const [f, setF] = useState({ event_name: "", event_type: "", date: "", start: "18:00", end: "23:00", adults: "", kids: "", venue: "", location: "", notes: "" });
   const [saving, setSaving] = useState(false);
+  const [staff, setStaff] = useState<{ id: string; name: string; phone: string | null; job_title: string | null }[]>([]);
+  const [coordId, setCoordId] = useState("");
+  const [pkgs, setPkgs] = useState<{ key: string; packageId: string; dishes: Record<string, string[]> }[]>([{ key: "p1", packageId: "", dishes: {} }]);
+  useEffect(() => { if (!crm.business) return; supabase.from("employees").select("id,name,phone,job_title").eq("business_id", crm.business.id).eq("active", true).order("name").then(({ data }) => setStaff((data as any) || [])); }, [crm.business?.id]);
+  const itemName = (ci: any) => ci.dish_id ? ev.dishes.find(x => x.id === ci.dish_id)?.name : ev.drinks.find(x => x.id === ci.drink_id)?.name;
+  const courseOpts = (courseId: string) => ev.courseItems.filter(ci => ci.course_id === courseId).map(ci => ({ id: ci.id, name: itemName(ci) as string })).filter(o => o.name);
+  const activePkgs = ev.packages.filter(p => p.active);
+  const updPkg = (key: string, patch: any) => setPkgs(ps => ps.map(p => p.key === key ? { ...p, ...patch } : p));
+  const coord = staff.find(s => s.id === coordId);
   const set = (k: keyof typeof f, v: string) => setF(p => ({ ...p, [k]: v }));
 
   useEffect(() => {
@@ -47,7 +56,8 @@ export default function CreateEventWizard({ kind }: { kind: "event" | "catering"
   }, [f.date, f.start, f.end, crm.bookings, ev.venues, kind]);
   const customers = ev.customers.filter(c => `${c.full_name} ${c.phone || ""} ${c.email || ""}`.toLowerCase().includes(cSearch.toLowerCase())).slice(0, 8);
   const custOk = mode === "existing" ? !!customerId : !!(cust.full_name && cust.phone && cust.email);
-  const ready = custOk && f.event_name && f.date && Number(f.adults) > 0 && (kind === "event" ? !!f.venue : !!f.location);
+  const cateringOk = kind === "event" || pkgs.some(p => p.packageId);
+  const ready = cateringOk && custOk && f.event_name && f.date && Number(f.adults) > 0 && (kind === "event" ? !!f.venue : !!f.location);
 
   const save = async () => {
     if (!crm.business || !ready) return; setSaving(true);
@@ -59,14 +69,28 @@ export default function CreateEventWizard({ kind }: { kind: "event" | "catering"
       if (lid) { const { error } = await supabase.from("crm_leads").update({ customer_id: cid, lead_outcome: "confirmed", lead_kind: kind, service_location: f.location || null } as any).eq("id", lid); if (error) throw error; }
       else { const { data, error } = await supabase.from("crm_leads").insert({ business_id: bid, full_name: c.full_name, phone: c.phone || null, email: c.email || null, source: "direct", event_type: f.event_type || "other", preferred_dates: [f.date], estimated_guest_count: total, venue_space: venue?.name || null, status: "menu_selected", lead_kind: kind, service_location: f.location || null, customer_id: cid, lead_outcome: "confirmed", created_by: user?.id } as any).select().single(); if (error) throw error; lid = data.id; }
       const { data: order } = await supabase.rpc("crm_next_event_order" as any, { _business_id: bid });
-      const { error } = await supabase.from("crm_bookings").insert({ business_id: bid, lead_id: lid, customer_id: cid, booking_kind: kind, event_name: f.event_name, event_type: f.event_type || null, event_date: f.date, start_time: f.start, end_time: f.end, duration_minutes: minutesBetween(f.start, f.end), guest_count: total, adults: Number(f.adults) || 0, kids: Number(f.kids) || 0, venue_space: kind === "event" ? venue!.name : "Off-site catering", venue_space_id: kind === "event" ? venue!.id : null, service_location: f.location || null, notes: f.notes || null, status: "confirmed", event_order_number: order as any, created_by: user?.id } as any);
+      const { data: bk, error } = await supabase.from("crm_bookings").insert({ business_id: bid, lead_id: lid, customer_id: cid, booking_kind: kind, event_name: f.event_name, event_type: f.event_type || null, event_date: f.date, start_time: f.start, end_time: f.end, duration_minutes: minutesBetween(f.start, f.end), guest_count: total, adults: Number(f.adults) || 0, kids: Number(f.kids) || 0, venue_space: kind === "event" ? venue!.name : "Off-site catering", venue_space_id: kind === "event" ? venue!.id : null, service_location: f.location || null, notes: f.notes || null, status: "confirmed", event_order_number: order as any, created_by: user?.id } as any).select("id").single();
       if (error) throw error;
+      const chosen = pkgs.filter(p => p.packageId);
+      if (chosen.length) {
+        const { data: sel, error: se } = await supabase.from("crm_menu_selections").upsert({ business_id: bid, lead_id: lid!, guest_count: Number(f.adults) || total, package_name: ev.packages.find(x => x.id === chosen[0].packageId)?.name || null, updated_by: user?.id } as any, { onConflict: "lead_id" }).select("id").single();
+        if (se) throw se;
+        await supabase.from("crm_menu_selection_items").delete().eq("selection_id", sel.id);
+        const rows: any[] = [];
+        chosen.forEach(cp => { const pk = ev.packages.find(x => x.id === cp.packageId); rows.push({ business_id: bid, selection_id: sel.id, item_name: pk?.name, course: "package", notes: `pkg:${cp.key}` });
+          ev.courses.filter(c => c.package_id === cp.packageId).forEach(c => (cp.dishes[c.id] || []).forEach(ciId => { const o = courseOpts(c.id).find(x => x.id === ciId); if (o) rows.push({ business_id: bid, selection_id: sel.id, item_name: o.name, course: String(c.name).trim(), notes: `pkg:${cp.key}` }); })); });
+        if (rows.length) await supabase.from("crm_menu_selection_items").insert(rows);
+      }
+      if (coord || f.notes) await supabase.from("crm_runsheets").insert({ business_id: bid, lead_id: lid!, booking_id: bk?.id, event_order_number: order as any, adult_guests: Number(f.adults) || 0, kids_guests: Number(f.kids) || 0, event_coordinator: coord?.name || null, event_coordinator_phone: coord?.phone || null, onsite_contact_name: coord?.name || null, onsite_contact_phone: coord?.phone || null, client_notes: f.notes || null, status: "draft", created_by: user?.id } as any);
       toast.success(kind === "event" ? "Event created" : "Catering booking created");
       nav(`/b/${businessCode}/events/${kind === "event" ? "events" : "catering-bookings"}`);
     } catch (e: any) { toast.error(e.message); } finally { setSaving(false); }
   };
 
-  return <div className="mx-auto max-w-4xl space-y-5">
+  const checks: [string, boolean][] = [["Customer", custOk], ["Booking & schedule", !!(f.event_name && f.date && Number(f.adults) > 0)], [kind === "event" ? "Venue" : "Service location", kind === "event" ? !!f.venue : !!f.location], ...(kind === "catering" ? [["Coordinator", true], ["Catering", cateringOk]] as [string, boolean][] : []), ["Notes", true]];
+  const custName = mode === "existing" ? ev.customers.find(x => x.id === customerId)?.full_name : cust.full_name;
+  const Sum = ({ l, v, empty }: { l: string; v?: any; empty: string }) => <div className="border-t pt-2"><p className="text-xs uppercase tracking-widest text-muted-foreground">{l}</p><p className={cn("text-sm", !v && "text-muted-foreground")}>{v || empty}</p></div>;
+  return <div className="mx-auto grid max-w-6xl gap-6 lg:grid-cols-[1fr_300px]"><div className="space-y-5">
     <div><h1 className="font-serif text-3xl font-semibold">{kind === "event" ? "Create event" : "New catering booking"}</h1><p className="text-sm text-muted-foreground">Record a confirmed {kind === "event" ? "event" : "catering job"}. The customer, schedule and {kind === "event" ? "hall" : "service location"} are required; everything else can follow.</p></div>
     <Step n="01" title="Customer" sub="Search for an existing client, or add a new one. Name, phone and email are required.">
       <div className="mb-3 flex gap-2">{(["existing", "new"] as const).map(m => <Button key={m} size="sm" variant={mode === m ? "default" : "outline"} onClick={() => setMode(m)}>{m === "existing" ? "Existing customer" : "New customer"}</Button>)}</div>
@@ -90,8 +114,31 @@ export default function CreateEventWizard({ kind }: { kind: "event" | "catering"
         {c.length ? <p className="mt-2 flex items-center gap-1 text-xs text-destructive"><AlertTriangle className="h-3 w-3" />Booked: {c.map(b => b.event_name || "event").join(", ")}</p> : f.date ? <p className="mt-2 flex items-center gap-1 text-xs text-primary"><CheckCircle2 className="h-3 w-3" />Free</p> : null}
         {over && <p className="mt-1 text-xs text-destructive">Over capacity by {total - v.capacity}</p>}
       </button>; })}{!ev.venues.length && <p className="text-sm text-muted-foreground">Add halls under Venue → Spaces first.</p>}</div>
-    </Step> : <Step n="03" title="Service location" sub="Where the food is going."><Input value={f.location} onChange={e => set("location", e.target.value)} placeholder="Full address" /></Step>}
-    <Step n="04" title="Notes" sub="Anything the team should know."><Textarea value={f.notes} onChange={e => set("notes", e.target.value)} /></Step>
-    <div className="flex justify-end gap-2"><Button variant="outline" onClick={() => nav(-1)}>Cancel</Button><Button disabled={!ready || saving} onClick={save}>{saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Save {kind === "event" ? "event" : "booking"}</Button></div>
+    </Step> : <><Step n="03" title="Service location" sub="Where the food is being served — there is no hall to choose."><Label>Service location *</Label><Input value={f.location} onChange={e => set("location", e.target.value)} placeholder="Full address" /></Step>
+    <Step n="04" title="Coordinator" sub="Optional. Printed on the event order as the event's coordinator, and their number as the onsite contact.">
+      <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">{staff.map(s => <button key={s.id} type="button" onClick={() => setCoordId(coordId === s.id ? "" : s.id)} className={cn("rounded-md border p-3 text-left text-sm", coordId === s.id ? "border-primary bg-primary/5" : "border-border hover:bg-muted/40")}><p className="font-medium">{s.name}</p><p className="text-xs text-muted-foreground">{s.job_title || "Staff"}{s.phone ? ` · ${s.phone}` : ""}</p></button>)}{!staff.length && <p className="text-sm text-muted-foreground">No active staff found.</p>}</div>
+    </Step>
+    <Step n="05" title="Catering" sub="The packages the client ordered, and the dishes they chose. Prints on the run sheet.">
+      <div className="space-y-4">{pkgs.map((cp, i) => { const courses = ev.courses.filter(c => c.package_id === cp.packageId); return <div key={cp.key} className="space-y-3 rounded-md border p-4">
+        <div className="flex items-end gap-2"><div className="flex-1 space-y-1.5"><Label>Package {i + 1} *</Label><select value={cp.packageId} onChange={e => updPkg(cp.key, { packageId: e.target.value, dishes: {} })} className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"><option value="">Choose a package…</option>{activePkgs.map(p => <option key={p.id} value={p.id}>{ev.books.find(b => b.id === p.book_id)?.name || "Menu"} · {p.name}{p.package_type === "beverage" ? " (drinks)" : ""}</option>)}</select></div>{pkgs.length > 1 && <Button type="button" variant="ghost" onClick={() => setPkgs(ps => ps.filter(p => p.key !== cp.key))}>Remove</Button>}</div>
+        {courses.map(c => { const picked = cp.dishes[c.id] || []; const opts = courseOpts(c.id); const full = c.picks && picked.length >= c.picks; return <div key={c.id} className="space-y-1.5"><p className="text-sm font-medium">{c.name} <span className="text-xs text-muted-foreground">{c.picks ? `pick ${c.picks}` : "any"} · {picked.length} chosen</span></p>
+          <div className="flex flex-wrap gap-1.5">{picked.map(id => <button key={id} type="button" onClick={() => updPkg(cp.key, { dishes: { ...cp.dishes, [c.id]: picked.filter(x => x !== id) } })} className="rounded-full border border-primary/40 px-2 py-0.5 text-xs">{opts.find(o => o.id === id)?.name} ×</button>)}</div>
+          {!full && <select value="" onChange={e => e.target.value && updPkg(cp.key, { dishes: { ...cp.dishes, [c.id]: [...picked, e.target.value] } })} className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm"><option value="">Add a dish…</option>{opts.filter(o => !picked.includes(o.id)).map(o => <option key={o.id} value={o.id}>{o.name}</option>)}</select>}</div>; })}
+      </div>; })}
+        <Button type="button" variant="outline" size="sm" onClick={() => setPkgs(ps => [...ps, { key: `p${Date.now()}`, packageId: "", dishes: {} }])}>Add another package</Button>
+        {!activePkgs.length && <p className="text-sm text-muted-foreground">Create packages under Catering → View menu first.</p>}</div>
+    </Step></>}
+    <Step n={kind === "event" ? "04" : "06"} title="Notes" sub="Notes for the client and the team — all optional."><Textarea value={f.notes} onChange={e => set("notes", e.target.value)} /></Step>
+    <div className="flex justify-end gap-2"><Button variant="outline" onClick={() => nav(-1)}>Cancel</Button><Button disabled={!ready || saving} onClick={save}>{saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}{kind === "event" ? "Save event" : "Create booking"}</Button></div>
+  </div>
+  <aside className="space-y-4 lg:sticky lg:top-4 lg:self-start"><Card><CardContent className="space-y-3 p-5">
+    <div className="flex items-center justify-between"><p className="font-serif text-xl">Event summary</p><span className="text-xs text-primary">Live</span></div>
+    <Sum l="Reference" v="" empty="Assigned on save" /><Sum l="Customer" v={custName} empty="Not chosen yet" /><Sum l="Event" v={f.event_name && `${f.event_name}${f.date ? ` · ${f.date} · ${to12(f.start)}–${to12(f.end)}` : ""}`} empty="Not named yet" />
+    <Sum l={kind === "event" ? "Venue" : "Service location"} v={kind === "event" ? venue?.name : f.location} empty="Not entered yet" /><Sum l="Guests" v={total ? `${f.adults || 0} adults · ${f.kids || 0} children` : ""} empty="Not set yet" />
+    {kind === "catering" && <><Sum l="Coordinator" v={coord?.name} empty="None" /><Sum l="Catering" v={pkgs.filter(p => p.packageId).map(p => ev.packages.find(x => x.id === p.packageId)?.name).join(", ")} empty="No catering added" /></>}
+    <Sum l="Notes" v={f.notes} empty="No notes added" />
+  </CardContent></Card>
+  <Card><CardContent className="space-y-2 p-5"><div className="flex justify-between"><p className="font-medium">Before you create</p><span className="text-xs text-muted-foreground">{checks.filter(c => c[1]).length} of {checks.length}</span></div>
+    {checks.map(([l, ok]) => <p key={l} className="flex justify-between text-sm"><span>{l}</span><span className={ok ? "text-primary" : "text-muted-foreground"}>{ok ? "done" : "not yet"}</span></p>)}</CardContent></Card></aside>
   </div>;
 }
