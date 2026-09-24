@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import { Link } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
-import { ShieldCheck, Building2, Users, LogIn, Sun, Moon } from "lucide-react";
+import { ShieldCheck, Building2, Users, LogIn, Sun, Moon, PartyPopper } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useBusiness } from "@/contexts/BusinessContext";
 import { useTheme } from "next-themes";
@@ -53,7 +53,7 @@ const Index = () => {
         </div>
 
         {/* Action cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 w-full max-w-2xl animate-fade-in" style={{ animationDelay: '0.15s' }}>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 w-full max-w-5xl animate-fade-in" style={{ animationDelay: '0.15s' }}>
           <Link to="/auth" className="block">
             <Card className="border border-border/50 cursor-pointer hover:border-primary/40 transition-all duration-300 group h-full ambient-glow shimmer card-lift">
               <CardContent className="p-6 sm:p-8 flex flex-row sm:flex-col items-center sm:text-center gap-4 sm:gap-4">
@@ -63,6 +63,20 @@ const Index = () => {
                 <div>
                   <h2 className="text-base font-semibold text-foreground">Business Admin</h2>
                   <p className="text-xs text-muted-foreground mt-1 leading-relaxed">Sign in to manage your business</p>
+                </div>
+              </CardContent>
+            </Card>
+          </Link>
+
+          <Link to="/auth?next=events" className="block">
+            <Card className="border border-border/50 cursor-pointer hover:border-primary/40 transition-all duration-300 group h-full ambient-glow shimmer card-lift">
+              <CardContent className="p-6 sm:p-8 flex flex-row sm:flex-col items-center sm:text-center gap-4 sm:gap-4">
+                <div className="h-12 w-12 sm:h-14 sm:w-14 rounded-2xl bg-primary/8 flex items-center justify-center shrink-0 group-hover:bg-primary/15 group-hover:scale-110 transition-all duration-300">
+                  <PartyPopper className="h-6 w-6 sm:h-7 sm:w-7 text-primary" />
+                </div>
+                <div>
+                  <h2 className="text-base font-semibold text-foreground">Events & Sales</h2>
+                  <p className="text-xs text-muted-foreground mt-1 leading-relaxed">Leads, events, menus & venue</p>
                 </div>
               </CardContent>
             </Card>
