@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import DateField from "@/features/sales/DateField";
-import TimeDropdownPicker from "@/components/TimeDropdownPicker";
+import { TimeDropdownPicker } from "@/components/TimeDropdownPicker";
 import { useCrmData } from "@/features/sales/useCrmData";
 import { useEventsData, bookingEnd, minutesBetween, to12 } from "./useEventsData";
 import { AlertTriangle, CheckCircle2, Loader2 } from "lucide-react";
