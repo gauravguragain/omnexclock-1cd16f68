@@ -36,3 +36,8 @@
 - [x] Place Confirmation before Menu and offer an optional tasting step before Menu
 - [x] Save, change, or remove a tasting date and time as a calendar reminder
 - [x] Verify tasting scheduling and the lead tabs on mobile and desktop
+
+# Catering separation
+- [x] Keep catering lead details, confirmation and editing inside Catering, without opening event workflow tabs
+- [x] Give confirmed catering bookings and run sheets catering-only navigation and labels
+- [x] Verify lead and confirmed booking paths on screen

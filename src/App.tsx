@@ -55,8 +55,13 @@ const PayDetailsPage = React.lazy(() => import("./pages/admin/PayDetailsPage"));
 const InvoicesPage = React.lazy(() => import("./pages/admin/InvoicesPage"));
 const EventsLayout = React.lazy(() => import("./layouts/EventsLayout"));
 const ev = (k: string) => React.lazy(() => import("./pages/events/EventsWorkspace").then(m => ({ default: (m.EventsPages as any)[k] })));
-const EventsPages: Record<string, React.ComponentType> = Object.fromEntries(["Dashboard","Pipeline","Inspections","Tasks","Settings","EventLeads","CateringLeads","Events","CateringBookings","NewEvent","NewCatering","Calendar","EventDetail","CateringDetail","Customers","Stakeholders","Coordinators","MenuBooks","Dishes","Drinks","Spaces","Reports","RunsheetView"].map(k => [k, ev(k)]));
+const EventsPages: Record<string, React.ComponentType> = Object.fromEntries(["Dashboard","Pipeline","Inspections","Tasks","Settings","EventLeads","CateringLeads","CateringLeadDetail","Events","CateringBookings","NewEvent","NewCatering","Calendar","EventDetail","CateringDetail","Customers","Stakeholders","Coordinators","MenuBooks","Dishes","Drinks","Spaces","Reports","RunsheetView"].map(k => [k, ev(k)]));
 function SalesRedirect() { const { businessCode } = useParams(); return <Navigate to={`/b/${businessCode}/events`} replace />; }
+function CateringRedirect({ destination, withId = false, withRunsheet = false }: { destination: string; withId?: boolean; withRunsheet?: boolean }) {
+  const { businessCode, id, runsheetId } = useParams();
+  const suffix = `${withId && id ? `/${id}` : ""}${withRunsheet && runsheetId ? `/runsheet/${runsheetId}` : ""}`;
+  return <Navigate to={`/b/${businessCode}/catering/${destination}${suffix}${window.location.search}`} replace />;
+}
 const PublicEnquiryPage = React.lazy(() => import("./pages/PublicEnquiryPage"));
 const BookingConfirmationPage = React.lazy(() => import("./pages/BookingConfirmationPage"));
 const MasterDashboardPage = React.lazy(() => import("./pages/master/MasterDashboardPage"));
@@ -126,15 +131,17 @@ const App = () => (
                   <Route path="/b/:businessCode/events" element={<EventsLayout />}>
                     <Route index element={<EventsPages.Dashboard />} />
                     <Route path="leads/events" element={<EventsPages.EventLeads />} />
-                    <Route path="leads/catering" element={<EventsPages.CateringLeads />} />
+                    <Route path="leads/catering" element={<CateringRedirect destination="leads" />} />
+                    <Route path="leads/catering/:id" element={<CateringRedirect destination="leads" withId />} />
                     <Route path="pipeline" element={<EventsPages.Pipeline />} />
                     <Route path="events" element={<EventsPages.Events />} />
                     <Route path="events/:id" element={<EventsPages.EventDetail />} />
                     <Route path="runsheet/:runsheetId" element={<EventsPages.RunsheetView />} />
+                    <Route path="catering-bookings/:id/runsheet/:runsheetId" element={<CateringRedirect destination="bookings" withId withRunsheet />} />
                     <Route path="events/new" element={<Navigate to="../leads/events" replace />} />
-                    <Route path="catering-bookings" element={<EventsPages.CateringBookings />} />
-                    <Route path="catering-bookings/:id" element={<EventsPages.CateringDetail />} />
-                    <Route path="catering-bookings/new" element={<EventsPages.NewCatering />} />
+                    <Route path="catering-bookings" element={<CateringRedirect destination="bookings" />} />
+                    <Route path="catering-bookings/:id" element={<CateringRedirect destination="bookings" withId />} />
+                    <Route path="catering-bookings/new" element={<CateringRedirect destination="bookings/new" />} />
                     <Route path="calendar" element={<EventsPages.Calendar />} />
                     <Route path="inspections" element={<EventsPages.Inspections />} />
                     <Route path="tasks" element={<EventsPages.Tasks />} />
@@ -147,6 +154,22 @@ const App = () => (
                     <Route path="spaces" element={<EventsPages.Spaces />} />
                     <Route path="reports" element={<EventsPages.Reports />} />
                     <Route path="settings" element={<EventsPages.Settings />} />
+                  </Route>
+
+                  <Route path="/b/:businessCode/catering" element={<EventsLayout mode="catering" />}>
+                    <Route index element={<Navigate to="leads" replace />} />
+                    <Route path="leads" element={<EventsPages.CateringLeads />} />
+                    <Route path="leads/:id" element={<EventsPages.CateringLeadDetail />} />
+                    <Route path="bookings" element={<EventsPages.CateringBookings />} />
+                    <Route path="bookings/new" element={<EventsPages.NewCatering />} />
+                    <Route path="bookings/:id" element={<EventsPages.CateringDetail />} />
+                    <Route path="bookings/:id/runsheet/:runsheetId" element={<EventsPages.RunsheetView />} />
+                    <Route path="customers" element={<EventsPages.Customers />} />
+                    <Route path="coordinators" element={<EventsPages.Coordinators />} />
+                    <Route path="stakeholders" element={<EventsPages.Stakeholders />} />
+                    <Route path="menu-books" element={<EventsPages.MenuBooks />} />
+                    <Route path="dishes" element={<EventsPages.Dishes />} />
+                    <Route path="drinks" element={<EventsPages.Drinks />} />
                   </Route>
 
                   {/* Master admin routes */}

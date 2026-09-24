@@ -15,7 +15,7 @@ export default function EventsDashboard() {
   if (!crm.business) return null;
   const base = `/b/${businessCode}/events`;
   const today = format(new Date(), "yyyy-MM-dd"); const in7 = format(addDays(new Date(), 7), "yyyy-MM-dd");
-  const active = crm.bookings.filter(b => b.status !== "cancelled");
+   const active = crm.bookings.filter(b => b.status !== "cancelled" && b.booking_kind !== "catering");
   const upcoming = active.filter(b => b.event_date >= today).sort((a, b) => (a.event_date + a.start_time).localeCompare(b.event_date + b.start_time));
   const todays = upcoming.filter(b => b.event_date === today);
   const week = upcoming.filter(b => b.event_date > today && b.event_date <= in7);
@@ -88,7 +88,7 @@ export default function EventsDashboard() {
       </CardContent></Card>
     </div>
 
-    <div className="grid gap-4 lg:grid-cols-2">
+     <div className="grid gap-4 lg:grid-cols-2">
       <Card><CardContent className="p-6">
         <p className="font-semibold">Venue at a glance</p><p className="text-xs text-muted-foreground">Standing figures</p>
         <p className="mt-4 text-sm">Utilisation rate</p><p className="text-4xl font-semibold">{util}%</p>
@@ -98,7 +98,7 @@ export default function EventsDashboard() {
       </CardContent></Card>
       <Card><CardContent className="p-6">
         <p className="font-semibold">Quick actions</p><p className="text-xs text-muted-foreground">Where a shift usually starts</p>
-        <div className="mt-4 grid gap-3 sm:grid-cols-2">{[[UserPlus, "New lead", "Start the event workflow", `${base}/leads/events`], [Plus, "Add space", "Create or manage venue spaces", `${base}/spaces`], [CalendarPlus, "View calendar", "All events in calendar view", `${base}/calendar`], [UtensilsCrossed, "View catering", "Menus and packages", `${base}/menu-books`]].map(([I, t, s, to]: any) => <Link key={t} to={to} className="flex items-center gap-3 rounded-lg border border-border p-3 hover:border-primary">
+         <div className="mt-4 grid gap-3 sm:grid-cols-2">{[[UserPlus, "New lead", "Start the event workflow", `${base}/leads/events`], [Plus, "Add space", "Create or manage venue spaces", `${base}/spaces`], [CalendarPlus, "View calendar", "All events in calendar view", `${base}/calendar`], [UtensilsCrossed, "Menu books", "Menus and packages", `${base}/menu-books`]].map(([I, t, s, to]: any) => <Link key={t} to={to} className="flex items-center gap-3 rounded-lg border border-border p-3 hover:border-primary">
           <span className="rounded-full bg-primary/15 p-2 text-primary"><I className="h-4 w-4" /></span><div className="flex-1"><p className="text-sm font-medium">{t}</p><p className="text-xs text-muted-foreground">{s}</p></div><ChevronRight className="h-4 w-4 text-muted-foreground" /></Link>)}</div>
       </CardContent></Card>
     </div>

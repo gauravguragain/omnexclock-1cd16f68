@@ -1,4 +1,5 @@
 import EventDetailPage from "@/features/events/EventDetailPage";
+import CateringDetailPage from "@/features/events/CateringDetailPage";
 import RunsheetViewPage from "@/features/events/RunsheetViewPage";
 import EventsDashboard from "@/features/events/EventsDashboard";
 import SalesMarketingPage from "@/pages/admin/SalesMarketingPage";
@@ -26,9 +27,9 @@ function CalendarPage() {
   const editing = crm.bookings.find(b => b.id === editingId);
   const lead = crm.leads.find(l => l.id === editing?.lead_id) || null;
   return <div className="space-y-6"><div className="flex flex-wrap items-end justify-between gap-3"><div><p className="flex items-center gap-2 text-xs font-medium uppercase tracking-widest text-primary"><CalendarDays className="h-4 w-4" />Events</p><h1 className="font-serif text-3xl font-semibold">Calendar</h1><p className="text-sm text-muted-foreground">View and manage all your events in one place.</p></div><div className="flex gap-2"><Button variant="outline" onClick={() => setTodayKey(k => k + 1)}>Today</Button><Button asChild><Link to={`/b/${businessCode}/events/leads/events`}><Plus className="mr-2 h-4 w-4" />New lead</Link></Button></div></div>
-    <MonthCalendar key={todayKey} bookings={crm.bookings} leads={crm.leads} runsheets={crm.runsheets} customers={ev.customers} venues={ev.venues} onView={b => navigate(`/b/${businessCode}/events/${b.booking_kind === "catering" ? "catering-bookings" : "events"}/${b.id}`)} onEdit={b => { if (b.lead_id) setEditingId(b.id); else navigate(`/b/${businessCode}/events/${b.booking_kind === "catering" ? "catering-bookings" : "events"}/${b.id}`); }} />
-    <CalendarTab businessId={crm.business.id} businessName={crm.business.name} leads={crm.leads} inspections={crm.inspections} bookings={crm.bookings} tasks={crm.tasks} />
-    <LeadDetailDialog lead={lead} open={!!editingId && !!lead} onOpenChange={open => { if (!open) setEditingId(null); }} initialTab="booking" options={crm.options} interactions={crm.interactions} inspections={crm.inspections} tasks={crm.tasks} menuItems={crm.menuItems} booking={editing} businessName={crm.business.name} onSaved={crm.refresh} />
+    <MonthCalendar key={todayKey} bookings={crm.bookings.filter(b => b.booking_kind !== "catering")} leads={crm.leads.filter(l => l.lead_kind !== "catering" && l.event_type !== "catering")} runsheets={crm.runsheets} customers={ev.customers} venues={ev.venues} onView={b => navigate(`/b/${businessCode}/events/events/${b.id}`)} onEdit={b => { if (!b.lead_id) navigate(`/b/${businessCode}/events/events/${b.id}`); else setEditingId(b.id); }} />
+    <CalendarTab businessId={crm.business.id} businessName={crm.business.name} leads={crm.leads.filter(l => l.lead_kind !== "catering" && l.event_type !== "catering")} inspections={crm.inspections.filter(i => crm.leads.some(l => l.id === i.lead_id && l.lead_kind !== "catering" && l.event_type !== "catering"))} bookings={crm.bookings.filter(b => b.booking_kind !== "catering")} tasks={crm.tasks.filter(t => !t.lead_id || crm.leads.some(l => l.id === t.lead_id && l.lead_kind !== "catering" && l.event_type !== "catering"))} />
+    <LeadDetailDialog lead={lead?.lead_kind === "catering" ? null : lead} open={!!editingId && !!lead && lead.lead_kind !== "catering"} onOpenChange={open => { if (!open) setEditingId(null); }} initialTab="booking" options={crm.options} interactions={crm.interactions} inspections={crm.inspections} tasks={crm.tasks} menuItems={crm.menuItems} booking={editing} businessName={crm.business.name} onSaved={crm.refresh} />
   </div>;
 }
 
@@ -45,7 +46,8 @@ export const EventsPages = {
   NewEvent: () => <CreateEventWizard kind="event" />,
   NewCatering: () => <CreateEventWizard kind="catering" />,
   EventDetail: () => <EventDetailPage kind="event" />,
-  CateringDetail: () => <EventDetailPage kind="catering" />,
+  CateringDetail: () => <CateringDetailPage view="booking" />,
+  CateringLeadDetail: () => <CateringDetailPage view="lead" />,
   RunsheetView: () => <RunsheetViewPage />,
   Calendar: CalendarPage,
   Customers: CustomersPage, Stakeholders: StakeholdersPage, Coordinators: CoordinatorsPage, MenuBooks: MenuBooksPage, Dishes: DishesPage, Drinks: DrinksPage, Spaces: SpacesPage, Reports: ReportsPage,

@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { downloadRunsheetPdf } from "@/lib/runsheetDownload";
-import { Link, useParams } from "react-router-dom";
+import { Link, Navigate, useLocation, useParams } from "react-router-dom";
 import { format } from "date-fns";
 import { ChevronRight, ArrowLeft, Printer, Mail, Link as LinkIcon, Download } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -140,6 +140,7 @@ export function RunsheetDocument({ rs, lead, b, items, selection, businessName }
 
 export default function RunsheetViewPage() {
   const { businessCode, runsheetId } = useParams();
+  const location = useLocation();
   const crm = useCrmData();
   const [rs, setRs] = useState<any>(null);
   const [items, setItems] = useState<any[]>([]);
@@ -165,12 +166,14 @@ export default function RunsheetViewPage() {
 
   if (loading || crm.loading) return <div className="py-20 text-center text-muted-foreground">Loading…</div>;
   const back = `/b/${businessCode}/events/events`;
-  if (!rs) return <div className="py-20 text-center text-muted-foreground">Run sheet not found. <Link to={back} className="text-primary">Back to events</Link></div>;
+  const cateringRoute = location.pathname.includes("/catering/bookings/") || location.pathname.includes("/catering-bookings/");
+  if (!rs) return <div className="py-20 text-center text-muted-foreground">Run sheet not found. <Link to={cateringRoute ? `/b/${businessCode}/catering/bookings` : back} className="text-primary">Back to {cateringRoute ? "catering bookings" : "events"}</Link></div>;
   const lead: any = crm.leads.find(l => l.id === rs.lead_id);
   const b: any = crm.bookings.find(x => x.id === rs.booking_id) || crm.bookings.find(x => x.lead_id === rs.lead_id);
   const title = runsheetTitle(lead, b);
-  const isCatering = b?.booking_kind === "catering";
-  const backTo = isCatering && b ? `/b/${businessCode}/events/catering-bookings/${b.id}` : back;
+  const isCatering = b?.booking_kind === "catering" || lead?.lead_kind === "catering" || cateringRoute;
+  if (isCatering && !cateringRoute) return <Navigate to={b ? `/b/${businessCode}/catering/bookings/${b.id}/runsheet/${rs.id}` : `/b/${businessCode}/catering/leads/${rs.lead_id}`} replace />;
+  const backTo = isCatering ? b ? `/b/${businessCode}/catering/bookings/${b.id}` : `/b/${businessCode}/catering/leads` : back;
   const issueCatering = async () => { const { data, error } = await supabase.from("crm_runsheets").update({ status: "sent", sent_at: new Date().toISOString(), generated_at: new Date().toISOString() } as any).eq("id", rs.id).select().single(); if (error) { toast.error(error.message); return null; } setRs(data); crm.refresh(); return data; };
   const copyLink = async () => { await navigator.clipboard.writeText(runsheetPublicUrl(rs)); toast.success("Web link copied"); };
 

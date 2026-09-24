@@ -82,7 +82,7 @@ export default function CreateEventWizard({ kind }: { kind: "event" | "catering"
       }
       if (kind === "catering" || coord || f.notes) await supabase.from("crm_runsheets").insert({ business_id: bid, lead_id: lid!, booking_id: bk?.id, event_order_number: order as any, adult_guests: Number(f.adults) || 0, kids_guests: Number(f.kids) || 0, event_coordinator: coord?.name || null, event_coordinator_phone: coord?.phone || null, onsite_contact_name: coord?.name || null, onsite_contact_phone: coord?.phone || null, client_notes: f.notes || null, status: "draft", created_by: user?.id } as any);
       toast.success(kind === "event" ? "Event created" : "Catering booking created");
-      nav(`/b/${businessCode}/events/${kind === "event" ? "events" : "catering-bookings"}`);
+       nav(kind === "catering" ? `/b/${businessCode}/catering/bookings` : `/b/${businessCode}/events/events`);
     } catch (e: any) { toast.error(e.message); } finally { setSaving(false); }
   };
 
@@ -118,7 +118,7 @@ export default function CreateEventWizard({ kind }: { kind: "event" | "catering"
       {f.method === "delivery" ? <><Label>Delivery address *</Label><Input value={f.location} onChange={e => set("location", e.target.value)} placeholder="Full address" /></> : <p className="text-sm text-muted-foreground">The client collects from the venue during the pickup window.</p>}
     </Step>
     <Step n="04" title="Coordinator" sub="Optional. Printed on the event order as the event's coordinator, and their number as the onsite contact.">
-      <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">{staff.map(s => <button key={s.id} type="button" onClick={() => setCoordId(coordId === s.id ? "" : s.id)} className={cn("rounded-md border p-3 text-left text-sm", coordId === s.id ? "border-primary bg-primary/5" : "border-border hover:bg-muted/40")}><p className="font-medium">{s.name}</p><p className="text-xs text-muted-foreground">{s.job_title || "Coordinator"}{s.phone ? ` · ${s.phone}` : ""}</p></button>)}{!staff.length && <p className="text-sm text-muted-foreground">No coordinators yet. Add them under People → <Link to={`/b/${businessCode}/events/coordinators`} className="text-primary underline">Coordinators</Link>.</p>}</div>
+       <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">{staff.map(s => <button key={s.id} type="button" onClick={() => setCoordId(coordId === s.id ? "" : s.id)} className={cn("rounded-md border p-3 text-left text-sm", coordId === s.id ? "border-primary bg-primary/5" : "border-border hover:bg-muted/40")}><p className="font-medium">{s.name}</p><p className="text-xs text-muted-foreground">{s.job_title || "Coordinator"}{s.phone ? ` · ${s.phone}` : ""}</p></button>)}{!staff.length && <p className="text-sm text-muted-foreground">No coordinators yet. Add them under People → <Link to={`/b/${businessCode}/catering/coordinators`} className="text-primary underline">Coordinators</Link>.</p>}</div>
     </Step>
     <Step n="05" title="Catering" sub="The packages the client ordered, and the dishes they chose. Prints on the run sheet.">
       <div className="space-y-4">{pkgs.map((cp, i) => { const courses = ev.courses.filter(c => c.package_id === cp.packageId); return <div key={cp.key} className="space-y-3 rounded-md border p-4">
@@ -134,7 +134,7 @@ export default function CreateEventWizard({ kind }: { kind: "event" | "catering"
     <div className="flex justify-end gap-2"><Button variant="outline" onClick={() => nav(-1)}>Cancel</Button><Button disabled={!ready || saving} onClick={save}>{saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}{kind === "event" ? "Save event" : "Create booking"}</Button></div>
   </div>
   <aside className="space-y-4 lg:sticky lg:top-4 lg:self-start"><Card><CardContent className="space-y-3 p-5">
-    <div className="flex items-center justify-between"><p className="font-serif text-xl">Event summary</p><span className="text-xs text-primary">Live</span></div>
+     <div className="flex items-center justify-between"><p className="font-serif text-xl">{kind === "catering" ? "Catering summary" : "Event summary"}</p><span className="text-xs text-primary">Live</span></div>
     <Sum l="Reference" v="" empty="Assigned on save" /><Sum l="Customer" v={custName} empty="Not chosen yet" /><Sum l="Event" v={f.event_name && `${f.event_name}${f.date ? ` · ${f.date} · ${kind === "catering" ? (f.method === "pickup" ? "pickup " : "delivery ") : ""}${to12(f.start)}–${to12(f.end)}` : ""}`} empty="Not named yet" />
     <Sum l={kind === "event" ? "Venue" : f.method === "pickup" ? "Pickup" : "Delivery to"} v={kind === "event" ? venue?.name : f.method === "pickup" ? "Client collects" : f.location} empty="Not entered yet" /><Sum l="Guests" v={total ? `${f.adults || 0} adults · ${f.kids || 0} children` : ""} empty="Not set yet" />
     {kind === "catering" && <><Sum l="Coordinator" v={coord?.name} empty="None" /><Sum l="Catering" v={pkgs.filter(p => p.packageId).map(p => ev.packages.find(x => x.id === p.packageId)?.name).join(", ")} empty="No catering added" /></>}
