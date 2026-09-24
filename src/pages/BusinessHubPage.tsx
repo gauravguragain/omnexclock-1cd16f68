@@ -7,7 +7,7 @@ import { ShieldCheck, LogOut, Building2, PartyPopper, Utensils, ShieldPlus } fro
 import { useEffect } from "react";
 
 export default function BusinessHubPage() {
-  const { user, isApproved, isMaster, isAdminOf, isViewerOf, hasAccessTo, loading, signOut } = useAuth();
+  const { user, isApproved, isMaster, isAdminOf, isViewerOf, hasAccessTo, isRosterAdminOf, isSalesManagerOf, isFoodSafetyManagerOf, loading, signOut } = useAuth();
   const { business, businesses, loading: bizLoading, setBusiness, applyTheme, resetTheme } = useBusiness();
 
   // Always reset to default theme on the hub
@@ -119,6 +119,10 @@ export default function BusinessHubPage() {
 
   // Single business - go straight to admin
   const businessCode = business.business_code;
+  const bid = business.id;
+  const showAdmin = isAdminOf(bid) || isViewerOf(bid) || isRosterAdminOf(bid);
+  const showSales = isAdminOf(bid) || isSalesManagerOf(bid);
+  const showFood = isAdminOf(bid) || isFoodSafetyManagerOf(bid);
 
   return (
     <div className="min-h-[100dvh] flex flex-col items-center justify-center bg-background p-4 relative overflow-hidden standalone-top-pad safe-x">
@@ -140,7 +144,7 @@ export default function BusinessHubPage() {
       </div>
 
       <div className="w-full max-w-sm animate-fade-in" style={{ animationDelay: '0.1s' }}>
-        <Link
+        {showAdmin && <Link
           to={`/b/${businessCode}/admin`}
           onClick={() => applyTheme(business.theme)}
           className="block"
@@ -156,8 +160,8 @@ export default function BusinessHubPage() {
               </div>
             </CardContent>
           </Card>
-        </Link>
-        <Link to={`/b/${businessCode}/events`} onClick={() => applyTheme(business.theme)} className="mt-4 block">
+        </Link>}
+        {showSales && <Link to={`/b/${businessCode}/events`} onClick={() => applyTheme(business.theme)} className="mt-4 block">
           <Card className="border border-border/50 cursor-pointer hover:border-primary/40 transition-all duration-300 group card-lift">
             <CardContent className="p-8 flex flex-col items-center text-center space-y-4">
               <div className="h-14 w-14 rounded-2xl bg-primary/8 flex items-center justify-center group-hover:bg-primary/15 group-hover:scale-110 transition-all duration-300">
@@ -169,8 +173,8 @@ export default function BusinessHubPage() {
               </div>
             </CardContent>
           </Card>
-        </Link>
-        <Link to={`/b/${businessCode}/admin/food-safety`} onClick={() => applyTheme(business.theme)} className="mt-4 block">
+        </Link>}
+        {showFood && <Link to={`/b/${businessCode}/admin/food-safety`} onClick={() => applyTheme(business.theme)} className="mt-4 block">
           <Card className="border border-border/50 cursor-pointer hover:border-primary/40 transition-all duration-300 group card-lift">
             <CardContent className="p-8 flex flex-col items-center text-center space-y-4">
               <div className="h-14 w-14 rounded-2xl bg-primary/8 flex items-center justify-center group-hover:bg-primary/15 group-hover:scale-110 transition-all duration-300">
@@ -182,7 +186,7 @@ export default function BusinessHubPage() {
               </div>
             </CardContent>
           </Card>
-        </Link>
+        </Link>}
       </div>
 
       <Button variant="ghost" className="mt-10 text-muted-foreground hover:text-foreground transition-colors" onClick={signOut}>

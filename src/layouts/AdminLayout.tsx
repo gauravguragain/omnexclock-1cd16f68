@@ -85,6 +85,7 @@ export default function AdminLayout() {
     { path: `${basePath}/inventory`, label: "Inventory", icon: Package, tourId: "inventory", access: "inventory" },
     { path: `${basePath}/service`, label: "Service", icon: Wrench, tourId: "service", access: "admin" },
     { path: `${basePath}/food-safety`, label: "Food Safety", icon: ShieldPlus, tourId: "food-safety", access: "food_safety" },
+    { path: `/b/${businessCode}/events`, label: "Sales & Marketing", icon: BriefcaseBusiness, tourId: "sales", access: "sales" },
     { path: `${basePath}/users`, label: "User Management", icon: UserCog, tourId: "users", access: "super_admin_only" },
     
     { path: `${basePath}/my-business`, label: "My Business", icon: Building2, tourId: "my-business", access: "admin" },
@@ -101,6 +102,7 @@ export default function AdminLayout() {
     if (item.access === "super_admin_only") return isSuperAdmin;
     if (isAdmin || isSuperAdmin) return true;
     if (item.access === "food_safety" && isFoodSafety) return true;
+    if (item.access === "sales") return isSalesManager;
     if (isViewer && item.access !== "admin_only") return true;
     if (isRosterAdmin) {
       if (item.access === "roster") return true;
@@ -158,6 +160,7 @@ export default function AdminLayout() {
 
   if (!user) return <Navigate to="/auth" replace />;
   if (isSalesManager && !isAdmin && !isSuperAdmin && !isViewer && !isRosterAdmin && !isFoodSafety) return <Navigate to={`/b/${businessCode}/events`} replace />;
+  if (isFoodSafety && !isAdmin && !isSuperAdmin && !isViewer && !isRosterAdmin && !location.pathname.includes("/food-safety")) return <Navigate to={`/b/${businessCode}/admin/food-safety`} replace />;
 
   const businessStatus = business && (business as any).status;
   const isSuspended = businessStatus === "suspended" || businessStatus === "deactivated";
