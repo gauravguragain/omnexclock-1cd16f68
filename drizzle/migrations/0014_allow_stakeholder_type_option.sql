@@ -1,0 +1,2 @@
+ALTER TABLE public.crm_options DROP CONSTRAINT IF EXISTS crm_options_option_type_check;
+ALTER TABLE public.crm_options ADD CONSTRAINT crm_options_option_type_check CHECK (option_type IN ('lead_source','event_type','lost_reason','lead_stage','venue_space','beverage_package','live_stall','dietary_tag','tag','setup_item','service_course','stakeholder_type'));
