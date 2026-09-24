@@ -64,8 +64,8 @@ export default function CalendarTab({ businessId, businessName, leads, inspectio
     return list.filter((e) => !Number.isNaN(e.start.getTime())).sort((a, b) => a.start.getTime() - b.start.getTime());
   }, [inspections, bookings, tasks, leads, businessName]);
 
-  const visible = entries.filter((e) => filter === "all" || e.kind === filter);
-  const upcoming = visible.filter((e) => e.start >= startOfDay(new Date()));
+  const upcomingEntries = entries.filter((e) => e.start >= startOfDay(new Date()));
+  const upcoming = upcomingEntries.filter((e) => filter === "all" || e.kind === filter);
   const days = useMemo(() => {
     const grouped: { day: Date; items: AgendaEntry[] }[] = [];
     upcoming.forEach((entry) => {
@@ -104,7 +104,7 @@ export default function CalendarTab({ businessId, businessName, leads, inspectio
     <div className="flex flex-wrap gap-2">
       {(["all", "inspection", "event", "task"] as const).map((kind) => (
         <Button key={kind} size="sm" variant={filter === kind ? "default" : "outline"} onClick={() => setFilter(kind)}>
-          {kind === "all" ? `Everything (${entries.length})` : `${KIND_LABEL[kind]}s (${entries.filter((e) => e.kind === kind).length})`}
+          {kind === "all" ? `Everything (${upcomingEntries.length})` : `${KIND_LABEL[kind]}s (${upcomingEntries.filter((e) => e.kind === kind).length})`}
         </Button>
       ))}
     </div>
