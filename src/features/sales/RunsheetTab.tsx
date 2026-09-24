@@ -70,8 +70,10 @@ export default function RunsheetTab({ lead, booking, options, onSaved }: {
 
   const courseOptions = useMemo(() => {
     const configured = options.filter((o) => o.option_type === "service_course" && o.active).map((o) => o.label);
-    return configured.length ? configured : FALLBACK_COURSES;
-  }, [options]);
+    const base = configured.length ? configured : FALLBACK_COURSES;
+    const selected = menu.items.map((i: any) => i.course).filter((c: string) => c && !["package", "kids_package", "manual", "beverage", "live_stall"].includes(c));
+    return Array.from(new Set([...selected, ...base]));
+  }, [options, menu]);
 
   const load = useCallback(async () => {
     setLoading(true);
