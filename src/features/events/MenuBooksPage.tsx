@@ -12,7 +12,7 @@ import { Archive, ArchiveRestore, Loader2, Pencil, Plus, Trash2, X } from "lucid
 import { useEventsData, type Row } from "./useEventsData";
 
 type CourseDraft = { key: string; name: string; picks: string; items: string[] };
-const COURSE_PRESETS = ["Starters", "Entrées", "Mains", "Rice & Breads", "Desserts"];
+const COURSE_PRESETS = ["Starters", "Entrées", "Mains", "Sides", "Desserts"];
 
 export default function MenuBooksPage() {
   const d = useEventsData(); const [status, setStatus] = useState("active");
