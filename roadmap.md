@@ -25,3 +25,4 @@
 - [ ] Keep the original monochrome run sheet in an A4-sized, scaled web preview and A4 download/print on every device
 - [ ] Refine Events & Sales / Sales & Marketing navigation, pipeline, lists, and workflow for phone, tablet, and desktop
 - [ ] Verify the web preview and download at mobile and desktop sizes
+- [ ] Redesign the lead editing form for phone, tablet, and desktop while preserving the existing fields and workflow
