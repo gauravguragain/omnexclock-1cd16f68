@@ -40,7 +40,7 @@ export default function EventDetailPage({ kind }: { kind: "event" | "catering" }
   const rs: any = crm.runsheets.filter((r: any) => r.booking_id === b.id || r.lead_id === b.lead_id).sort((a: any, z: any) => (z.revision || 0) - (a.revision || 0))[0];
   const venue = ev.venues.find(v => v.id === b.venue_space_id || v.name === b.venue_space);
   const start = String(b.start_time).slice(0, 5); const end = bookingEnd(b); const hrs = minutesBetween(start, end) / 60;
-  const adults = rs?.adult_guests ?? b.adults ?? selection?.guest_count ?? b.guest_count; const kidsN = rs?.kids_guests ?? b.kids ?? kidsRow?.quantity ?? 0;
+  const adults = rs?.adult_guests ?? b.adults ?? selection?.guest_count ?? b.guest_count; const kidsN = rs?.kids_guests ?? b.kids ?? items.find(i => i.course === "kids_package")?.quantity ?? 0;
   const guests = Number(adults || 0) + Number(kidsN || 0);
   const date = new Date(`${b.event_date}T00:00:00`);
   const cancelled = b.status === "cancelled";
