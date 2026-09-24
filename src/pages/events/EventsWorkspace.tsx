@@ -10,7 +10,7 @@ import ReportsPage from "@/features/events/ReportsPage";
 import MonthCalendar from "@/features/events/MonthCalendar";
 import CalendarTab from "@/features/sales/CalendarTab";
 import { useCrmData } from "@/features/sales/useCrmData";
-import { CustomersPage, DishesPage, DrinksPage, SpacesPage, StakeholdersPage } from "@/features/events/ListPages";
+import { CustomersPage, DishesPage, DrinksPage, SpacesPage, StakeholdersPage, CoordinatorsPage } from "@/features/events/ListPages";
 
 function CalendarPage() {
   const crm = useCrmData(); if (!crm.business) return null;
@@ -35,5 +35,5 @@ export const EventsPages = {
   CateringDetail: () => <EventDetailPage kind="catering" />,
   RunsheetView: () => <RunsheetViewPage />,
   Calendar: CalendarPage,
-  Customers: CustomersPage, Stakeholders: StakeholdersPage, MenuBooks: MenuBooksPage, Dishes: DishesPage, Drinks: DrinksPage, Spaces: SpacesPage, Reports: ReportsPage,
+  Customers: CustomersPage, Stakeholders: StakeholdersPage, Coordinators: CoordinatorsPage, MenuBooks: MenuBooksPage, Dishes: DishesPage, Drinks: DrinksPage, Spaces: SpacesPage, Reports: ReportsPage,
 };

@@ -54,7 +54,7 @@ const PayDetailsPage = React.lazy(() => import("./pages/admin/PayDetailsPage"));
 const InvoicesPage = React.lazy(() => import("./pages/admin/InvoicesPage"));
 const EventsLayout = React.lazy(() => import("./layouts/EventsLayout"));
 const ev = (k: string) => React.lazy(() => import("./pages/events/EventsWorkspace").then(m => ({ default: (m.EventsPages as any)[k] })));
-const EventsPages: Record<string, React.ComponentType> = Object.fromEntries(["Dashboard","Pipeline","Inspections","Tasks","Settings","EventLeads","CateringLeads","Events","CateringBookings","NewEvent","NewCatering","Calendar","EventDetail","CateringDetail","Customers","Stakeholders","MenuBooks","Dishes","Drinks","Spaces","Reports"].map(k => [k, ev(k)]));
+const EventsPages: Record<string, React.ComponentType> = Object.fromEntries(["Dashboard","Pipeline","Inspections","Tasks","Settings","EventLeads","CateringLeads","Events","CateringBookings","NewEvent","NewCatering","Calendar","EventDetail","CateringDetail","Customers","Stakeholders","Coordinators","MenuBooks","Dishes","Drinks","Spaces","Reports"].map(k => [k, ev(k)]));
 function SalesRedirect() { const { businessCode } = useParams(); return <Navigate to={`/b/${businessCode}/events`} replace />; }
 const PublicEnquiryPage = React.lazy(() => import("./pages/PublicEnquiryPage"));
 const BookingConfirmationPage = React.lazy(() => import("./pages/BookingConfirmationPage"));
@@ -138,6 +138,7 @@ const App = () => (
                     <Route path="tasks" element={<EventsPages.Tasks />} />
                     <Route path="customers" element={<EventsPages.Customers />} />
                     <Route path="stakeholders" element={<EventsPages.Stakeholders />} />
+                    <Route path="coordinators" element={<EventsPages.Coordinators />} />
                     <Route path="menu-books" element={<EventsPages.MenuBooks />} />
                     <Route path="dishes" element={<EventsPages.Dishes />} />
                     <Route path="drinks" element={<EventsPages.Drinks />} />

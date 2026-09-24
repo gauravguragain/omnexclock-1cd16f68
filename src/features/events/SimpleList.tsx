@@ -11,10 +11,10 @@ import type { Row } from "./useEventsData";
 
 export type Field = { key: string; label: string; type?: "text" | "number" | "select" | "email" | "tags"; options?: { value: string; label: string }[]; required?: boolean; placeholder?: string };
 
-export default function SimpleList({ title, subtitle, table, businessId, rows, fields, columns, refresh, archivable, filterKey, filterOptions, groupAZ, extra, nameKey = "name", onOpen }: {
+export default function SimpleList({ title, subtitle, table, businessId, rows, fields, columns, refresh, archivable, filterKey, filterOptions, groupAZ, extra, nameKey = "name", onOpen, defaults }: {
   title: string; subtitle: string; table: string; businessId: string; rows: Row[]; fields: Field[];
   columns: { label: string; render: (r: Row) => ReactNode }[]; refresh: () => void; archivable?: boolean;
-  filterKey?: string; filterOptions?: { value: string; label: string }[]; groupAZ?: boolean; extra?: ReactNode; nameKey?: string; onOpen?: (r: Row) => void;
+  filterKey?: string; filterOptions?: { value: string; label: string }[]; groupAZ?: boolean; extra?: ReactNode; nameKey?: string; onOpen?: (r: Row) => void; defaults?: Row;
 }) {
   const [search, setSearch] = useState(""); const [status, setStatus] = useState("active"); const [filter, setFilter] = useState("all");
   const [editing, setEditing] = useState<Row | null>(null); const [open, setOpen] = useState(false);
@@ -25,7 +25,7 @@ export default function SimpleList({ title, subtitle, table, businessId, rows, f
     e.preventDefault(); const f = new FormData(e.currentTarget); const values: Row = {};
     fields.forEach(fd => { const v = f.get(fd.key); values[fd.key] = fd.type === "number" ? (v ? Number(v) : null) : fd.type === "tags" ? String(v || "").split(",").map(s => s.trim()).filter(Boolean) : (v ? String(v) : null); });
     const t = supabase.from(table as any) as any;
-    const res = editing ? await t.update({ ...values, updated_at: new Date().toISOString() }).eq("id", editing.id) : await t.insert({ ...values, business_id: businessId });
+    const res = editing ? await t.update({ ...values, updated_at: new Date().toISOString() }).eq("id", editing.id) : await t.insert({ ...(defaults || {}), ...values, business_id: businessId });
     if (res.error) toast.error(res.error.message); else { toast.success("Saved"); setOpen(false); refresh(); }
   };
   const setActive = async (r: Row, active: boolean) => { const { error } = await (supabase.from(table as any) as any).update({ active }).eq("id", r.id); if (error) toast.error(error.message); else refresh(); };
