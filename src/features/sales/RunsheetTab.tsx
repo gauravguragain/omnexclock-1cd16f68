@@ -195,7 +195,7 @@ export default function RunsheetTab({ lead, booking, options, onSaved }: {
     { label: "Service schedule built", done: schedule.length > 0 || fohSchedule.length > 0 },
     { label: "Setup and styling ticked off", done: setupItems.length > 0 },
     ...(accessEnabled ? [{ label: "Vendor access time agreed", done: Boolean(form.access_time) }] : []),
-    { label: "Deposit received", done: ["deposit_received", "runsheet_sent", "full_payment_received"].includes(lead.status) },
+    { label: "Deposit received", done: ["deposit_received", "menu_selected", "invoice_sent", "runsheet_sent", "full_payment_received"].includes(lead.status) },
   ]), [booking, form, menu, schedule, fohSchedule, setupItems, lead.status, accessEnabled]);
 
   const completed = checklist.filter((c) => c.done).length;

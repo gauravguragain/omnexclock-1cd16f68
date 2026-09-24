@@ -1751,6 +1751,7 @@ export type Database = {
           dish_id: string | null
           drink_id: string | null
           id: string
+          protein_options: string[]
         }
         Insert: {
           business_id: string
@@ -1759,6 +1760,7 @@ export type Database = {
           dish_id?: string | null
           drink_id?: string | null
           id?: string
+          protein_options?: string[]
         }
         Update: {
           business_id?: string
@@ -1767,6 +1769,7 @@ export type Database = {
           dish_id?: string | null
           drink_id?: string | null
           id?: string
+          protein_options?: string[]
         }
         Relationships: [
           {

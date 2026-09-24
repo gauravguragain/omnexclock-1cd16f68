@@ -31,7 +31,7 @@ export type CrmInteraction = {
   ai_summary: Record<string, unknown> | null; logged_by: string | null;
 };
 
-export const CRM_STAGE_VALUES = ["new", "contacted", "inspection_booked", "inspected", "menu_selected", "invoice_sent", "deposit_received", "runsheet_sent", "full_payment_received"];
+export const CRM_STAGE_VALUES = ["new", "contacted", "inspection_booked", "inspected", "deposit_received", "menu_selected", "invoice_sent", "runsheet_sent", "full_payment_received"];
 
 /** Cold leads are parked, not part of the forward pipeline. */
 export const CRM_COLD_STATUS = "cold";
