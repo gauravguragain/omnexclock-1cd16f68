@@ -6,11 +6,18 @@ import { ArrowLeft, FileText, Mail, Pencil } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import DateField from "@/features/sales/DateField";
+import { TimeDropdownPicker } from "@/components/TimeDropdownPicker";
 import { useCrmData } from "@/features/sales/useCrmData";
 import LeadFormDialog from "@/features/sales/LeadFormDialog";
 import { prettyCrmValue } from "@/features/sales/types";
 import SendRunsheetDialog from "./SendRunsheetDialog";
-import { bookingEnd, to12 } from "./useEventsData";
+import { bookingEnd, minutesBetween, to12 } from "./useEventsData";
 
 const Section = ({ title, children }: { title: string; children: React.ReactNode }) => <section className="space-y-3 border-t border-border py-5"><h2 className="text-lg font-semibold">{title}</h2>{children}</section>;
 const Field = ({ label, value }: { label: string; value: React.ReactNode }) => <div className="min-w-0"><dt className="text-xs text-muted-foreground">{label}</dt><dd className="break-words text-sm font-medium">{value || "—"}</dd></div>;
@@ -20,6 +27,9 @@ export default function CateringDetailPage({ view }: { view: "lead" | "booking" 
   const nav = useNavigate();
   const crm = useCrmData();
   const [editOpen, setEditOpen] = useState(false);
+  const [editBkOpen, setEditBkOpen] = useState(false);
+  const [bk, setBk] = useState({ event_name: "", event_date: "", start_time: "18:00", end_time: "23:00", fulfilment_method: "delivery", service_location: "", adults: "", kids: "", notes: "" });
+  const [bkSaving, setBkSaving] = useState(false);
   const [sendOpen, setSendOpen] = useState(false);
   const [selection, setSelection] = useState<any>(null);
   const [items, setItems] = useState<any[]>([]);
@@ -66,13 +76,30 @@ export default function CateringDetailPage({ view }: { view: "lead" | "booking" 
     await crm.refresh();
     return data;
   };
+  const openBkEdit = () => {
+    if (!booking) return;
+    setBk({ event_name: booking.event_name || "", event_date: booking.event_date || "", start_time: String(booking.start_time || "18:00").slice(0, 5), end_time: String(booking.end_time || bookingEnd(booking) || "23:00").slice(0, 5), fulfilment_method: booking.fulfilment_method || "delivery", service_location: booking.service_location || "", adults: String(booking.adults ?? booking.guest_count ?? ""), kids: String(booking.kids ?? 0), notes: booking.notes || "" });
+    setEditBkOpen(true);
+  };
+  const saveBk = async () => {
+    if (!booking) return;
+    if (!bk.event_name || !bk.event_date || !(Number(bk.adults) > 0) || (bk.fulfilment_method === "delivery" && !bk.service_location)) { toast.error("Name, date, adults and delivery address are required."); return; }
+    setBkSaving(true);
+    const total = (Number(bk.adults) || 0) + (Number(bk.kids) || 0);
+    const { error } = await supabase.from("crm_bookings").update({ event_name: bk.event_name, event_date: bk.event_date, start_time: bk.start_time, end_time: bk.end_time, duration_minutes: minutesBetween(bk.start_time, bk.end_time), fulfilment_method: bk.fulfilment_method, service_location: bk.fulfilment_method === "pickup" ? null : bk.service_location || null, adults: Number(bk.adults) || 0, kids: Number(bk.kids) || 0, guest_count: total, notes: bk.notes || null } as any).eq("id", booking.id);
+    setBkSaving(false);
+    if (error) { toast.error(error.message); return; }
+    toast.success("Catering booking updated.");
+    setEditBkOpen(false);
+    await crm.refresh();
+  };
 
   return <div className="mx-auto max-w-5xl space-y-5">
     <Button variant="ghost" asChild className="px-0"><Link to={view === "lead" ? `${base}/leads` : `${base}/bookings`}><ArrowLeft className="mr-2 h-4 w-4" />{view === "lead" ? "Catering leads" : "Catering bookings"}</Link></Button>
     <header className="flex flex-wrap items-end justify-between gap-4 border-b border-border pb-5">
       <div><p className="text-xs font-semibold uppercase text-primary">{view === "lead" ? "Catering enquiry" : "Catering booking"}</p><h1 className="font-serif text-3xl font-semibold">{booking?.event_name || lead.full_name}</h1><p className="mt-1 text-sm text-muted-foreground">{lead.full_name}{booking?.event_order_number ? ` · Order ${booking.event_order_number}` : ""}</p></div>
       <div className="flex flex-wrap gap-2"><Badge variant={view === "lead" ? "outline" : "default"}>{view === "lead" ? prettyCrmValue(lead.lead_outcome === "declined" ? "declined" : "lead") : prettyCrmValue(booking.status)}</Badge>
-        {view === "lead" ? <><Button variant="outline" onClick={() => setEditOpen(true)}><Pencil className="mr-2 h-4 w-4" />Edit lead</Button>{lead.lead_outcome !== "declined" && <Button asChild><Link to={`${base}/bookings/new?lead=${lead.id}`}>Confirm as catering job</Link></Button>}</> : <><Button variant="outline" onClick={preview}><FileText className="mr-2 h-4 w-4" />Preview run sheet</Button>{rs && <Button onClick={() => setSendOpen(true)}><Mail className="mr-2 h-4 w-4" />{rs.sent_at ? "Resend run sheet" : "Send run sheet"}</Button>}</>}
+        {view === "lead" ? <><Button variant="outline" onClick={() => setEditOpen(true)}><Pencil className="mr-2 h-4 w-4" />Edit lead</Button>{lead.lead_outcome !== "declined" && <Button asChild><Link to={`${base}/bookings/new?lead=${lead.id}`}>Confirm as catering job</Link></Button>}</> : <><Button variant="outline" onClick={openBkEdit}><Pencil className="mr-2 h-4 w-4" />Edit booking</Button><Button variant="outline" onClick={preview}><FileText className="mr-2 h-4 w-4" />Preview run sheet</Button>{rs && <Button onClick={() => setSendOpen(true)}><Mail className="mr-2 h-4 w-4" />{rs.sent_at ? "Resend run sheet" : "Send run sheet"}</Button>}</>}
       </div>
     </header>
     <div className="grid gap-x-10 lg:grid-cols-[1.4fr_1fr]">
@@ -93,5 +120,21 @@ export default function CateringDetailPage({ view }: { view: "lead" | "booking" 
     </div>
     <LeadFormDialog open={editOpen} onOpenChange={setEditOpen} businessId={crm.business.id} options={crm.options} lead={lead} leads={crm.leads} onSaved={crm.refresh} defaultKind="catering" lockedKind="catering" />
     {booking && rs && <SendRunsheetDialog mode={rs.sent_at ? "resend" : "issue"} onIssue={issue} open={sendOpen} onOpenChange={setSendOpen} rs={rs} lead={lead} booking={booking} businessName={crm.business.name} />}
+    <Dialog open={editBkOpen} onOpenChange={setEditBkOpen}><DialogContent className="max-h-[90vh] max-w-lg overflow-y-auto"><DialogHeader><DialogTitle>Edit catering booking</DialogTitle></DialogHeader>
+      <div className="space-y-4">
+        <div><Label>Booking name</Label><Input value={bk.event_name} onChange={e => setBk(p => ({ ...p, event_name: e.target.value }))} /></div>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div><Label>Date</Label><DateField value={bk.event_date} onChange={v => setBk(p => ({ ...p, event_date: v }))} /></div>
+          <div><Label>Service</Label><Select value={bk.fulfilment_method} onValueChange={v => setBk(p => ({ ...p, fulfilment_method: v }))}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="delivery">Delivery</SelectItem><SelectItem value="pickup">Pickup</SelectItem></SelectContent></Select></div>
+          <div><Label>{bk.fulfilment_method === "pickup" ? "Pickup from" : "Delivery from"}</Label><TimeDropdownPicker value={bk.start_time} onChange={v => setBk(p => ({ ...p, start_time: v }))} /></div>
+          <div><Label>{bk.fulfilment_method === "pickup" ? "Pickup by" : "Delivery by"}</Label><TimeDropdownPicker value={bk.end_time} onChange={v => setBk(p => ({ ...p, end_time: v }))} /></div>
+          <div><Label>Adults</Label><Input type="number" min={1} value={bk.adults} onChange={e => setBk(p => ({ ...p, adults: e.target.value }))} /></div>
+          <div><Label>Kids</Label><Input type="number" min={0} value={bk.kids} onChange={e => setBk(p => ({ ...p, kids: e.target.value }))} /></div>
+        </div>
+        {bk.fulfilment_method === "delivery" && <div><Label>Delivery address</Label><Input value={bk.service_location} onChange={e => setBk(p => ({ ...p, service_location: e.target.value }))} /></div>}
+        <div><Label>Notes</Label><Textarea rows={3} value={bk.notes} onChange={e => setBk(p => ({ ...p, notes: e.target.value }))} /></div>
+        <div className="flex justify-end gap-2"><Button variant="outline" onClick={() => setEditBkOpen(false)}>Cancel</Button><Button onClick={saveBk} disabled={bkSaving}>{bkSaving ? "Saving…" : "Save changes"}</Button></div>
+      </div>
+    </DialogContent></Dialog>
   </div>;
 }
