@@ -83,6 +83,28 @@ export default function EventsDashboard() {
       </CardContent></Card>
     </div>
 
+    <div className="grid min-w-0 gap-4 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
+      <Card><CardContent className="p-6">
+        <div className="flex items-start justify-between"><div><p className="text-lg font-semibold">Catering load</p><p className="text-xs text-muted-foreground">How the catering work is spread</p></div><span className="rounded-full border border-border px-3 py-1 text-xs">{cUp.length} upcoming jobs</span></div>
+        <div className="mt-6 flex flex-col items-center gap-8 sm:flex-row">
+          <div className="relative h-40 w-40 shrink-0"><svg viewBox="0 0 100 100" className="-rotate-90"><circle cx="50" cy="50" r="40" fill="none" stroke="hsl(var(--muted))" strokeWidth="8" />
+            {cRing.map((r, i) => { const len = (r.n / cTotal) * C; const el = <circle key={i} cx="50" cy="50" r="40" fill="none" stroke={r.c} strokeWidth="8" strokeDasharray={`${len} ${C - len}`} strokeDashoffset={-cOff} />; cOff += len; return el; })}</svg>
+            <div className="absolute inset-0 flex flex-col items-center justify-center"><span className="text-3xl font-semibold">{cUp.length}</span><span className="text-xs text-muted-foreground">Upcoming jobs</span></div></div>
+          <div className="w-full space-y-4">{[["Today", cToday.length, cRing[0].c], ["Next 7 days", cWeek.length, cRing[1].c], ["Further out", cLater.length, cRing[2].c]].map(([l, n, c]: any) => <div key={l}>
+            <div className="flex items-baseline justify-between text-sm"><span><span className="mr-2 text-2xl font-semibold">{n}</span><span className="text-muted-foreground">{l}</span></span><span className="text-xs">{Math.round((n / cTotal) * 100)}%</span></div>
+            <div className="mt-1 h-1.5 rounded-full bg-muted"><div className="h-full rounded-full" style={{ width: `${(n / cTotal) * 100}%`, background: c }} /></div></div>)}</div>
+        </div>
+      </CardContent></Card>
+
+      <Card className="border-primary/40 bg-card"><CardContent className="p-6">
+        <p className="text-xl font-semibold">{format(month, "MMMM yyyy")}</p><p className="text-xs text-muted-foreground">{monthCount} events this month</p>
+        <div className="mt-3 flex gap-2"><Button size="icon" variant="outline" className="h-8 w-8" onClick={() => setMonth(addMonths(month, -1))}><ChevronLeft className="h-4 w-4" /></Button><Button size="icon" variant="outline" className="h-8 w-8" onClick={() => setMonth(addMonths(month, 1))}><ChevronRight className="h-4 w-4" /></Button><Button size="sm" variant="secondary" onClick={() => setMonth(startOfMonth(new Date()))}>Today</Button></div>
+        <div className="mt-4 grid grid-cols-7 gap-y-1 text-center text-sm">{["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map(x => <span key={x} className="text-[10px] uppercase tracking-wider text-muted-foreground">{x}</span>)}
+          {days.map(x => { const k = format(x, "yyyy-MM-dd"); return <span key={k} className={`relative mx-auto flex h-8 w-8 items-center justify-center rounded-full ${k === today ? "bg-primary text-primary-foreground font-semibold" : isSameMonth(x, month) ? "" : "text-muted-foreground/50"}`}>{format(x, "d")}{eventDays.has(k) && <span className="absolute bottom-0.5 h-1 w-1 rounded-full bg-primary ring-1 ring-card" />}</span>; })}</div>
+        <div className="mt-3 flex justify-between text-xs"><span className="text-muted-foreground">• Event day</span><Link to={`${base}/calendar`} className="text-primary">View full calendar ›</Link></div>
+      </CardContent></Card>
+    </div>
+
      <div className="grid min-w-0 gap-4 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
       <div className="grid gap-4 sm:grid-cols-2">
         <Stat title="Events today" sub={format(new Date(), "EEE d MMM")} value={todays.length} unit="events scheduled" icon={CalendarDays} link="View today's events" to={`${base}/events`}>{first ? `${to12(String(first.start_time).slice(0, 5))} – ${to12(bookingEnd(first))} · ${first.event_name || first.venue_space}` : "Nothing on today"}</Stat>
