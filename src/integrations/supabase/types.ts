@@ -1815,27 +1815,33 @@ export type Database = {
           created_at: string
           id: string
           name: string
+          non_veg_picks: number | null
           package_id: string
           picks: number | null
           sort_order: number
+          veg_picks: number | null
         }
         Insert: {
           business_id: string
           created_at?: string
           id?: string
           name: string
+          non_veg_picks?: number | null
           package_id: string
           picks?: number | null
           sort_order?: number
+          veg_picks?: number | null
         }
         Update: {
           business_id?: string
           created_at?: string
           id?: string
           name?: string
+          non_veg_picks?: number | null
           package_id?: string
           picks?: number | null
           sort_order?: number
+          veg_picks?: number | null
         }
         Relationships: [
           {
