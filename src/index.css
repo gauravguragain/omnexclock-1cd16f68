@@ -654,3 +654,4 @@
   background: hsl(var(--muted-foreground) / 0.25);
   margin: 0 auto 8px;
 }
+@media print { @page { size: A4; margin: 10mm; } }
