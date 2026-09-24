@@ -357,7 +357,7 @@ export default function RunsheetTab({ lead, booking, options, onSaved }: {
 
       <section className="space-y-3 rounded-lg border border-border p-4">
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <div><h3 className="font-serif text-lg">Service schedule</h3><p className="text-xs text-muted-foreground">What happens when, for the kitchen and floor team.</p></div>
+          <div><h3 className="font-serif text-lg">Food serving schedule</h3><p className="text-xs text-muted-foreground">When each course goes out, for the kitchen.</p></div>
           <Button type="button" size="sm" variant="outline" onClick={() => { suggestSchedule(); toast.success("Timings suggested — adjust as needed"); }}><Sparkles className="mr-2 h-4 w-4" />Suggest timings</Button>
         </div>
         <div className="space-y-2">
@@ -373,14 +373,30 @@ export default function RunsheetTab({ lead, booking, options, onSaved }: {
                 <option value="__custom__">Other (type your own)</option>
               </select>
               {!courseOptions.includes(row.label)
-                ? <Input value={row.label} placeholder="What is happening" onChange={(event) => setSchedule((v) => v.map((r, i) => (i === index ? { ...r, label: event.target.value } : r)))} />
+                ? <Input value={row.label} placeholder="What is being served" onChange={(event) => setSchedule((v) => v.map((r, i) => (i === index ? { ...r, label: event.target.value } : r)))} />
                 : <Input value={row.detail || ""} placeholder="Notes e.g. served on the table" onChange={(event) => setSchedule((v) => v.map((r, i) => (i === index ? { ...r, detail: event.target.value } : r)))} />}
               <Button type="button" variant="ghost" size="icon" title="Remove line" onClick={() => setSchedule((v) => v.filter((_, i) => i !== index))}><X className="h-4 w-4" /></Button>
             </div>
           ))}
-          {!schedule.length && <p className="text-sm text-muted-foreground">No timings yet.</p>}
+          {!schedule.length && <p className="text-sm text-muted-foreground">No food timings yet.</p>}
         </div>
-        <Button type="button" size="sm" variant="secondary" onClick={() => setSchedule((v) => [...v, { key: `n${Date.now()}`, time: startTime, label: courseOptions[0] || "", detail: "" }])}><Plus className="mr-2 h-4 w-4" />Add timing</Button>
+        <Button type="button" size="sm" variant="secondary" onClick={() => setSchedule((v) => [...v, { key: `n${Date.now()}`, time: startTime, label: courseOptions[0] || "", detail: "" }])}><Plus className="mr-2 h-4 w-4" />Add food timing</Button>
+      </section>
+
+      <section className="space-y-3 rounded-lg border border-border p-4">
+        <div><h3 className="font-serif text-lg">FOH service schedule</h3><p className="text-xs text-muted-foreground">What happens when on the floor — arrivals, speeches, cake, pack down.</p></div>
+        <div className="space-y-2">
+          {fohSchedule.map((row, index) => (
+            <div key={row.key} className="grid gap-2 sm:grid-cols-[9rem_1fr_1.4fr_auto]">
+              <TimeDropdownPicker value={row.time || startTime} onChange={(value) => setFohSchedule((v) => v.map((r, i) => (i === index ? { ...r, time: value } : r)))} />
+              <Input value={row.label} placeholder="What is happening" onChange={(event) => setFohSchedule((v) => v.map((r, i) => (i === index ? { ...r, label: event.target.value } : r)))} />
+              <Input value={row.detail || ""} placeholder="Notes e.g. at the entrance" onChange={(event) => setFohSchedule((v) => v.map((r, i) => (i === index ? { ...r, detail: event.target.value } : r)))} />
+              <Button type="button" variant="ghost" size="icon" title="Remove line" onClick={() => setFohSchedule((v) => v.filter((_, i) => i !== index))}><X className="h-4 w-4" /></Button>
+            </div>
+          ))}
+          {!fohSchedule.length && <p className="text-sm text-muted-foreground">No floor timings yet.</p>}
+        </div>
+        <Button type="button" size="sm" variant="secondary" onClick={() => setFohSchedule((v) => [...v, { key: `m${Date.now()}`, time: startTime, label: "", detail: "" }])}><Plus className="mr-2 h-4 w-4" />Add FOH timing</Button>
       </section>
 
       <section className="grid gap-4 lg:grid-cols-2">
