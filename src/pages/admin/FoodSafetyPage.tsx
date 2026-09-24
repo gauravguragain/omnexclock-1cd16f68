@@ -14,7 +14,7 @@ import { Switch } from "@/components/ui/switch";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { ShieldCheck, AlertTriangle, Clock, Upload, Pencil, QrCode, Download, Plus, FileSpreadsheet, FileText, FileDown, ClipboardList } from "lucide-react";
+import { ShieldCheck, AlertTriangle, Clock, Upload, Pencil, QrCode, Download, Plus, FileSpreadsheet, FileText, FileDown, ClipboardList, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { FormConfig, formatValue, todayStr, periodKey, mondayOf, to12, ymd, sydneyNow } from "@/features/fsl/engine";
 import { formStatus, statusTone, hoursOpen, FslEntry, FslForm } from "@/features/fsl/status";
