@@ -12,7 +12,7 @@ export function useCrmData() {
 
   const refresh = useCallback(async () => {
     if (!business?.id) return; setLoading(true);
-    const [leadRes, optionRes, inspectionRes, taskRes, interactionRes, settingRes, bookingRes, menuRes, runsheetRes] = await Promise.all([
+    const [leadRes, optionRes, inspectionRes, taskRes, interactionRes, settingRes, bookingRes, menuRes, runsheetRes, spaceRes] = await Promise.all([
       supabase.from("crm_leads").select("*").eq("business_id", business.id).order("created_at", { ascending: false }),
       supabase.from("crm_options").select("*").eq("business_id", business.id).order("sort_order"),
       supabase.from("crm_inspections").select("*").eq("business_id", business.id).order("starts_at"),
@@ -22,8 +22,9 @@ export function useCrmData() {
       supabase.from("crm_bookings").select("*").eq("business_id", business.id).order("event_date"),
       supabase.from("crm_menu_items").select("*").eq("business_id", business.id).order("sort_order"),
       supabase.from("crm_runsheets").select("*").eq("business_id", business.id),
+      (supabase.from("crm_venue_spaces" as any) as any).select("*").eq("business_id", business.id).eq("active", true).order("sort_order"),
     ]);
-    setLeads((leadRes.data || []) as CrmLead[]); setOptions((optionRes.data || []) as CrmOption[]);
+    setLeads((leadRes.data || []) as CrmLead[]); const spaces = (spaceRes.data || []) as any[]; const baseOpts = (optionRes.data || []) as CrmOption[]; setOptions(spaces.length ? [...baseOpts.filter(o => o.option_type !== "venue_space"), ...spaces.map((v, i) => ({ id: v.id, option_type: "venue_space", label: v.name, value: v.name, description: v.capacity ? `Holds ${v.capacity}` : null, image_url: null, sort_order: i, active: true }))] : baseOpts);
     setInspections((inspectionRes.data || []) as CrmInspection[]); setTasks((taskRes.data || []) as CrmTask[]);
     setInteractions((interactionRes.data || []) as unknown as CrmInteraction[]); setSettings(settingRes.data);
     setBookings(bookingRes.data || []); setMenuItems(menuRes.data || []); setRunsheets(runsheetRes.data || []); setLoading(false);

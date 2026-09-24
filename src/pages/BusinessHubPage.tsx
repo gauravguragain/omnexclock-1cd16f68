@@ -3,7 +3,7 @@ import { useBusiness } from "@/contexts/BusinessContext";
 import { Navigate, Link } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ShieldCheck, LogOut, Building2 } from "lucide-react";
+import { ShieldCheck, LogOut, Building2, PartyPopper } from "lucide-react";
 import { useEffect } from "react";
 
 export default function BusinessHubPage() {
@@ -32,6 +32,8 @@ export default function BusinessHubPage() {
 
   if (!user) return <Navigate to="/auth" replace />;
   if (isMaster) return <Navigate to="/master" replace />;
+  const wantsEvents = new URLSearchParams(window.location.search).get("next") === "events";
+  if (wantsEvents && isApproved && business && businesses.length === 1) return <Navigate to={`/b/${business.business_code}/events`} replace />;
 
   if (!isApproved) {
     return (
@@ -81,7 +83,7 @@ export default function BusinessHubPage() {
             return (
               <Link
                 key={biz.id}
-                to={`/b/${biz.business_code}/admin`}
+                to={`/b/${biz.business_code}/${wantsEvents ? "events" : "admin"}`}
                 onClick={() => { setBusiness(biz); applyTheme(biz.theme); }}
                 className="block"
               >
@@ -151,6 +153,19 @@ export default function BusinessHubPage() {
               <div>
                 <h2 className="text-base font-semibold text-foreground">Admin Panel</h2>
                 <p className="text-xs text-muted-foreground mt-1.5 leading-relaxed">Manage employees, timesheets & more</p>
+              </div>
+            </CardContent>
+          </Card>
+        </Link>
+        <Link to={`/b/${businessCode}/events`} onClick={() => applyTheme(business.theme)} className="mt-4 block">
+          <Card className="border border-border/50 cursor-pointer hover:border-primary/40 transition-all duration-300 group card-lift">
+            <CardContent className="p-8 flex flex-col items-center text-center space-y-4">
+              <div className="h-14 w-14 rounded-2xl bg-primary/8 flex items-center justify-center group-hover:bg-primary/15 group-hover:scale-110 transition-all duration-300">
+                <PartyPopper className="h-7 w-7 text-primary" />
+              </div>
+              <div>
+                <h2 className="text-base font-semibold text-foreground">Events & Sales</h2>
+                <p className="text-xs text-muted-foreground mt-1.5 leading-relaxed">Leads, events, menus & venue</p>
               </div>
             </CardContent>
           </Card>

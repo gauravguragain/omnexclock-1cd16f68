@@ -13,3 +13,10 @@
 - [x] Verify database security, build, and desktop/mobile workflows
 - [x] Match the runsheet PDF to the supplied Pro Regal Pavilion event order
 - [x] Add venue, split guests, live-stall timings, staff contacts, and revised PDF layout
+
+# Events & Sales workspace
+- [x] Events & Sales tile on home + own sidebar; moved out of Business Admin
+- [x] Venue spaces, customers, stakeholders
+- [x] Menu books, dishes, drinks; load package into client menu
+- [x] Event/catering leads, events lists, create wizard with clash check
+- [x] Month calendar and reports (PDF/Excel)
