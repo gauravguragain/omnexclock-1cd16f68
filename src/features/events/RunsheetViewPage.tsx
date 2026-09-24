@@ -115,7 +115,7 @@ export default function RunsheetViewPage() {
       </div>
 
       <div className="grid gap-4 lg:grid-cols-[1.8fr_1fr]">
-        <Box icon={UtensilsCrossed} title="Catering">
+        <Box icon={UtensilsCrossed} title="Menu selection">
           {stalls.length > 0 && <div className="mb-3">
             <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">Live stalls</p>
             {stalls.map(s => <p key={s.id} className="flex justify-between py-0.5 text-sm"><span className="font-medium">{s.item_name}</span><span className="text-muted-foreground">{s.service_start_time ? to12(s.service_start_time) : ""}{s.service_end_time ? ` – ${to12(s.service_end_time)}` : ""}</span></p>)}
