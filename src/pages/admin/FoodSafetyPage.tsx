@@ -222,6 +222,13 @@ export default function FoodSafetyPage() {
             <div className="flex-1 min-w-0"><p className="font-medium">{f.config.name} {f.config.code && <span className="text-xs text-muted-foreground">{f.config.code}</span>}</p><p className="text-xs text-muted-foreground truncate">{typeLabel[f.form_type]} · {f.config.title} · v{f.version}{f.template_path ? " · Excel linked" : ""}</p></div>
             <Switch checked={f.active} onCheckedChange={async (v) => { await supabase.from("fsl_forms").update({ active: v }).eq("id", f.id); load(); }} />
             <Button size="sm" variant="outline" onClick={() => setEditForm(f)}><Pencil className="h-4 w-4 mr-1" />Edit</Button>
+            <Button size="sm" variant="destructive" onClick={async () => {
+              if (!window.confirm(`Delete "${f.config.name}"? All its saved entries and history will be permanently deleted. This cannot be undone.`)) return;
+              const { error } = await supabase.from("fsl_forms").delete().eq("id", f.id);
+              if (error) { toast.error(error.message); return; }
+              toast.success("Form deleted");
+              load();
+            }}><Trash2 className="h-4 w-4" /></Button>
           </div>
         ))}
       </div>
