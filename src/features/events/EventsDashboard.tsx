@@ -55,7 +55,10 @@ export default function EventsDashboard() {
   return <div className="space-y-6">
     <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
       <div><h1 className="font-serif text-3xl font-semibold">Welcome back</h1><p className="text-sm text-muted-foreground"><span className="font-medium text-foreground">{format(new Date(), "EEEE, d MMMM yyyy")}</span> · Venue events below, catering further down.</p></div>
-      <Button asChild><Link to={`${base}/leads/events`}><UserPlus className="mr-2 h-4 w-4" />New lead</Link></Button>
+      <div className="flex flex-col gap-2 sm:items-end">
+        <Button asChild><Link to={`${base}/leads/events`}><UserPlus className="mr-2 h-4 w-4" />New lead</Link></Button>
+        <Button asChild variant="outline"><Link to={`${cBase}/leads`}><UtensilsCrossed className="mr-2 h-4 w-4" />New catering lead</Link></Button>
+      </div>
     </div>
 
      <div className="grid min-w-0 gap-4 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
@@ -113,8 +116,7 @@ export default function EventsDashboard() {
       </CardContent></Card>
     </div>
     <div className="space-y-4 border-t border-border pt-6">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between"><div><h2 className="font-serif text-2xl font-semibold">Catering</h2><p className="text-sm text-muted-foreground">Deliveries and pickups, kept separate from venue events.</p></div>
-        <Button asChild variant="outline"><Link to={`${cBase}/leads`}><UserPlus className="mr-2 h-4 w-4" />New catering lead</Link></Button></div>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between"><div><h2 className="font-serif text-2xl font-semibold">Catering</h2><p className="text-sm text-muted-foreground">Deliveries and pickups, kept separate from venue events.</p></div></div>
       <div className="grid min-w-0 gap-4 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
         <Card><CardContent className="p-6">
           <div className="flex items-start justify-between"><div><p className="text-lg font-semibold">Catering load</p><p className="text-xs text-muted-foreground">How the catering work is spread</p></div><span className="rounded-full border border-border px-3 py-1 text-xs">{cUp.length} upcoming jobs</span></div>
