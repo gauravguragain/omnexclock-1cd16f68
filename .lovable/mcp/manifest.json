@@ -1,0 +1,193 @@
+{
+  "version": 1,
+  "sdk_version": "3.0.4",
+  "path": "/functions/v1/mcp",
+  "auth": {
+    "type": "oauth",
+    "issuer": "https://fhotpjcgoyuqyhttawef.supabase.co/auth/v1",
+    "accepted_audiences": [
+      "authenticated"
+    ]
+  },
+  "mcp": {
+    "server": {
+      "name": "omnexclock",
+      "version": "0.1.0",
+      "title": "OmnexClock"
+    },
+    "tools": [
+      {
+        "name": "list_businesses",
+        "title": "List businesses",
+        "description": "List the businesses you can access, with their IDs and codes.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {},
+          "additionalProperties": false
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_leads",
+        "title": "List sales leads",
+        "description": "List recent sales leads for a business, optionally filtered by pipeline stage.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "business_id": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Business ID from list_businesses."
+            },
+            "status": {
+              "type": "string",
+              "description": "Pipeline stage, e.g. new, contacted, inspection_booked, deposit_received, cold."
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "description": "Max results (default 25)."
+            }
+          },
+          "required": [
+            "business_id"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_upcoming_bookings",
+        "title": "List upcoming events",
+        "description": "List upcoming event and catering bookings for a business from today onward.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "business_id": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Business ID from list_businesses."
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "description": "Max results (default 25)."
+            }
+          },
+          "required": [
+            "business_id"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_open_tasks",
+        "title": "List open tasks",
+        "description": "List open sales & events tasks for a business, soonest due first.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "business_id": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Business ID from list_businesses."
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "description": "Max results (default 25)."
+            }
+          },
+          "required": [
+            "business_id"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "create_task",
+        "title": "Create task",
+        "description": "Add a manual sales & events task for a business, optionally linked to a lead.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "business_id": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Business ID from list_businesses."
+            },
+            "title": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Task title."
+            },
+            "due_at": {
+              "type": "string",
+              "description": "Due date/time as ISO 8601, e.g. 2026-10-01T10:00:00+10:00."
+            },
+            "priority": {
+              "type": "string",
+              "enum": [
+                "low",
+                "medium",
+                "high"
+              ],
+              "description": "Defaults to medium."
+            },
+            "description": {
+              "type": "string",
+              "description": "Optional notes."
+            },
+            "lead_id": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Optional linked lead ID."
+            }
+          },
+          "required": [
+            "business_id",
+            "title",
+            "due_at"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      }
+    ]
+  }
+}

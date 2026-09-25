@@ -46,7 +46,14 @@ export default function AuthPage() {
 
   if (user && isApproved && !denied) {
     if (isMasterLogin && isMaster) return <Navigate to="/master" replace />;
-    if (!isMasterLogin) return <Navigate to={new URLSearchParams(window.location.search).get("next") === "events" ? "/hub?next=events" : "/hub"} replace />;
+    if (!isMasterLogin) {
+      const nextParam = new URLSearchParams(window.location.search).get("next") || "";
+      if (nextParam.startsWith("/") && !nextParam.startsWith("//")) {
+        window.location.replace(nextParam);
+        return null;
+      }
+      return <Navigate to={nextParam === "events" ? "/hub?next=events" : "/hub"} replace />;
+    }
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
