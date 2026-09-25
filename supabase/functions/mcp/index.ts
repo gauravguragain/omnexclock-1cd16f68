@@ -67,9 +67,9 @@ var list_businesses_default = defineTool({
   annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: false },
   handler: async (_args, ctx) => {
     if (!ctx.isAuthenticated()) return notAuthed();
-    const { data, error } = await supabaseForUser(ctx).from("businesses").select("id, name, code").order("name");
+    const { data, error } = await supabaseForUser(ctx).from("businesses").select("id, name, business_code").order("name");
     if (error) return { content: [{ type: "text", text: error.message }], isError: true };
-    const businesses = (data ?? []).map((b) => ({ id: String(b.id), name: String(b.name ?? ""), code: String(b.code ?? "") }));
+    const businesses = (data ?? []).map((b) => ({ id: String(b.id), name: String(b.name ?? ""), code: String(b.business_code ?? "") }));
     return { content: [{ type: "text", text: JSON.stringify(businesses) }], structuredContent: { businesses } };
   }
 });
