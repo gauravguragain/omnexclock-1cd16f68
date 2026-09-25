@@ -29,6 +29,7 @@ const PublicRunsheetPage = React.lazy(() => import("./features/events/RunsheetVi
 const NotFound = React.lazy(() => import("./pages/NotFound"));
 const Index = React.lazy(() => import("./pages/Index"));
 const AuthPage = React.lazy(() => import("./pages/AuthPage"));
+const OAuthConsentPage = React.lazy(() => import("./pages/OAuthConsent"));
 const ResetPasswordPage = React.lazy(() => import("./pages/ResetPasswordPage"));
 const RegisterBusinessPage = React.lazy(() => import("./pages/RegisterBusinessPage"));
 const BusinessHubPage = React.lazy(() => import("./pages/BusinessHubPage"));
@@ -99,6 +100,7 @@ const App = () => (
                 <Routes>
                   <Route path="/" element={<Index />} />
                   <Route path="/auth" element={<AuthPage />} />
+                  <Route path="/.lovable/oauth/consent" element={<OAuthConsentPage />} />
                   <Route path="/runsheet/:runsheetId" element={<PublicRunsheetPage />} />
                   <Route path="/menu/:token" element={<GuestMenuPage />} />
                   <Route path="/reset-password" element={<ResetPasswordPage />} />
