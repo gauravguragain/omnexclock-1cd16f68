@@ -9,7 +9,9 @@ import { UserCheck, UserX, Shield, ShieldOff, Search, Eye, EyeOff, CalendarRange
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { getAppOrigin } from "@/lib/appOrigin";
+
 import { logAudit, logMasterAudit } from "@/lib/auditLog";
 import { useAuth } from "@/contexts/AuthContext";
 import { useBusiness } from "@/contexts/BusinessContext";
@@ -295,7 +297,7 @@ export default function UsersPage() {
           role: inviteRole,
           businessId,
           departments: inviteRole === "roster_admin" ? inviteDepartments : null,
-          appUrl: "https://omnexclock.lovable.app",
+          appUrl: getAppOrigin(),
         },
       });
 

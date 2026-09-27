@@ -10,6 +10,8 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
+import { getAppOrigin } from "@/lib/appOrigin";
+
 import { Switch } from "@/components/ui/switch";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -277,7 +279,7 @@ export default function FoodSafetyPage() {
     supabase.from("fsl_settings").select("*").eq("business_id", bid).maybeSingle().then(({ data }) => data && setSettings({ supervisor_employee_ids: data.supervisor_employee_ids || [], alert_emails: data.alert_emails || [] }));
     supabase.from("employees").select("id, name, department").eq("business_id", bid).eq("active", true).order("name").then(({ data }) => setEmployees((data || []) as any));
   }, [bid]);
-  const logsUrl = `${window.location.origin.includes("localhost") || window.location.origin.includes("preview") ? window.location.origin : "https://omnexclock.lovable.app"}/logs?b=${businessCode}`;
+  const logsUrl = `${getAppOrigin()}/logs?b=${businessCode}`;
   const poster = async () => {
     const qr = await QRCode.toDataURL(logsUrl, { width: 900, margin: 1 });
     const doc = new jsPDF({ unit: "mm", format: "a4" });

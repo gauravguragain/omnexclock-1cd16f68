@@ -9,9 +9,10 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { prettyCrmValue } from "@/features/sales/types";
 import { to12 } from "./useEventsData";
+import { getAppOrigin } from "@/lib/appOrigin";
 
-const PUBLIC_ORIGIN = "https://omnexclock.lovable.app";
-export const runsheetPublicUrl = (rs: any) => `${PUBLIC_ORIGIN}/runsheet/${rs.id}?t=${rs.share_token}`;
+export const runsheetPublicUrl = (rs: any) => `${getAppOrigin()}/runsheet/${rs.id}?t=${rs.share_token}`;
+
 
 type Person = { key: string; name: string; email: string; kind: "confirmation" | "runsheet" };
 type Group = { title: string; people: Person[] };
