@@ -56,8 +56,28 @@ export default function EventsLayout({ mode = "events" }: { mode?: "events" | "c
       {nav}
       <div className="space-y-1 border-t border-border/40 p-4"><Link to={`/b/${businessCode}/admin`} className="flex items-center gap-3 rounded-md px-3 py-2 text-sm text-muted-foreground hover:bg-muted"><Home className="h-4 w-4" />Business Admin</Link><button onClick={signOut} className="flex w-full items-center gap-3 rounded-md px-3 py-2 text-sm text-muted-foreground hover:bg-muted"><LogOut className="h-4 w-4" />Sign out</button></div>
     </div></aside>
-     <header className="sticky top-0 z-30 flex items-center justify-between border-b border-border/40 bg-background/95 p-3 backdrop-blur lg:hidden print:!hidden"><p className="font-semibold">{mode === "catering" ? "Catering" : "Events & Sales"}</p><Button size="icon" variant="ghost" aria-label={open ? "Close navigation" : "Open navigation"} onClick={() => setOpen(!open)}>{open ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}</Button></header>
-    {open && <div className="fixed inset-0 top-14 z-20 overflow-y-auto bg-background lg:hidden">{nav}<div className="space-y-2 p-4"><Link to={`/b/${businessCode}/admin`} className="text-sm text-muted-foreground">Business Admin</Link></div></div>}
-    <main className="min-w-0 flex-1 p-4 sm:p-6 lg:p-8 print:!p-0"><Outlet /></main>
+     <header className="sticky top-0 z-40 border-b border-border/40 bg-background/95 backdrop-blur lg:hidden print:!hidden" style={{ paddingTop: "env(safe-area-inset-top)" }}>
+       <div className="flex h-14 items-center gap-2 px-2" style={{ paddingLeft: "max(0.5rem, env(safe-area-inset-left))", paddingRight: "max(0.5rem, env(safe-area-inset-right))" }}>
+         <Button size="icon" variant="ghost" className="h-11 w-11 shrink-0" aria-label={open ? "Close navigation" : "Open navigation"} onClick={() => setOpen(!open)}>{open ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}</Button>
+         {business?.logo_url && <img src={business.logo_url} alt="" className="h-8 w-8 rounded-md object-cover" />}
+         <div className="min-w-0"><p className="truncate text-sm font-semibold">{business?.name}</p><p className="text-[11px] text-primary">{mode === "catering" ? "Catering" : "Events & Sales"}</p></div>
+       </div>
+     </header>
+     {open && <div className="fixed inset-0 z-50 lg:hidden print:!hidden">
+       <button aria-label="Close navigation" className="absolute inset-0 bg-background/70 backdrop-blur-sm" onClick={() => setOpen(false)} />
+       <div className="absolute inset-y-0 left-0 flex w-[82%] max-w-xs flex-col border-r border-border bg-background shadow-2xl animate-in slide-in-from-left" style={{ paddingTop: "env(safe-area-inset-top)", paddingBottom: "env(safe-area-inset-bottom)" }}>
+         <div className="flex items-center justify-between border-b border-border/40 p-3"><p className="pl-2 text-sm font-semibold">Menu</p><Button size="icon" variant="ghost" className="h-11 w-11" aria-label="Close navigation" onClick={() => setOpen(false)}><X className="h-6 w-6" /></Button></div>
+         <div className="flex-1 overflow-y-auto">{nav}</div>
+         <div className="space-y-1 border-t border-border/40 p-4"><Link to={`/b/${businessCode}/admin`} onClick={() => setOpen(false)} className="flex items-center gap-3 rounded-md px-3 py-3 text-sm text-muted-foreground hover:bg-muted"><Home className="h-4 w-4" />Business Admin</Link><button onClick={signOut} className="flex w-full items-center gap-3 rounded-md px-3 py-3 text-sm text-muted-foreground hover:bg-muted"><LogOut className="h-4 w-4" />Sign out</button></div>
+       </div>
+     </div>}
+     <main className="min-w-0 flex-1 p-4 pb-24 sm:p-6 sm:pb-24 lg:p-8 print:!p-0"><Outlet /></main>
+     <nav className="fixed inset-x-0 bottom-0 z-30 grid grid-cols-5 border-t border-border/40 bg-background/95 backdrop-blur lg:hidden print:!hidden" style={{ paddingBottom: "env(safe-area-inset-bottom)" }}>
+       {(mode === "catering"
+         ? [{ to: "leads", label: "Leads", icon: Utensils }, { to: "bookings", label: "Bookings", icon: Truck }, { to: "customers", label: "Customers", icon: Users }, { to: "menu-books", label: "Menus", icon: BookOpen }]
+         : [{ to: "", label: "Home", icon: LayoutDashboard }, { to: "leads/events", label: "Leads", icon: UserPlus }, { to: "events", label: "Events", icon: PartyPopper }, { to: "calendar", label: "Calendar", icon: CalendarDays }]
+       ).map(it => <NavLink key={it.to} to={it.to ? `${base}/${it.to}` : base} end className={({ isActive }) => cn("flex min-h-14 flex-col items-center justify-center gap-0.5 text-[11px]", isActive ? "text-primary font-medium" : "text-muted-foreground")}><it.icon className="h-5 w-5" />{it.label}</NavLink>)}
+       <button onClick={() => setOpen(true)} className="flex min-h-14 flex-col items-center justify-center gap-0.5 text-[11px] text-muted-foreground"><Menu className="h-5 w-5" />More</button>
+     </nav>
   </div>;
 }
