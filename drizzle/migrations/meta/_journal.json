@@ -267,6 +267,13 @@
       "when": 1790544142203,
       "tag": "0037_ops_report_templates",
       "breakpoints": true
+    },
+    {
+      "idx": 38,
+      "version": "7",
+      "when": 1790545344579,
+      "tag": "0038_allow_completed_booking_status",
+      "breakpoints": true
     }
   ]
 }
