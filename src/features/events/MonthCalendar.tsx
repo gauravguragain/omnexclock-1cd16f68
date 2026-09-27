@@ -1,10 +1,9 @@
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { addMonths, eachDayOfInterval, endOfMonth, endOfWeek, format, isSameMonth, isToday, startOfMonth, startOfWeek } from "date-fns";
-import { CalendarDays, ChevronDown, ChevronLeft, ChevronRight, Clock3, Mail, MapPin, Pencil, Phone, Search, Tag, UserRound, Users } from "lucide-react";
+import { CalendarDays, ChevronLeft, ChevronRight, Clock3, Mail, MapPin, Pencil, Phone, Tag, UserRound, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@/lib/utils";
 import { prettyCrmValue, type CrmLead } from "@/features/sales/types";
 import { bookingEnd, to12 } from "./useEventsData";
@@ -34,9 +33,6 @@ export default function MonthCalendar({ bookings, leads, runsheets, customers, v
   const [month, setMonth] = useState(startOfMonth(new Date()));
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
-  const [types, setTypes] = useState<string[] | null>(null);
-  const [query, setQuery] = useState("");
-  const [filterOpen, setFilterOpen] = useState(false);
   const active = bookings.filter(b => b.status !== "cancelled" && b.event_date);
   const leadOf = (b: Booking) => leads.find(l => l.id === b.lead_id);
   const customerOf = (b: Booking) => customers.find(c => c.id === b.customer_id) || leadOf(b);
@@ -46,18 +42,8 @@ export default function MonthCalendar({ bookings, leads, runsheets, customers, v
   const allTypes = Array.from(new Set(active.map(typeOf)));
   const tone = (type: string) => TONES[Math.max(0, allTypes.indexOf(type)) % TONES.length];
   const dotTone = (type: string) => DOT_TONES[Math.max(0, allTypes.indexOf(type)) % DOT_TONES.length];
-  const typeLabel = (t: string) => t === "no_type" ? "No type" : prettyCrmValue(t);
-  const typeCounts = useMemo(() => { const m = new Map<string, number>(); active.forEach(b => { const t = typeOf(b); m.set(t, (m.get(t) || 0) + 1); }); return m; }, [active]);
-  const sortedTypes = useMemo(() => [...allTypes].sort((a, b) => (typeCounts.get(b) || 0) - (typeCounts.get(a) || 0) || a.localeCompare(b)), [allTypes, typeCounts]);
-  const q = query.trim().toLowerCase();
-  const matchedTypes = q ? sortedTypes.filter(t => typeLabel(t).toLowerCase().includes(q)) : sortedTypes;
-  const frequent = q ? [] : matchedTypes.slice(0, 4);
-  const restTypes = q ? matchedTypes : matchedTypes.slice(4);
-  const toggleType = (t: string) => setTypes(cur => { const list = cur || allTypes; return list.includes(t) ? list.filter(x => x !== t) : [...list, t]; });
-  const selectedCount = types ? types.length : 0;
-  const filtered = active.filter(b => (!types || types.includes(typeOf(b))) && (!q || typeOf(b).includes(q)));
   const days = eachDayOfInterval({ start: startOfWeek(month, { weekStartsOn: 1 }), end: endOfWeek(endOfMonth(month), { weekStartsOn: 1 }) });
-  const eventsOn = (date: string) => filtered.filter(b => b.event_date === date).sort((a, b) => String(a.start_time || "").localeCompare(String(b.start_time || "")));
+  const eventsOn = (date: string) => active.filter(b => b.event_date === date).sort((a, b) => String(a.start_time || "").localeCompare(String(b.start_time || "")));
   const selected = selectedDate ? eventsOn(selectedDate) : [];
   const groups = Array.from(new Set(selected.map(placeOf)));
   const guestSplit = (b: Booking) => {
@@ -65,7 +51,7 @@ export default function MonthCalendar({ bookings, leads, runsheets, customers, v
     return { adults: Number(sheet?.adult_guests ?? b.adults ?? b.guest_count ?? 0), kids: Number(sheet?.kids_guests ?? b.kids ?? 0) };
   };
   const guestCount = (b: Booking) => guestSplit(b).adults + guestSplit(b).kids;
-  const dateCount = filtered.filter(b => String(b.event_date).startsWith(format(month, "yyyy-MM"))).length;
+  const dateCount = active.filter(b => String(b.event_date).startsWith(format(month, "yyyy-MM"))).length;
 
   const renderEventDetail = (b: Booking) => {
     const place = placeOf(b); const customer = customerOf(b); const time = `${to12(String(b.start_time || "").slice(0, 5))} – ${to12(bookingEnd(b))}`;
@@ -95,40 +81,6 @@ export default function MonthCalendar({ bookings, leads, runsheets, customers, v
           <Button size="icon" variant="ghost" aria-label="Next month" onClick={() => setMonth(addMonths(month, 1))}><ChevronRight className="h-4 w-4" /></Button>
         </div>
         <div className="ml-auto flex flex-wrap items-center gap-x-3 gap-y-2">
-          <div className="flex items-stretch overflow-hidden rounded-md border border-border bg-card">
-            <label className="flex items-center gap-2 border-r border-border px-3">
-              <Search className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-              <input value={query} onChange={e => setQuery(e.target.value)} placeholder={`Search ${allTypes.length} categories…`} aria-label="Search event categories" className="w-36 bg-transparent py-2 text-sm outline-none placeholder:text-muted-foreground sm:w-52" />
-            </label>
-            <Popover open={filterOpen} onOpenChange={setFilterOpen}>
-              <PopoverTrigger asChild><Button variant="secondary" className="h-auto gap-1.5 rounded-none border-0 px-4 text-xs font-semibold uppercase tracking-wider">Categories{selectedCount > 0 && <span className="rounded-full bg-primary px-1.5 py-0.5 text-[10px] font-bold leading-none text-primary-foreground">{selectedCount}</span>}<ChevronDown className="h-3 w-3" /></Button></PopoverTrigger>
-              <PopoverContent align="end" className="w-[380px] p-0">
-                <div className="flex items-center justify-between border-b border-border px-4 py-3">
-                  <h3 className="text-xs font-bold uppercase tracking-widest text-primary">Select event types</h3>
-                  <button onClick={() => { setTypes(null); setQuery(""); }} className="text-[10px] uppercase tracking-wider text-muted-foreground underline underline-offset-4 hover:text-primary">Clear all</button>
-                </div>
-                <div className="max-h-[320px] overflow-y-auto px-4 py-3">
-                  {q ? (
-                    <div className="space-y-0.5">
-                      {matchedTypes.map(t => <label key={t} className="flex cursor-pointer items-center gap-3 rounded px-1.5 py-1.5 hover:bg-primary/5"><Checkbox checked={!types || types.includes(t)} onCheckedChange={checked => setTypes(current => checked ? [...(current || []), t] : (current || allTypes).filter(x => x !== t))} className="h-3.5 w-3.5" /><span className="truncate text-xs">{typeLabel(t)}</span></label>)}
-                      {matchedTypes.length === 0 && <p className="py-4 text-center text-xs text-muted-foreground">No categories match “{query}”</p>}
-                    </div>
-                  ) : (
-                    <>
-                      <h4 className="mb-2 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">Frequent types</h4>
-                      <div className="flex flex-wrap gap-2">{frequent.map(t => <button key={t} onClick={() => toggleType(t)} className={cn("rounded-sm border px-2 py-1 text-[11px] transition-colors", types?.includes(t) ? "border-primary bg-primary font-medium text-primary-foreground" : "border-border bg-primary/10 hover:bg-primary/20")}>{typeLabel(t)}</button>)}</div>
-                      <h4 className="mb-1 mt-4 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">All types</h4>
-                      <div className="space-y-0.5">{restTypes.map(t => <label key={t} className="flex cursor-pointer items-center gap-3 rounded px-1.5 py-1.5 hover:bg-primary/5"><Checkbox checked={!types || types.includes(t)} onCheckedChange={checked => setTypes(current => checked ? [...(current || []), t] : (current || allTypes).filter(x => x !== t))} className="h-3.5 w-3.5" /><span className="truncate text-xs">{typeLabel(t)}</span></label>)}</div>
-                    </>
-                  )}
-                </div>
-                <div className="flex items-center justify-between border-t border-border bg-muted/30 px-4 py-2.5">
-                  <span className="text-[10px] italic text-muted-foreground">{q && sortedTypes.length > matchedTypes.length ? `${sortedTypes.length - matchedTypes.length} more hidden…` : ""}</span>
-                  <Button size="sm" className="h-7 px-3 text-[10px] font-bold uppercase tracking-widest" onClick={() => setFilterOpen(false)}>Apply selection</Button>
-                </div>
-              </PopoverContent>
-            </Popover>
-          </div>
           <span className="whitespace-nowrap text-xs font-medium">{dateCount} {dateCount === 1 ? "event" : "events"}</span>
         </div>
       </div>
