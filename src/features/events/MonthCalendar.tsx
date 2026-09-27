@@ -47,7 +47,14 @@ export default function MonthCalendar({ bookings, leads, runsheets, customers, v
   const tone = (type: string) => TONES[Math.max(0, allTypes.indexOf(type)) % TONES.length];
   const dotTone = (type: string) => DOT_TONES[Math.max(0, allTypes.indexOf(type)) % DOT_TONES.length];
   const typeLabel = (t: string) => t === "no_type" ? "No type" : prettyCrmValue(t);
+  const typeCounts = useMemo(() => { const m = new Map<string, number>(); active.forEach(b => { const t = typeOf(b); m.set(t, (m.get(t) || 0) + 1); }); return m; }, [active]);
+  const sortedTypes = useMemo(() => [...allTypes].sort((a, b) => (typeCounts.get(b) || 0) - (typeCounts.get(a) || 0) || a.localeCompare(b)), [allTypes, typeCounts]);
   const q = query.trim().toLowerCase();
+  const matchedTypes = q ? sortedTypes.filter(t => typeLabel(t).toLowerCase().includes(q)) : sortedTypes;
+  const frequent = q ? [] : matchedTypes.slice(0, 4);
+  const restTypes = q ? matchedTypes : matchedTypes.slice(4);
+  const toggleType = (t: string) => setTypes(cur => { const list = cur || allTypes; return list.includes(t) ? list.filter(x => x !== t) : [...list, t]; });
+  const selectedCount = types ? types.length : 0;
   const filtered = active.filter(b => (!types || types.includes(typeOf(b))) && (!q || typeOf(b).includes(q)));
   const days = eachDayOfInterval({ start: startOfWeek(month, { weekStartsOn: 1 }), end: endOfWeek(endOfMonth(month), { weekStartsOn: 1 }) });
   const eventsOn = (date: string) => filtered.filter(b => b.event_date === date).sort((a, b) => String(a.start_time || "").localeCompare(String(b.start_time || "")));
