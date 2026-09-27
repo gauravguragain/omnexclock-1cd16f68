@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { Link, Navigate, NavLink, Outlet, useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import type { Business } from "@/contexts/BusinessContext";
+import { defaultTheme } from "@/contexts/BusinessContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { useBusiness } from "@/contexts/BusinessContext";
 import { Button } from "@/components/ui/button";
@@ -37,9 +39,8 @@ export default function EventsLayout({ mode = "events" }: { mode?: "events" | "c
     // browsing a business without a selected business context).
     if (!businessCode || !user) return;
     (supabase as any).from("businesses").select("*").eq("business_code", businessCode).maybeSingle()
-      .then(({ data }: any) => { setUrlBusiness(data ? { ...data, theme: data.theme || defaultTheme, status: data.status || "active" } : null); });
+      .then(({ data }: any) => { setUrlBusiness(data ? { ...data, theme: data.theme || defaultTheme, status: data.status || "active" } : null); if (data?.theme) applyTheme(data.theme || defaultTheme); });
   }, [businessCode, businesses, user]);
-  applyTheme(urlBusiness?.theme || business?.theme || defaultTheme);
 
   const resolved = business?.business_code === businessCode ? business : urlBusiness;
   const resolving = !!businessCode && !resolved;
