@@ -9,10 +9,10 @@ import { useEventsData, bookingEnd, to12 } from "./useEventsData";
 
 const d = (s: string) => new Date(`${s}T00:00:00`);
 
-export default function EventsDashboard() {
-  const crm = useCrmData(); const ev = useEventsData(); const { businessCode } = useParams();
+export default function EventsDashboard({ businessId, ownerView = false, canOpenSales = true }: { businessId?: string; ownerView?: boolean; canOpenSales?: boolean } = {}) {
+  const crm = useCrmData(businessId); const ev = useEventsData(businessId); const { businessCode } = useParams();
   const [month, setMonth] = useState(startOfMonth(new Date()));
-  if (!crm.business) return null;
+  if (!businessId && !crm.business) return null;
   const base = `/b/${businessCode}/events`;
   const today = format(new Date(), "yyyy-MM-dd"); const in7 = format(addDays(new Date(), 7), "yyyy-MM-dd");
    const active = crm.bookings.filter(b => b.status !== "cancelled" && b.booking_kind !== "catering");
@@ -52,13 +52,15 @@ export default function EventsDashboard() {
     <Link to={to} className="mt-3 flex items-center justify-between border-t border-border pt-3 text-sm hover:text-primary">{link}<ChevronRight className="h-4 w-4" /></Link>
   </CardContent></Card>;
 
-  return <div className="space-y-6">
+  return <div className={`space-y-6 ${!canOpenSales ? "[&_a]:hidden" : ""}`}
+    onClickCapture={e => { if (!canOpenSales && (e.target as HTMLElement).closest("a")) e.preventDefault(); }}
+    onKeyDownCapture={e => { if (!canOpenSales && e.key === "Enter" && (e.target as HTMLElement).closest("a")) e.preventDefault(); }}>
     <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
       <div><h1 className="font-serif text-3xl font-semibold">Welcome back</h1><p className="text-sm text-muted-foreground"><span className="font-medium text-foreground">{format(new Date(), "EEEE, d MMMM yyyy")}</span> · Venue events below, catering further down.</p></div>
-      <div className="flex flex-col gap-2 sm:items-end">
+      {!ownerView && <div className="flex flex-col gap-2 sm:items-end">
         <Button asChild><Link to={`${base}/leads/events`}><UserPlus className="mr-2 h-4 w-4" />New lead</Link></Button>
         <Button asChild variant="outline"><Link to={`${cBase}/leads`}><UtensilsCrossed className="mr-2 h-4 w-4" />New catering lead</Link></Button>
-      </div>
+      </div>}
     </div>
 
      <div className="grid min-w-0 gap-4 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
@@ -123,11 +125,11 @@ export default function EventsDashboard() {
         <div className="mt-2 flex justify-between text-sm text-muted-foreground"><span>In use <b className="text-foreground">{usedSpaces.size}</b></span><span>Active spaces <b className="text-foreground">{venues.length}</b></span></div>
          <div className="mt-5 grid grid-cols-3 divide-x divide-border">{[[active.length, "Total events", "All time"], [thisMonth, "This month", format(new Date(), "MMMM yyyy")], [ev.venues.length, "Total spaces", `${venues.length} active`]].map(([n, l, s]: any) => <div key={l} className="min-w-0 px-2 first:pl-0 sm:px-3"><p className="text-2xl font-semibold sm:text-3xl">{n}</p><p className="text-xs sm:text-sm">{l}</p><p className="break-words text-xs text-muted-foreground">{s}</p></div>)}</div>
       </CardContent></Card>
-      <Card><CardContent className="p-6">
+       {!ownerView && <Card><CardContent className="p-6">
         <p className="font-semibold">Quick actions</p><p className="text-xs text-muted-foreground">Where a shift usually starts</p>
          <div className="mt-4 grid gap-3 sm:grid-cols-2">{[[UserPlus, "New lead", "Start the event workflow", `${base}/leads/events`], [Plus, "Add space", "Create or manage venue spaces", `${base}/spaces`], [CalendarPlus, "View calendar", "All events in calendar view", `${base}/calendar`], [UtensilsCrossed, "Menu books", "Menus and packages", `${base}/menu-books`]].map(([I, t, s, to]: any) => <Link key={t} to={to} className="flex items-center gap-3 rounded-lg border border-border p-3 hover:border-primary">
           <span className="rounded-full bg-primary/15 p-2 text-primary"><I className="h-4 w-4" /></span><div className="flex-1"><p className="text-sm font-medium">{t}</p><p className="text-xs text-muted-foreground">{s}</p></div><ChevronRight className="h-4 w-4 text-muted-foreground" /></Link>)}</div>
-      </CardContent></Card>
+       </CardContent></Card>}
     </div>
     <div className="space-y-4 border-t border-border pt-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between"><div><h2 className="font-serif text-2xl font-semibold">Catering</h2><p className="text-sm text-muted-foreground">Deliveries and pickups, kept separate from venue events.</p></div></div>
