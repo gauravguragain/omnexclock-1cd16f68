@@ -9,7 +9,6 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { useCrmData } from "@/features/sales/useCrmData";
 import SendRunsheetDialog from "./SendRunsheetDialog";
-import LeadDetailDialog from "@/features/sales/LeadDetailDialog";
 import { prettyCrmValue } from "@/features/sales/types";
 import { useEventsData, bookingEnd, minutesBetween, to12 } from "./useEventsData";
 
@@ -21,7 +20,7 @@ const Row = ({ k, v }: { k: string; v: any }) => <div className="flex justify-be
 export default function EventDetailPage({ kind }: { kind: "event" | "catering" }) {
   const { businessCode, id } = useParams(); const nav = useNavigate();
   const crm = useCrmData(); const ev = useEventsData();
-  const [items, setItems] = useState<any[]>([]); const [selection, setSelection] = useState<any>(null); const [workflow, setWorkflow] = useState(false); const [workflowTab, setWorkflowTab] = useState<string>("timeline"); const [sendOpen, setSendOpen] = useState(false);
+  const [items, setItems] = useState<any[]>([]); const [selection, setSelection] = useState<any>(null); const [sendOpen, setSendOpen] = useState(false);
   const b: any = crm.bookings.find(x => x.id === id);
   useEffect(() => {
     if (!b?.menu_selection_id && !b?.lead_id) return;
@@ -31,7 +30,7 @@ export default function EventDetailPage({ kind }: { kind: "event" | "catering" }
       setSelection(sel.data);
       if (!sel.data) setItems([]); else { const r = await supabase.from("crm_menu_selection_items").select("*").eq("selection_id", sel.data.id).order("created_at"); setItems(r.data || []); }
     })();
-  }, [b?.menu_selection_id, b?.lead_id, workflow, crm.leads]);
+  }, [b?.menu_selection_id, b?.lead_id, crm.leads]);
   if (!crm.business) return null;
   const list = `/b/${businessCode}/events/${kind === "event" ? "events" : "catering-bookings"}`;
   if (!b) return <div className="py-20 text-center text-muted-foreground">{crm.loading ? "Loading…" : <>Event not found. <Link to={list} className="text-primary">Back to list</Link></>}</div>;
@@ -68,7 +67,7 @@ export default function EventDetailPage({ kind }: { kind: "event" | "catering" }
       <div className="border-l-2 border-primary pl-4"><p className="text-xs font-medium uppercase tracking-widest text-primary">{kind === "event" ? "Events" : "Catering"}</p>
         <h1 className="flex items-center gap-3 font-serif text-3xl font-semibold">{title}<Badge variant={cancelled ? "destructive" : "secondary"}>{cancelled ? "Cancelled" : "Live"}</Badge></h1>
         <p className="text-sm text-muted-foreground">Event Order {b.event_order_number || "—"} · {prettyCrmValue(b.event_type || lead?.event_type || "event")}</p></div>
-      <div className="flex flex-wrap gap-2">{lead && (kind === "catering" ? <><Button variant="outline" onClick={openCateringSheet}><FileText className="mr-2 h-4 w-4" />Preview run sheet</Button>{rs && <Button onClick={() => setSendOpen(true)}><Mail className="mr-2 h-4 w-4" />{rs.sent_at ? "Resend run sheet" : "Send run sheet"}</Button>}</> : <><Button variant="outline" onClick={() => { if (rs?.sent_at) nav(`/b/${businessCode}/events/runsheet/${rs.id}`); else { setWorkflowTab("runsheet"); setWorkflow(true); } }}><FileText className="mr-2 h-4 w-4" />Run sheet</Button><Button onClick={() => { setWorkflowTab("timeline"); setWorkflow(true); }}><Pencil className="mr-2 h-4 w-4" />Edit</Button>{rs?.sent_at && <Button variant="outline" onClick={() => setSendOpen(true)}><Mail className="mr-2 h-4 w-4" />Resend Email</Button>}</>)}</div>
+      <div className="flex flex-wrap gap-2">{lead && (kind === "catering" ? <><Button variant="outline" onClick={openCateringSheet}><FileText className="mr-2 h-4 w-4" />Preview run sheet</Button>{rs && <Button onClick={() => setSendOpen(true)}><Mail className="mr-2 h-4 w-4" />{rs.sent_at ? "Resend run sheet" : "Send run sheet"}</Button>}</> : <><Button variant="outline" onClick={() => { if (rs?.sent_at) nav(`/b/${businessCode}/events/runsheet/${rs.id}`); else { nav(`/b/${businessCode}/events/lead/${lead.id}?tab=runsheet`); } }}><FileText className="mr-2 h-4 w-4" />Run sheet</Button><Button onClick={() => nav(`/b/${businessCode}/events/lead/${lead.id}`)}><Pencil className="mr-2 h-4 w-4" />Edit</Button>{rs?.sent_at && <Button variant="outline" onClick={() => setSendOpen(true)}><Mail className="mr-2 h-4 w-4" />Resend Email</Button>}</>)}</div>
     </div>
 
     <Card><CardContent className="grid divide-y divide-border p-0 sm:grid-cols-4 sm:divide-x sm:divide-y-0">
@@ -117,6 +116,5 @@ export default function EventDetailPage({ kind }: { kind: "event" | "catering" }
       </div>
     </div>
     {lead && rs && <SendRunsheetDialog mode={kind === "catering" && !rs.sent_at ? "issue" : "resend"} onIssue={issueCatering} open={sendOpen} onOpenChange={setSendOpen} rs={rs} lead={lead} booking={b} businessName={crm.business.name} />}
-    {lead && kind !== "catering" && <LeadDetailDialog lead={lead} open={workflow} onOpenChange={setWorkflow} initialTab={workflowTab} options={crm.options} interactions={crm.interactions} inspections={crm.inspections} tasks={crm.tasks} menuItems={crm.menuItems} booking={b} businessName={crm.business.name} onSaved={crm.refresh} />}
   </div>;
 }

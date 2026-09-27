@@ -39,7 +39,7 @@ interface BusinessContextType {
   resetTheme: () => void;
 }
 
-const defaultTheme: BusinessTheme = {
+export const defaultTheme: BusinessTheme = {
   primary: "30 33% 52%",
   background: "0 0% 0%",
   foreground: "0 0% 96%",
