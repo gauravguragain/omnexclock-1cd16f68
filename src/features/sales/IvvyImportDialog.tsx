@@ -61,12 +61,13 @@ export default function IvvyImportDialog({ open, onOpenChange, businessId, onDon
           business_id: businessId, external_ref: code,
           full_name: r["Main Contact"] || [r["First Name"], r["Last Name"]].filter(Boolean).join(" ") || r["Booking Name"],
           email: r.Email || null, company: r.Company || null, source: "ivvy",
-          event_type: catering ? "catering" : "other", lead_kind: catering ? "catering" : "event",
+          event_type: catering ? "catering" : (r["Booking Name"] || "other").toLowerCase().replace(/\s+/g, "_"),
+          lead_kind: catering ? "catering" : "event",
           preferred_dates: date ? [date] : [], estimated_guest_count: guests > 0 ? guests : null,
           estimated_value: num(r["Total Amount"]), status: lStatus,
           lead_outcome: lStatus === "deposit_received" ? "confirmed" : lStatus === "cold" ? "declined" : "new",
           decline_reason: status === "cancelled" ? (r["Cancel Reason"] || "Cancelled in iVvy") : null,
-          tags: ["ivvy", `ivvy:${code}`, r["Booking Name"], r["Sales Person"] && `sales:${r["Sales Person"]}`].filter(Boolean) as string[],
+          tags: ["ivvy", `ivvy:${code}`, r["Sales Person"] && `sales:${r["Sales Person"]}`].filter(Boolean) as string[],
           created_by: user?.id ?? null, updated_by: user?.id ?? null,
         };
       });
