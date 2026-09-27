@@ -8,10 +8,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
+import { Link } from "react-router-dom";
 import {
   Building2, Mail, Phone, MapPin, Calendar, Users, Trash2,
   Search, ShieldOff, StickyNote, Send, X, AlertTriangle, CheckCircle2, Pause, Clock, Palette, Hash, User,
-  ClipboardList, ThumbsUp, ThumbsDown, Hourglass
+  ClipboardList, ThumbsUp, ThumbsDown, Hourglass, Gauge
 } from "lucide-react";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
@@ -363,6 +364,12 @@ export default function MasterBusinessesPage() {
                     <SelectItem value="deactivated">🚫 Deactivated</SelectItem>
                   </SelectContent>
                 </Select>
+
+                <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-primary" asChild title="Operations overview">
+                  <Link to={`/b/${biz.business_code}/operations`}>
+                    <Gauge className="h-4 w-4" />
+                  </Link>
+                </Button>
 
                 <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-foreground" onClick={() => toggleNotes(biz.id)} title="Internal notes">
                   <StickyNote className="h-4 w-4" />
