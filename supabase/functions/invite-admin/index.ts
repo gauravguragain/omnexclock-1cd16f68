@@ -181,7 +181,7 @@ serve(async (req) => {
         Authorization: `Bearer ${RESEND_API_KEY}`,
       },
       body: JSON.stringify({
-        from: "Regal Clock <noreply@omnexventures.com>",
+        from: "Regal Clock <noreply@regalmanagement.com.au>",
         to: [email],
         subject: `You're invited to ${business.name} as ${roleLabel}`,
         html,

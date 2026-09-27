@@ -113,7 +113,7 @@ serve(async (req) => {
           Authorization: `Bearer ${RESEND_API_KEY}`,
         },
         body: JSON.stringify({
-          from: "Security <noreply@omnexventures.com>",
+          from: "Security <noreply@regalmanagement.com.au>",
           to: [normalizedEmail],
           subject: "Password Reset Code",
           html: emailHtml,

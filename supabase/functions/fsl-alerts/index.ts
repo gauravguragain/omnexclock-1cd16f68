@@ -10,7 +10,7 @@ const ymd = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart
 
 async function send(to: string[], subject: string, html: string) {
   const key = Deno.env.get("RESEND_API_KEY"); if (!key || !to.length) return;
-  const r = await fetch("https://api.resend.com/emails", { method: "POST", headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" }, body: JSON.stringify({ from: "Food Safety <noreply@omnexventures.com>", to, subject, html }) });
+  const r = await fetch("https://api.resend.com/emails", { method: "POST", headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" }, body: JSON.stringify({ from: "Food Safety <noreply@regalmanagement.com.au>", to, subject, html }) });
   if (!r.ok) console.error("Resend failed", r.status, await r.text());
 }
 

@@ -94,7 +94,7 @@ serve(async (req) => {
           Authorization: `Bearer ${RESEND_API_KEY}`,
         },
         body: JSON.stringify({
-          from: `${businessName} <noreply@omnexventures.com>`,
+          from: `${businessName} <noreply@regalmanagement.com.au>`,
           to: task.reminder_email.split(",").map((e: string) => e.trim()).filter(Boolean),
           subject: `🔧 Service Reminder: ${task.name} — Due ${task.next_service_date}`,
           html,
