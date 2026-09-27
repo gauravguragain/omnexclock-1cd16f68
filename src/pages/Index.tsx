@@ -27,12 +27,20 @@ const Index = () => {
         >
           {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
         </Button>
-        <Link to="/auth?master=true">
-          <Button variant="ghost" size="sm" className="text-muted-foreground/50 hover:text-foreground gap-1.5 text-xs">
-            <LogIn className="h-3.5 w-3.5" />
-            Master Login
-          </Button>
-        </Link>
+        <div className="flex flex-col items-end gap-0.5">
+          <Link to="/auth?master=true">
+            <Button variant="ghost" size="sm" className="text-muted-foreground/50 hover:text-foreground gap-1.5 text-xs">
+              <LogIn className="h-3.5 w-3.5" />
+              Master Login
+            </Button>
+          </Link>
+          <Link to="/register-business">
+            <Button variant="ghost" size="sm" className="text-muted-foreground/50 hover:text-foreground gap-1.5 text-xs">
+              <Building2 className="h-3.5 w-3.5" />
+              Register Business
+            </Button>
+          </Link>
+        </div>
       </div>
 
       {/* Main content — vertically centered in remaining space */}
