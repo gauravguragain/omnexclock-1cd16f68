@@ -253,6 +253,13 @@
       "when": 1790532625977,
       "tag": "0035_add_is_owner_of_business",
       "breakpoints": true
+    },
+    {
+      "idx": 36,
+      "version": "7",
+      "when": 1790543437490,
+      "tag": "0036_crm_payments",
+      "breakpoints": true
     }
   ]
 }

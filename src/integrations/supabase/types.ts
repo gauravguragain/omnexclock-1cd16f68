@@ -1976,6 +1976,70 @@ export type Database = {
           },
         ]
       }
+      crm_payments: {
+        Row: {
+          amount: number
+          booking_id: string
+          business_id: string
+          created_at: string
+          created_by: string | null
+          id: string
+          method: string
+          notes: string | null
+          paid_on: string
+          payment_type: string
+          reference: string | null
+        }
+        Insert: {
+          amount: number
+          booking_id: string
+          business_id: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          method?: string
+          notes?: string | null
+          paid_on?: string
+          payment_type?: string
+          reference?: string | null
+        }
+        Update: {
+          amount?: number
+          booking_id?: string
+          business_id?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          method?: string
+          notes?: string | null
+          paid_on?: string
+          payment_type?: string
+          reference?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_payments_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "crm_bookings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_payments_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_payments_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses_public"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       crm_runsheets: {
         Row: {
           access_time: string | null
