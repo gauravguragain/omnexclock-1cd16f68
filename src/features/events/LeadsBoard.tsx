@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from "react";
+import { useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -11,13 +11,14 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "
 import { Download, Plus, Search, Upload } from "lucide-react";
 import { useCrmData } from "@/features/sales/useCrmData";
 import LeadFormDialog from "@/features/sales/LeadFormDialog";
+import IvvyImportDialog from "@/features/sales/IvvyImportDialog";
 import { prettyCrmValue, type CrmLead } from "@/features/sales/types";
 
 export default function LeadsBoard({ kind }: { kind: "event" | "catering" }) {
   const crm = useCrmData(); const nav = useNavigate(); const { businessCode } = useParams();
   const [tab, setTab] = useState("new"); const [search, setSearch] = useState("");
   const [formOpen, setFormOpen] = useState(false); const [editing, setEditing] = useState<CrmLead | null>(null);
-  const [declining, setDeclining] = useState<CrmLead | null>(null); const [reason, setReason] = useState(""); const fileRef = useRef<HTMLInputElement>(null);
+  const [declining, setDeclining] = useState<CrmLead | null>(null); const [reason, setReason] = useState(""); const [importOpen, setImportOpen] = useState(false);
    const mine = useMemo(() => crm.leads.filter(l => (l.lead_kind === "catering" || l.event_type === "catering" ? "catering" : "event") === kind), [crm.leads, kind]);
   const outcome = (l: CrmLead) => l.lead_outcome || "new";
   const shown = mine.filter(l => (tab === "all" || outcome(l) === tab) && `${l.full_name} ${l.email || ""} ${l.phone || ""} ${l.event_type} ${l.service_location || ""}`.toLowerCase().includes(search.toLowerCase()));
@@ -37,26 +38,11 @@ export default function LeadsBoard({ kind }: { kind: "event" | "catering" }) {
     const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([rows.map(r => r.map(q).join(",")).join("\n")], { type: "text/csv" }));
     a.download = `${crm.business!.business_code}__${label.replace(" ", "-")}__${format(new Date(), "dd.MM.yyyy")}.csv`; a.click();
   };
-  const importCsv = async (file: File) => {
-    const text = await file.text(); const lines = text.split(/\r?\n/).filter(Boolean);
-    const parse = (line: string) => (line.match(/("([^"]|"")*"|[^,]*)(,|$)/g) || []).map(c => c.replace(/,$/, "").replace(/^"|"$/g, "").replace(/""/g, '"').trim());
-    const head = parse(lines[0]).map(h => h.toLowerCase());
-    const idx = (n: string) => head.findIndex(h => h.includes(n));
-    const rows = lines.slice(1).map(parse).filter(r => r[idx("name")]).map(r => ({
-      business_id: crm.business!.id, full_name: r[idx("name")], phone: r[idx("phone")] || null, email: r[idx("email")] || null,
-       source: (r[idx("source")] || "import").toLowerCase().replace(/\s+/g, "_"), event_type: kind === "catering" ? "catering" : (r[idx("event")] || "other").toLowerCase().replace(/\s+/g, "_"),
-      preferred_dates: idx("date") >= 0 && r[idx("date")] ? [r[idx("date")]] : [], estimated_guest_count: Number(r[idx("guest")]) || null,
-      service_location: idx("location") >= 0 ? r[idx("location")] || null : null, lead_kind: kind,
-    }));
-    if (!rows.length) return toast.error("No rows found — the file needs a Name column");
-    const { error } = await supabase.from("crm_leads").insert(rows as any);
-    if (error) toast.error(error.message); else { toast.success(`${rows.length} leads imported`); crm.refresh(); }
-  };
-
   return <div className="space-y-5">
+    <IvvyImportDialog open={importOpen} onOpenChange={setImportOpen} businessId={crm.business.id} onDone={crm.refresh} />
     <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
       <div><p className="text-xs font-medium uppercase tracking-widest text-primary">{kind === "catering" ? "Catering" : "Leads"}</p><h1 className="font-serif text-3xl font-semibold">{label}</h1><p className="text-sm text-muted-foreground">{kind === "event" ? "Enquiries about hosting an event — each lead moves step by step from enquiry through inspection, menu, invoice, deposit, runsheet and final payment." : "Catering enquiries and confirmed orders."}</p></div>
-      <div className="flex flex-wrap gap-2"><input ref={fileRef} type="file" accept=".csv" hidden onChange={e => e.target.files?.[0] && importCsv(e.target.files[0])} /><Button variant="outline" onClick={() => fileRef.current?.click()}><Upload className="mr-2 h-4 w-4" />Import</Button><Button variant="outline" onClick={exportCsv}><Download className="mr-2 h-4 w-4" />Export</Button><Button onClick={() => { setEditing(null); setFormOpen(true); }}><Plus className="mr-2 h-4 w-4" />New lead</Button></div>
+      <div className="flex flex-wrap gap-2"><Button variant="outline" onClick={() => setImportOpen(true)}><Upload className="mr-2 h-4 w-4" />Import</Button><Button variant="outline" onClick={exportCsv}><Download className="mr-2 h-4 w-4" />Export</Button><Button onClick={() => { setEditing(null); setFormOpen(true); }}><Plus className="mr-2 h-4 w-4" />New lead</Button></div>
     </div>
     <div className="flex flex-wrap items-center gap-2">{["new", "confirmed", "declined", "all"].map(t => <Button key={t} size="sm" variant={tab === t ? "default" : "outline"} onClick={() => setTab(t)} className="capitalize">{t === "new" ? "Leads" : t} ({t === "all" ? mine.length : mine.filter(l => outcome(l) === t).length})</Button>)}
       <div className="relative ml-auto w-full max-w-xs"><Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" /><Input className="h-9 pl-9" placeholder="Search leads" value={search} onChange={e => setSearch(e.target.value)} /></div></div>
