@@ -62,9 +62,12 @@ export default function IvvyImportDialog({ open, onOpenChange, businessId, onDon
     setBusy(true);
     try {
       const { data: { user } } = await supabase.auth.getUser();
+      const today = new Date().toLocaleDateString("en-CA", { timeZone: "Australia/Sydney" });
       const leadRows = items.map(({ code, row: r, date, catering, status }) => {
         const guests = Math.round(num(col(r, "Total Attendees Guaranteed")));
-        const lStatus = status === "confirmed" ? "deposit_received" : status === "cancelled" ? "cold" : "new";
+        const outstanding = num(col(r, "Total Outstanding"));
+        // Historical migration: confirmed bookings are events that already happened, so fully paid ones land at the final stage.
+        const lStatus = status === "confirmed" ? (outstanding <= 0 ? "full_payment_received" : "deposit_received") : status === "cancelled" ? "cold" : "new";
         return {
           business_id: businessId, external_ref: code,
           full_name: col(r, "Main Contact") || [col(r, "First Name"), col(r, "Last Name")].filter(Boolean).join(" ") || col(r, "Booking Name"),
@@ -73,7 +76,7 @@ export default function IvvyImportDialog({ open, onOpenChange, businessId, onDon
           lead_kind: catering ? "catering" : "event",
           preferred_dates: date ? [date] : [], estimated_guest_count: guests > 0 ? guests : null,
           estimated_value: num(col(r, "Total Amount")), status: lStatus,
-          lead_outcome: lStatus === "deposit_received" ? "confirmed" : lStatus === "cold" ? "declined" : "new",
+          lead_outcome: lStatus === "deposit_received" || lStatus === "full_payment_received" ? "confirmed" : lStatus === "cold" ? "declined" : "new",
           decline_reason: status === "cancelled" ? (col(r, "Cancel Reason") || "Cancelled in iVvy") : null,
           tags: ["ivvy", `ivvy:${code}`, col(r, "Sales Person") && `sales:${col(r, "Sales Person")}`].filter(Boolean) as string[],
           created_by: user?.id ?? null, updated_by: user?.id ?? null,
