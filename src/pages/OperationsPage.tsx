@@ -17,6 +17,7 @@ import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { loadOperations, presetRange, previousRange, type OpsData, type Range, type RangePreset } from "@/lib/operationsData";
 import EventsDashboard from "@/features/events/EventsDashboard";
+import ReportBuilder from "@/features/operations/ReportBuilder";
 
 const money = (n: number) => `$${(n || 0).toLocaleString("en-AU", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 const num = (n: number) => (n || 0).toLocaleString("en-AU", { maximumFractionDigits: 2 });
@@ -239,7 +240,12 @@ export default function OperationsPage() {
               <TabsTrigger value="labour">Staff & labour</TabsTrigger>
               <TabsTrigger value="compliance">Compliance</TabsTrigger>
               <TabsTrigger value="attention">Attention {alerts.length ? `(${alerts.length})` : ""}</TabsTrigger>
+              <TabsTrigger value="reports">Reports</TabsTrigger>
             </TabsList>
+
+            <TabsContent value="reports">
+              <ReportBuilder businessId={business.id} businessName={business.name} range={range} ops={d} />
+            </TabsContent>
 
             {/* OVERVIEW */}
             <TabsContent value="overview" className="space-y-4">
