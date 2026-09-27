@@ -199,7 +199,6 @@ export async function loadOperations(bid: string, r: Range) {
         const hrs = Math.max(0, (t - inAt - breakMs) / 3600000);
         if (hrs < 24) {
           const E = getE(eid); E.actual += hrs; E.shifts++;
-          if (hrs > 10) E.overtimeDays++;
           const d = sydDate(inIso); dayHours[d] = (dayHours[d] || 0) + hrs;
           const tb = trendMap[bucket(d)]; if (tb) { tb.hours += hrs; tb.labour += hrs * (rateOf(eid)); }
         }
