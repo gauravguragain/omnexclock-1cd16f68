@@ -179,9 +179,9 @@ export async function loadOperations(bid: string, r: Range) {
   const overdueTasks = tasks.filter((t: any) => t.status !== "completed" && t.status !== "done" && t.due_at && t.due_at < new Date().toISOString());
 
   // ---------- Labour ----------
-  type Emp = { id: string; name: string; department: string; actual: number; rostered: number; cost: number; shifts: number; late: number; overtimeDays: number };
+  type Emp = { id: string; name: string; department: string; actual: number; rostered: number; cost: number; shifts: number; late: number };
   const empStats: Record<string, Emp> = {};
-  const getE = (id: string) => (empStats[id] ||= { id, name: empById[id]?.name || "Unknown", department: empById[id]?.department || "—", actual: 0, rostered: 0, cost: 0, shifts: 0, late: 0, overtimeDays: 0 });
+  const getE = (id: string) => (empStats[id] ||= { id, name: empById[id]?.name || "Unknown", department: empById[id]?.department || "—", actual: 0, rostered: 0, cost: 0, shifts: 0, late: 0 });
   // actual from clock pairs (Sydney date of clock-in)
   const perEmp: Record<string, any[]> = {};
   clocks.forEach((c: any) => (perEmp[c.employee_id] ||= []).push(c));
