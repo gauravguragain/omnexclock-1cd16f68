@@ -21,7 +21,11 @@ export default function PaymentsPage() {
   const rows = useMemo(() => crm.bookings.filter(b => b.status !== "cancelled").map(b => {
     const s = paymentSummary(b, payments.filter(p => p.booking_id === b.id));
     return { b, s, client: leadName(b.lead_id) || "" };
-  }).sort((a, z) => String(a.b.event_date).localeCompare(String(z.b.event_date))), [crm.bookings, crm.leads, payments]);
+  }).sort((a, z) => {
+    const today = sydneyToday();
+    const dist = (d?: string) => Math.abs(new Date(String(d || today) + "T00:00:00").getTime() - new Date(today + "T00:00:00").getTime());
+    return dist(a.b.event_date) - dist(z.b.event_date);
+  }), [crm.bookings, crm.leads, payments]);
 
   const month = sydneyToday().slice(0, 7);
   const totals = {
