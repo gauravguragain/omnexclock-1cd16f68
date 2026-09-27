@@ -43,7 +43,7 @@ export default function OperationsPage() {
   const [compliance, setCompliance] = useState<Stat[]>([]);
   const [finance, setFinance] = useState<Stat[]>([]);
 
-  const allowed = business ? isOwnerOf(business.id) : false;
+  const allowed = isMaster || (business ? isOwnerOf(business.id) : false);
 
   useEffect(() => {
     if (!business || !allowed) return;
