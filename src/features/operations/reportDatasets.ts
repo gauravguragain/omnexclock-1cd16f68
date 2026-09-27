@@ -122,12 +122,12 @@ export const DATASETS: Dataset[] = [
   {
     key: "catering_deliveries", group: "Sales & events", label: "Catering deliveries", description: "Standalone delivery entries",
     columns: [
-      { key: "delivery_date", label: "Date", type: "date" }, { key: "client_name", label: "Client" }, { key: "number_of_guests", label: "Guests", type: "num" },
+      { key: "delivery_date", label: "Date", type: "date" }, { key: "contact_person", label: "Contact" }, { key: "delivery_address", label: "Address" }, { key: "number_of_guests", label: "Guests", type: "num" },
       { key: "status", label: "Status" }, { key: "cost_incl_gst", label: "Cost incl. GST", type: "money" },
     ],
     load: async ({ bid, range }) => (await all(() => db.from("catering_deliveries").select("*")
       .eq("business_id", bid).gte("delivery_date", range.from).lte("delivery_date", range.to).order("delivery_date")))
-      .map(c => ({ ...c, client_name: c.client_name || c.customer_name || c.event_name || "", status: pretty(c.status) })),
+      .map(c => ({ ...c, status: pretty(c.status) })),
     summary: rows => [["Deliveries", rows.length], ["Guests", sum(rows, "number_of_guests")], ["Value incl. GST", sum(rows, "cost_incl_gst")]],
   },
   {
@@ -241,7 +241,7 @@ export const DATASETS: Dataset[] = [
   {
     key: "employees", group: "Staff & labour", label: "Staff list", description: "All employees and pay rates",
     columns: [
-      { key: "name", label: "Name" }, { key: "department", label: "Department" }, { key: "position", label: "Position" },
+      { key: "name", label: "Name" }, { key: "department", label: "Department" }, { key: "job_title", label: "Job title" },
       { key: "email", label: "Email" }, { key: "phone", label: "Phone" }, { key: "pay_rate", label: "Pay rate", type: "money" },
       { key: "admin_hourly_rate", label: "Admin rate", type: "money" }, { key: "active", label: "Active" },
     ],
