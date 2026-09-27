@@ -234,7 +234,7 @@ export default function UsersPage() {
       if (exErr) throw exErr;
       const current = (existing || []).map((r: any) => r.role as string);
       const toAdd = selectedRoles.filter(r => !current.includes(r));
-      const toRemove = current.filter(r => !selectedRoles.includes(r));
+      const toRemove = current.filter(r => !(selectedRoles as string[]).includes(r));
       if (toAdd.length) {
         const rows = toAdd.map(role => ({
           user_id: selectedUser.id, role: role as any, business_id: businessId,
