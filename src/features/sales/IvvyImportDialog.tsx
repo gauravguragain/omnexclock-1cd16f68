@@ -41,7 +41,7 @@ const num = (s: string) => { const n = parseFloat((s || "").replace(/,/g, "")); 
 
 type Prepared = { code: string; row: Row; date: string | null; catering: boolean; status: string };
 
-export default function IvvyImportDialog({ open, onOpenChange, businessId, onDone }: { open: boolean; onOpenChange: (o: boolean) => void; businessId: string; onDone: () => void }) {
+export default function IvvyImportDialog({ open, onOpenChange, businessId, onDone, mode = "ivvy" }: { mode?: "ivvy" | "excel"; open: boolean; onOpenChange: (o: boolean) => void; businessId: string; onDone: () => void }) {
   const [items, setItems] = useState<Prepared[]>([]);
   const [skipped, setSkipped] = useState(0);
   const [busy, setBusy] = useState(false);
@@ -51,7 +51,7 @@ export default function IvvyImportDialog({ open, onOpenChange, businessId, onDon
   const onFile = async (f?: File) => {
     if (!f) return;
     setItems([]); setClients([]);
-    if (/\.xlsx?$/i.test(f.name)) {
+    if (mode === "excel") {
       const { data: sp } = await (supabase.from("crm_venue_spaces" as any) as any).select("name").eq("business_id", businessId).eq("active", true);
       const rows = await readClientList(f, (sp || []).map((x: any) => x.name));
       if (!rows) { toast.error("Couldn't find a 'Client Name' column in this spreadsheet."); return; }
@@ -198,8 +198,8 @@ export default function IvvyImportDialog({ open, onOpenChange, businessId, onDon
   const c = (f: (p: Prepared) => boolean) => items.filter(f).length;
   return <Dialog open={open} onOpenChange={o => { if (!busy) onOpenChange(o); }}>
     <DialogContent className="max-w-2xl">
-      <DialogHeader><DialogTitle>Import bookings</DialogTitle><DialogDescription>Upload an iVvy Bookings CSV, or an Excel client list (Client Name, Event Date, Event Type, Event Room, Event Start Time, Deposit). Past confirmed bookings are imported as completed history with their payments. Running it again updates bookings already imported.</DialogDescription></DialogHeader>
-      <Input type="file" accept=".csv,text/csv,.xlsx,.xls" disabled={busy} onChange={e => onFile(e.target.files?.[0])} />
+      <DialogHeader><DialogTitle>{mode === "excel" ? "Import clients from Excel" : "Import past events from iVvy"}</DialogTitle><DialogDescription>{mode === "excel" ? "Upload your client spreadsheet with columns Client Name, Event Date, Event Type, Event Room, Event Start Time and Deposit. Running it again updates clients already imported." : "Upload an iVvy Bookings CSV export. Past bookings are imported as completed history with their payments. Running it again updates bookings already imported."}</DialogDescription></DialogHeader>
+      <Input type="file" accept={mode === "excel" ? ".xlsx,.xls,.csv" : ".csv,text/csv"} disabled={busy} onChange={e => onFile(e.target.files?.[0])} />
       {items.length > 0 && <div className="grid grid-cols-2 gap-2 text-sm">
         {[["Bookings found", items.length], ["Event leads", c(p => !p.catering)], ["Catering leads", c(p => p.catering)], ["Hosted (become bookings)", c(p => p.status !== "cancelled")], ["Past (marked completed)", c(p => p.status !== "cancelled" && p.date && p.date < new Date().toLocaleDateString("en-CA", { timeZone: "Australia/Sydney" }))], ["Cancelled (Cold)", c(p => p.status === "cancelled")], ["Skipped rows", skipped]].map(([l, v]) =>
           <div key={l as string} className="flex justify-between border-b border-border py-1"><span className="text-muted-foreground">{l}</span><span className="font-medium">{v}</span></div>)}
