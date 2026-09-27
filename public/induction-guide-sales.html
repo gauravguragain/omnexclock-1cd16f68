@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pro Regal Management – Sales &amp; Events Guide</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  @media print { body { font-size: 11pt; } .no-print { display: none; } .page-break { page-break-before: always; } }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Barlow', 'Segoe UI', Arial, sans-serif; color: #1a1a1a; line-height: 1.7; max-width: 900px; margin: 0 auto; padding: 40px 30px; }
+  h1 { font-size: 28pt; color: #ac845d; margin-bottom: 6px; }
+  h2 { font-size: 18pt; color: #ac845d; margin-top: 40px; margin-bottom: 12px; border-bottom: 2px solid #ac845d; padding-bottom: 6px; }
+  h3 { font-size: 14pt; color: #333; margin-top: 20px; margin-bottom: 8px; }
+  p, li { margin-bottom: 8px; }
+  ul, ol { padding-left: 24px; }
+  .cover { text-align: center; padding: 80px 0 40px; }
+  .cover img { width: 100px; height: 100px; border-radius: 50%; object-fit: cover; margin-bottom: 16px; }
+  .badge { display: inline-block; background: #ac845d; color: #000; padding: 2px 10px; border-radius: 12px; font-size: 10pt; font-weight: bold; }
+  .note { background: #fef9e7; border-left: 4px solid #ac845d; padding: 12px 16px; margin: 16px 0; border-radius: 0 8px 8px 0; }
+  table { width: 100%; border-collapse: collapse; margin: 16px 0; }
+  th, td { border: 1px solid #ddd; padding: 10px 14px; text-align: left; }
+  th { background: #1a1a1a; color: #ac845d; }
+  tr:nth-child(even) { background: #f9f9f9; }
+  code { background: #f1f1f1; padding: 2px 6px; border-radius: 4px; font-size: 10pt; }
+  .btn-print { position: fixed; bottom: 20px; right: 20px; background: #ac845d; color: #000; border: none; padding: 12px 24px; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 12pt; box-shadow: 0 4px 12px rgba(0,0,0,0.2); }
+  .btn-print:hover { background: #b8941f; }
+  .step { counter-increment: step; margin-bottom: 12px; padding-left: 8px; }
+  .step::before { content: counter(step) ". "; font-weight: bold; color: #ac845d; }
+  .steps { counter-reset: step; }
+  .warning { background: #fdecea; border-left: 4px solid #c0392b; padding: 12px 16px; margin: 16px 0; border-radius: 0 8px 8px 0; }
+</style>
+</head>
+<body>
+<button class="btn-print no-print" onclick="window.print()">📄 Save as PDF / Print</button>
+<div class="cover">
+  <img src="/regal-logo.png" alt="Pro Regal Management Logo">
+  <h1>Pro Regal Management</h1>
+  <p style="font-size: 14pt; color: #555;">Sales &amp; Events Guide</p>
+  <p style="margin-top: 16px;"><span class="badge">SALES &amp; MARKETING</span></p>
+</div>
+<div class="page-break"></div>
+<h2>Welcome to Sales &amp; Events</h2>
+<p>The <strong>Sales &amp; Events</strong> workspace manages every enquiry from first contact to the finished event or catering job. Open it from the Business Hub. Access requires the <strong>Sales &amp; Marketing</strong> role (or Super Admin).</p>
+
+<h2>Side Menu</h2>
+<table>
+<tr><th>Section</th><th>What it's for</th></tr>
+<tr><td>Dashboard</td><td>Event load, catering load, upcoming bookings, open tasks and pipeline figures</td></tr>
+<tr><td>Calendar</td><td>Events (gold) and catering (teal) together, including all past jobs. Click any item for a snapshot; click a day with several items for the full list</td></tr>
+<tr><td>Event leads</td><td>Draggable ten-stage pipeline for event enquiries</td></tr>
+<tr><td>Events</td><td>Confirmed events (from Deposit received onward) — Upcoming, Past, All, Cancelled</td></tr>
+<tr><td>Catering leads / bookings</td><td>Separate catering pipeline with delivery or pickup time windows</td></tr>
+<tr><td>Inspections &amp; Tasks</td><td>Venue inspection calendar and manual tasks with due date, time and priority</td></tr>
+<tr><td>Customers</td><td>Clients created automatically once a lead is confirmed</td></tr>
+<tr><td>Payments</td><td>Record deposits, instalments, balances, extras and refunds</td></tr>
+<tr><td>Menu Books</td><td>Dishes, sides, proteins, packages, per-person surcharges and guest-pick limits</td></tr>
+<tr><td>Venue spaces</td><td>One card per space with a cover photo and a clickable gallery</td></tr>
+<tr><td>Reports / Audit log</td><td>Sales analytics and the history of lead changes and interactions</td></tr>
+<tr><td>Settings</td><td>Options lists, coordinator contacts, and the <strong>Import past events from iVvy</strong> button</td></tr>
+</table>
+<p>All lists show the closest date first. Every screen updates live — no refresh needed. On mobile, use the menu button at the top or the bottom tabs.</p>
+
+<h2>The Pipeline</h2>
+<ol>
+<li><strong>New</strong> → Contacted → Inspection booked → <strong>Inspected</strong> → <strong>Deposit received</strong> → Confirmed stages → <strong>Full payment received</strong> → Completed</li>
+<li>Drag a lead card between columns, or open the lead and use the stage chips and quick actions.</li>
+<li><strong>Declining</strong> a lead moves it to <strong>Cold</strong> and keeps the reason; reopening returns it to New.</li>
+<li>Tap anywhere on a lead tile to open its full-page editor (Details, Inspection, Menu selection, Run sheet tabs). <strong>Continue workflow</strong> opens the same editor at the next step.</li>
+</ol>
+
+<h2>Leads &amp; Bookings</h2>
+<ul>
+<li>Record every call, email or meeting in the <strong>Interaction log</strong> — bullets and line breaks are kept as typed.</li>
+<li>An event can use <strong>multiple venue spaces</strong>. Space names are matched to your venue spaces automatically.</li>
+<li>Dropdowns with an <strong>Other</strong> option let you type your own value.</li>
+<li>Optional <strong>menu tasting reminder</strong> creates a task at the chosen Sydney time.</li>
+<li>Confirmed catering bookings can be fully edited (Details, Menu selection, Team &amp; schedule).</li>
+</ul>
+
+<h2>Inspections &amp; Tasks</h2>
+<ul>
+<li>Inspections have start and end times. Past inspections leave the upcoming list but stay saved.</li>
+<li>Mark each as <strong>Complete</strong>, <strong>Reschedule</strong> (updates the calendar) or <strong>No show</strong> (flags follow-up).</li>
+<li>Add manual tasks with due date, time, priority, notes and an optional lead.</li>
+</ul>
+
+<h2>Menus &amp; Guest Selection</h2>
+<ul>
+<li>Build packages from dish courses (entrees veg/non-veg, mains, sides, desserts), live stalls (per person or flat rate) and corkage.</li>
+<li>Dishes can require a protein choice. Hover a dish photo to enlarge; replace or delete it.</li>
+<li>Send the client a <strong>guest selection link</strong> showing only the package dishes, with photos, dietary and allergy fields. When they submit, the lead's Menu selection tab updates automatically.</li>
+</ul>
+
+<h2>Run Sheets</h2>
+<ol>
+<li>Open the lead's <strong>Run sheet</strong> tab and complete the readiness checklist.</li>
+<li>Choose salesperson, event coordinator and onsite contacts from your coordinator lists (phone numbers fill in).</li>
+<li>Review the compact A4 preview — live stalls with timings, food serving and FOH service schedules, guest counts (adults/kids), no pricing.</li>
+<li>Click <strong>Confirm &amp; send</strong> (or <strong>Resend</strong>) to email the client confirmation and the kitchen/coordinator team a web run sheet link. Every revision is tracked.</li>
+</ol>
+
+<h2>Payments</h2>
+<p>Payments are tracked here only — invoices stay in Xero. Recording a payment automatically moves the lead: paid ≥ deposit → <strong>Deposit received</strong>; paid ≥ total → <strong>Full payment received</strong>.</p>
+
+<h2>Importing Data</h2>
+<ul>
+<li><strong>Leads → Import</strong>: upload your client Excel sheet (client name, event date, event type, room, start/end time, deposit). A preview appears before anything is saved; re-importing updates rather than duplicates.</li>
+<li><strong>Settings → Import past events from iVvy</strong>: brings in historical bookings as Completed with their payment history. Anything with "Catering" in the booking name goes to catering.</li>
+</ul>
+
+<h2>Calendar Feed</h2>
+<p>Use the universal <strong>calendar (ICS) link</strong> in Settings to subscribe from Google, Outlook or Apple Calendar.</p>
+
+<h2>Need Help?</h2>
+<p>For the complete platform documentation, visit the full <a href="/induction-guide.html" style="color:#ac845d;">Pro Regal Management Induction Guide</a>. Contact your Super Admin for access changes.</p>
+</body>
+</html>
