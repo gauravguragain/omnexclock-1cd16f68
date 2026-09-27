@@ -32,15 +32,13 @@ export function parseTimes(raw: string): { start: string; end: string } {
   if (t === "lunch") return { start: "11:00", end: "16:00" };
   if (t === "morning") return { start: "09:00", end: "14:00" };
   const [a, b] = t.split(/\s*(?:-|–|to)\s*/);
-  const endAp = b?.match(/(am|pm)/)?.[1];
+  const aAp = /am|pm/.test(a); const endAp = b?.match(/(am|pm)/)?.[1];
   let s = toMin(a); let e = b ? toMin(b) : null;
   if (s === null) return { start: "18:00", end: "23:00" };
-  const aHasAp = /am|pm/.test(a);
-  // Bare hours like "6" or "6:30" are evening; "10-4pm" means 10am to 4pm.
-  if (!aHasAp && s < 12 * 60) { if (endAp === "pm" && e !== null && s < e - 12 * 60 + 12 * 60 && s >= 9 * 60) {/* morning start */} else if (s < 9 * 60 || !endAp) s += 12 * 60; }
-  if (b && e !== null && !endAp && e <= 12 * 60) e = e === 12 * 60 ? 0 : e + 12 * 60;
-  if (e !== null && /pm/.test(a) && /pm/.test(b || "") && e < s) s -= 12 * 60; // "9pm-3pm" → 9am-3pm
-  if (e !== null && /pm/.test(a) && /pm/.test(b || "") && s > e) s -= 12 * 60;
+  if (b && e !== null && !endAp) e = e === 720 ? 0 : e < 720 ? e + 720 : e; // "6-11:30" ends 11:30pm, "-12" is midnight
+  if (e === 720 && endAp === "pm" && s > 720) e = 0; // "6:30pm - 12 pm" means midnight
+  if (!aAp && s < 720) { if (!(endAp === "pm" && e !== null && s + 720 >= e && e !== 0)) s += 720; } // "10-4pm" stays morning
+  if (aAp && /pm/.test(a) && endAp === "pm" && e !== null && e !== 0 && e < s) s -= 720; // "9pm-3pm" → 9am-3pm
   if (e === null) e = (s + 300) % 1440;
   return { start: fmt(s), end: fmt(e) };
 }
