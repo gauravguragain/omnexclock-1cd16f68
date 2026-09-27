@@ -97,15 +97,37 @@ export default function BusinessHubPage() {
                       </div>
                     )}
                     <div>
-                      <h2 className="text-base font-semibold text-foreground">{biz.name}</h2>
-                      <p className="text-xs text-muted-foreground mt-1.5 font-medium">
-                        {isAdmin ? "Admin" : isViewerOnly ? "Viewer" : "Member"}
-                      </p>
-                    </div>
-                  </CardContent>
-                </Card>
-              </Link>
-            );
+                       <h2 className="text-base font-semibold text-foreground">{biz.name}</h2>
+                       <p className="text-xs text-muted-foreground mt-1.5 font-medium">
+                         {isAdmin ? "Admin" : isViewerOnly ? "Viewer" : "Member"}
+                       </p>
+                     </div>
+                   </CardContent>
+                 </Card>
+               </Link>
+             );
+           })}
+           {businesses.filter((biz) => isOwnerOf(biz.id)).map((biz) => (
+             <Link
+               key={`ops-${biz.id}`}
+               to={`/b/${biz.business_code}/operations`}
+               onClick={() => { setBusiness(biz); applyTheme(biz.theme); }}
+               className="block"
+             >
+               <Card className="border border-border/50 cursor-pointer hover:border-primary/40 transition-all duration-300 group h-full card-lift">
+                 <CardContent className="p-8 flex flex-col items-center text-center space-y-4">
+                   <div className="h-14 w-14 rounded-2xl bg-primary/8 flex items-center justify-center group-hover:bg-primary/15 group-hover:scale-110 transition-all duration-300">
+                     <Gauge className="h-7 w-7 text-primary" />
+                   </div>
+                   <div>
+                     <h2 className="text-base font-semibold text-foreground">Operations — {biz.name}</h2>
+                     <p className="text-xs text-muted-foreground mt-1.5 font-medium">Owner overview: sales, workforce, compliance & finance</p>
+                   </div>
+                 </CardContent>
+               </Card>
+             </Link>
+           ))}
+           {businesses.map(() => null
           })}
         </div>
 
