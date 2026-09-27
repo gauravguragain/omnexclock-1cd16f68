@@ -39,7 +39,7 @@ export default function LeadsBoard({ kind }: { kind: "event" | "catering" }) {
     a.download = `${crm.business!.business_code}__${label.replace(" ", "-")}__${format(new Date(), "dd.MM.yyyy")}.csv`; a.click();
   };
   return <div className="space-y-5">
-    <IvvyImportDialog open={importOpen} onOpenChange={setImportOpen} businessId={crm.business.id} onDone={crm.refresh} />
+    <IvvyImportDialog open={importOpen} onOpenChange={setImportOpen} businessId={crm.business.id} onDone={crm.refresh} mode="excel" />
     <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
       <div><p className="text-xs font-medium uppercase tracking-widest text-primary">{kind === "catering" ? "Catering" : "Leads"}</p><h1 className="font-serif text-3xl font-semibold">{label}</h1><p className="text-sm text-muted-foreground">{kind === "event" ? "Enquiries about hosting an event — each lead moves step by step from enquiry through inspection, menu, invoice, deposit, runsheet and final payment." : "Catering enquiries and confirmed orders."}</p></div>
       <div className="flex flex-wrap gap-2"><Button variant="outline" onClick={() => setImportOpen(true)}><Upload className="mr-2 h-4 w-4" />Import</Button><Button variant="outline" onClick={exportCsv}><Download className="mr-2 h-4 w-4" />Export</Button><Button onClick={() => { setEditing(null); setFormOpen(true); }}><Plus className="mr-2 h-4 w-4" />New lead</Button></div>
