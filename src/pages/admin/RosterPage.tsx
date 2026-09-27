@@ -849,6 +849,7 @@ export default function RosterPage() {
             dayEvents: empDayEvents,
             portalUrl,
             businessCode: business?.business_code,
+            businessName: business?.name,
           },
         });
         sentCount++;

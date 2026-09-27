@@ -80,9 +80,14 @@ serve(async (req) => {
         )
         .join("");
 
+      const bizName = body.businessName || "Pro Regal Management";
       const html = `
-        <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;">
-          <h2 style="color:#1a1a1a;">Roster Update</h2>
+        <div style="font-family:'Segoe UI',Arial,sans-serif;max-width:600px;margin:0 auto;color:#1a1a1a;background:#ffffff;">
+          <div style="text-align:center;padding:30px 20px 16px;background:linear-gradient(135deg,#1a1a1a 0%,#2d2d2d 100%);border-radius:12px 12px 0 0;">
+            <h1 style="color:#ac845d;font-size:24px;margin:0;letter-spacing:1px;">${bizName}</h1>
+            <p style="color:#a0a0a0;font-size:11px;margin:6px 0 0;text-transform:uppercase;letter-spacing:2px;">Roster Update</p>
+          </div>
+          <div style="padding:24px 30px 0;">
           <p>Hi ${body.employeeName},</p>
           <p>Your roster for <strong>${body.weekLabel}</strong> has been updated. Here are your shifts:</p>
           <table style="width:100%;border-collapse:collapse;margin:16px 0;">
@@ -125,17 +130,20 @@ serve(async (req) => {
             </p>
           </div>
           ` : ''}
-          <div style="margin-top:20px;padding:14px 16px;background:#fef9e7;border:1px solid #f5e6b8;border-radius:6px;">
+          <div style="margin:0 30px 20px;padding:14px 16px;background:#fef9e7;border:1px solid #f5e6b8;border-radius:6px;">
             <p style="margin:0;font-size:12px;color:#92400e;line-height:1.5;">
               <strong>⚠️ Disclaimer:</strong> The shift and break times stated in this roster are indicative and may vary according to the operational needs of the business and at the discretion of management. You may be required to start earlier, finish later, or take breaks at different times depending on business demands. Please check with your manager if you have any concerns.
             </p>
           </div>
-          <p style="color:#6b7280;font-size:13px;margin-top:16px;">This is an automated notification from Pro Regal Management. Please contact your manager if you have questions.</p>
+          </div>
+          <div style="text-align:center;padding:16px 30px;background:#f8f9fa;border-radius:0 0 12px 12px;">
+            <p style="color:#999;font-size:11px;margin:0;">This is an automated notification from <strong>${bizName}</strong>. Please contact your manager if you have questions.</p>
+          </div>
         </div>
       `;
 
       emailPayload = {
-        from: "Roster <noreply@regalmanagement.com.au>",
+        from: `${bizName} Roster <noreply@regalmanagement.com.au>`,
         to: [body.to],
         subject: `Roster Updated – ${body.weekLabel}`,
         html,
@@ -227,7 +235,7 @@ serve(async (req) => {
           <!-- Header -->
           <div style="text-align:center;padding:40px 20px 20px;background:linear-gradient(135deg,#1a1a1a 0%,#2d2d2d 100%);border-radius:12px 12px 0 0;">
             <h1 style="color:#ac845d;font-size:28px;margin:0;letter-spacing:1px;">Pro Regal Management</h1>
-            <p style="color:#a0a0a0;font-size:12px;margin:6px 0 0;text-transform:uppercase;letter-spacing:2px;">Time & Workforce Management</p>
+            <p style="color:#a0a0a0;font-size:12px;margin:6px 0 0;text-transform:uppercase;letter-spacing:2px;">Workforce and Sales Management</p>
           </div>
           
           <!-- Welcome Banner -->
@@ -359,7 +367,7 @@ serve(async (req) => {
         <div style="font-family:'Segoe UI',Arial,sans-serif;max-width:600px;margin:0 auto;color:#1a1a1a;background:#ffffff;">
           <!-- Header -->
           <div style="text-align:center;padding:30px 20px 16px;background:linear-gradient(135deg,#1a1a1a 0%,#2d2d2d 100%);border-radius:12px 12px 0 0;">
-            <h1 style="color:#ac845d;font-size:24px;margin:0;letter-spacing:1px;">Pro Regal Management</h1>
+            <h1 style="color:#ac845d;font-size:24px;margin:0;letter-spacing:1px;">${body.businessName || "Pro Regal Management"}</h1>
             <p style="color:#a0a0a0;font-size:11px;margin:6px 0 0;text-transform:uppercase;letter-spacing:2px;">Roster Report</p>
           </div>
           
