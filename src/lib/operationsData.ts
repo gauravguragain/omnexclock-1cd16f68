@@ -83,7 +83,7 @@ export async function loadOperations(bid: string, r: Range) {
   const [employees, leadsAll, bookings, inspections, tasks, fslEntries, fslForms, maint, docs, invOrders, barOrders, catering, contractorInv] =
     await Promise.all([
       rows(db.from("employees").select("id,name,department,pay_rate,admin_hourly_rate,active").eq("business_id", bid)),
-      rows(db.from("crm_leads").select("id,full_name,source,event_type,status,lead_kind,estimated_value,estimated_guest_count,created_at,assigned_to,lost_reason,decline_reason").eq("business_id", bid)),
+      rows(db.from("crm_leads").select("id,full_name,source,event_type,status,lead_kind,estimated_value,estimated_guest_count,created_at,preferred_dates,assigned_to,lost_reason,decline_reason").eq("business_id", bid)),
       rows(db.from("crm_bookings").select("id,lead_id,event_name,event_type,event_date,start_time,end_time,duration_minutes,guest_count,adults,kids,venue_space,total_amount,deposit_amount,deposit_paid,balance_due_date,status,booking_kind").eq("business_id", bid)),
       rows(db.from("crm_inspections").select("id,status,starts_at,proposed_at").eq("business_id", bid)),
       rows(db.from("crm_tasks").select("id,title,status,due_at,priority").eq("business_id", bid)),
@@ -110,7 +110,9 @@ export async function loadOperations(bid: string, r: Range) {
   ]);
 
   // ---------- Sales ----------
-  const leadsInRange = leadsAll.filter((l: any) => { const d = sydDate(l.created_at); return d >= r.from && d <= r.to; });
+  // Leads count in the period of their event date (first preferred date); fall back to creation date when no date is set.
+  const leadDate = (l: any) => (Array.isArray(l.preferred_dates) && l.preferred_dates[0]) || sydDate(l.created_at);
+  const leadsInRange = leadsAll.filter((l: any) => { const d = leadDate(l); return d >= r.from && d <= r.to; });
   const wonInRange = leadsInRange.filter((l: any) => WON_STAGES.includes(l.status));
   const lostInRange = leadsInRange.filter((l: any) => LOST_STAGES.includes(l.status));
   const activeLeads = leadsAll.filter((l: any) => !WON_STAGES.includes(l.status) && !LOST_STAGES.includes(l.status));
@@ -152,7 +154,7 @@ export async function loadOperations(bid: string, r: Range) {
   events.forEach((b: any) => { const t = trendMap[bucket(b.event_date)]; if (t) { t.events += Number(b.total_amount) || 0; t.bookings++; t.guests += Number(b.guest_count) || 0; } });
   cater.forEach((b: any) => { const t = trendMap[bucket(b.event_date)]; if (t) { t.catering += Number(b.total_amount) || 0; t.bookings++; } });
   catering.forEach((c: any) => { const t = trendMap[bucket(c.delivery_date)]; if (t) t.catering += Number(c.cost_incl_gst) || 0; });
-  leadsInRange.forEach((l: any) => { const t = trendMap[bucket(sydDate(l.created_at))]; if (t) t.leads++; });
+  leadsInRange.forEach((l: any) => { const t = trendMap[bucket(leadDate(l))]; if (t) t.leads++; });
 
   // venue utilisation
   const venueMap: Record<string, { name: string; events: number; guests: number; revenue: number; hours: number }> = {};
