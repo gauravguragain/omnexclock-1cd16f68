@@ -239,6 +239,20 @@
       "when": 1790530976148,
       "tag": "0033_ivvy_external_ref",
       "breakpoints": true
+    },
+    {
+      "idx": 34,
+      "version": "7",
+      "when": 1790532615815,
+      "tag": "0034_add_owner_enum_value",
+      "breakpoints": true
+    },
+    {
+      "idx": 35,
+      "version": "7",
+      "when": 1790532625977,
+      "tag": "0035_add_is_owner_of_business",
+      "breakpoints": true
     }
   ]
 }

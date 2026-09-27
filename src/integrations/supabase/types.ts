@@ -4453,6 +4453,10 @@ export type Database = {
       is_admin_of_business: { Args: { _business_id: string }; Returns: boolean }
       is_approved: { Args: { _user_id: string }; Returns: boolean }
       is_master: { Args: never; Returns: boolean }
+      is_owner_of_business: {
+        Args: { _business_id: string; _user_id: string }
+        Returns: boolean
+      }
       is_roster_admin_of_business: {
         Args: { _business_id: string }
         Returns: boolean
@@ -4578,6 +4582,7 @@ export type Database = {
         | "super_admin"
         | "sales_marketing_manager"
         | "food_safety_manager"
+        | "owner"
       clock_event_type: "clock_in" | "clock_out" | "break_start" | "break_end"
     }
     CompositeTypes: {
@@ -4715,6 +4720,7 @@ export const Constants = {
         "super_admin",
         "sales_marketing_manager",
         "food_safety_manager",
+        "owner",
       ],
       clock_event_type: ["clock_in", "clock_out", "break_start", "break_end"],
     },
