@@ -13,6 +13,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/hooks/use-toast";
 import { TimeDropdownPicker } from "@/components/TimeDropdownPicker";
 import { logAudit } from "@/lib/auditLog";
+import { getAppOrigin } from "@/lib/appOrigin";
+
 import { notifyEmployees } from "@/lib/notifications";
 import { useAuth } from "@/contexts/AuthContext";
 import {
@@ -800,7 +802,7 @@ export default function RosterPage() {
       dayEventsData = data || [];
     }
 
-    const portalUrl = "https://omnexclock.lovable.app/portal";
+    const portalUrl = `${getAppOrigin()}/portal`;
 
     let sentCount = 0;
     for (const [empId, empShifts] of allByEmployee) {

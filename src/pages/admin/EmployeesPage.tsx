@@ -14,7 +14,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/hooks/use-toast";
 import { Plus, Pencil, UserX, UserCheck, Search, ChevronRight, ChevronLeft, Check, Trash2, ListFilter, FileText } from "lucide-react";
 import type { Tables } from "@/integrations/supabase/types";
+import { logAudit } from "@/lib/auditLog";
 import { getAppOrigin } from "@/lib/appOrigin";
+
 import EmployeeDocumentsPanel from "@/components/EmployeeDocumentsPanel";
 
 type Employee = Tables<"employees">;
@@ -187,7 +189,7 @@ export default function EmployeesPage() {
                 department: payload.department || "General",
                 businessName: business.name,
                 businessCode: business.business_code,
-                portalUrl: "https://omnexclock.lovable.app/portal",
+                portalUrl: `${getAppOrigin()}/portal`,
               },
             }).then(async () => {
               await logAudit("induction_email_sent", { employee_id: data?.id, employee_name: payload.name, email: payload.email });
