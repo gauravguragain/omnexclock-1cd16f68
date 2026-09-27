@@ -39,7 +39,14 @@ export default function EventsLayout({ mode = "events" }: { mode?: "events" | "c
     // browsing a business without a selected business context).
     if (!businessCode || !user) return;
     (supabase as any).from("businesses").select("*").eq("business_code", businessCode).maybeSingle()
-      .then(({ data }: any) => { setUrlBusiness(data ? { ...data, theme: data.theme || defaultTheme, status: data.status || "active" } : null); if (data?.theme) applyTheme(data.theme || defaultTheme); });
+      .then(({ data }: any) => {
+        if (!data) return;
+        const mapped: Business = { ...data, theme: data.theme || defaultTheme, status: data.status || "active" };
+        setUrlBusiness(mapped);
+        if (data?.theme) applyTheme(mapped.theme);
+        // Adopt it as the selected business so business-scoped hooks (CRM data, etc.) follow.
+        if (business?.id !== mapped.id) setBusiness(mapped);
+      });
   }, [businessCode, businesses, user]);
 
   const resolved = business?.business_code === businessCode ? business : urlBusiness;
