@@ -54,6 +54,7 @@ const ServiceMaintenancePage = React.lazy(() => import("./pages/admin/ServiceMai
 
 const FoodSafetyPage = React.lazy(() => import("./pages/admin/FoodSafetyPage"));
 const OperationsPage = React.lazy(() => import("./pages/OperationsPage"));
+const OperationsCalendarPage = React.lazy(() => import("./pages/OperationsCalendarPage"));
 const FoodSafetyStaffPage = React.lazy(() => import("./pages/FoodSafetyStaffPage"));
 const PayDetailsPage = React.lazy(() => import("./pages/admin/PayDetailsPage"));
 const InvoicesPage = React.lazy(() => import("./pages/admin/InvoicesPage"));
@@ -117,7 +118,8 @@ const App = () => (
                  <Route path="/b/:businessCode/portal" element={<PortalPage />} />
                   <Route path="/b/:businessCode/enquire" element={<PublicEnquiryPage />} />
                    <Route path="/booking/confirm/:token" element={<BookingConfirmationPage />} />
-                   <Route path="/b/:businessCode/operations" element={<OperationsPage />} />
+<Route path="/b/:businessCode/operations" element={<OperationsPage />} />
+                   <Route path="/b/:businessCode/operations/calendar" element={<OperationsCalendarPage />} />
                   <Route path="/b/:businessCode/admin" element={<AdminLayout />}>
                     <Route index element={<DashboardPage />} />
                     <Route path="employees" element={<EmployeesPage />} />
