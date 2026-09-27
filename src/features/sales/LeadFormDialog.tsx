@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input"; import { Label } from "@/componen
 import { AlertTriangle, CalendarDays, CircleDollarSign, Loader2, UserRound } from "lucide-react"; import { toast } from "sonner";
 import type { CrmLead, CrmOption } from "./types";
 import OptionSelect from "./OptionSelect";
+import MultiOptionSelect from "./MultiOptionSelect";
 import DateField from "./DateField";
 
 export default function LeadFormDialog({ open, onOpenChange, businessId, options, lead, leads, onSaved, defaultKind = "event", lockedKind }: { open: boolean; onOpenChange: (open:boolean)=>void; businessId:string; options:CrmOption[]; lead?:CrmLead|null; leads:CrmLead[]; onSaved:()=>void; defaultKind?: string; lockedKind?: "event" | "catering" }) {
@@ -45,7 +46,7 @@ export default function LeadFormDialog({ open, onOpenChange, businessId, options
              <div className="space-y-1.5"><Label>Preferred date</Label><DateField name="preferred_date" defaultValue={lead?.preferred_dates?.[0] || ""} placeholder="Not set"/></div>
              <div className="space-y-1.5"><Label htmlFor="lead-guests">Estimated guests</Label><Input id="lead-guests" name="guests" type="number" min="1" defaultValue={lead?.estimated_guest_count || ""}/></div>
              <label className="flex min-h-10 items-center gap-2 text-sm sm:col-span-2"><Checkbox name="flexible_date" defaultChecked={lead?.flexible_date}/> Date is flexible</label>
-             {!isCatering && <><div className="space-y-1.5"><Label>Venue</Label><OptionSelect name="venue_space" options={list("venue_space")} defaultValue={lead?.venue_space || ""} emptyLabel="Not selected"/></div><div className="space-y-1.5"><Label htmlFor="lead-service-location">Service location (catering)</Label><Input id="lead-service-location" name="service_location" defaultValue={lead?.service_location || ""} placeholder="Address for catering jobs"/></div></>}
+             {!isCatering && <><div className="space-y-1.5"><Label>Venues</Label><MultiOptionSelect name="venue_space" options={list("venue_space")} defaultValue={lead?.venue_space || ""}/></div><div className="space-y-1.5"><Label htmlFor="lead-service-location">Service location (catering)</Label><Input id="lead-service-location" name="service_location" defaultValue={lead?.service_location || ""} placeholder="Address for catering jobs"/></div></>}
            </div>
          </section>
          <section className="space-y-4" aria-labelledby="lead-tracking-heading">
