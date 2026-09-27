@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { addMonths, eachDayOfInterval, endOfMonth, endOfWeek, format, isSameMonth, isToday, startOfMonth, startOfWeek } from "date-fns";
-import { CalendarDays, ChevronLeft, ChevronRight, Clock3, Mail, MapPin, Pencil, Phone, Tag, UserRound, Users } from "lucide-react";
+import { CalendarDays, ChevronLeft, ChevronRight, Clock3, Mail, MapPin, Pencil, Tag, UserRound, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
