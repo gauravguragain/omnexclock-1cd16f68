@@ -16,6 +16,7 @@ import * as XLSX from "xlsx";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { loadOperations, presetRange, previousRange, type OpsData, type Range, type RangePreset } from "@/lib/operationsData";
+import EventsDashboard from "@/features/events/EventsDashboard";
 
 const money = (n: number) => `$${(n || 0).toLocaleString("en-AU", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 const num = (n: number) => (n || 0).toLocaleString("en-AU", { maximumFractionDigits: 2 });
@@ -241,13 +242,17 @@ export default function OperationsPage() {
 
             {/* OVERVIEW */}
             <TabsContent value="overview" className="space-y-4">
+              <section aria-label="Sales and events dashboard">
+                <EventsDashboard businessId={business.id} ownerView />
+              </section>
+              <section className="space-y-4 border-t border-border pt-6" aria-label="Owner operations dashboard">
+              <div>
+                <h2 className="font-serif text-2xl font-semibold">Owner operations</h2>
+                <p className="text-sm text-muted-foreground">Financial, workforce and compliance performance for the selected period.</p>
+              </div>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                 <Kpi label="Total revenue" value={money(d.revenue.total)} cur={d.revenue.total} prev={p.revenue.total} />
-                <Kpi label="Bookings" value={num(d.revenue.bookings)} cur={d.revenue.bookings} prev={p.revenue.bookings} />
-                <Kpi label="Guests served" value={num(d.revenue.guests)} cur={d.revenue.guests} prev={p.revenue.guests} />
                 <Kpi label="Revenue per guest" value={money(d.revenue.perGuest)} cur={d.revenue.perGuest} prev={p.revenue.perGuest} />
-                <Kpi label="New leads" value={num(d.sales.leadsCount)} cur={d.sales.leadsCount} prev={p.sales.leadsCount} />
-                <Kpi label="Lead conversion" value={`${d.sales.conversion}%`} cur={d.sales.conversion} prev={p.sales.conversion} />
                 <Kpi label="Labour % of revenue" value={`${d.labour.labourPct}%`} cur={d.labour.labourPct} prev={p.labour.labourPct} invert alert={d.labour.labourPct > 35} />
                 <Kpi label="Food safety issues" value={num(d.compliance.fslOut)} cur={d.compliance.fslOut} prev={p.compliance.fslOut} invert alert={d.compliance.fslOut > 0} />
               </div>
@@ -259,14 +264,10 @@ export default function OperationsPage() {
                   {alerts.length ? <ul className="space-y-2">{alerts.slice(0, 8).map((a, i) => <li key={i} className="flex gap-2 text-xs"><AlertTriangle className={`h-3.5 w-3.5 shrink-0 mt-0.5 ${a.level === "high" ? "text-destructive" : "text-warning"}`} /><span className="text-foreground">{a.text}</span></li>)}</ul> : <p className="text-xs text-muted-foreground py-6 text-center">Nothing needs attention</p>}
                 </Panel>
               </div>
-              <div className="grid lg:grid-cols-2 gap-4">
-                <Panel title="Labour hours vs cost">
-                  <div className="h-56"><ResponsiveContainer><LineChart data={d.trend}><CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" /><XAxis dataKey="label" tick={{ fontSize: 10, fill: MUTED }} /><YAxis yAxisId="l" tick={{ fontSize: 10, fill: MUTED }} /><YAxis yAxisId="r" orientation="right" tick={{ fontSize: 10, fill: MUTED }} /><Tooltip {...tip} /><Legend wrapperStyle={{ fontSize: 11 }} /><Line yAxisId="l" dataKey="hours" name="Hours" stroke={P} dot={false} /><Line yAxisId="r" dataKey="labour" name="Cost $" stroke="hsl(var(--warning))" dot={false} /></LineChart></ResponsiveContainer></div>
-                </Panel>
-                <Panel title="Next 30 days">
-                  <DataTable cols={["Date", "Event", "Space", "Guests", "Value"]} rows={d.venue.upcoming.slice(0, 10).map((b: any) => [fmtDate(b.event_date), b.event_name || b.event_type || (b.booking_kind === "catering" ? "Catering" : "Event"), b.venue_space || "—", b.guest_count || "—", money(Number(b.total_amount) || 0)])} />
-                </Panel>
-              </div>
+              <Panel title="Labour hours vs cost">
+                <div className="h-56"><ResponsiveContainer><LineChart data={d.trend}><CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" /><XAxis dataKey="label" tick={{ fontSize: 10, fill: MUTED }} /><YAxis yAxisId="l" tick={{ fontSize: 10, fill: MUTED }} /><YAxis yAxisId="r" orientation="right" tick={{ fontSize: 10, fill: MUTED }} /><Tooltip {...tip} /><Legend wrapperStyle={{ fontSize: 11 }} /><Line yAxisId="l" dataKey="hours" name="Hours" stroke={P} dot={false} /><Line yAxisId="r" dataKey="labour" name="Cost $" stroke="hsl(var(--warning))" dot={false} /></LineChart></ResponsiveContainer></div>
+              </Panel>
+              </section>
             </TabsContent>
 
             {/* REVENUE */}
