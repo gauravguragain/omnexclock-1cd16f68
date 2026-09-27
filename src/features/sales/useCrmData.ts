@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useBusiness } from "@/contexts/BusinessContext";
+import { useLiveSync } from "@/hooks/useLiveSync";
 import type { CrmInspection, CrmInteraction, CrmLead, CrmOption, CrmTask } from "./types";
 
 export function useCrmData(businessId?: string) {
@@ -11,8 +12,8 @@ export function useCrmData(businessId?: string) {
   const [interactions, setInteractions] = useState<CrmInteraction[]>([]); const [settings, setSettings] = useState<any>(null);
   const [runsheets, setRunsheets] = useState<any[]>([]); const [bookings, setBookings] = useState<any[]>([]); const [menuItems, setMenuItems] = useState<any[]>([]); const [loading, setLoading] = useState(true);
 
-  const refresh = useCallback(async () => {
-    if (!id) return; setLoading(true);
+  const refresh = useCallback(async (silent = false) => {
+    if (!id) return; if (!silent) setLoading(true);
     const [leadRes, optionRes, inspectionRes, taskRes, interactionRes, settingRes, bookingRes, menuRes, runsheetRes, spaceRes] = await Promise.all([
       supabase.from("crm_leads").select("*").eq("business_id", id).order("created_at", { ascending: false }),
       supabase.from("crm_options").select("*").eq("business_id", id).order("sort_order"),
@@ -32,5 +33,6 @@ export function useCrmData(businessId?: string) {
   }, [id]);
 
   useEffect(() => { void refresh(); }, [refresh]);
+  useLiveSync(["crm_leads", "crm_options", "crm_inspections", "crm_tasks", "crm_interactions", "crm_settings", "crm_bookings", "crm_menu_items", "crm_runsheets", "crm_venue_spaces"], id, () => void refresh(true));
   return { business, leads, options, inspections, tasks, interactions, settings, bookings, menuItems, runsheets, loading, refresh };
 }

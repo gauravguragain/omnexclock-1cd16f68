@@ -37,15 +37,15 @@ export default function OperationsCalendarPage() {
         <div className="flex items-center gap-2">
           <span className="rounded-md bg-primary/10 p-2 text-primary"><CalendarDays className="h-5 w-5" /></span>
           <div>
-            <h1 className="text-lg font-semibold leading-tight">Events calendar</h1>
+            <h1 className="text-lg font-semibold leading-tight">Events & catering calendar</h1>
             <p className="text-xs text-muted-foreground">{business.name} · view only</p>
           </div>
         </div>
       </div>
       <MonthCalendar
         readOnly
-        bookings={crm.bookings.filter(b => b.booking_kind !== "catering")}
-        leads={crm.leads.filter((l: any) => l.lead_kind !== "catering" && l.event_type !== "catering")}
+        bookings={crm.bookings.filter((b: any) => !["cancelled", "declined"].includes(b.status))}
+        leads={crm.leads}
         runsheets={crm.runsheets}
         customers={ev.customers}
         venues={ev.venues}
