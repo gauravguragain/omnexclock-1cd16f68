@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { readClientList, type ClientRow } from "./clientListImport";
 
 type Row = Record<string, string>;
 const MONTHS = ["january","february","march","april","may","june","july","august","september","october","november","december"];
@@ -46,8 +47,16 @@ export default function IvvyImportDialog({ open, onOpenChange, businessId, onDon
   const [busy, setBusy] = useState(false);
   const [progress, setProgress] = useState("");
 
+  const [clients, setClients] = useState<ClientRow[]>([]);
   const onFile = async (f?: File) => {
     if (!f) return;
+    setItems([]); setClients([]);
+    if (/\.xlsx?$/i.test(f.name)) {
+      const { data: sp } = await (supabase.from("crm_venue_spaces" as any) as any).select("name").eq("business_id", businessId).eq("active", true);
+      const rows = await readClientList(f, (sp || []).map((x: any) => x.name));
+      if (!rows) { toast.error("Couldn't find a 'Client Name' column in this spreadsheet."); return; }
+      setClients(rows); return;
+    }
     const rows = parseCsv(await f.text());
     if (!rows.length || !("code" in rows[0]) || !("main contact" in rows[0])) { toast.error("This doesn't look like an iVvy bookings export."); return; }
     const out: Prepared[] = []; let skip = 0;
@@ -58,7 +67,59 @@ export default function IvvyImportDialog({ open, onOpenChange, businessId, onDon
     setItems(out); setSkipped(skip);
   };
 
+  const runClients = async () => {
+    setBusy(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      const today = new Date().toLocaleDateString("en-CA", { timeZone: "Australia/Sydney" });
+      const leadRows = clients.map(c => ({
+        business_id: businessId, external_ref: c.ref, full_name: c.name, source: "excel_import",
+        event_type: c.eventType.toLowerCase().replace(/\s+/g, "_"), lead_kind: "event",
+        preferred_dates: c.date ? [c.date] : [], venue_space: c.venue,
+        status: c.deposit > 0 ? "deposit_received" : "new", lead_outcome: c.deposit > 0 ? "confirmed" : "new",
+        tags: ["excel import"], created_by: user?.id ?? null, updated_by: user?.id ?? null,
+      }));
+      const leadId: Record<string, { id: string; customer_id: string | null }> = {};
+      for (let i = 0; i < leadRows.length; i += 100) {
+        setProgress(`Leads ${Math.min(i + 100, leadRows.length)}/${leadRows.length}`);
+        const { data, error } = await supabase.from("crm_leads").upsert(leadRows.slice(i, i + 100) as any, { onConflict: "business_id,external_ref" }).select("id, external_ref, customer_id");
+        if (error) throw error;
+        (data || []).forEach((d: any) => { leadId[d.external_ref] = d; });
+      }
+      // Start/end times and deposits live on the booking, so every dated client gets one; unpaid ones stay pending.
+      const bookingRows = clients.filter(c => c.date).map(c => {
+        const [sh, sm] = c.start.split(":").map(Number); const [eh, em] = c.end.split(":").map(Number);
+        const dur = ((eh * 60 + em) - (sh * 60 + sm) + 1440) % 1440 || 300;
+        return {
+          business_id: businessId, external_ref: c.ref, lead_id: leadId[c.ref]?.id ?? null, customer_id: leadId[c.ref]?.customer_id ?? null,
+          event_date: c.date, start_time: c.start, end_time: c.end, duration_minutes: dur, guest_count: 1,
+          venue_space: c.venue, booking_kind: "event", event_name: `${c.eventType} – ${c.name}`,
+          deposit_amount: c.deposit, deposit_paid: c.deposit > 0,
+          status: c.deposit > 0 ? (c.date! < today ? "completed" : "confirmed") : "pending_confirmation",
+          notes: ["Imported from spreadsheet", c.roomRaw && `Room given: ${c.roomRaw}`, c.timeRaw && `Time given: ${c.timeRaw}`, c.depositRaw && `Deposit given: ${c.depositRaw}`].filter(Boolean).join("\n"),
+          created_by: user?.id ?? null, updated_by: user?.id ?? null,
+        };
+      });
+      const bookingId: Record<string, string> = {};
+      for (let i = 0; i < bookingRows.length; i += 100) {
+        setProgress(`Bookings ${Math.min(i + 100, bookingRows.length)}/${bookingRows.length}`);
+        const { data, error } = await supabase.from("crm_bookings").upsert(bookingRows.slice(i, i + 100) as any, { onConflict: "business_id,external_ref" }).select("id, external_ref");
+        if (error) throw error;
+        (data || []).forEach((d: any) => { bookingId[d.external_ref] = d.id; });
+      }
+      const paid = clients.filter(c => c.deposit > 0 && bookingId[c.ref]);
+      const ids = paid.map(c => bookingId[c.ref]);
+      if (ids.length) { const { error } = await supabase.from("crm_payments").delete().in("booking_id", ids).eq("reference", "Spreadsheet import"); if (error) throw error; }
+      const payRows = paid.map(c => ({ business_id: businessId, booking_id: bookingId[c.ref], amount: c.deposit, paid_on: today, payment_type: "deposit", method: "other", reference: "Spreadsheet import", notes: `Deposit: ${c.depositRaw}` }));
+      if (payRows.length) { const { error } = await supabase.from("crm_payments").insert(payRows as any); if (error) throw error; }
+      toast.success(`Imported ${leadRows.length} clients, ${bookingRows.length} bookings and ${payRows.length} deposits.`);
+      setClients([]); onOpenChange(false); onDone();
+    } catch (e: any) { toast.error(e.message || "Import failed"); }
+    finally { setBusy(false); setProgress(""); }
+  };
+
   const run = async () => {
+    if (clients.length) return runClients();
     setBusy(true);
     try {
       const { data: { user } } = await supabase.auth.getUser();
@@ -136,15 +197,19 @@ export default function IvvyImportDialog({ open, onOpenChange, businessId, onDon
 
   const c = (f: (p: Prepared) => boolean) => items.filter(f).length;
   return <Dialog open={open} onOpenChange={o => { if (!busy) onOpenChange(o); }}>
-    <DialogContent className="max-w-lg">
-      <DialogHeader><DialogTitle>Import from iVvy</DialogTitle><DialogDescription>In iVvy, export your Bookings list as CSV and upload it here. Past confirmed bookings are imported as completed history with their payments. Running it again updates bookings already imported.</DialogDescription></DialogHeader>
-      <Input type="file" accept=".csv,text/csv" disabled={busy} onChange={e => onFile(e.target.files?.[0])} />
+    <DialogContent className="max-w-2xl">
+      <DialogHeader><DialogTitle>Import bookings</DialogTitle><DialogDescription>Upload an iVvy Bookings CSV, or an Excel client list (Client Name, Event Date, Event Type, Event Room, Event Start Time, Deposit). Past confirmed bookings are imported as completed history with their payments. Running it again updates bookings already imported.</DialogDescription></DialogHeader>
+      <Input type="file" accept=".csv,text/csv,.xlsx,.xls" disabled={busy} onChange={e => onFile(e.target.files?.[0])} />
       {items.length > 0 && <div className="grid grid-cols-2 gap-2 text-sm">
         {[["Bookings found", items.length], ["Event leads", c(p => !p.catering)], ["Catering leads", c(p => p.catering)], ["Hosted (become bookings)", c(p => p.status !== "cancelled")], ["Past (marked completed)", c(p => p.status !== "cancelled" && p.date && p.date < new Date().toLocaleDateString("en-CA", { timeZone: "Australia/Sydney" }))], ["Cancelled (Cold)", c(p => p.status === "cancelled")], ["Skipped rows", skipped]].map(([l, v]) =>
           <div key={l as string} className="flex justify-between border-b border-border py-1"><span className="text-muted-foreground">{l}</span><span className="font-medium">{v}</span></div>)}
       </div>}
+      {clients.length > 0 && <div className="space-y-2 text-sm">
+        <div className="grid grid-cols-2 gap-2">{[["Clients found", clients.length], ["With deposit (confirmed)", clients.filter(c => c.deposit > 0).length], ["No deposit (new leads)", clients.filter(c => !c.deposit).length], ["Missing date", clients.filter(c => !c.date).length]].map(([l, v]) => <div key={l as string} className="flex justify-between border-b border-border py-1"><span className="text-muted-foreground">{l}</span><span className="font-medium">{v}</span></div>)}</div>
+        <div className="max-h-56 overflow-auto rounded border border-border text-xs"><table className="w-full"><tbody>{clients.map(c => <tr key={c.ref} className="border-b border-border"><td className="p-1.5 font-medium">{c.name}</td><td className="p-1.5">{c.date}</td><td className="p-1.5">{c.eventType}</td><td className="p-1.5">{c.venue}</td><td className="p-1.5 whitespace-nowrap">{c.start}–{c.end}</td><td className="p-1.5">{c.deposit ? `$${c.deposit}` : "—"}</td></tr>)}</tbody></table></div>
+      </div>}
       {progress && <p className="text-sm text-muted-foreground">{progress}</p>}
-      <DialogFooter><Button variant="outline" disabled={busy} onClick={() => onOpenChange(false)}>Cancel</Button><Button disabled={busy || !items.length} onClick={run}>{busy ? "Importing…" : `Import ${items.length || ""}`}</Button></DialogFooter>
+      <DialogFooter><Button variant="outline" disabled={busy} onClick={() => onOpenChange(false)}>Cancel</Button><Button disabled={busy || !(items.length || clients.length)} onClick={run}>{busy ? "Importing…" : `Import ${items.length || clients.length || ""}`}</Button></DialogFooter>
     </DialogContent>
   </Dialog>;
 }
