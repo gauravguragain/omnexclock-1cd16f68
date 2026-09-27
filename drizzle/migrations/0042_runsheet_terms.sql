@@ -1,0 +1,1 @@
+ALTER TABLE public.crm_settings ADD COLUMN IF NOT EXISTS runsheet_terms text, ADD COLUMN IF NOT EXISTS runsheet_terms_enabled boolean NOT NULL DEFAULT true;
