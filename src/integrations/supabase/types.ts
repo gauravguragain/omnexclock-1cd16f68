@@ -4578,6 +4578,7 @@ export type Database = {
         | "super_admin"
         | "sales_marketing_manager"
         | "food_safety_manager"
+        | "owner"
       clock_event_type: "clock_in" | "clock_out" | "break_start" | "break_end"
     }
     CompositeTypes: {
@@ -4715,6 +4716,7 @@ export const Constants = {
         "super_admin",
         "sales_marketing_manager",
         "food_safety_manager",
+        "owner",
       ],
       clock_event_type: ["clock_in", "clock_out", "break_start", "break_end"],
     },
