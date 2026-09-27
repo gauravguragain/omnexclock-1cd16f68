@@ -51,7 +51,7 @@ export default function EventsDashboard({ businessId, ownerView = false, canOpen
     <div className="flex items-start justify-between"><div><p className="font-medium">{title}</p><p className="text-xs text-muted-foreground">{sub}</p></div><span className="rounded-full bg-primary/15 p-2 text-primary"><Icon className="h-4 w-4" /></span></div>
     <p className="mt-4 text-3xl font-semibold">{value}</p><p className="text-xs text-muted-foreground">{unit}</p>
     <div className="mt-3 flex-1 text-xs text-muted-foreground">{children}</div>
-    <Link to={to} className="mt-3 flex items-center justify-between border-t border-border pt-3 text-sm hover:text-primary">{link}<ChevronRight className="h-4 w-4" /></Link>
+    {!ownerView && <Link to={to} className="mt-3 flex items-center justify-between border-t border-border pt-3 text-sm hover:text-primary">{link}<ChevronRight className="h-4 w-4" /></Link>}
   </CardContent></Card>;
 
   return <div className={`space-y-6 ${!canOpenSales ? "[&_a]:hidden" : ""}`}
@@ -110,7 +110,7 @@ export default function EventsDashboard({ businessId, ownerView = false, canOpen
         <Stat title="Events next 7 days" sub={`${later.length} further out`} value={week.length} unit="upcoming events" icon={CalendarClock} link="Open calendar" to={`${base}/calendar`}>{week.length ? `Next: ${week[0].event_name || week[0].venue_space} on ${format(d(week[0].event_date), "d MMM")}` : "Nothing booked in the next seven days"}</Stat>
       </div>
       <Card><CardContent className="p-6">
-        <div className="flex items-start justify-between"><div className="border-l-2 border-primary pl-3"><p className="font-semibold">Upcoming events</p><p className="text-xs text-muted-foreground">The next seven days</p></div><Link to={`${base}/events`} className="text-xs text-muted-foreground hover:text-primary">View all ›</Link></div>
+        <div className="flex items-start justify-between"><div className="border-l-2 border-primary pl-3"><p className="font-semibold">Upcoming events</p><p className="text-xs text-muted-foreground">The next seven days</p></div>{!ownerView && <Link to={`${base}/events`} className="text-xs text-muted-foreground hover:text-primary">View all ›</Link>}</div>
          <div className="mt-4 space-y-2">{[...todays, ...week].slice(0, 6).map(b => <div key={b.id} className="flex min-w-0 items-center gap-3 rounded-lg border border-border p-3 sm:gap-4">
           <div className="text-center"><p className="text-lg font-semibold leading-none">{format(d(b.event_date), "dd")}</p><p className="text-[10px] uppercase text-muted-foreground">{format(d(b.event_date), "MMM")}</p></div>
            <div className="min-w-0 flex-1"><p className="truncate font-medium">{b.event_name || crm.leads.find(l => l.id === b.lead_id)?.full_name || "Event"}</p><p className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground"><span className="flex min-w-0 items-center gap-1"><MapPin className="h-3 w-3 shrink-0" /><span className="truncate">{b.venue_space || b.service_location || "—"}</span></span><span className="flex items-center gap-1"><Users className="h-3 w-3" />{guests(b)} guests</span></p></div>
@@ -143,7 +143,7 @@ export default function EventsDashboard({ businessId, ownerView = false, canOpen
           <Stat title="Catering this month" sub={format(new Date(), "MMMM yyyy")} value={cat.filter(b => isSameMonth(d(b.event_date), new Date())).length} unit="jobs" icon={CalendarDays} link="View catering bookings" to={`${cBase}/bookings`}>{cat.length} catering jobs all time</Stat>
         </div>
         <Card><CardContent className="p-6">
-          <div className="flex items-start justify-between"><div className="border-l-2 border-primary pl-3"><p className="font-semibold">Upcoming catering</p><p className="text-xs text-muted-foreground">The next seven days</p></div><Link to={`${cBase}/bookings`} className="text-xs text-muted-foreground hover:text-primary">View all ›</Link></div>
+          <div className="flex items-start justify-between"><div className="border-l-2 border-primary pl-3"><p className="font-semibold">Upcoming catering</p><p className="text-xs text-muted-foreground">The next seven days</p></div>{!ownerView && <Link to={`${cBase}/bookings`} className="text-xs text-muted-foreground hover:text-primary">View all ›</Link>}</div>
           <div className="mt-4 space-y-2">{[...cToday, ...cWeek].slice(0, 6).map(b => <Link key={b.id} to={`${cBase}/bookings/${b.id}`} className="flex min-w-0 items-center gap-3 rounded-lg border border-border p-3 hover:border-primary sm:gap-4">
             <div className="text-center"><p className="text-lg font-semibold leading-none">{format(d(b.event_date), "dd")}</p><p className="text-[10px] uppercase text-muted-foreground">{format(d(b.event_date), "MMM")}</p></div>
             <div className="min-w-0 flex-1"><p className="truncate font-medium">{b.event_name || crm.leads.find(l => l.id === b.lead_id)?.full_name || "Catering"}</p><p className="flex flex-wrap gap-x-3 text-xs text-muted-foreground"><span>{to12(String(b.start_time).slice(0, 5))}</span><span className="flex items-center gap-1"><Users className="h-3 w-3" />{guests(b)} guests</span></p></div>
