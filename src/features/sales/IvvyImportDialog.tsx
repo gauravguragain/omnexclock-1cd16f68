@@ -137,7 +137,7 @@ export default function IvvyImportDialog({ open, onOpenChange, businessId, onDon
   const c = (f: (p: Prepared) => boolean) => items.filter(f).length;
   return <Dialog open={open} onOpenChange={o => { if (!busy) onOpenChange(o); }}>
     <DialogContent className="max-w-lg">
-      <DialogHeader><DialogTitle>Import from iVvy</DialogTitle><DialogDescription>In iVvy, export your Bookings list as CSV and upload it here. Running it again updates bookings already imported.</DialogDescription></DialogHeader>
+      <DialogHeader><DialogTitle>Import from iVvy</DialogTitle><DialogDescription>In iVvy, export your Bookings list as CSV and upload it here. Past confirmed bookings are imported as completed history with their payments. Running it again updates bookings already imported.</DialogDescription></DialogHeader>
       <Input type="file" accept=".csv,text/csv" disabled={busy} onChange={e => onFile(e.target.files?.[0])} />
       {items.length > 0 && <div className="grid grid-cols-2 gap-2 text-sm">
         {[["Bookings found", items.length], ["Event leads", c(p => !p.catering)], ["Catering leads", c(p => p.catering)], ["Confirmed (become bookings)", c(p => p.status === "confirmed")], ["Past (marked completed)", c(p => p.status === "confirmed" && p.date && p.date < new Date().toLocaleDateString("en-CA", { timeZone: "Australia/Sydney" }))], ["Tentative (New)", c(p => p.status === "tentative")], ["Cancelled (Cold)", c(p => p.status === "cancelled")], ["Skipped rows", skipped]].map(([l, v]) =>
