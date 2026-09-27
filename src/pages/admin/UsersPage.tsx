@@ -227,14 +227,33 @@ export default function UsersPage() {
         setRoleSaving(false);
         return;
       }
-      const { error: delErr } = await supabase.from("user_roles").delete().eq("user_id", selectedUser.id).eq("business_id", businessId);
-      if (delErr) throw delErr;
-      const rows = selectedRoles.map(role => ({
-        user_id: selectedUser.id, role: role as any, business_id: businessId,
-        ...(role === "roster_admin" ? { departments: selectedDepartments } : {}),
-      }));
-      const { error: insErr } = await supabase.from("user_roles").insert(rows as any);
-      if (insErr) throw insErr;
+      // Add/update first, then remove unticked roles — so editing your own roles
+      // never strips the admin access needed to finish saving.
+      const { data: existing, error: exErr } = await supabase
+        .from("user_roles").select("role").eq("user_id", selectedUser.id).eq("business_id", businessId);
+      if (exErr) throw exErr;
+      const current = (existing || []).map((r: any) => r.role as string);
+      const toAdd = selectedRoles.filter(r => !current.includes(r));
+      const toRemove = current.filter(r => !selectedRoles.includes(r));
+      if (toAdd.length) {
+        const rows = toAdd.map(role => ({
+          user_id: selectedUser.id, role: role as any, business_id: businessId,
+          ...(role === "roster_admin" ? { departments: selectedDepartments } : {}),
+        }));
+        const { error: insErr } = await supabase.from("user_roles").insert(rows as any);
+        if (insErr) throw insErr;
+      }
+      if (selectedRoles.includes("roster_admin") && current.includes("roster_admin")) {
+        const { error: upErr } = await (supabase.from("user_roles") as any)
+          .update({ departments: selectedDepartments })
+          .eq("user_id", selectedUser.id).eq("business_id", businessId).eq("role", "roster_admin");
+        if (upErr) throw upErr;
+      }
+      if (toRemove.length) {
+        const { error: delErr } = await supabase.from("user_roles").delete()
+          .eq("user_id", selectedUser.id).eq("business_id", businessId).in("role", toRemove as any);
+        if (delErr) throw delErr;
+      }
       await logAudit("roles_updated", { user_id: selectedUser.id, email: selectedUser.email, roles: selectedRoles, departments: selectedRoles.includes("roster_admin") ? selectedDepartments : undefined, business_id: businessId });
       logMasterAudit("role_changed", { user_email: selectedUser.email, business_name: business?.name, roles: selectedRoles, action: "granted" });
       toast({ title: "Access updated", description: `${selectedUser.email}: ${selectedRoles.map(r => ROLE_LABELS[r]).join(", ")}.` });
