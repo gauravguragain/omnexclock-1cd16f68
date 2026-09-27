@@ -98,17 +98,19 @@ const bookingSummary = (rows: Row[]): [string, string | number][] => {
 export const DATASETS: Dataset[] = [
   // ---------- Sales & events ----------
   {
-    key: "leads", group: "Sales & events", label: "Leads", description: "Enquiries created in the period",
+    key: "leads", group: "Sales & events", label: "Leads", description: "Enquiries with an event date in the period (creation date used when no date is set)",
     columns: [
-      { key: "created", label: "Created", type: "date" }, { key: "full_name", label: "Client" }, { key: "email", label: "Email" },
+      { key: "event_date", label: "Event date", type: "date" }, { key: "created", label: "Created", type: "date" }, { key: "full_name", label: "Client" }, { key: "email", label: "Email" },
       { key: "phone", label: "Phone" }, { key: "lead_kind", label: "Kind" }, { key: "event_type", label: "Event type" },
       { key: "source", label: "Source" }, { key: "status", label: "Stage" }, { key: "estimated_guest_count", label: "Est. guests", type: "num" },
       { key: "estimated_value", label: "Est. value", type: "money" }, { key: "reason", label: "Lost / decline reason" },
     ],
     load: async ({ bid, range }) => (await all(() => db.from("crm_leads")
-      .select("created_at,full_name,email,phone,lead_kind,event_type,source,status,estimated_guest_count,estimated_value,lost_reason,decline_reason")
-      .eq("business_id", bid).gte("created_at", tsFrom(range)).lt("created_at", tsTo(range)).order("created_at")))
-      .map(l => ({ ...l, created: sydDate(l.created_at), lead_kind: pretty(l.lead_kind || "event"), event_type: pretty(l.event_type), source: pretty(l.source), status: pretty(l.status), reason: l.decline_reason || l.lost_reason || "" })),
+      .select("created_at,preferred_dates,full_name,email,phone,lead_kind,event_type,source,status,estimated_guest_count,estimated_value,lost_reason,decline_reason")
+      .eq("business_id", bid)))
+      .map(l => ({ ...l, event_date: (Array.isArray(l.preferred_dates) && l.preferred_dates[0]) || sydDate(l.created_at), created: sydDate(l.created_at), lead_kind: pretty(l.lead_kind || "event"), event_type: pretty(l.event_type), source: pretty(l.source), status: pretty(l.status), reason: l.decline_reason || l.lost_reason || "" }))
+      .filter(l => l.event_date >= range.from && l.event_date <= range.to)
+      .sort((a, b) => a.event_date.localeCompare(b.event_date)),
     summary: rows => [["New leads", rows.length], ["Estimated value", sum(rows, "estimated_value")], ...countBy(rows, "status").map(([k, v]) => [`Stage: ${k}`, v] as [string, number])],
   },
   {
