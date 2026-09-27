@@ -11,9 +11,9 @@
   },
   "mcp": {
     "server": {
-      "name": "omnexclock",
+      "name": "regalclock",
       "version": "0.1.0",
-      "title": "OmnexClock"
+      "title": "Regal Clock"
     },
     "tools": [
       {

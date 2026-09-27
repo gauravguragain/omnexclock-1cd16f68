@@ -220,7 +220,7 @@ serve(async (req) => {
         throw new Error("Missing required fields for employee induction");
       }
 
-      const portalUrl = body.portalUrl || "https://omnexclock.lovable.app/portal";
+      const portalUrl = body.portalUrl || "https://www.regalmanagement.com.au/portal";
 
       const html = `
         <div style="font-family:'Segoe UI',Arial,sans-serif;max-width:600px;margin:0 auto;color:#1a1a1a;background:#ffffff;">

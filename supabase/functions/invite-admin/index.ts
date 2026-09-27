@@ -108,7 +108,7 @@ serve(async (req) => {
 
     // Always use the published URL for links (not the preview URL)
     const publishedUrl = appUrl.includes("preview--") 
-      ? "https://omnexclock.lovable.app" 
+      ? "https://www.regalmanagement.com.au" 
       : appUrl;
 
     const inductionGuides: Record<string, string> = {
