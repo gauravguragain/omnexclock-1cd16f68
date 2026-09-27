@@ -126,10 +126,8 @@ export default function BusinessHubPage() {
                  </CardContent>
                </Card>
              </Link>
-           ))}
-           {businesses.map(() => null
-          })}
-        </div>
+            ))}
+         </div>
 
         <Button variant="ghost" className="text-muted-foreground hover:text-foreground transition-colors" onClick={signOut}>
           <LogOut className="h-4 w-4 mr-2" />
