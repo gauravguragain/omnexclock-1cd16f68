@@ -14,7 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/hooks/use-toast";
 import { Plus, Pencil, UserX, UserCheck, Search, ChevronRight, ChevronLeft, Check, Trash2, ListFilter, FileText } from "lucide-react";
 import type { Tables } from "@/integrations/supabase/types";
-import { logAudit } from "@/lib/auditLog";
+import { getAppOrigin } from "@/lib/appOrigin";
 import EmployeeDocumentsPanel from "@/components/EmployeeDocumentsPanel";
 
 type Employee = Tables<"employees">;
