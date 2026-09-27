@@ -18,6 +18,7 @@ type CalendarProps = {
   venues: Booking[];
   onView: (booking: Booking) => void;
   onEdit: (booking: Booking) => void;
+  readOnly?: boolean;
 };
 
   const TONES = [
@@ -29,7 +30,7 @@ type CalendarProps = {
 ];
 const DOT_TONES = ["bg-primary", "bg-secondary-foreground", "bg-accent-foreground", "bg-muted-foreground", "bg-destructive"];
 
-export default function MonthCalendar({ bookings, leads, runsheets, customers, venues, onView, onEdit }: CalendarProps) {
+export default function MonthCalendar({ bookings, leads, runsheets, customers, venues, onView, onEdit, readOnly = false }: CalendarProps) {
   const [month, setMonth] = useState(startOfMonth(new Date()));
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
@@ -67,7 +68,7 @@ export default function MonthCalendar({ bookings, leads, runsheets, customers, v
         <div className="flex items-center justify-between gap-3 py-2"><dt className="flex items-center gap-2 text-muted-foreground"><UserRound className="h-4 w-4" />Organizer</dt><dd className="flex min-w-0 items-center gap-2 text-right"><span className="min-w-0 break-words">{customer?.full_name || "—"}{customer?.phone && <span className="block text-xs text-muted-foreground">{customer.phone}</span>}</span>{customer?.phone && <Button asChild size="icon" variant="outline" className="h-8 w-8 shrink-0"><a href={`tel:${customer.phone}`} aria-label={`Call ${customer.full_name}`}><Phone className="h-3.5 w-3.5" /></a></Button>}{customer?.email && <Button asChild size="icon" variant="outline" className="h-8 w-8 shrink-0"><a href={`mailto:${customer.email}`} aria-label={`Email ${customer.full_name}`}><Mail className="h-3.5 w-3.5" /></a></Button>}</dd></div>
         <div className="flex justify-between gap-4 py-2"><dt className="text-muted-foreground">Notes</dt><dd className="max-w-[65%] whitespace-pre-wrap text-right">{b.notes || "No notes added"}</dd></div>
       </dl>
-      <div className="flex items-center justify-between gap-2 pt-1"><Button size="sm" variant="outline" onClick={() => { setSelectedDate(null); setSelectedBooking(null); onEdit(b); }}><Pencil className="mr-2 h-4 w-4" />Edit event</Button><Button size="sm" variant="outline" onClick={() => { setSelectedDate(null); setSelectedBooking(null); onView(b); }}>View details <ChevronRight className="ml-2 h-4 w-4" /></Button></div>
+      {!readOnly && <div className="flex items-center justify-between gap-2 pt-1"><Button size="sm" variant="outline" onClick={() => { setSelectedDate(null); setSelectedBooking(null); onEdit(b); }}><Pencil className="mr-2 h-4 w-4" />Edit event</Button><Button size="sm" variant="outline" onClick={() => { setSelectedDate(null); setSelectedBooking(null); onView(b); }}>View details <ChevronRight className="ml-2 h-4 w-4" /></Button></div>}
     </div>;
   };
 
