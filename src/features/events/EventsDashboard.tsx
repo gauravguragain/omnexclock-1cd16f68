@@ -51,7 +51,7 @@ export default function EventsDashboard({ businessId, ownerView = false, canOpen
     <div className="flex items-start justify-between"><div><p className="font-medium">{title}</p><p className="text-xs text-muted-foreground">{sub}</p></div><span className="rounded-full bg-primary/15 p-2 text-primary"><Icon className="h-4 w-4" /></span></div>
     <p className="mt-4 text-3xl font-semibold">{value}</p><p className="text-xs text-muted-foreground">{unit}</p>
     <div className="mt-3 flex-1 text-xs text-muted-foreground">{children}</div>
-    <Link to={to} className="mt-3 flex items-center justify-between border-t border-border pt-3 text-sm hover:text-primary">{link}<ChevronRight className="h-4 w-4" /></Link>
+    {!ownerView && <Link to={to} className="mt-3 flex items-center justify-between border-t border-border pt-3 text-sm hover:text-primary">{link}<ChevronRight className="h-4 w-4" /></Link>}
   </CardContent></Card>;
 
   return <div className={`space-y-6 ${!canOpenSales ? "[&_a]:hidden" : ""}`}
