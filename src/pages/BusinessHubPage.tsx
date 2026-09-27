@@ -164,10 +164,23 @@ export default function BusinessHubPage() {
       </div>
 
       <div className="w-full max-w-sm animate-fade-in" style={{ animationDelay: '0.1s' }}>
+        {showOperations && <Link to={`/b/${businessCode}/operations`} onClick={() => applyTheme(business.theme)} className="block">
+          <Card className="border border-border/50 cursor-pointer hover:border-primary/40 transition-all duration-300 group card-lift">
+            <CardContent className="p-8 flex flex-col items-center text-center space-y-4">
+              <div className="h-14 w-14 rounded-2xl bg-primary/8 flex items-center justify-center group-hover:bg-primary/15 group-hover:scale-110 transition-all duration-300">
+                <Gauge className="h-7 w-7 text-primary" />
+              </div>
+              <div>
+                <h2 className="text-base font-semibold text-foreground">Operations</h2>
+                <p className="text-xs text-muted-foreground mt-1.5 leading-relaxed">Owner overview: sales, workforce, compliance & finance</p>
+              </div>
+            </CardContent>
+          </Card>
+        </Link>}
         {showAdmin && <Link
           to={`/b/${businessCode}/admin`}
           onClick={() => applyTheme(business.theme)}
-          className="block"
+          className="mt-4 block"
         >
           <Card className="border border-border/50 cursor-pointer hover:border-primary/40 transition-all duration-300 group card-lift">
             <CardContent className="p-8 flex flex-col items-center text-center space-y-4">
@@ -177,19 +190,6 @@ export default function BusinessHubPage() {
               <div>
                 <h2 className="text-base font-semibold text-foreground">Admin Panel</h2>
                 <p className="text-xs text-muted-foreground mt-1.5 leading-relaxed">Manage employees, timesheets & more</p>
-              </div>
-            </CardContent>
-          </Card>
-        </Link>}
-        {showOperations && <Link to={`/b/${businessCode}/operations`} onClick={() => applyTheme(business.theme)} className="mt-4 block">
-          <Card className="border border-border/50 cursor-pointer hover:border-primary/40 transition-all duration-300 group card-lift">
-            <CardContent className="p-8 flex flex-col items-center text-center space-y-4">
-              <div className="h-14 w-14 rounded-2xl bg-primary/8 flex items-center justify-center group-hover:bg-primary/15 group-hover:scale-110 transition-all duration-300">
-                <Gauge className="h-7 w-7 text-primary" />
-              </div>
-              <div>
-                <h2 className="text-base font-semibold text-foreground">Operations</h2>
-                <p className="text-xs text-muted-foreground mt-1.5 leading-relaxed">Owner overview: sales, workforce, compliance & finance</p>
               </div>
             </CardContent>
           </Card>
