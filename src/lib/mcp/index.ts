@@ -8,8 +8,8 @@ import createTask from "./tools/create-task";
 const projectRef = import.meta.env.VITE_SUPABASE_PROJECT_ID ?? "project-ref-unset";
 
 export default defineMcp({
-  name: "omnexclock",
-  title: "OmnexClock",
+  name: "regalclock",
+  title: "Regal Clock",
   version: "0.1.0",
   instructions:
     "Tools for Regal Clock sales & events. Call list_businesses first to get a business_id, then list leads, upcoming bookings, open tasks, or create a task.",
