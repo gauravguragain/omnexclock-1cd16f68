@@ -288,6 +288,13 @@
       "when": 1790548242754,
       "tag": "0040_enable_realtime_crm",
       "breakpoints": true
+    },
+    {
+      "idx": 41,
+      "version": "7",
+      "when": 1790551637995,
+      "tag": "0041_venue_double_booking_guard",
+      "breakpoints": true
     }
   ]
 }
