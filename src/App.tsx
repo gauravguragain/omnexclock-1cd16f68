@@ -157,6 +157,7 @@ const App = () => (
                     <Route path="catering-bookings/:id" element={<CateringRedirect destination="bookings" withId />} />
                     <Route path="catering-bookings/new" element={<CateringRedirect destination="bookings/new" />} />
                     <Route path="calendar" element={<EventsPages.Calendar />} />
+                    <Route path="payments" element={<EventsPages.Payments />} />
                     <Route path="inspections" element={<EventsPages.Inspections />} />
                     <Route path="tasks" element={<EventsPages.Tasks />} />
                     <Route path="customers" element={<EventsPages.Customers />} />
