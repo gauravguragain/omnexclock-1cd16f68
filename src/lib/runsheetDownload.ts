@@ -12,6 +12,8 @@ export async function downloadRunsheetPdf(el: HTMLElement, fileName: string) {
   document.body.appendChild(copy);
   try {
     await Promise.all(Array.from(copy.querySelectorAll("img")).map(img => img.decode().catch(() => undefined)));
+    const top = copy.getBoundingClientRect().top;
+    const breaks = Array.from(copy.querySelectorAll<HTMLElement>("[data-pdf-break]")).map(b => Math.round((b.getBoundingClientRect().top - top) * 2)).filter(v => v > 0);
     const canvas = await html2canvas(copy, { scale: 2, useCORS: true, backgroundColor: "#ffffff" });
     const pdf = new jsPDF({ unit: "mm", format: "a4", orientation: "portrait" });
     const pw = pdf.internal.pageSize.getWidth(), ph = pdf.internal.pageSize.getHeight();
@@ -22,7 +24,10 @@ export async function downloadRunsheetPdf(el: HTMLElement, fileName: string) {
     let y = 0;
     while (y < canvas.height) {
        const remaining = canvas.height - y;
-       const h = remaining <= pageHpx + roundingTolerance ? remaining : Math.floor(pageHpx);
+       let h = remaining <= pageHpx + roundingTolerance ? remaining : Math.floor(pageHpx);
+       // Start forced sections (e.g. Terms & Conditions) on a fresh page.
+       const forced = breaks.find(b => b > y + 4 && b < y + h);
+       if (forced) h = forced - y;
       const slice = document.createElement("canvas");
       slice.width = canvas.width; slice.height = h;
       const context = slice.getContext("2d");

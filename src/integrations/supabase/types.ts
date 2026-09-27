@@ -2194,6 +2194,8 @@ export type Database = {
           inspection_day_end: string
           inspection_day_start: string
           reminder_hours: number[]
+          runsheet_terms: string | null
+          runsheet_terms_enabled: boolean
           stale_days: number
           updated_at: string
         }
@@ -2210,6 +2212,8 @@ export type Database = {
           inspection_day_end?: string
           inspection_day_start?: string
           reminder_hours?: number[]
+          runsheet_terms?: string | null
+          runsheet_terms_enabled?: boolean
           stale_days?: number
           updated_at?: string
         }
@@ -2226,6 +2230,8 @@ export type Database = {
           inspection_day_end?: string
           inspection_day_start?: string
           reminder_hours?: number[]
+          runsheet_terms?: string | null
+          runsheet_terms_enabled?: boolean
           stale_days?: number
           updated_at?: string
         }

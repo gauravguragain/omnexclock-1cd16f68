@@ -10,6 +10,26 @@ import SendRunsheetDialog, { runsheetPublicUrl } from "./SendRunsheetDialog";
 import { useCrmData } from "@/features/sales/useCrmData";
 import { prettyCrmValue } from "@/features/sales/types";
 import { to12 } from "./useEventsData";
+import { DEFAULT_RUNSHEET_TERMS } from "./defaultTerms";
+
+export function runsheetTermsFor(settings: any, booking: any): string | null {
+  if (booking?.booking_kind === "catering" || settings?.runsheet_terms_enabled === false) return null;
+  return (settings?.runsheet_terms ?? "").trim() || DEFAULT_RUNSHEET_TERMS;
+}
+
+function TermsPage({ terms, businessName }: { terms: string; businessName?: string }) {
+  const blocks = terms.split(/\n\s*\n/).map(b => b.trim()).filter(Boolean);
+  return <section data-pdf-break className="mt-10 break-before-page pt-2 text-[10.5px] leading-snug" style={{ breakBefore: "page" }}>
+    <header className="flex items-start justify-between gap-6 border-b border-border pb-3">
+      <h1 className="text-xl font-bold">Terms &amp; Conditions</h1>
+      <img src="/regal-logo.png" alt={businessName || "Logo"} className="h-12 w-24 object-contain object-right" />
+    </header>
+    <div className="mt-3 space-y-2">{blocks.map((b, i) => /^\d+\.\s/.test(b) || (b.length < 90 && !/[.:]$/.test(b) && i > 0)
+      ? <h2 key={i} className="pt-1 text-xs font-bold">{b}</h2>
+      : <p key={i} className="whitespace-pre-line">{b.replace(/^([^:\n]{2,40}):/, "$1:")}</p>)}</div>
+    <div className="mt-6 grid grid-cols-3 gap-6 text-xs"><p>Client name: <span className="inline-block w-20 border-b border-border" /></p><p>Signature: <span className="inline-block w-20 border-b border-border" /></p><p>Date: <span className="inline-block w-20 border-b border-border" /></p></div>
+  </section>;
+}
 
 export function runsheetTitle(lead: any, b: any) { return `${prettyCrmValue(lead?.event_type || b?.event_type || "Event")} — ${lead?.full_name || "Client"}`; }
 
@@ -38,7 +58,7 @@ function A4Preview({ children, documentRef }: { children: React.ReactNode; docum
   </div>;
 }
 
-export function RunsheetDocument({ rs, lead, b, items, selection, businessName }: { rs: any; lead: any; b: any; items: any[]; selection: any; businessName?: string }) {
+export function RunsheetDocument({ rs, lead, b, items, selection, businessName, terms }: { rs: any; lead: any; b: any; items: any[]; selection: any; businessName?: string; terms?: string | null }) {
   const PKG = ["package", "kids_package", "manual"];
   const pkgs = items.filter(i => i.course === "package" || i.course === "kids_package");
   const stalls = items.filter(i => i.course === "live_stall");
@@ -138,6 +158,7 @@ export function RunsheetDocument({ rs, lead, b, items, selection, businessName }
         <div className="mt-4 grid grid-cols-[1fr_1fr_1fr] gap-6"><p>Name: <span className="inline-block w-24 border-b border-border" /></p><p>Signature: <span className="inline-block w-20 border-b border-border" /></p><p>Date: <span className="inline-block w-20 border-b border-border" /></p></div>
       </div>
     </footer>
+    {terms && <TermsPage terms={terms} businessName={businessName} />}
   </article>;
 }
 
@@ -191,7 +212,7 @@ export default function RunsheetViewPage() {
       <Button variant="outline" disabled={dl} onClick={async () => { if (!docRef.current) return; setDl(true); try { await downloadRunsheetPdf(docRef.current, `Run sheet - ${title}`); } catch { toast.error("Could not create PDF"); } setDl(false); }}><Download className="mr-2 h-4 w-4" />{dl ? "Preparing…" : "Download PDF"}</Button>
       {lead && (rs.sent_at || isCatering) && <Button onClick={() => setSendOpen(true)}><Mail className="mr-2 h-4 w-4" />{rs.sent_at ? "Resend Email" : "Send run sheet"}</Button>}
     </div>
-    <A4Preview documentRef={docRef}><RunsheetDocument rs={rs} lead={lead} b={b} items={items} selection={selection} businessName={crm.business?.name} /></A4Preview>
+    <A4Preview documentRef={docRef}><RunsheetDocument rs={rs} lead={lead} b={b} items={items} selection={selection} businessName={crm.business?.name} terms={runsheetTermsFor(crm.settings, b)} /></A4Preview>
     {lead && <SendRunsheetDialog mode={isCatering && !rs.sent_at ? "issue" : "resend"} onIssue={issueCatering} open={sendOpen} onOpenChange={setSendOpen} rs={rs} lead={lead} booking={b} businessName={crm.business?.name || ""} />}
   </div>;
 }
@@ -213,7 +234,7 @@ export function PublicRunsheetPage() {
         <Button variant="outline" onClick={() => window.print()}><Printer className="mr-2 h-4 w-4" />Print</Button>
         <Button disabled={dl} onClick={async () => { if (!docRef.current) return; setDl(true); try { await downloadRunsheetPdf(docRef.current, `Run sheet - ${runsheetTitle(data.lead, data.booking)}`); } catch { toast.error("Could not create PDF"); } setDl(false); }}><Download className="mr-2 h-4 w-4" />{dl ? "Preparing…" : "Download PDF"}</Button>
       </div>
-        <A4Preview documentRef={docRef}><RunsheetDocument rs={data.rs} lead={data.lead} b={data.booking} items={data.items || []} selection={data.selection} businessName={data.businessName} /></A4Preview>
+        <A4Preview documentRef={docRef}><RunsheetDocument rs={data.rs} lead={data.lead} b={data.booking} items={data.items || []} selection={data.selection} businessName={data.businessName} terms={data.terms} /></A4Preview>
     </div>
   </div>;
 }
