@@ -76,6 +76,9 @@
   <li><a href="#mybusiness">My Business Settings</a></li>
   <li><a href="#portal">Employee Portal</a></li>
   <li><a href="#master">Master Admin Panel</a></li>
+  <li><a href="#sales">Sales &amp; Events</a></li>
+  <li><a href="#foodsafety">Food Safety Logs</a></li>
+  <li><a href="#operations">Operations (Owner Dashboard)</a></li>
   <li><a href="#security">Security & Best Practices</a></li>
   <li><a href="#faq">Frequently Asked Questions</a></li>
 </ol>
@@ -84,19 +87,23 @@
 
 <!-- 1. OVERVIEW -->
 <h2 id="overview">1. Platform Overview</h2>
-<p>Pro Regal Management is a cloud-based workforce management platform designed for small-to-medium businesses. It provides:</p>
+<p>Pro Regal Management is a cloud-based workforce and sales management platform for venues and hospitality businesses. It provides:</p>
 <ul>
   <li><strong>Time Tracking</strong> — Clock in/out with photo verification via an on-site Kiosk</li>
   <li><strong>Roster Scheduling</strong> — Create, publish, and manage weekly employee schedules</li>
   <li><strong>Timesheet Management</strong> — Automatic timesheet generation from clock events with approval workflows</li>
   <li><strong>Payroll Calculation</strong> — Generate payroll entries based on approved timesheets</li>
   <li><strong>Employee Self-Service</strong> — Employees can view rosters, timesheets, submit leave requests, and participate in forums via their own portal</li>
+  <li><strong>Sales &amp; Events CRM</strong> — Leads pipeline, inspections, bookings, catering, menus, run sheets and payment tracking</li>
+  <li><strong>Food Safety Logs</strong> — Configurable HACCP forms with staff PIN logging, offline support and alerts</li>
+  <li><strong>Operations</strong> — A view-only owner dashboard with statistics, calendar and custom reports</li>
   <li><strong>Multi-Business Support</strong> — A single platform supporting multiple businesses with isolated data</li>
 </ul>
 
 <h3>How It Works</h3>
 <p>The platform is accessible via any web browser. There is no app to download. The URL is:</p>
-<p style="text-align:center; font-size: 14pt;"><code>the application address</code></p>
+<p style="text-align:center; font-size: 14pt;"><code>https://www.regalmanagement.com.au</code></p>
+<p>It can also be installed to a phone or tablet home screen when prompted.</p>
 
 <div class="page-break"></div>
 
@@ -107,27 +114,31 @@
   <tr><td><span class="badge">Master Admin</span></td><td>Platform-level super administrator</td><td>View all businesses, delete businesses, manage the entire platform</td></tr>
   <tr><td><span class="badge">Admin</span></td><td>Business owner/manager</td><td>Full access to their business: employees, roster, kiosk, timesheets, payroll, forum, requests, audit logs, user management, business settings</td></tr>
   <tr><td><span class="badge">Viewer</span></td><td>Read-only business access</td><td>Can view all admin pages but cannot make changes. Cannot launch Kiosk</td></tr>
+  <tr><td><span class="badge">Super Admin</span></td><td>Senior business manager</td><td>Everything an Admin can do plus User Management (inviting and assigning roles)</td></tr>
+  <tr><td><span class="badge">Roster Admin</span></td><td>Department manager</td><td>Roster and timesheets for assigned departments only</td></tr>
+  <tr><td><span class="badge">Owner</span></td><td>Business owner</td><td>View-only Operations dashboard, calendar and reports</td></tr>
+  <tr><td><span class="badge">Sales &amp; Marketing</span></td><td>Sales / events staff</td><td>Sales &amp; Events workspace</td></tr>
+  <tr><td><span class="badge">Food Safety Manager</span></td><td>Kitchen / compliance lead</td><td>Food Safety Logs</td></tr>
   <tr><td><span class="badge">Employee</span></td><td>Staff member</td><td>Access via 4-digit code only. View roster, timesheets, submit requests, forum participation</td></tr>
 </table>
 
 <div class="note">
-  <strong>Note:</strong> Employees do not need an email account or password. They authenticate using their unique 4-digit employee code.
+  <strong>Note:</strong> Roles can be combined on one person (e.g. Admin + Sales &amp; Marketing). Employees do not need an email account or password. They authenticate using their unique 4-digit employee code.
 </div>
 
 <div class="page-break"></div>
 
 <!-- 3. LANDING PAGE -->
 <h2 id="landing">3. Landing Page & Navigation</h2>
-<p>The landing page at <code>/</code> is the main entry point for all users. It provides three options:</p>
-
+<p>The landing page at <code>/</code> is the main entry point for all users:</p>
 <table>
-  <tr><th>Card</th><th>Purpose</th><th>Who Uses It</th></tr>
-  <tr><td><strong>Business Admin</strong></td><td>Sign in to manage your business</td><td>Admins, Viewers</td></tr>
+  <tr><th>Card / Button</th><th>Purpose</th><th>Who Uses It</th></tr>
+  <tr><td><strong>Business Admin</strong></td><td>Sign in to manage your business (workforce, sales, food safety)</td><td>Admins, Viewers, Sales, Food Safety</td></tr>
+  <tr><td><strong>Operations</strong></td><td>Owner dashboard (sign-in required)</td><td>Owners, Master accounts</td></tr>
   <tr><td><strong>Employee Portal</strong></td><td>Access roster, timesheets & requests</td><td>Employees (remote access)</td></tr>
-  <tr><td><strong>Register Business</strong></td><td>Set up a new business account</td><td>New business owners</td></tr>
+  <tr><td><strong>Master Login</strong> (top right)</td><td>Platform administration</td><td>Master Admin</td></tr>
+  <tr><td><strong>Register Business</strong> (button below Master Login)</td><td>Set up a new business account</td><td>New business owners</td></tr>
 </table>
-
-<p>Additionally, a <strong>"Master Login"</strong> button appears in the top-right corner for platform administrators.</p>
 
 <div class="page-break"></div>
 
@@ -548,6 +559,21 @@
 
 <div class="page-break"></div>
 
+<!-- NEW MODULES -->
+<h2 id="sales">Sales &amp; Events</h2>
+<p>A full CRM for event and catering enquiries: draggable pipeline, inspections calendar, full-page lead editor, menu books with guest selection links, run sheets (Confirm &amp; send), payment tracking, combined events/catering calendar, audit log and Excel/iVvy imports. Everything updates live.</p>
+<p>Full details: <a href="/induction-guide-sales.html" style="color:#ac845d;">Sales &amp; Events Guide</a>.</p>
+
+<h2 id="foodsafety">Food Safety Logs</h2>
+<p>Configurable HACCP forms filled in by staff via QR code and 4-digit code, working offline, with out-of-range alerts and Excel export.</p>
+<p>Full details: <a href="/induction-guide-food-safety.html" style="color:#ac845d;">Food Safety Logs Guide</a>.</p>
+
+<h2 id="operations">Operations (Owner Dashboard)</h2>
+<p>A view-only dashboard covering revenue, events and venue use, staff and labour, compliance, a full calendar and a custom report builder with Excel/PDF export.</p>
+<p>Full details: <a href="/induction-guide-owner.html" style="color:#ac845d;">Owner Operations Guide</a>.</p>
+
+<div class="page-break"></div>
+
 <!-- 20. SECURITY -->
 <h2 id="security">20. Security & Best Practices</h2>
 
@@ -596,12 +622,12 @@
 <p>Go to <strong>My Business</strong> in the admin panel. Upload a logo, and click <strong>"Analyse Theme"</strong> to get AI-suggested colours, or manually set your preferred palette.</p>
 
 <h3>Q: Can I export data?</h3>
-<p>Yes. Employee lists, timesheets, and payroll can be exported as CSV files using the export button on each respective page.</p>
+<p>Yes. Timesheets export as branded PDF or Excel, payroll as PDF/CSV, and the Operations Report Builder exports any combination of data to Excel or PDF.</p>
 
 <hr style="margin: 40px 0; border-color: #ac845d;">
 
 <div style="text-align: center; color: #888; font-size: 10pt;">
-  <p>© 2024 Pro Regal Pavilion Pty Ltd All rights reserved.</p>
+  <p>© 2026 Pro Regal Pavilion Pty Ltd All rights reserved.</p>
   <p>Pro Regal Management — Workforce and Sales Management</p>
   <p>For support, contact your platform administrator.</p>
 </div>

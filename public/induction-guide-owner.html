@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pro Regal Management – Owner Operations Guide</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  @media print { body { font-size: 11pt; } .no-print { display: none; } .page-break { page-break-before: always; } }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Barlow', 'Segoe UI', Arial, sans-serif; color: #1a1a1a; line-height: 1.7; max-width: 900px; margin: 0 auto; padding: 40px 30px; }
+  h1 { font-size: 28pt; color: #ac845d; margin-bottom: 6px; }
+  h2 { font-size: 18pt; color: #ac845d; margin-top: 40px; margin-bottom: 12px; border-bottom: 2px solid #ac845d; padding-bottom: 6px; }
+  h3 { font-size: 14pt; color: #333; margin-top: 20px; margin-bottom: 8px; }
+  p, li { margin-bottom: 8px; }
+  ul, ol { padding-left: 24px; }
+  .cover { text-align: center; padding: 80px 0 40px; }
+  .cover img { width: 100px; height: 100px; border-radius: 50%; object-fit: cover; margin-bottom: 16px; }
+  .badge { display: inline-block; background: #ac845d; color: #000; padding: 2px 10px; border-radius: 12px; font-size: 10pt; font-weight: bold; }
+  .note { background: #fef9e7; border-left: 4px solid #ac845d; padding: 12px 16px; margin: 16px 0; border-radius: 0 8px 8px 0; }
+  table { width: 100%; border-collapse: collapse; margin: 16px 0; }
+  th, td { border: 1px solid #ddd; padding: 10px 14px; text-align: left; }
+  th { background: #1a1a1a; color: #ac845d; }
+  tr:nth-child(even) { background: #f9f9f9; }
+  code { background: #f1f1f1; padding: 2px 6px; border-radius: 4px; font-size: 10pt; }
+  .btn-print { position: fixed; bottom: 20px; right: 20px; background: #ac845d; color: #000; border: none; padding: 12px 24px; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 12pt; box-shadow: 0 4px 12px rgba(0,0,0,0.2); }
+  .btn-print:hover { background: #b8941f; }
+  .step { counter-increment: step; margin-bottom: 12px; padding-left: 8px; }
+  .step::before { content: counter(step) ". "; font-weight: bold; color: #ac845d; }
+  .steps { counter-reset: step; }
+  .warning { background: #fdecea; border-left: 4px solid #c0392b; padding: 12px 16px; margin: 16px 0; border-radius: 0 8px 8px 0; }
+</style>
+</head>
+<body>
+<button class="btn-print no-print" onclick="window.print()">📄 Save as PDF / Print</button>
+<div class="cover">
+  <img src="/regal-logo.png" alt="Pro Regal Management Logo">
+  <h1>Pro Regal Management</h1>
+  <p style="font-size: 14pt; color: #555;">Owner Operations Guide</p>
+  <p style="margin-top: 16px;"><span class="badge">OWNER</span></p>
+</div>
+<div class="page-break"></div>
+<h2>Welcome to Operations</h2>
+<p><strong>Operations</strong> is the owner's view of the whole business. It appears on the home screen for users with the <strong>Owner</strong> role (per business) and for Master accounts. It is <strong>view-only</strong> — nothing can be edited here.</p>
+
+<h2>Getting In</h2>
+<ol>
+<li>On the home page click the <strong>Operations</strong> card and sign in.</li>
+<li>Owners go straight to their business's Operations dashboard; Master accounts choose a business first.</li>
+</ol>
+
+<h2>Dashboard Tabs</h2>
+<table>
+<tr><th>Tab</th><th>Shows</th></tr>
+<tr><td>Overview</td><td>The live Sales &amp; Events dashboard on top, followed by owner-level figures</td></tr>
+<tr><td>Revenue &amp; Sales</td><td>Booked value of events and catering, trends and lead conversion</td></tr>
+<tr><td>Events &amp; Venue use</td><td>Bookings by space, guest numbers and utilisation</td></tr>
+<tr><td>Staff &amp; Labour</td><td>Hours and labour cost (calculated at the admin pay rate)</td></tr>
+<tr><td>Compliance &amp; Maintenance</td><td>Timesheets awaiting approval, service tasks and food safety status</td></tr>
+<tr><td>Reports</td><td>Custom report builder</td></tr>
+</table>
+
+<h2>Date Ranges</h2>
+<p>Choose a preset or custom range. Events and catering are counted by their <strong>event/delivery date</strong>, not the date they were created. Revenue means booked value (not cash collected).</p>
+
+<h2>Calendar</h2>
+<p><strong>View full calendar</strong> opens a full-page calendar of all events and catering (colour coded). Click any item for a read-only popup with the organiser's name and an email button.</p>
+
+<h2>Report Builder</h2>
+<ol>
+<li>Pick one or more datasets (leads, bookings, payments, catering, staff hours, compliance and more).</li>
+<li>Choose the columns and date range.</li>
+<li>Export as <strong>Excel</strong> (one sheet per section with totals) or <strong>PDF</strong>. Save the setup as a template to reuse.</li>
+</ol>
+
+<h2>Need Help?</h2>
+<p>For the complete platform documentation, visit the full <a href="/induction-guide.html" style="color:#ac845d;">Pro Regal Management Induction Guide</a>. Contact your Super Admin for access changes.</p>
+</body>
+</html>
