@@ -35,7 +35,7 @@ function StatCard({ stat }: { stat: Stat }) {
 
 export default function OperationsPage() {
   const { businessCode } = useParams();
-  const { user, isOwnerOf, loading: authLoading } = useAuth();
+  const { user, isOwnerOf, isMaster, loading: authLoading } = useAuth();
   const { business, loading: bizLoading } = useBusiness();
   const [loading, setLoading] = useState(true);
   const [sales, setSales] = useState<Stat[]>([]);
