@@ -36,13 +36,32 @@ function StatCard({ stat }: { stat: Stat }) {
 export default function OperationsPage() {
   const { businessCode } = useParams();
   const { user, isOwnerOf, isMaster, loading: authLoading } = useAuth();
-  const { business, loading: bizLoading } = useBusiness();
+  const { business: ctxBusiness, loading: bizLoading } = useBusiness();
   const [loading, setLoading] = useState(true);
   const [sales, setSales] = useState<Stat[]>([]);
   const [workforce, setWorkforce] = useState<Stat[]>([]);
   const [compliance, setCompliance] = useState<Stat[]>([]);
   const [finance, setFinance] = useState<Stat[]>([]);
+  const [urlBusiness, setUrlBusiness] = useState<{ id: string; name: string } | null>(null);
+  const [urlBizLoading, setUrlBizLoading] = useState(false);
 
+  // Masters often have no business-scoped roles, so the context has no business
+  // for them — resolve the business straight from the URL code in that case.
+  useEffect(() => {
+    if (ctxBusiness || !businessCode || !user) return;
+    setUrlBizLoading(true);
+    (supabase as any)
+      .from("businesses")
+      .select("id, name")
+      .eq("business_code", businessCode)
+      .maybeSingle()
+      .then(({ data }: any) => {
+        setUrlBusiness(data || null);
+        setUrlBizLoading(false);
+      });
+  }, [ctxBusiness, businessCode, user]);
+
+  const business = ctxBusiness || urlBusiness;
   const allowed = isMaster || (business ? isOwnerOf(business.id) : false);
 
   useEffect(() => {
