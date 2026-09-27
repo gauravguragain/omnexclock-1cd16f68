@@ -43,7 +43,7 @@ export default function MonthCalendar({ bookings, leads, runsheets, customers, v
   const tone = (type: string) => TONES[Math.max(0, allTypes.indexOf(type)) % TONES.length];
   const dotTone = (type: string) => DOT_TONES[Math.max(0, allTypes.indexOf(type)) % DOT_TONES.length];
   const days = eachDayOfInterval({ start: startOfWeek(month, { weekStartsOn: 1 }), end: endOfWeek(endOfMonth(month), { weekStartsOn: 1 }) });
-  const eventsOn = (date: string) => filtered.filter(b => b.event_date === date).sort((a, b) => String(a.start_time || "").localeCompare(String(b.start_time || "")));
+  const eventsOn = (date: string) => active.filter(b => b.event_date === date).sort((a, b) => String(a.start_time || "").localeCompare(String(b.start_time || "")));
   const selected = selectedDate ? eventsOn(selectedDate) : [];
   const groups = Array.from(new Set(selected.map(placeOf)));
   const guestSplit = (b: Booking) => {
