@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { addMonths, eachDayOfInterval, endOfMonth, endOfWeek, format, isSameMonth, isToday, startOfMonth, startOfWeek } from "date-fns";
-import { CalendarDays, ChevronLeft, ChevronRight, Clock3, Mail, MapPin, Pencil, Phone, Tag, UserRound, Users } from "lucide-react";
+import { CalendarDays, ChevronDown, ChevronLeft, ChevronRight, Clock3, Mail, MapPin, Pencil, Phone, Search, Tag, UserRound, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -35,6 +35,8 @@ export default function MonthCalendar({ bookings, leads, runsheets, customers, v
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
   const [types, setTypes] = useState<string[] | null>(null);
+  const [query, setQuery] = useState("");
+  const [filterOpen, setFilterOpen] = useState(false);
   const active = bookings.filter(b => b.status !== "cancelled" && b.event_date);
   const leadOf = (b: Booking) => leads.find(l => l.id === b.lead_id);
   const customerOf = (b: Booking) => customers.find(c => c.id === b.customer_id) || leadOf(b);
@@ -44,7 +46,9 @@ export default function MonthCalendar({ bookings, leads, runsheets, customers, v
   const allTypes = Array.from(new Set(active.map(typeOf)));
   const tone = (type: string) => TONES[Math.max(0, allTypes.indexOf(type)) % TONES.length];
   const dotTone = (type: string) => DOT_TONES[Math.max(0, allTypes.indexOf(type)) % DOT_TONES.length];
-  const filtered = active.filter(b => !types || types.includes(typeOf(b)));
+  const typeLabel = (t: string) => t === "no_type" ? "No type" : prettyCrmValue(t);
+  const q = query.trim().toLowerCase();
+  const filtered = active.filter(b => (!types || types.includes(typeOf(b))) && (!q || typeOf(b).includes(q)));
   const days = eachDayOfInterval({ start: startOfWeek(month, { weekStartsOn: 1 }), end: endOfWeek(endOfMonth(month), { weekStartsOn: 1 }) });
   const eventsOn = (date: string) => filtered.filter(b => b.event_date === date).sort((a, b) => String(a.start_time || "").localeCompare(String(b.start_time || "")));
   const selected = selectedDate ? eventsOn(selectedDate) : [];
