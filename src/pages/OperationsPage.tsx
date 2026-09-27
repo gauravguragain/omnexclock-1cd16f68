@@ -148,11 +148,11 @@ export default function OperationsPage() {
     })();
   }, [business?.id, allowed]);
 
-  if (authLoading || bizLoading) {
+  if (authLoading || bizLoading || urlBizLoading) {
     return <div className="min-h-screen flex items-center justify-center bg-background"><div className="h-10 w-10 rounded-xl skeleton-shimmer" /></div>;
   }
   if (!user) return <Navigate to="/auth" replace />;
-  if (!business) return <Navigate to="/hub" replace />;
+  if (!business) return <Navigate to={isMaster ? "/master" : "/hub"} replace />;
   if (!allowed) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background p-4">
