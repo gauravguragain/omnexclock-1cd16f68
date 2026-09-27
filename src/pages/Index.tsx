@@ -61,7 +61,7 @@ const Index = () => {
         </div>
 
         {/* Action cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 w-full max-w-6xl animate-fade-in" style={{ animationDelay: '0.15s' }}>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 w-full max-w-5xl animate-fade-in" style={{ animationDelay: '0.15s' }}>
           <Link to="/auth?next=operations" className="block">
             <Card className="border border-border/50 cursor-pointer hover:border-primary/40 transition-all duration-300 group h-full ambient-glow shimmer card-lift">
               <CardContent className="p-6 sm:p-8 flex flex-row sm:flex-col items-center sm:text-center gap-4 sm:gap-4">
