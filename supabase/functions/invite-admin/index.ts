@@ -118,6 +118,7 @@ serve(async (req) => {
       roster_admin: "/induction-guide-roster-admin.html",
       sales_marketing_manager: "/induction-guide-sales.html",
       food_safety_manager: "/induction-guide-food-safety.html",
+      owner: "/induction-guide-owner.html",
     };
     const guideUrl = `${publishedUrl}${inductionGuides[role] || "/induction-guide.html"}`;
     const signupUrl = `${publishedUrl}/auth?invite=${token}`;
