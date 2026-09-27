@@ -350,7 +350,7 @@ export default function OperationsPage() {
                 <Kpi label="Contractor invoices" value={money(d.labour.contractorCost)} cur={d.labour.contractorCost} prev={p.labour.contractorCost} invert />
                 <Kpi label="Staff who worked" value={`${d.labour.staffCount} / ${d.labour.activeEmployees}`} hint="of active staff" />
                 <Kpi label="Late clock-ins" value={num(d.labour.lateArrivals)} cur={d.labour.lateArrivals} prev={p.labour.lateArrivals} invert alert={d.labour.lateArrivals > 0} />
-                <Kpi label="Shifts over 10 hours" value={num(d.labour.longShifts)} alert={d.labour.longShifts > 0} hint={`${d.labour.leave} approved leave requests`} />
+                <Kpi label="Timesheets awaiting approval" value={num(d.labour.unapprovedDays)} alert={d.labour.unapprovedDays > 0} hint={`${d.labour.leave} approved leave requests`} />
               </div>
               <div className="grid lg:grid-cols-2 gap-4">
                 <Panel title="Hours and cost by department">

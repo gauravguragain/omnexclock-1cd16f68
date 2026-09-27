@@ -269,7 +269,7 @@ export async function loadOperations(bid: string, r: Range) {
       actualHours, rosteredHours, variance: r2(actualHours - rosteredHours), labourCost, contractorCost,
       labourPct: revenue ? r2(((labourCost + contractorCost) / revenue) * 100) : 0,
       staffCount: staff.length, activeEmployees: employees.filter((e: any) => e.active !== false).length,
-      lateArrivals: staff.reduce((s, e) => s + e.late, 0), longShifts: staff.reduce((s, e) => s + e.overtimeDays, 0),
+      lateArrivals: staff.reduce((s, e) => s + e.late, 0),
       staff, departments: Object.values(deptMap), hourHeat, leave: leaveInRange.length, pendingRequests, unapprovedDays,
     },
     compliance: {
