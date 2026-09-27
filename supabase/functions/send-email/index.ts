@@ -457,7 +457,7 @@ serve(async (req) => {
       if (!b.to || !b.viewUrl || !b.eventTitle) throw new Error("Missing required fields for run sheet email");
       if (!/^https:\/\/[^\s"'<>]+$/.test(b.viewUrl)) throw new Error("Missing required fields for run sheet email");
       const esc = (s: unknown) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]!));
-      const biz = esc(b.businessName || "Pro Regal Pavilion");
+      const biz = esc(b.businessName || "Pro Regal Management");
       const row = (k: string, v: unknown) => v ? `<tr><td style="padding:6px 0;color:#777;font-size:13px;width:38%;">${k}</td><td style="padding:6px 0;font-size:13px;color:#1a1a1a;">${esc(v)}</td></tr>` : "";
       const html = `
         <div style="font-family:'Segoe UI',Arial,sans-serif;max-width:600px;margin:0 auto;color:#1a1a1a;background:#ffffff;">
