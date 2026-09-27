@@ -1,7 +1,7 @@
-# Sales & Marketing CRM
-
 # Owner Operations overview
 - [x] Place the existing Sales & Events dashboard above owner-specific statistics without duplicate overview figures
+
+# Sales & Marketing CRM
 
 - [x] Approve implementation plan
 - [x] Create secure business-scoped CRM schema and access helper

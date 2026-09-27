@@ -52,7 +52,7 @@ export default function EventsDashboard({ businessId, ownerView = false, canOpen
     <Link to={to} className="mt-3 flex items-center justify-between border-t border-border pt-3 text-sm hover:text-primary">{link}<ChevronRight className="h-4 w-4" /></Link>
   </CardContent></Card>;
 
-  return <div className={`space-y-6 ${!canOpenSales ? "[&_a]:pointer-events-none [&_a]:cursor-default [&_a]:no-underline" : ""}`}
+  return <div className={`space-y-6 ${!canOpenSales ? "[&_a]:hidden" : ""}`}
     onClickCapture={e => { if (!canOpenSales && (e.target as HTMLElement).closest("a")) e.preventDefault(); }}
     onKeyDownCapture={e => { if (!canOpenSales && e.key === "Enter" && (e.target as HTMLElement).closest("a")) e.preventDefault(); }}>
     <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">

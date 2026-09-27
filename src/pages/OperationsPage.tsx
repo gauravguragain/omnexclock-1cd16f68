@@ -87,13 +87,13 @@ export default function OperationsPage() {
   const [tick, setTick] = useState(0);
 
   useEffect(() => {
-    if (ctxBusiness || !businessCode || !user) return;
+    if (ctxBusiness?.business_code === businessCode || !businessCode || !user) return;
     setUrlBizLoading(true);
     (supabase as any).from("businesses").select("id, name").eq("business_code", businessCode).maybeSingle()
       .then(({ data }: any) => { setUrlBusiness(data || null); setUrlBizLoading(false); });
   }, [ctxBusiness, businessCode, user]);
 
-  const business = ctxBusiness || urlBusiness;
+  const business = ctxBusiness?.business_code === businessCode ? ctxBusiness : urlBusiness;
   const allowed = isMaster || (business ? isOwnerOf(business.id) : false);
   const canOpenSales = !!business && isApproved && (isAdminOf(business.id) || isSuperAdminOf(business.id) || isSalesManagerOf(business.id));
 
