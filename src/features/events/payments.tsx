@@ -1,3 +1,4 @@
+import { useLiveSync } from "@/hooks/useLiveSync";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { format } from "date-fns";
 import { toast } from "sonner";
@@ -49,6 +50,7 @@ export function usePayments(businessId?: string, bookingId?: string) {
     setLoading(false);
   }, [businessId, bookingId]);
   useEffect(() => { refresh(); }, [refresh]);
+  useLiveSync(["crm_payments"], businessId, () => void refresh());
   return { payments, loading, refresh };
 }
 

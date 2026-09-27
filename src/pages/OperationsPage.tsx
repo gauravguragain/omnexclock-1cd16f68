@@ -1,3 +1,4 @@
+import { useLiveSync } from "@/hooks/useLiveSync";
 import { useEffect, useMemo, useState } from "react";
 import { Link, Navigate, useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -108,6 +109,8 @@ export default function OperationsPage() {
     });
     return () => { cancelled = true; };
   }, [business?.id, allowed, range.from, range.to, tick]);
+
+  useLiveSync(["crm_bookings","crm_leads","crm_payments","crm_inspections","crm_tasks","catering_deliveries","invoices","clock_events","shifts"], allowed ? business?.id : undefined, () => setTick(t => t + 1));
 
   const alerts = useMemo(() => {
     if (!data) return [] as { text: string; level: "high" | "med" }[];
