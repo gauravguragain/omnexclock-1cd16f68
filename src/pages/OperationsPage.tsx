@@ -75,7 +75,7 @@ function DataTable({ cols, rows }: { cols: string[]; rows: (string | number)[][]
 
 export default function OperationsPage() {
   const { businessCode } = useParams();
-  const { user, isOwnerOf, isMaster, loading: authLoading } = useAuth();
+  const { user, isOwnerOf, isMaster, isApproved, isAdminOf, isSuperAdminOf, isSalesManagerOf, loading: authLoading } = useAuth();
   const { business: ctxBusiness, loading: bizLoading } = useBusiness();
   const [urlBusiness, setUrlBusiness] = useState<{ id: string; name: string } | null>(null);
   const [urlBizLoading, setUrlBizLoading] = useState(false);
@@ -95,6 +95,7 @@ export default function OperationsPage() {
 
   const business = ctxBusiness || urlBusiness;
   const allowed = isMaster || (business ? isOwnerOf(business.id) : false);
+  const canOpenSales = !!business && isApproved && (isAdminOf(business.id) || isSuperAdminOf(business.id) || isSalesManagerOf(business.id));
 
   useEffect(() => {
     if (!business || !allowed || range.from > range.to) return;
@@ -243,7 +244,7 @@ export default function OperationsPage() {
             {/* OVERVIEW */}
             <TabsContent value="overview" className="space-y-4">
               <section aria-label="Sales and events dashboard">
-                <EventsDashboard businessId={business.id} ownerView />
+                <EventsDashboard businessId={business.id} ownerView canOpenSales={canOpenSales} />
               </section>
               <section className="space-y-4 border-t border-border pt-6" aria-label="Owner operations dashboard">
               <div>

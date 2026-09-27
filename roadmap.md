@@ -1,5 +1,8 @@
 # Sales & Marketing CRM
 
+# Owner Operations overview
+- [x] Place the existing Sales & Events dashboard above owner-specific statistics without duplicate overview figures
+
 - [x] Approve implementation plan
 - [x] Create secure business-scoped CRM schema and access helper
 - [x] Seed configurable Pro Regal lists and defaults

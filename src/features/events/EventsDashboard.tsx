@@ -9,7 +9,7 @@ import { useEventsData, bookingEnd, to12 } from "./useEventsData";
 
 const d = (s: string) => new Date(`${s}T00:00:00`);
 
-export default function EventsDashboard({ businessId, ownerView = false }: { businessId?: string; ownerView?: boolean } = {}) {
+export default function EventsDashboard({ businessId, ownerView = false, canOpenSales = true }: { businessId?: string; ownerView?: boolean; canOpenSales?: boolean } = {}) {
   const crm = useCrmData(businessId); const ev = useEventsData(businessId); const { businessCode } = useParams();
   const [month, setMonth] = useState(startOfMonth(new Date()));
   if (!businessId && !crm.business) return null;
@@ -52,7 +52,9 @@ export default function EventsDashboard({ businessId, ownerView = false }: { bus
     <Link to={to} className="mt-3 flex items-center justify-between border-t border-border pt-3 text-sm hover:text-primary">{link}<ChevronRight className="h-4 w-4" /></Link>
   </CardContent></Card>;
 
-  return <div className={`space-y-6 ${ownerView ? "[&_a]:pointer-events-none [&_a]:cursor-default [&_a]:no-underline" : ""}`}>
+  return <div className={`space-y-6 ${!canOpenSales ? "[&_a]:pointer-events-none [&_a]:cursor-default [&_a]:no-underline" : ""}`}
+    onClickCapture={e => { if (!canOpenSales && (e.target as HTMLElement).closest("a")) e.preventDefault(); }}
+    onKeyDownCapture={e => { if (!canOpenSales && e.key === "Enter" && (e.target as HTMLElement).closest("a")) e.preventDefault(); }}>
     <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
       <div><h1 className="font-serif text-3xl font-semibold">Welcome back</h1><p className="text-sm text-muted-foreground"><span className="font-medium text-foreground">{format(new Date(), "EEEE, d MMMM yyyy")}</span> · Venue events below, catering further down.</p></div>
       {!ownerView && <div className="flex flex-col gap-2 sm:items-end">

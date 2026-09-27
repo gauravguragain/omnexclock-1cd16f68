@@ -1,0 +1,1 @@
+Owner Operations reuses the Sales & Events dashboard with an explicit business ID, so master accounts without a selected business context see the same live data without duplicating dashboard calculations.
