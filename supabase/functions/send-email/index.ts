@@ -479,6 +479,7 @@ serve(async (req) => {
               <a href="${esc(b.viewUrl)}" style="display:inline-block;background:#ac845d;color:#000;text-decoration:none;padding:13px 34px;border-radius:8px;font-weight:bold;font-size:14px;">${b.kind === "confirmation" ? "View event order" : "View run sheet"}</a>
             </div>
             <p style="font-size:12px;color:#888;line-height:1.5;">The link always shows the latest version. You can print it or save it as a PDF from that page.</p>
+            ${b.kind === "confirmation" ? `<p style="font-size:13px;color:#444;line-height:1.6;">Your event order includes our <strong>Terms &amp; Conditions</strong> on the final page — please review them and get in touch if you have any questions before signing.</p>` : ""}
             ${b.message ? `<p style="font-size:13px;color:#444;white-space:pre-line;border-top:1px solid #eee;padding-top:12px;">${esc(b.message)}</p>` : ""}
           </div>
           <div style="text-align:center;padding:14px 30px;background:#f8f9fa;border-radius:0 0 12px 12px;">
