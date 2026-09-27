@@ -4,16 +4,17 @@ import { useBusiness } from "@/contexts/BusinessContext";
 
 export type Row = Record<string, any>;
 
-export function useEventsData() {
+export function useEventsData(businessId?: string) {
   const { business } = useBusiness();
+  const businessKey = businessId || business?.id;
   const [data, setData] = useState({
     venues: [] as Row[], customers: [] as Row[], stakeholders: [] as Row[], books: [] as Row[],
     packages: [] as Row[], courses: [] as Row[], courseItems: [] as Row[], dishes: [] as Row[], drinks: [] as Row[],
   });
   const [loading, setLoading] = useState(true);
   const refresh = useCallback(async () => {
-    if (!business?.id) return;
-    const id = business.id;
+    if (!businessKey) return;
+    const id = businessKey;
     const q = (t: string, order = "created_at") => (supabase.from(t as any) as any).select("*").eq("business_id", id).order(order);
     const [venues, customers, stakeholders, books, packages, courses, courseItems, dishes, drinks] = await Promise.all([
       q("crm_venue_spaces", "sort_order"), q("crm_customers", "full_name"), q("crm_stakeholders", "full_name"), q("crm_menu_books", "sort_order"),
@@ -24,7 +25,7 @@ export function useEventsData() {
       packages: packages.data || [], courses: courses.data || [], courseItems: courseItems.data || [], dishes: dishes.data || [], drinks: drinks.data || [],
     });
     setLoading(false);
-  }, [business?.id]);
+  }, [businessKey]);
   useEffect(() => { void refresh(); }, [refresh]);
   return { business, ...data, loading, refresh };
 }
