@@ -260,6 +260,13 @@
       "when": 1790543437490,
       "tag": "0036_crm_payments",
       "breakpoints": true
+    },
+    {
+      "idx": 37,
+      "version": "7",
+      "when": 1790544142203,
+      "tag": "0037_ops_report_templates",
+      "breakpoints": true
     }
   ]
 }
