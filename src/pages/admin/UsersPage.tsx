@@ -42,6 +42,7 @@ interface Invitation {
 
 const ROLE_LABELS: Record<string, string> = {
   super_admin: "Super Admin",
+  owner: "Owner",
   admin: "Admin",
   viewer: "View Only",
   roster_admin: "Roster Admin",
@@ -62,7 +63,7 @@ export default function UsersPage() {
   // Role assignment dialog state
   const [roleDialogOpen, setRoleDialogOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<UserProfile | null>(null);
-  type ManagedRole = "super_admin" | "admin" | "viewer" | "roster_admin" | "sales_marketing_manager" | "food_safety_manager";
+  type ManagedRole = "super_admin" | "owner" | "admin" | "viewer" | "roster_admin" | "sales_marketing_manager" | "food_safety_manager";
   const [selectedRoles, setSelectedRoles] = useState<ManagedRole[]>([]);
   const [selectedDepartments, setSelectedDepartments] = useState<string[]>([]);
   const [availableDepartments, setAvailableDepartments] = useState<string[]>([]);
@@ -437,6 +438,24 @@ export default function UsersPage() {
         </div>
         <p className="text-xs text-muted-foreground mt-1">
           Full access to leads, inspections, menus, bookings, tasks, and the shared sales pipeline.
+        </p>
+      </button>
+
+      <button
+        type="button"
+        onClick={() => onChange("owner")}
+        className={`w-full text-left rounded-lg border p-3 transition-all ${
+          selected.includes("owner")
+            ? "border-primary bg-primary/5 ring-1 ring-primary/30"
+            : "border-border hover:border-muted-foreground/30"
+        }`}
+      >
+        <div className="flex items-center gap-2">
+          <Crown className="h-4 w-4 text-primary" />
+          <span className="font-semibold text-sm text-foreground">Owner</span>
+        </div>
+        <p className="text-xs text-muted-foreground mt-1">
+          High-level Operations overview: sales, workforce, compliance and finance across the whole business. Read-only.
         </p>
       </button>
 
