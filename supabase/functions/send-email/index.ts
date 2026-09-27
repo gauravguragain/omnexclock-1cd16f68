@@ -457,7 +457,7 @@ serve(async (req) => {
       if (!b.to || !b.viewUrl || !b.eventTitle) throw new Error("Missing required fields for run sheet email");
       if (!/^https:\/\/[^\s"'<>]+$/.test(b.viewUrl)) throw new Error("Missing required fields for run sheet email");
       const esc = (s: unknown) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]!));
-      const biz = esc(b.businessName || "Pro Regal Pavilion");
+      const biz = esc(b.businessName || "Pro Regal Management");
       const row = (k: string, v: unknown) => v ? `<tr><td style="padding:6px 0;color:#777;font-size:13px;width:38%;">${k}</td><td style="padding:6px 0;font-size:13px;color:#1a1a1a;">${esc(v)}</td></tr>` : "";
       const html = `
         <div style="font-family:'Segoe UI',Arial,sans-serif;max-width:600px;margin:0 auto;color:#1a1a1a;background:#ffffff;">
@@ -479,6 +479,7 @@ serve(async (req) => {
               <a href="${esc(b.viewUrl)}" style="display:inline-block;background:#ac845d;color:#000;text-decoration:none;padding:13px 34px;border-radius:8px;font-weight:bold;font-size:14px;">${b.kind === "confirmation" ? "View event order" : "View run sheet"}</a>
             </div>
             <p style="font-size:12px;color:#888;line-height:1.5;">The link always shows the latest version. You can print it or save it as a PDF from that page.</p>
+            ${b.kind === "confirmation" ? `<p style="font-size:13px;color:#444;line-height:1.6;">Your event order includes our <strong>Terms &amp; Conditions</strong> on the final page — please review them and get in touch if you have any questions before signing.</p>` : ""}
             ${b.message ? `<p style="font-size:13px;color:#444;white-space:pre-line;border-top:1px solid #eee;padding-top:12px;">${esc(b.message)}</p>` : ""}
           </div>
           <div style="text-align:center;padding:14px 30px;background:#f8f9fa;border-radius:0 0 12px 12px;">
@@ -486,7 +487,7 @@ serve(async (req) => {
           </div>
         </div>`;
       emailPayload = {
-        from: `${b.businessName || "Pro Regal Pavilion"} <noreply@regalmanagement.com.au>`,
+        from: `${b.businessName || "Pro Regal Management"} <noreply@regalmanagement.com.au>`,
         to: [b.to],
         subject: `${b.kind === "confirmation" ? "Booking confirmed" : "Run sheet"} — ${b.eventTitle}${b.dateLabel ? ` (${b.dateLabel})` : ""}`,
         html,
