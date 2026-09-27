@@ -48,7 +48,7 @@ const Index = () => {
           </div>
           <div className="space-y-1">
             <h1 className="text-3xl font-bold text-foreground tracking-tight">Pro Regal Management</h1>
-            <p className="text-muted-foreground text-sm font-medium tracking-wide">Time & Workforce Management</p>
+            <p className="text-muted-foreground text-sm font-medium tracking-wide">Workforce and Sales Management</p>
           </div>
         </div>
 
