@@ -33,7 +33,6 @@ export default function MonthCalendar({ bookings, leads, runsheets, customers, v
   const [month, setMonth] = useState(startOfMonth(new Date()));
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
-  const [types, setTypes] = useState<string[] | null>(null);
   const active = bookings.filter(b => b.status !== "cancelled" && b.event_date);
   const leadOf = (b: Booking) => leads.find(l => l.id === b.lead_id);
   const customerOf = (b: Booking) => customers.find(c => c.id === b.customer_id) || leadOf(b);
@@ -44,6 +43,7 @@ export default function MonthCalendar({ bookings, leads, runsheets, customers, v
   const tone = (type: string) => TONES[Math.max(0, allTypes.indexOf(type)) % TONES.length];
   const dotTone = (type: string) => DOT_TONES[Math.max(0, allTypes.indexOf(type)) % DOT_TONES.length];
   const typeLabel = (t: string) => t === "no_type" ? "No type" : prettyCrmValue(t);
+  const filtered = active;
   const filtered = active.filter(b => !types || types.includes(typeOf(b)));
   const days = eachDayOfInterval({ start: startOfWeek(month, { weekStartsOn: 1 }), end: endOfWeek(endOfMonth(month), { weekStartsOn: 1 }) });
   const eventsOn = (date: string) => filtered.filter(b => b.event_date === date).sort((a, b) => String(a.start_time || "").localeCompare(String(b.start_time || "")));
