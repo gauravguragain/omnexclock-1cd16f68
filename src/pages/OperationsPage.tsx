@@ -35,15 +35,34 @@ function StatCard({ stat }: { stat: Stat }) {
 
 export default function OperationsPage() {
   const { businessCode } = useParams();
-  const { user, isOwnerOf, loading: authLoading } = useAuth();
-  const { business, loading: bizLoading } = useBusiness();
+  const { user, isOwnerOf, isMaster, loading: authLoading } = useAuth();
+  const { business: ctxBusiness, loading: bizLoading } = useBusiness();
   const [loading, setLoading] = useState(true);
   const [sales, setSales] = useState<Stat[]>([]);
   const [workforce, setWorkforce] = useState<Stat[]>([]);
   const [compliance, setCompliance] = useState<Stat[]>([]);
   const [finance, setFinance] = useState<Stat[]>([]);
+  const [urlBusiness, setUrlBusiness] = useState<{ id: string; name: string } | null>(null);
+  const [urlBizLoading, setUrlBizLoading] = useState(false);
 
-  const allowed = business ? isOwnerOf(business.id) : false;
+  // Masters often have no business-scoped roles, so the context has no business
+  // for them — resolve the business straight from the URL code in that case.
+  useEffect(() => {
+    if (ctxBusiness || !businessCode || !user) return;
+    setUrlBizLoading(true);
+    (supabase as any)
+      .from("businesses")
+      .select("id, name")
+      .eq("business_code", businessCode)
+      .maybeSingle()
+      .then(({ data }: any) => {
+        setUrlBusiness(data || null);
+        setUrlBizLoading(false);
+      });
+  }, [ctxBusiness, businessCode, user]);
+
+  const business = ctxBusiness || urlBusiness;
+  const allowed = isMaster || (business ? isOwnerOf(business.id) : false);
 
   useEffect(() => {
     if (!business || !allowed) return;
@@ -129,11 +148,11 @@ export default function OperationsPage() {
     })();
   }, [business?.id, allowed]);
 
-  if (authLoading || bizLoading) {
+  if (authLoading || bizLoading || urlBizLoading) {
     return <div className="min-h-screen flex items-center justify-center bg-background"><div className="h-10 w-10 rounded-xl skeleton-shimmer" /></div>;
   }
   if (!user) return <Navigate to="/auth" replace />;
-  if (!business) return <Navigate to="/hub" replace />;
+  if (!business) return <Navigate to={isMaster ? "/master" : "/hub"} replace />;
   if (!allowed) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background p-4">
