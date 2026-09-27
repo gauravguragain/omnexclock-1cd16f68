@@ -1,10 +1,9 @@
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { addMonths, eachDayOfInterval, endOfMonth, endOfWeek, format, isSameMonth, isToday, startOfMonth, startOfWeek } from "date-fns";
-import { CalendarDays, ChevronDown, ChevronLeft, ChevronRight, Clock3, Mail, MapPin, Pencil, Phone, Search, Tag, UserRound, Users } from "lucide-react";
+import { CalendarDays, ChevronLeft, ChevronRight, Clock3, Mail, MapPin, Pencil, Phone, Tag, UserRound, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@/lib/utils";
 import { prettyCrmValue, type CrmLead } from "@/features/sales/types";
 import { bookingEnd, to12 } from "./useEventsData";
