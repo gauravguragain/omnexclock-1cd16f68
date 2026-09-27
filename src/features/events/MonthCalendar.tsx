@@ -44,7 +44,6 @@ export default function MonthCalendar({ bookings, leads, runsheets, customers, v
   const dotTone = (type: string) => DOT_TONES[Math.max(0, allTypes.indexOf(type)) % DOT_TONES.length];
   const typeLabel = (t: string) => t === "no_type" ? "No type" : prettyCrmValue(t);
   const filtered = active;
-  const filtered = active.filter(b => !types || types.includes(typeOf(b)));
   const days = eachDayOfInterval({ start: startOfWeek(month, { weekStartsOn: 1 }), end: endOfWeek(endOfMonth(month), { weekStartsOn: 1 }) });
   const eventsOn = (date: string) => filtered.filter(b => b.event_date === date).sort((a, b) => String(a.start_time || "").localeCompare(String(b.start_time || "")));
   const selected = selectedDate ? eventsOn(selectedDate) : [];
