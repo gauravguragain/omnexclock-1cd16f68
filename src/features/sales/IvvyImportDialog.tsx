@@ -9,7 +9,7 @@ type Row = Record<string, string>;
 const MONTHS = ["january","february","march","april","may","june","july","august","september","october","november","december"];
 
 function parseCsv(text: string): Row[] {
-  text = text.replace(/^\uFEFF/, "");
+  text = text.replace(/^﻿/, "");
   const rows: string[][] = []; let row: string[] = []; let cell = ""; let q = false;
   for (let i = 0; i < text.length; i++) {
     const c = text[i];
@@ -42,11 +42,11 @@ export default function IvvyImportDialog({ open, onOpenChange, businessId, onDon
   const onFile = async (f?: File) => {
     if (!f) return;
     const rows = parseCsv(await f.text());
-    if (!rows.length || !("Code" in rows[0]) || !("Main Contact" in rows[0])) { toast.error("This doesn't look like an iVvy bookings export."); return; }
+    if (!rows.length || !("code" in rows[0]) || !("main contact" in rows[0])) { toast.error("This doesn't look like an iVvy bookings export."); return; }
     const out: Prepared[] = []; let skip = 0;
     for (const r of rows) {
-      if (!r.Code || !(r["Main Contact"] || r["Booking Name"])) { skip++; continue; }
-      out.push({ code: r.Code, row: r, date: parseDate(r["Event Start Date"]), catering: /catering/i.test(r["Booking Name"]), status: (r.Status || "").toLowerCase() });
+      if (!col(r, "Code") || !(col(r, "Main Contact") || col(r, "Booking Name"))) { skip++; continue; }
+      out.push({ code: col(r, "Code"), row: r, date: parseDate(col(r, "Event Start Date")), catering: /catering/i.test(col(r, "Booking Name")), status: col(r, "Status").toLowerCase() });
     }
     setItems(out); setSkipped(skip);
   };
@@ -56,19 +56,19 @@ export default function IvvyImportDialog({ open, onOpenChange, businessId, onDon
     try {
       const { data: { user } } = await supabase.auth.getUser();
       const leadRows = items.map(({ code, row: r, date, catering, status }) => {
-        const guests = Math.round(num(r["Total Attendees Guaranteed"]));
+        const guests = Math.round(num(col(r, "Total Attendees Guaranteed")));
         const lStatus = status === "confirmed" ? "deposit_received" : status === "cancelled" ? "cold" : "new";
         return {
           business_id: businessId, external_ref: code,
-          full_name: r["Main Contact"] || [r["First Name"], r["Last Name"]].filter(Boolean).join(" ") || r["Booking Name"],
-          email: r.Email || null, company: r.Company || null, source: "ivvy",
-          event_type: catering ? "catering" : (r["Booking Name"] || "other").toLowerCase().replace(/\s+/g, "_"),
+          full_name: col(r, "Main Contact") || [col(r, "First Name"), col(r, "Last Name")].filter(Boolean).join(" ") || col(r, "Booking Name"),
+          email: col(r, "Email") || null, company: col(r, "Company") || null, source: "ivvy",
+          event_type: catering ? "catering" : (col(r, "Booking Name") || "other").toLowerCase().replace(/\s+/g, "_"),
           lead_kind: catering ? "catering" : "event",
           preferred_dates: date ? [date] : [], estimated_guest_count: guests > 0 ? guests : null,
-          estimated_value: num(r["Total Amount"]), status: lStatus,
+          estimated_value: num(col(r, "Total Amount")), status: lStatus,
           lead_outcome: lStatus === "deposit_received" ? "confirmed" : lStatus === "cold" ? "declined" : "new",
-          decline_reason: status === "cancelled" ? (r["Cancel Reason"] || "Cancelled in iVvy") : null,
-          tags: ["ivvy", `ivvy:${code}`, r["Sales Person"] && `sales:${r["Sales Person"]}`].filter(Boolean) as string[],
+          decline_reason: status === "cancelled" ? (col(r, "Cancel Reason") || "Cancelled in iVvy") : null,
+          tags: ["ivvy", `ivvy:${code}`, col(r, "Sales Person") && `sales:${col(r, "Sales Person")}`].filter(Boolean) as string[],
           created_by: user?.id ?? null, updated_by: user?.id ?? null,
         };
       });
@@ -81,14 +81,14 @@ export default function IvvyImportDialog({ open, onOpenChange, businessId, onDon
       }
       const bookingRows = items.filter(p => p.status === "confirmed" && p.date).map(({ code, row: r, date, catering }) => {
         const [leadId, customerId] = (idByCode[code] || "|").split("|");
-        const guests = Math.max(1, Math.round(num(r["Total Attendees Guaranteed"])));
+        const guests = Math.max(1, Math.round(num(col(r, "Total Attendees Guaranteed"))));
         return {
           business_id: businessId, external_ref: code, lead_id: leadId || null, customer_id: customerId || null,
           event_date: date, start_time: "18:00", end_time: "22:00", duration_minutes: 240, guest_count: guests, adults: guests,
-          venue_space: "TBC", booking_kind: catering ? "catering" : "event", event_name: r["Booking Name"],
-          total_amount: num(r["Total Amount"]), deposit_amount: num(r["Total Paid"]), deposit_paid: num(r["Total Paid"]) > 0,
+          venue_space: "TBC", booking_kind: catering ? "catering" : "event", event_name: col(r, "Booking Name"),
+          total_amount: num(col(r, "Total Amount")), deposit_amount: num(col(r, "Total Paid")), deposit_paid: num(col(r, "Total Paid")) > 0,
           status: "confirmed", confirmed_at: new Date().toISOString(),
-          notes: [`Imported from iVvy (${code})`, r.Coordinator && `Coordinator: ${r.Coordinator}`, r["Sales Person"] && `Sales person: ${r["Sales Person"]}`, `Paid: $${num(r["Total Paid"])} · Outstanding: $${num(r["Total Outstanding"])}`].filter(Boolean).join("\n"),
+          notes: [`Imported from iVvy (${code})`, col(r, "Coordinator") && `Coordinator: ${col(r, "Coordinator")}`, col(r, "Sales Person") && `Sales person: ${col(r, "Sales Person")}`, `Paid: $${num(col(r, "Total Paid"))} · Outstanding: $${num(col(r, "Total Outstanding"))}`].filter(Boolean).join("\n"),
           created_by: user?.id ?? null, updated_by: user?.id ?? null,
         };
       });
