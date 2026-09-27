@@ -62,9 +62,12 @@ export default function IvvyImportDialog({ open, onOpenChange, businessId, onDon
     setBusy(true);
     try {
       const { data: { user } } = await supabase.auth.getUser();
+      const today = new Date().toLocaleDateString("en-CA", { timeZone: "Australia/Sydney" });
       const leadRows = items.map(({ code, row: r, date, catering, status }) => {
         const guests = Math.round(num(col(r, "Total Attendees Guaranteed")));
-        const lStatus = status === "confirmed" ? "deposit_received" : status === "cancelled" ? "cold" : "new";
+        const outstanding = num(col(r, "Total Outstanding"));
+        // Historical migration: confirmed bookings are events that already happened, so fully paid ones land at the final stage.
+        const lStatus = status === "confirmed" ? (outstanding <= 0 ? "full_payment_received" : "deposit_received") : status === "cancelled" ? "cold" : "new";
         return {
           business_id: businessId, external_ref: code,
           full_name: col(r, "Main Contact") || [col(r, "First Name"), col(r, "Last Name")].filter(Boolean).join(" ") || col(r, "Booking Name"),
@@ -73,7 +76,7 @@ export default function IvvyImportDialog({ open, onOpenChange, businessId, onDon
           lead_kind: catering ? "catering" : "event",
           preferred_dates: date ? [date] : [], estimated_guest_count: guests > 0 ? guests : null,
           estimated_value: num(col(r, "Total Amount")), status: lStatus,
-          lead_outcome: lStatus === "deposit_received" ? "confirmed" : lStatus === "cold" ? "declined" : "new",
+          lead_outcome: lStatus === "deposit_received" || lStatus === "full_payment_received" ? "confirmed" : lStatus === "cold" ? "declined" : "new",
           decline_reason: status === "cancelled" ? (col(r, "Cancel Reason") || "Cancelled in iVvy") : null,
           tags: ["ivvy", `ivvy:${code}`, col(r, "Sales Person") && `sales:${col(r, "Sales Person")}`].filter(Boolean) as string[],
           created_by: user?.id ?? null, updated_by: user?.id ?? null,
@@ -94,17 +97,38 @@ export default function IvvyImportDialog({ open, onOpenChange, businessId, onDon
           event_date: date, start_time: "18:00", end_time: "22:00", duration_minutes: 240, guest_count: guests, adults: guests,
           venue_space: "TBC", booking_kind: catering ? "catering" : "event", event_name: col(r, "Booking Name"),
           total_amount: num(col(r, "Total Amount")), deposit_amount: num(col(r, "Total Paid")), deposit_paid: num(col(r, "Total Paid")) > 0,
-          status: "confirmed", confirmed_at: new Date().toISOString(),
+          // Past events are already done — mark them completed so they don't show as upcoming or overdue.
+          status: date! < today ? "completed" : "confirmed", confirmed_at: new Date().toISOString(),
           notes: [`Imported from iVvy (${code})`, col(r, "Coordinator") && `Coordinator: ${col(r, "Coordinator")}`, col(r, "Sales Person") && `Sales person: ${col(r, "Sales Person")}`, `Paid: $${num(col(r, "Total Paid"))} · Outstanding: $${num(col(r, "Total Outstanding"))}`].filter(Boolean).join("\n"),
           created_by: user?.id ?? null, updated_by: user?.id ?? null,
         };
       });
+      const bookingIdByCode: Record<string, string> = {};
       for (let i = 0; i < bookingRows.length; i += 100) {
         setProgress(`Bookings ${Math.min(i + 100, bookingRows.length)}/${bookingRows.length}`);
-        const { error } = await supabase.from("crm_bookings").upsert(bookingRows.slice(i, i + 100) as any, { onConflict: "business_id,external_ref" });
+        const { data, error } = await supabase.from("crm_bookings").upsert(bookingRows.slice(i, i + 100) as any, { onConflict: "business_id,external_ref" }).select("id, external_ref");
+        if (error) throw error;
+        (data || []).forEach((d: any) => { bookingIdByCode[d.external_ref] = d.id; });
+      }
+      // Record what was actually paid in iVvy as payment history, so the Payments page reflects reality.
+      const paidItems = items.filter(p => p.status === "confirmed" && num(col(p.row, "Total Paid")) > 0 && bookingIdByCode[p.code]);
+      const bookingIds = paidItems.map(p => bookingIdByCode[p.code]);
+      for (let i = 0; i < bookingIds.length; i += 200) {
+        const { error } = await supabase.from("crm_payments").delete().in("booking_id", bookingIds.slice(i, i + 200)).like("reference", "iVvy %");
         if (error) throw error;
       }
-      toast.success(`Imported ${leadRows.length} leads and ${bookingRows.length} confirmed bookings from iVvy.`);
+      const paymentRows = paidItems.map(p => ({
+        business_id: businessId, booking_id: bookingIdByCode[p.code],
+        amount: num(col(p.row, "Total Paid")), paid_on: p.date || today,
+        payment_type: num(col(p.row, "Total Outstanding")) > 0 ? "deposit" : "balance",
+        method: "other", reference: `iVvy ${p.code}`, notes: "Migrated from iVvy",
+      }));
+      for (let i = 0; i < paymentRows.length; i += 100) {
+        setProgress(`Payments ${Math.min(i + 100, paymentRows.length)}/${paymentRows.length}`);
+        const { error } = await supabase.from("crm_payments").insert(paymentRows.slice(i, i + 100) as any);
+        if (error) throw error;
+      }
+      toast.success(`Imported ${leadRows.length} leads, ${bookingRows.length} bookings and ${paymentRows.length} payments from iVvy.`);
       setItems([]); onOpenChange(false); onDone();
     } catch (e: any) { toast.error(e.message || "Import failed"); }
     finally { setBusy(false); setProgress(""); }
@@ -113,10 +137,10 @@ export default function IvvyImportDialog({ open, onOpenChange, businessId, onDon
   const c = (f: (p: Prepared) => boolean) => items.filter(f).length;
   return <Dialog open={open} onOpenChange={o => { if (!busy) onOpenChange(o); }}>
     <DialogContent className="max-w-lg">
-      <DialogHeader><DialogTitle>Import from iVvy</DialogTitle><DialogDescription>In iVvy, export your Bookings list as CSV and upload it here. Running it again updates bookings already imported.</DialogDescription></DialogHeader>
+      <DialogHeader><DialogTitle>Import from iVvy</DialogTitle><DialogDescription>In iVvy, export your Bookings list as CSV and upload it here. Past confirmed bookings are imported as completed history with their payments. Running it again updates bookings already imported.</DialogDescription></DialogHeader>
       <Input type="file" accept=".csv,text/csv" disabled={busy} onChange={e => onFile(e.target.files?.[0])} />
       {items.length > 0 && <div className="grid grid-cols-2 gap-2 text-sm">
-        {[["Bookings found", items.length], ["Event leads", c(p => !p.catering)], ["Catering leads", c(p => p.catering)], ["Confirmed (become events)", c(p => p.status === "confirmed")], ["Tentative (New)", c(p => p.status === "tentative")], ["Cancelled (Cold)", c(p => p.status === "cancelled")], ["Skipped rows", skipped]].map(([l, v]) =>
+        {[["Bookings found", items.length], ["Event leads", c(p => !p.catering)], ["Catering leads", c(p => p.catering)], ["Confirmed (become bookings)", c(p => p.status === "confirmed")], ["Past (marked completed)", c(p => p.status === "confirmed" && p.date && p.date < new Date().toLocaleDateString("en-CA", { timeZone: "Australia/Sydney" }))], ["Tentative (New)", c(p => p.status === "tentative")], ["Cancelled (Cold)", c(p => p.status === "cancelled")], ["Skipped rows", skipped]].map(([l, v]) =>
           <div key={l as string} className="flex justify-between border-b border-border py-1"><span className="text-muted-foreground">{l}</span><span className="font-medium">{v}</span></div>)}
       </div>}
       {progress && <p className="text-sm text-muted-foreground">{progress}</p>}
