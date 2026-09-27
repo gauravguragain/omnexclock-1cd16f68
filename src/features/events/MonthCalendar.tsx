@@ -73,7 +73,7 @@ export default function MonthCalendar({ bookings, leads, runsheets, customers, v
           <Button size="icon" variant="ghost" aria-label="Next month" onClick={() => setMonth(addMonths(month, 1))}><ChevronRight className="h-4 w-4" /></Button>
         </div>
         <div className="ml-auto flex flex-wrap items-center gap-x-3 gap-y-2">
-          <span className="whitespace-nowrap text-xs font-medium">{dateCount} {dateCount === 1 ? "event" : "events"}</span>
+          <span className="whitespace-nowrap text-xs font-semibold">{dateCount}</span>
           <span className="flex items-center gap-1.5 whitespace-nowrap text-xs text-muted-foreground"><span className="h-2 w-2 rounded-full bg-primary" />Events<span className="ml-2 h-2 w-2 rounded-full bg-catering" />Catering</span>
         </div>
       </div>
