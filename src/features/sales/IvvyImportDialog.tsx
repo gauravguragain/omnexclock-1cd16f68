@@ -97,7 +97,8 @@ export default function IvvyImportDialog({ open, onOpenChange, businessId, onDon
           event_date: date, start_time: "18:00", end_time: "22:00", duration_minutes: 240, guest_count: guests, adults: guests,
           venue_space: "TBC", booking_kind: catering ? "catering" : "event", event_name: col(r, "Booking Name"),
           total_amount: num(col(r, "Total Amount")), deposit_amount: num(col(r, "Total Paid")), deposit_paid: num(col(r, "Total Paid")) > 0,
-          status: "confirmed", confirmed_at: new Date().toISOString(),
+          // Past events are already done — mark them completed so they don't show as upcoming or overdue.
+          status: date! < today ? "completed" : "confirmed", confirmed_at: new Date().toISOString(),
           notes: [`Imported from iVvy (${code})`, col(r, "Coordinator") && `Coordinator: ${col(r, "Coordinator")}`, col(r, "Sales Person") && `Sales person: ${col(r, "Sales Person")}`, `Paid: $${num(col(r, "Total Paid"))} · Outstanding: $${num(col(r, "Total Outstanding"))}`].filter(Boolean).join("\n"),
           created_by: user?.id ?? null, updated_by: user?.id ?? null,
         };
