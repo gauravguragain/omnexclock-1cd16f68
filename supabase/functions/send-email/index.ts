@@ -487,7 +487,7 @@ serve(async (req) => {
           </div>
         </div>`;
       emailPayload = {
-        from: `${b.businessName || "Pro Regal Pavilion"} <noreply@regalmanagement.com.au>`,
+        from: `${b.businessName || "Pro Regal Management"} <noreply@regalmanagement.com.au>`,
         to: [b.to],
         subject: `${b.kind === "confirmation" ? "Booking confirmed" : "Run sheet"} — ${b.eventTitle}${b.dateLabel ? ` (${b.dateLabel})` : ""}`,
         html,
