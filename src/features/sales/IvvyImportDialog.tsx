@@ -103,12 +103,32 @@ export default function IvvyImportDialog({ open, onOpenChange, businessId, onDon
           created_by: user?.id ?? null, updated_by: user?.id ?? null,
         };
       });
+      const bookingIdByCode: Record<string, string> = {};
       for (let i = 0; i < bookingRows.length; i += 100) {
         setProgress(`Bookings ${Math.min(i + 100, bookingRows.length)}/${bookingRows.length}`);
-        const { error } = await supabase.from("crm_bookings").upsert(bookingRows.slice(i, i + 100) as any, { onConflict: "business_id,external_ref" });
+        const { data, error } = await supabase.from("crm_bookings").upsert(bookingRows.slice(i, i + 100) as any, { onConflict: "business_id,external_ref" }).select("id, external_ref");
+        if (error) throw error;
+        (data || []).forEach((d: any) => { bookingIdByCode[d.external_ref] = d.id; });
+      }
+      // Record what was actually paid in iVvy as payment history, so the Payments page reflects reality.
+      const paidItems = items.filter(p => p.status === "confirmed" && num(col(p.row, "Total Paid")) > 0 && bookingIdByCode[p.code]);
+      const bookingIds = paidItems.map(p => bookingIdByCode[p.code]);
+      for (let i = 0; i < bookingIds.length; i += 200) {
+        const { error } = await supabase.from("crm_payments").delete().in("booking_id", bookingIds.slice(i, i + 200)).like("reference", "iVvy %");
         if (error) throw error;
       }
-      toast.success(`Imported ${leadRows.length} leads and ${bookingRows.length} confirmed bookings from iVvy.`);
+      const paymentRows = paidItems.map(p => ({
+        business_id: businessId, booking_id: bookingIdByCode[p.code],
+        amount: num(col(p.row, "Total Paid")), paid_on: p.date || today,
+        payment_type: num(col(p.row, "Total Outstanding")) > 0 ? "deposit" : "balance",
+        method: "other", reference: `iVvy ${p.code}`, notes: "Migrated from iVvy",
+      }));
+      for (let i = 0; i < paymentRows.length; i += 100) {
+        setProgress(`Payments ${Math.min(i + 100, paymentRows.length)}/${paymentRows.length}`);
+        const { error } = await supabase.from("crm_payments").insert(paymentRows.slice(i, i + 100) as any);
+        if (error) throw error;
+      }
+      toast.success(`Imported ${leadRows.length} leads, ${bookingRows.length} bookings and ${paymentRows.length} payments from iVvy.`);
       setItems([]); onOpenChange(false); onDone();
     } catch (e: any) { toast.error(e.message || "Import failed"); }
     finally { setBusy(false); setProgress(""); }
