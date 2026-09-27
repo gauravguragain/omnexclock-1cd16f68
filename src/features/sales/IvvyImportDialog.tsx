@@ -21,8 +21,9 @@ function parseCsv(text: string): Row[] {
   }
   if (cell || row.length) { row.push(cell); rows.push(row); }
   const [head, ...body] = rows; if (!head) return [];
-  return body.filter(r => r.some(v => v.trim())).map(r => Object.fromEntries(head.map((h, i) => [h.trim(), (r[i] ?? "").trim()])));
+  return body.filter(r => r.some(v => v.trim())).map(r => Object.fromEntries(head.map((h, i) => [h.trim().toLowerCase().replace(/\s+/g, " "), (r[i] ?? "").trim()])));
 }
+const col = (r: Row, ...names: string[]) => { for (const n of names) { const v = r[n.toLowerCase()]; if (v) return v; } return ""; };
 const parseDate = (s: string) => { // "Saturday, 26 September 2026"
   const m = s.match(/(\d{1,2})\s+([A-Za-z]+)\s+(\d{4})/); if (!m) return null;
   const mi = MONTHS.indexOf(m[2].toLowerCase()); if (mi < 0) return null;
