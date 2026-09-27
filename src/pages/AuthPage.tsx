@@ -52,7 +52,7 @@ export default function AuthPage() {
         window.location.replace(nextParam);
         return null;
       }
-      return <Navigate to={nextParam === "events" ? "/hub?next=events" : "/hub"} replace />;
+      return <Navigate to={nextParam === "events" || nextParam === "operations" ? `/hub?next=${nextParam}` : "/hub"} replace />;
     }
   }
 
