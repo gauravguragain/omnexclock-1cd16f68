@@ -10,6 +10,7 @@ import MenuBooksPage from "@/features/events/MenuBooksPage";
 import ReportsPage from "@/features/events/ReportsPage";
 import MonthCalendar from "@/features/events/MonthCalendar";
 import CalendarTab from "@/features/sales/CalendarTab";
+import PaymentsPage from "@/features/events/PaymentsPage";
 import SpacesPage from "@/features/events/SpacesPage";
 import SpaceGalleryPage from "@/features/events/SpaceGalleryPage";
 import { useCrmData } from "@/features/sales/useCrmData";
@@ -47,6 +48,6 @@ export const EventsPages = {
   CateringDetail: () => <CateringDetailPage view="booking" />,
   CateringLeadDetail: () => <CateringDetailPage view="lead" />,
   RunsheetView: () => <RunsheetViewPage />, LeadDetail: () => <LeadDetailPage />,
-  Calendar: CalendarPage,
+  Calendar: CalendarPage, Payments: PaymentsPage,
   Customers: CustomersPage, Stakeholders: StakeholdersPage, Coordinators: CoordinatorsPage, MenuBooks: MenuBooksPage, Dishes: DishesPage, Drinks: DrinksPage, Spaces: SpacesPage, SpaceGallery: SpaceGalleryPage, Reports: ReportsPage,
 };

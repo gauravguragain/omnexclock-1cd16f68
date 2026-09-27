@@ -7,11 +7,11 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useBusiness } from "@/contexts/BusinessContext";
 import { Button } from "@/components/ui/button";
 import { useSessionGuard } from "@/hooks/useSessionGuard";
-import { BarChart3, BookOpen, CalendarDays, ChefHat, ClipboardList, Contact, GlassWater, Home, LayoutDashboard, ListFilter, LogOut, Menu, PartyPopper, PlusCircle, Settings, Truck, UserPlus, Users, Warehouse, X, CalendarCheck, Utensils, UserCheck } from "lucide-react";
+import { BarChart3, BookOpen, CalendarDays, ChefHat, ClipboardList, Contact, GlassWater, Home, LayoutDashboard, ListFilter, LogOut, Menu, PartyPopper, PlusCircle, Settings, Truck, UserPlus, Users, Warehouse, X, CalendarCheck, Utensils, UserCheck, Wallet } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const SECTIONS: { title: string; items: { to: string; label: string; icon: any }[] }[] = [
-  { title: "", items: [{ to: "", label: "Dashboard", icon: LayoutDashboard }, { to: "@@calendar", label: "Calendar", icon: CalendarDays }] },
+  { title: "", items: [{ to: "", label: "Dashboard", icon: LayoutDashboard }, { to: "@@calendar", label: "Calendar", icon: CalendarDays }, { to: "@@payments", label: "Payments", icon: Wallet }] },
   { title: "Leads", items: [{ to: "leads/events", label: "Event leads", icon: UserPlus }, { to: "pipeline", label: "Pipeline", icon: ListFilter }] },
   { title: "Events", items: [{ to: "events", label: "Events", icon: PartyPopper }, { to: "inspections", label: "Inspections", icon: CalendarCheck }, { to: "tasks", label: "Tasks", icon: ClipboardList }] },
   { title: "Catering", items: [{ to: "@leads", label: "Catering leads", icon: Utensils }, { to: "@bookings", label: "Catering bookings", icon: Truck }] },
@@ -58,7 +58,7 @@ export default function EventsLayout({ mode = "events" }: { mode?: "events" | "c
    if (!allowed) return <div className="min-h-dvh flex items-center justify-center bg-background"><div className="space-y-4 text-center"><h1 className="text-xl font-bold">Access denied</h1><p className="text-muted-foreground">{mode === "catering" ? "Catering" : "Events & Sales"} is for admins and sales managers.</p><Link to="/hub"><Button variant="outline">Back</Button></Link></div></div>;
    const base = `/b/${businessCode}/${mode}`;
    const sections = mode === "catering" ? [
-     { title: "", items: [{ to: "@@calendar", label: "Calendar", icon: CalendarDays }] },
+     { title: "", items: [{ to: "@@calendar", label: "Calendar", icon: CalendarDays }, { to: "@@payments", label: "Payments", icon: Wallet }] },
      { title: "Catering", items: [{ to: "leads", label: "Catering leads", icon: Utensils }, { to: "bookings", label: "Catering bookings", icon: Truck }] },
      { title: "People", items: [{ to: "customers", label: "Customers", icon: Users }, { to: "coordinators", label: "Coordinators", icon: UserCheck }, { to: "stakeholders", label: "Stakeholders & vendors", icon: Contact }] },
      { title: "Menus", items: [{ to: "menu-books", label: "Menu books", icon: BookOpen }, { to: "dishes", label: "Dishes", icon: ChefHat }, { to: "drinks", label: "Drinks", icon: GlassWater }] },

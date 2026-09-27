@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { useCrmData } from "@/features/sales/useCrmData";
 import SendRunsheetDialog from "./SendRunsheetDialog";
+import { BookingPaymentsCard } from "./payments";
 import { prettyCrmValue } from "@/features/sales/types";
 import { useEventsData, bookingEnd, minutesBetween, to12 } from "./useEventsData";
 
@@ -110,6 +111,7 @@ export default function EventDetailPage({ kind }: { kind: "event" | "catering" }
           {lead && <p className="text-sm">Workflow stage: <span className="font-medium text-primary">{prettyCrmValue(lead.status)}</span></p>}
           {cancelled ? <Button size="sm" variant="outline" onClick={() => setStatus("confirmed")}><RotateCcw className="mr-2 h-4 w-4" />Restore event</Button> : <Button size="sm" variant="outline" onClick={() => confirm("Cancel this event?") && setStatus("cancelled")}><X className="mr-2 h-4 w-4" />Cancel event</Button>}
         </CardContent></Card>
+        <BookingPaymentsCard booking={b} onChanged={crm.refresh} />
         <Section icon={User} title="Customer">{customer ? <><p className="mb-2 font-medium">{customer.full_name}</p><Row k="Phone" v={customer.phone} /><Row k="Email" v={customer.email} /><Row k="Address" v={customer.address} /></> : <p className="text-sm text-muted-foreground">No customer linked</p>}</Section>
         <Section icon={Users} title="Event team"><Row k="Sales person" v={rs?.sales_person && `${rs.sales_person}${rs.sales_person_phone ? ` · ${rs.sales_person_phone}` : ""}`} /><Row k="Event coordinator" v={rs?.event_coordinator && `${rs.event_coordinator}${rs.event_coordinator_phone ? ` · ${rs.event_coordinator_phone}` : ""}`} /><Row k="On-site contact" v={rs?.onsite_contact_name && `${rs.onsite_contact_name}${rs.onsite_contact_phone ? ` · ${rs.onsite_contact_phone}` : ""}`} /></Section>
         <Section icon={History} title="Record"><Row k="Event Order" v={b.event_order_number} /><Row k="Run sheet" v={rs ? `Revision ${rs.revision || 1}${rs.sent_at ? " · issued" : " · draft"}` : "Not started"} /><Row k="Created" v={format(new Date(b.created_at), "d MMM yyyy, h:mm a")} /></Section>
