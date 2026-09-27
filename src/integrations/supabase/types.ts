@@ -515,6 +515,7 @@ export type Database = {
           event_name: string | null
           event_order_number: string | null
           event_type: string | null
+          external_ref: string | null
           fulfilment_method: string
           guest_count: number
           id: string
@@ -551,6 +552,7 @@ export type Database = {
           event_name?: string | null
           event_order_number?: string | null
           event_type?: string | null
+          external_ref?: string | null
           fulfilment_method?: string
           guest_count: number
           id?: string
@@ -587,6 +589,7 @@ export type Database = {
           event_name?: string | null
           event_order_number?: string | null
           event_type?: string | null
+          external_ref?: string | null
           fulfilment_method?: string
           guest_count?: number
           id?: string
@@ -1286,6 +1289,7 @@ export type Database = {
           estimated_guest_count: number | null
           estimated_value: number
           event_type: string
+          external_ref: string | null
           flexible_date: boolean
           full_name: string
           id: string
@@ -1320,6 +1324,7 @@ export type Database = {
           estimated_guest_count?: number | null
           estimated_value?: number
           event_type: string
+          external_ref?: string | null
           flexible_date?: boolean
           full_name: string
           id?: string
@@ -1354,6 +1359,7 @@ export type Database = {
           estimated_guest_count?: number | null
           estimated_value?: number
           event_type?: string
+          external_ref?: string | null
           flexible_date?: boolean
           full_name?: string
           id?: string
