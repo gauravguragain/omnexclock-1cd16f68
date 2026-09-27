@@ -67,7 +67,7 @@ export default function IvvyImportDialog({ open, onOpenChange, businessId, onDon
         const guests = Math.round(num(col(r, "Total Attendees Guaranteed")));
         const outstanding = num(col(r, "Total Outstanding"));
         // Historical migration: confirmed bookings are events that already happened, so fully paid ones land at the final stage.
-        const lStatus = status === "confirmed" ? (outstanding <= 0 ? "full_payment_received" : "deposit_received") : status === "cancelled" ? "cold" : "new";
+        const lStatus = status !== "cancelled" ? (outstanding <= 0 ? "full_payment_received" : "deposit_received") : status === "cancelled" ? "cold" : "new";
         return {
           business_id: businessId, external_ref: code,
           full_name: col(r, "Main Contact") || [col(r, "First Name"), col(r, "Last Name")].filter(Boolean).join(" ") || col(r, "Booking Name"),
@@ -89,7 +89,7 @@ export default function IvvyImportDialog({ open, onOpenChange, businessId, onDon
         if (error) throw error;
         (data || []).forEach((d: any) => { idByCode[d.external_ref] = d.id + "|" + (d.customer_id ?? ""); });
       }
-      const bookingRows = items.filter(p => p.status === "confirmed" && p.date).map(({ code, row: r, date, catering }) => {
+      const bookingRows = items.filter(p => p.status !== "cancelled" && p.date).map(({ code, row: r, date, catering }) => {
         const [leadId, customerId] = (idByCode[code] || "|").split("|");
         const guests = Math.max(1, Math.round(num(col(r, "Total Attendees Guaranteed"))));
         return {
@@ -111,7 +111,7 @@ export default function IvvyImportDialog({ open, onOpenChange, businessId, onDon
         (data || []).forEach((d: any) => { bookingIdByCode[d.external_ref] = d.id; });
       }
       // Record what was actually paid in iVvy as payment history, so the Payments page reflects reality.
-      const paidItems = items.filter(p => p.status === "confirmed" && num(col(p.row, "Total Paid")) > 0 && bookingIdByCode[p.code]);
+      const paidItems = items.filter(p => p.status !== "cancelled" && num(col(p.row, "Total Paid")) > 0 && bookingIdByCode[p.code]);
       const bookingIds = paidItems.map(p => bookingIdByCode[p.code]);
       for (let i = 0; i < bookingIds.length; i += 200) {
         const { error } = await supabase.from("crm_payments").delete().in("booking_id", bookingIds.slice(i, i + 200)).like("reference", "iVvy %");
@@ -140,7 +140,7 @@ export default function IvvyImportDialog({ open, onOpenChange, businessId, onDon
       <DialogHeader><DialogTitle>Import from iVvy</DialogTitle><DialogDescription>In iVvy, export your Bookings list as CSV and upload it here. Past confirmed bookings are imported as completed history with their payments. Running it again updates bookings already imported.</DialogDescription></DialogHeader>
       <Input type="file" accept=".csv,text/csv" disabled={busy} onChange={e => onFile(e.target.files?.[0])} />
       {items.length > 0 && <div className="grid grid-cols-2 gap-2 text-sm">
-        {[["Bookings found", items.length], ["Event leads", c(p => !p.catering)], ["Catering leads", c(p => p.catering)], ["Confirmed (become bookings)", c(p => p.status === "confirmed")], ["Past (marked completed)", c(p => p.status === "confirmed" && p.date && p.date < new Date().toLocaleDateString("en-CA", { timeZone: "Australia/Sydney" }))], ["Tentative (New)", c(p => p.status === "tentative")], ["Cancelled (Cold)", c(p => p.status === "cancelled")], ["Skipped rows", skipped]].map(([l, v]) =>
+        {[["Bookings found", items.length], ["Event leads", c(p => !p.catering)], ["Catering leads", c(p => p.catering)], ["Hosted (become bookings)", c(p => p.status !== "cancelled")], ["Past (marked completed)", c(p => p.status !== "cancelled" && p.date && p.date < new Date().toLocaleDateString("en-CA", { timeZone: "Australia/Sydney" }))], ["Cancelled (Cold)", c(p => p.status === "cancelled")], ["Skipped rows", skipped]].map(([l, v]) =>
           <div key={l as string} className="flex justify-between border-b border-border py-1"><span className="text-muted-foreground">{l}</span><span className="font-medium">{v}</span></div>)}
       </div>}
       {progress && <p className="text-sm text-muted-foreground">{progress}</p>}
