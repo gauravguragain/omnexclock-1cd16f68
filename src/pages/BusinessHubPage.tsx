@@ -31,9 +31,12 @@ export default function BusinessHubPage() {
   }
 
   if (!user) return <Navigate to="/auth" replace />;
-  if (isMaster) return <Navigate to="/master" replace />;
-  const wantsEvents = new URLSearchParams(window.location.search).get("next") === "events";
+  const nextTarget = new URLSearchParams(window.location.search).get("next");
+  const wantsEvents = nextTarget === "events";
+  const wantsOps = nextTarget === "operations";
+  if (isMaster) return <Navigate to={wantsOps ? "/master/businesses" : "/master"} replace />;
   if (wantsEvents && isApproved && business && businesses.length === 1) return <Navigate to={`/b/${business.business_code}/events`} replace />;
+  if (wantsOps && isApproved && business && businesses.length === 1 && isOwnerOf(business.id)) return <Navigate to={`/b/${business.business_code}/operations`} replace />;
 
   if (!isApproved) {
     return (
@@ -83,7 +86,7 @@ export default function BusinessHubPage() {
             return (
               <Link
                 key={biz.id}
-                to={`/b/${biz.business_code}/${wantsEvents ? "events" : "admin"}`}
+                to={`/b/${biz.business_code}/${wantsEvents ? "events" : wantsOps && isOwnerOf(biz.id) ? "operations" : "admin"}`}
                 onClick={() => { setBusiness(biz); applyTheme(biz.theme); }}
                 className="block"
               >
