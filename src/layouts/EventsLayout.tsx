@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, Navigate, NavLink, Outlet, useParams } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useBusiness } from "@/contexts/BusinessContext";
 import { Button } from "@/components/ui/button";
@@ -19,22 +20,33 @@ const SECTIONS: { title: string; items: { to: string; label: string; icon: any }
 ];
 
 export default function EventsLayout({ mode = "events" }: { mode?: "events" | "catering" }) {
-  const { user, loading, isApproved, isAdminOf, isSuperAdminOf, isSalesManagerOf, signOut } = useAuth();
+  const { user, loading, isApproved, isAdminOf, isSuperAdminOf, isSalesManagerOf, isMaster, signOut } = useAuth();
   const { business, businesses, setBusiness, applyTheme } = useBusiness();
   const { businessCode } = useParams();
+  const [urlBusiness, setUrlBusiness] = useState<Business | null>(null);
   const [open, setOpen] = useState(false);
   useSessionGuard();
   useEffect(() => {
     const match = businesses.find(b => b.business_code === businessCode);
-    if (match && match.id !== business?.id) setBusiness(match);
-    if (match) applyTheme(match.theme);
-  }, [businessCode, businesses]);
+    if (match) {
+      if (match.id !== business?.id) setBusiness(match);
+      applyTheme(match.theme);
+      return;
+    }
+    // Resolve the business straight from the URL code (e.g. master accounts
+    // browsing a business without a selected business context).
+    if (!businessCode || !user) return;
+    (supabase as any).from("businesses").select("*").eq("business_code", businessCode).maybeSingle()
+      .then(({ data }: any) => { setUrlBusiness(data ? { ...data, theme: data.theme || defaultTheme, status: data.status || "active" } : null); });
+  }, [businessCode, businesses, user]);
+  applyTheme(urlBusiness?.theme || business?.theme || defaultTheme);
 
-  const resolving = !!businessCode && (!business || business.business_code !== businessCode);
+  const resolved = business?.business_code === businessCode ? business : urlBusiness;
+  const resolving = !!businessCode && !resolved;
   if (loading || resolving) return <div className="min-h-dvh bg-background p-8"><div className="h-64 rounded-xl skeleton-shimmer" /></div>;
   if (!user) return <Navigate to="/auth?next=events" replace />;
-  const id = business!.id;
-  const allowed = isApproved && (isAdminOf(id) || isSuperAdminOf(id) || isSalesManagerOf(id));
+  const id = resolved!.id;
+  const allowed = isApproved && (isMaster || isAdminOf(id) || isSuperAdminOf(id) || isSalesManagerOf(id));
    if (!allowed) return <div className="min-h-dvh flex items-center justify-center bg-background"><div className="space-y-4 text-center"><h1 className="text-xl font-bold">Access denied</h1><p className="text-muted-foreground">{mode === "catering" ? "Catering" : "Events & Sales"} is for admins and sales managers.</p><Link to="/hub"><Button variant="outline">Back</Button></Link></div></div>;
    const base = `/b/${businessCode}/${mode}`;
    const sections = mode === "catering" ? [
