@@ -48,7 +48,7 @@ Deno.serve(async (req) => {
     const lines: string[] = [
       "BEGIN:VCALENDAR",
       "VERSION:2.0",
-      "PRODID:-//Regal Clock//Sales & Marketing//EN",
+      "PRODID:-//Pro Regal Management//Sales & Marketing//EN",
       "CALSCALE:GREGORIAN",
       "METHOD:PUBLISH",
       `X-WR-CALNAME:${esc(business.name)} — Sales & Marketing`,

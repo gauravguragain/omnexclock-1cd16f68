@@ -58,7 +58,7 @@ export default function OAuthConsent() {
           <p className="text-muted-foreground">Loading…</p>
         ) : (
           <>
-            <h1 className="text-xl font-semibold">Connect {name} to Regal Clock</h1>
+            <h1 className="text-xl font-semibold">Connect {name} to Pro Regal Management</h1>
             <p className="text-sm text-muted-foreground">
               {name} will be able to view your sales leads, events and tasks, and add tasks, acting as you.
             </p>
