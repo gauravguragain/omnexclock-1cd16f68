@@ -26,7 +26,12 @@ export default function EventsList({ kind }: { kind: "event" | "catering" }) {
   const bucket = (b: any) => b.status === "cancelled" ? "cancelled" : b.event_date < today ? "past" : "upcoming";
   const customer = (b: any) => ev.customers.find(c => c.id === b.customer_id)?.full_name || crm.leads.find(l => l.id === b.lead_id)?.full_name || "—";
   const shown = mine.filter(b => (tab === "all" || bucket(b) === tab) && `${b.event_name || ""} ${customer(b)} ${b.event_order_number || ""} ${b.venue_space} ${b.service_location || ""}`.toLowerCase().includes(search.toLowerCase()))
-    .sort((a, b) => tab === "past" ? b.event_date.localeCompare(a.event_date) : a.event_date.localeCompare(b.event_date));
+    .sort((a, b) => {
+      if (tab === "upcoming") return a.event_date.localeCompare(b.event_date);
+      if (tab === "past") return b.event_date.localeCompare(a.event_date);
+      return Math.abs(a.event_date.localeCompare(today) ? a.event_date < today ? today.localeCompare(a.event_date) : a.event_date.localeCompare(today) : 0)
+        - Math.abs(b.event_date.localeCompare(today) ? b.event_date < today ? today.localeCompare(b.event_date) : b.event_date.localeCompare(today) : 0);
+    });
   const todays = shown.filter(b => isToday(new Date(`${b.event_date}T00:00:00`)));
   const rest = shown.filter(b => !todays.includes(b));
   const setStatus = async (b: any, status: string) => { const { error } = await supabase.from("crm_bookings").update({ status }).eq("id", b.id); if (error) toast.error(error.message); else crm.refresh(); };
