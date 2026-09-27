@@ -57,6 +57,7 @@ export default function OperationsPage() {
     const safe = async <T,>(fn: () => Promise<T>, fallback: T): Promise<T> => {
       try { return await fn(); } catch { return fallback; }
     };
+    const db: any = supabase;
     const count = async (build: () => any): Promise<number | null> =>
       safe(async () => {
         const { count, error } = await build();
@@ -67,15 +68,15 @@ export default function OperationsPage() {
     (async () => {
       // ---- Sales & events ----
       const leads = await safe(async () => {
-        const { data, error } = await supabase.from("crm_leads").select("status").eq("business_id", bid);
+        const { data, error } = await db.from("crm_leads").select("status").eq("business_id", bid);
         if (error) throw error;
         return data || [];
       }, [] as { status: string }[]);
       const activeStages = ["new", "contacted", "inspection_booked", "inspected", "deposit_received", "menu_selected", "invoice_sent", "runsheet_sent"];
       const activeLeads = leads.filter(l => activeStages.includes(l.status)).length;
       const confirmedLeads = leads.filter(l => ["deposit_received", "menu_selected", "invoice_sent", "runsheet_sent", "full_payment_received"].includes(l.status)).length;
-      const upcomingEvents = await count(() => supabase.from("crm_bookings").select("id", { count: "exact", head: true }).eq("business_id", bid).gte("event_date", today));
-      const upcomingInspections = await count(() => supabase.from("crm_inspections").select("id", { count: "exact", head: true }).eq("business_id", bid).gte("proposed_at", today));
+      const upcomingEvents = await count(() => db.from("crm_bookings").select("id", { count: "exact", head: true }).eq("business_id", bid).gte("event_date", today));
+      const upcomingInspections = await count(() => db.from("crm_inspections").select("id", { count: "exact", head: true }).eq("business_id", bid).gte("proposed_at", today));
       setSales([
         { label: "Active leads in pipeline", value: String(activeLeads), hint: `${leads.length} total leads` },
         { label: "Confirmed bookings (pipeline)", value: String(confirmedLeads) },
@@ -84,10 +85,10 @@ export default function OperationsPage() {
       ]);
 
       // ---- Workforce ----
-      const clockedToday = await count(() => supabase.from("clock_events").select("id", { count: "exact", head: true }).eq("business_id", bid).eq("event_type", "clock_in").gte("created_at", today));
-      const shiftsThisWeek = await count(() => supabase.from("shifts").select("id", { count: "exact", head: true }).eq("business_id", bid).gte("shift_date", wStart));
-      const pendingTimesheets = await count(() => supabase.from("timesheet_approvals").select("id", { count: "exact", head: true }).eq("business_id", bid).eq("status", "pending"));
-      const pendingRequests = await count(() => supabase.from("employee_requests").select("id", { count: "exact", head: true }).eq("business_id", bid).eq("status", "pending"));
+      const clockedToday = await count(() => db.from("clock_events").select("id", { count: "exact", head: true }).eq("business_id", bid).eq("event_type", "clock_in").gte("created_at", today));
+      const shiftsThisWeek = await count(() => db.from("shifts").select("id", { count: "exact", head: true }).eq("business_id", bid).gte("shift_date", wStart));
+      const pendingTimesheets = await count(() => db.from("timesheet_approvals").select("id", { count: "exact", head: true }).eq("business_id", bid).eq("status", "pending"));
+      const pendingRequests = await count(() => db.from("employee_requests").select("id", { count: "exact", head: true }).eq("business_id", bid).eq("status", "pending"));
       setWorkforce([
         { label: "Clock-ins today", value: clockedToday === null ? "—" : String(clockedToday) },
         { label: "Shifts rostered this week", value: shiftsThisWeek === null ? "—" : String(shiftsThisWeek), hint: `Week of ${wStart}` },
@@ -96,10 +97,10 @@ export default function OperationsPage() {
       ]);
 
       // ---- Compliance ----
-      const logsToday = await count(() => supabase.from("fsl_entries").select("id", { count: "exact", head: true }).eq("business_id", bid).gte("created_at", today));
-      const activeForms = await count(() => supabase.from("fsl_forms").select("id", { count: "exact", head: true }).eq("business_id", bid).eq("active", true));
-      const maintenanceDue = await count(() => supabase.from("service_maintenance_tasks").select("id", { count: "exact", head: true }).eq("business_id", bid).lte("next_service_date", in7));
-      const docsExpiring = await count(() => supabase.from("employee_documents").select("id", { count: "exact", head: true }).eq("business_id", bid).lte("expiry_date", in30).gte("expiry_date", today));
+      const logsToday = await count(() => db.from("fsl_entries").select("id", { count: "exact", head: true }).eq("business_id", bid).gte("created_at", today));
+      const activeForms = await count(() => db.from("fsl_forms").select("id", { count: "exact", head: true }).eq("business_id", bid).eq("active", true));
+      const maintenanceDue = await count(() => db.from("service_maintenance_tasks").select("id", { count: "exact", head: true }).eq("business_id", bid).lte("next_service_date", in7));
+      const docsExpiring = await count(() => db.from("employee_documents").select("id", { count: "exact", head: true }).eq("business_id", bid).lte("expiry_date", in30).gte("expiry_date", today));
       setCompliance([
         { label: "Food safety logs today", value: logsToday === null ? "—" : String(logsToday), hint: `${activeForms ?? "—"} active forms` },
         { label: "Maintenance due in 7 days", value: maintenanceDue === null ? "—" : String(maintenanceDue), alert: (maintenanceDue ?? 0) > 0 },
@@ -108,16 +109,16 @@ export default function OperationsPage() {
 
       // ---- Finance ----
       const outstanding = await safe(async () => {
-        const { data, error } = await supabase.from("invoices").select("total").eq("business_id", bid).neq("status", "paid");
+        const { data, error } = await db.from("invoices").select("total").eq("business_id", bid).neq("status", "paid");
         if (error) throw error;
         return (data || []).reduce((s, r: any) => s + (Number(r.total) || 0), 0);
       }, null as number | null);
       const paidThisMonth = await safe(async () => {
-        const { data, error } = await supabase.from("invoices").select("total").eq("business_id", bid).eq("status", "paid").gte("created_at", mStart);
+        const { data, error } = await db.from("invoices").select("total").eq("business_id", bid).eq("status", "paid").gte("created_at", mStart);
         if (error) throw error;
         return (data || []).reduce((s, r: any) => s + (Number(r.total) || 0), 0);
       }, null as number | null);
-      const payrollThisWeek = await count(() => supabase.from("payroll_entries").select("id", { count: "exact", head: true }).eq("business_id", bid).gte("created_at", wStart));
+      const payrollThisWeek = await count(() => db.from("payroll_entries").select("id", { count: "exact", head: true }).eq("business_id", bid).gte("created_at", wStart));
       setFinance([
         { label: "Outstanding invoices", value: outstanding === null ? "—" : money(outstanding), alert: (outstanding ?? 0) > 0 },
         { label: "Invoiced paid this month", value: paidThisMonth === null ? "—" : money(paidThisMonth), hint: `Since ${mStart}` },
