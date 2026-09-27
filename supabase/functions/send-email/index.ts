@@ -135,7 +135,7 @@ serve(async (req) => {
       `;
 
       emailPayload = {
-        from: "Roster <noreply@omnexventures.com>",
+        from: "Roster <noreply@regalmanagement.com.au>",
         to: [body.to],
         subject: `Roster Updated – ${body.weekLabel}`,
         html,
@@ -188,7 +188,7 @@ serve(async (req) => {
       }
 
       emailPayload = {
-        from: "Reports <noreply@omnexventures.com>",
+        from: "Reports <noreply@regalmanagement.com.au>",
         to: [body.recipientEmail],
         subject: body.subject,
         html: `
@@ -345,7 +345,7 @@ serve(async (req) => {
       `;
 
       emailPayload = {
-        from: `${body.businessName || "Regal Clock"} <noreply@omnexventures.com>`,
+        from: `${body.businessName || "Regal Clock"} <noreply@regalmanagement.com.au>`,
         to: [body.to],
         subject: `Welcome to ${body.businessName || "the team"}, ${body.employeeName}! 🎉 — Your Induction Packet`,
         html,
@@ -398,7 +398,7 @@ serve(async (req) => {
       `;
 
       emailPayload = {
-        from: `${body.businessName || "Regal Clock"} <noreply@omnexventures.com>`,
+        from: `${body.businessName || "Regal Clock"} <noreply@regalmanagement.com.au>`,
         to: [body.to],
         subject: `Roster — ${body.weekLabel}`,
         html,
@@ -440,7 +440,7 @@ serve(async (req) => {
       `;
 
       emailPayload = {
-        from: `${body.businessName || "Regal Clock"} <noreply@omnexventures.com>`,
+        from: `${body.businessName || "Regal Clock"} <noreply@regalmanagement.com.au>`,
         to: [body.to],
         subject: body.subject,
         html,
@@ -486,7 +486,7 @@ serve(async (req) => {
           </div>
         </div>`;
       emailPayload = {
-        from: `${b.businessName || "Pro Regal Pavilion"} <noreply@omnexventures.com>`,
+        from: `${b.businessName || "Pro Regal Pavilion"} <noreply@regalmanagement.com.au>`,
         to: [b.to],
         subject: `${b.kind === "confirmation" ? "Booking confirmed" : "Run sheet"} — ${b.eventTitle}${b.dateLabel ? ` (${b.dateLabel})` : ""}`,
         html,
