@@ -95,7 +95,40 @@ export default function MonthCalendar({ bookings, leads, runsheets, customers, v
           <Button size="icon" variant="ghost" aria-label="Next month" onClick={() => setMonth(addMonths(month, 1))}><ChevronRight className="h-4 w-4" /></Button>
         </div>
         <div className="ml-auto flex flex-wrap items-center gap-x-3 gap-y-2">
-          <Popover><PopoverTrigger asChild><Button size="sm" variant="outline">Categories</Button></PopoverTrigger><PopoverContent align="end" className="w-52 space-y-3">{allTypes.map(t => <label key={t} className="flex items-center gap-2 text-sm"><Checkbox checked={!types || types.includes(t)} onCheckedChange={checked => setTypes(current => checked ? [...(current || []), t] : (current || allTypes).filter(x => x !== t))} />{t === "no_type" ? "No type" : prettyCrmValue(t)}</label>)}</PopoverContent></Popover>
+          <div className="flex items-stretch overflow-hidden rounded-md border border-border bg-card">
+            <label className="flex items-center gap-2 border-r border-border px-3">
+              <Search className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+              <input value={query} onChange={e => setQuery(e.target.value)} placeholder={`Search ${allTypes.length} categories…`} aria-label="Search event categories" className="w-36 bg-transparent py-2 text-sm outline-none placeholder:text-muted-foreground sm:w-52" />
+            </label>
+            <Popover open={filterOpen} onOpenChange={setFilterOpen}>
+              <PopoverTrigger asChild><Button variant="secondary" className="h-auto gap-1.5 rounded-none border-0 px-4 text-xs font-semibold uppercase tracking-wider">Categories{selectedCount > 0 && <span className="rounded-full bg-primary px-1.5 py-0.5 text-[10px] font-bold leading-none text-primary-foreground">{selectedCount}</span>}<ChevronDown className="h-3 w-3" /></Button></PopoverTrigger>
+              <PopoverContent align="end" className="w-[380px] p-0">
+                <div className="flex items-center justify-between border-b border-border px-4 py-3">
+                  <h3 className="text-xs font-bold uppercase tracking-widest text-primary">Select event types</h3>
+                  <button onClick={() => { setTypes(null); setQuery(""); }} className="text-[10px] uppercase tracking-wider text-muted-foreground underline underline-offset-4 hover:text-primary">Clear all</button>
+                </div>
+                <div className="max-h-[320px] overflow-y-auto px-4 py-3">
+                  {q ? (
+                    <div className="space-y-0.5">
+                      {matchedTypes.map(t => <label key={t} className="flex cursor-pointer items-center gap-3 rounded px-1.5 py-1.5 hover:bg-primary/5"><Checkbox checked={!types || types.includes(t)} onCheckedChange={checked => setTypes(current => checked ? [...(current || []), t] : (current || allTypes).filter(x => x !== t))} className="h-3.5 w-3.5" /><span className="truncate text-xs">{typeLabel(t)}</span></label>)}
+                      {matchedTypes.length === 0 && <p className="py-4 text-center text-xs text-muted-foreground">No categories match “{query}”</p>}
+                    </div>
+                  ) : (
+                    <>
+                      <h4 className="mb-2 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">Frequent types</h4>
+                      <div className="flex flex-wrap gap-2">{frequent.map(t => <button key={t} onClick={() => toggleType(t)} className={cn("rounded-sm border px-2 py-1 text-[11px] transition-colors", types?.includes(t) ? "border-primary bg-primary font-medium text-primary-foreground" : "border-border bg-primary/10 hover:bg-primary/20")}>{typeLabel(t)}</button>)}</div>
+                      <h4 className="mb-1 mt-4 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">All types</h4>
+                      <div className="space-y-0.5">{restTypes.map(t => <label key={t} className="flex cursor-pointer items-center gap-3 rounded px-1.5 py-1.5 hover:bg-primary/5"><Checkbox checked={!types || types.includes(t)} onCheckedChange={checked => setTypes(current => checked ? [...(current || []), t] : (current || allTypes).filter(x => x !== t))} className="h-3.5 w-3.5" /><span className="truncate text-xs">{typeLabel(t)}</span></label>)}</div>
+                    </>
+                  )}
+                </div>
+                <div className="flex items-center justify-between border-t border-border bg-muted/30 px-4 py-2.5">
+                  <span className="text-[10px] italic text-muted-foreground">{q && sortedTypes.length > matchedTypes.length ? `${sortedTypes.length - matchedTypes.length} more hidden…` : ""}</span>
+                  <Button size="sm" className="h-7 px-3 text-[10px] font-bold uppercase tracking-widest" onClick={() => setFilterOpen(false)}>Apply selection</Button>
+                </div>
+              </PopoverContent>
+            </Popover>
+          </div>
           <span className="whitespace-nowrap text-xs font-medium">{dateCount} {dateCount === 1 ? "event" : "events"}</span>
         </div>
       </div>
