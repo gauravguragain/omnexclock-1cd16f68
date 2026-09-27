@@ -27,12 +27,20 @@ const Index = () => {
         >
           {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
         </Button>
-        <Link to="/auth?master=true">
-          <Button variant="ghost" size="sm" className="text-muted-foreground/50 hover:text-foreground gap-1.5 text-xs">
-            <LogIn className="h-3.5 w-3.5" />
-            Master Login
-          </Button>
-        </Link>
+        <div className="flex flex-col items-end gap-0.5">
+          <Link to="/auth?master=true">
+            <Button variant="ghost" size="sm" className="text-muted-foreground/50 hover:text-foreground gap-1.5 text-xs">
+              <LogIn className="h-3.5 w-3.5" />
+              Master Login
+            </Button>
+          </Link>
+          <Link to="/register-business">
+            <Button variant="ghost" size="sm" className="text-muted-foreground/50 hover:text-foreground gap-1.5 text-xs">
+              <Building2 className="h-3.5 w-3.5" />
+              Register Business
+            </Button>
+          </Link>
+        </div>
       </div>
 
       {/* Main content — vertically centered in remaining space */}
@@ -53,7 +61,7 @@ const Index = () => {
         </div>
 
         {/* Action cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 w-full max-w-6xl animate-fade-in" style={{ animationDelay: '0.15s' }}>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 w-full max-w-5xl animate-fade-in" style={{ animationDelay: '0.15s' }}>
           <Link to="/auth?next=operations" className="block">
             <Card className="border border-border/50 cursor-pointer hover:border-primary/40 transition-all duration-300 group h-full ambient-glow shimmer card-lift">
               <CardContent className="p-6 sm:p-8 flex flex-row sm:flex-col items-center sm:text-center gap-4 sm:gap-4">
@@ -110,19 +118,6 @@ const Index = () => {
             </Card>
           </Link>
 
-          <Link to="/register-business" className="block">
-            <Card className="border border-primary/25 cursor-pointer hover:border-primary/50 transition-all duration-300 group h-full bg-primary/[0.02] ambient-glow shimmer card-lift">
-              <CardContent className="p-6 sm:p-8 flex flex-row sm:flex-col items-center sm:text-center gap-4 sm:gap-4">
-                <div className="h-12 w-12 sm:h-14 sm:w-14 rounded-2xl bg-primary/12 flex items-center justify-center shrink-0 group-hover:bg-primary/20 group-hover:scale-110 transition-all duration-300">
-                  <Building2 className="h-6 w-6 sm:h-7 sm:w-7 text-primary" />
-                </div>
-                <div>
-                  <h2 className="text-base font-semibold text-foreground">Register Business</h2>
-                  <p className="text-xs text-muted-foreground mt-1 leading-relaxed">Set up a new business account</p>
-                </div>
-              </CardContent>
-            </Card>
-          </Link>
         </div>
       </div>
 
