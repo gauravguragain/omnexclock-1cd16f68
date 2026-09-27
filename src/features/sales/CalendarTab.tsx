@@ -55,7 +55,7 @@ export default function CalendarTab({ businessId, businessName, leads, inspectio
     });
     bookings.forEach((b: any) => {
       const start = new Date(`${b.event_date}T${String(b.start_time || "17:30").slice(0, 5)}`);
-      list.push({ id: `b-${b.id}`, kind: "event", start, end: new Date(start.getTime() + Number(b.duration_minutes || 300) * 60000), title: `Event — ${nameOf(b.lead_id)}`, detail: `${b.guest_count || 0} guests`, place: b.venue_space?prettyCrmValue(b.venue_space):businessName });
+      list.push({ id: `b-${b.id}`, kind: "event", start, end: new Date(start.getTime() + Number(b.duration_minutes || 300) * 60000), title: `${b.booking_kind === "catering" ? "Catering" : "Event"} — ${b.event_name || nameOf(b.lead_id)}`, detail: `${b.guest_count || 0} guests`, place: b.venue_space?prettyCrmValue(b.venue_space):businessName });
     });
     tasks.filter((t) => t.status === "open").forEach((t) => {
       const start = sydneyWallDate(t.due_at);
@@ -64,8 +64,10 @@ export default function CalendarTab({ businessId, businessName, leads, inspectio
     return list.filter((e) => !Number.isNaN(e.start.getTime())).sort((a, b) => a.start.getTime() - b.start.getTime());
   }, [inspections, bookings, tasks, leads, businessName]);
 
-  const upcomingEntries = entries.filter((e) => e.start >= startOfDay(new Date()));
+  const [period, setPeriod] = useState<"upcoming" | "past">("upcoming");
+  const upcomingEntries = entries.filter((e) => period === "upcoming" ? e.start >= startOfDay(new Date()) : e.start < startOfDay(new Date()));
   const upcoming = upcomingEntries.filter((e) => filter === "all" || e.kind === filter);
+  if (period === "past") upcoming.reverse();
   const days = useMemo(() => {
     const grouped: { day: Date; items: AgendaEntry[] }[] = [];
     upcoming.forEach((entry) => {
@@ -102,6 +104,9 @@ export default function CalendarTab({ businessId, businessName, leads, inspectio
     </Card>
 
     <div className="flex flex-wrap gap-2">
+      <Button size="sm" variant={period === "upcoming" ? "secondary" : "ghost"} onClick={() => setPeriod("upcoming")}>Upcoming</Button>
+      <Button size="sm" variant={period === "past" ? "secondary" : "ghost"} onClick={() => setPeriod("past")}>Past</Button>
+      <span className="mx-1 w-px bg-border" />
       {(["all", "inspection", "event", "task"] as const).map((kind) => (
         <Button key={kind} size="sm" variant={filter === kind ? "default" : "outline"} onClick={() => setFilter(kind)}>
           {kind === "all" ? `Everything (${upcomingEntries.length})` : `${KIND_LABEL[kind]}s (${upcomingEntries.filter((e) => e.kind === kind).length})`}
