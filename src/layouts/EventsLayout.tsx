@@ -65,15 +65,15 @@ export default function EventsLayout({ mode = "events" }: { mode?: "events" | "c
 
    return <div className="min-h-dvh bg-background lg:flex print:!block print:!min-h-0">
     <aside className="hidden w-64 shrink-0 border-r border-border/40 lg:block print:!hidden"><div className="sticky top-0 h-dvh overflow-y-auto">
-       <div className="flex items-center gap-3 border-b border-border/40 p-4">{business?.logo_url ? <img src={business.logo_url} alt="" className="h-9 w-9 rounded-lg object-cover" /> : <PartyPopper className="h-6 w-6 text-primary" />}<div><p className="text-sm font-semibold">{business?.name}</p><p className="text-[11px] text-primary">{mode === "catering" ? "Catering" : "Events & Sales"}</p></div></div>
+       <div className="flex items-center gap-3 border-b border-border/40 p-4">{resolved?.logo_url ? <img src={resolved.logo_url} alt="" className="h-9 w-9 rounded-lg object-cover" /> : <PartyPopper className="h-6 w-6 text-primary" />}<div><p className="text-sm font-semibold">{resolved?.name}</p><p className="text-[11px] text-primary">{mode === "catering" ? "Catering" : "Events & Sales"}</p></div></div>
       {nav}
       <div className="space-y-1 border-t border-border/40 p-4"><Link to={`/b/${businessCode}/admin`} className="flex items-center gap-3 rounded-md px-3 py-2 text-sm text-muted-foreground hover:bg-muted"><Home className="h-4 w-4" />Business Admin</Link><button onClick={signOut} className="flex w-full items-center gap-3 rounded-md px-3 py-2 text-sm text-muted-foreground hover:bg-muted"><LogOut className="h-4 w-4" />Sign out</button></div>
     </div></aside>
      <header className="sticky top-0 z-40 border-b border-border/40 bg-background/95 backdrop-blur lg:hidden print:!hidden" style={{ paddingTop: "env(safe-area-inset-top)" }}>
        <div className="flex h-14 items-center gap-2 px-2" style={{ paddingLeft: "max(0.5rem, env(safe-area-inset-left))", paddingRight: "max(0.5rem, env(safe-area-inset-right))" }}>
          <Button size="icon" variant="ghost" className="h-11 w-11 shrink-0" aria-label={open ? "Close navigation" : "Open navigation"} onClick={() => setOpen(!open)}>{open ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}</Button>
-         {business?.logo_url && <img src={business.logo_url} alt="" className="h-8 w-8 rounded-md object-cover" />}
-         <div className="min-w-0"><p className="truncate text-sm font-semibold">{business?.name}</p><p className="text-[11px] text-primary">{mode === "catering" ? "Catering" : "Events & Sales"}</p></div>
+         {resolved?.logo_url && <img src={resolved.logo_url} alt="" className="h-8 w-8 rounded-md object-cover" />}
+         <div className="min-w-0"><p className="truncate text-sm font-semibold">{resolved?.name}</p><p className="text-[11px] text-primary">{mode === "catering" ? "Catering" : "Events & Sales"}</p></div>
        </div>
      </header>
      {open && <div className="fixed inset-0 z-50 lg:hidden print:!hidden">
