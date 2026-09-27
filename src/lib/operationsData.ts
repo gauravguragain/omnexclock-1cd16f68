@@ -179,9 +179,9 @@ export async function loadOperations(bid: string, r: Range) {
   const overdueTasks = tasks.filter((t: any) => t.status !== "completed" && t.status !== "done" && t.due_at && t.due_at < new Date().toISOString());
 
   // ---------- Labour ----------
-  type Emp = { id: string; name: string; department: string; actual: number; rostered: number; cost: number; shifts: number; late: number; overtimeDays: number };
+  type Emp = { id: string; name: string; department: string; actual: number; rostered: number; cost: number; shifts: number; late: number };
   const empStats: Record<string, Emp> = {};
-  const getE = (id: string) => (empStats[id] ||= { id, name: empById[id]?.name || "Unknown", department: empById[id]?.department || "—", actual: 0, rostered: 0, cost: 0, shifts: 0, late: 0, overtimeDays: 0 });
+  const getE = (id: string) => (empStats[id] ||= { id, name: empById[id]?.name || "Unknown", department: empById[id]?.department || "—", actual: 0, rostered: 0, cost: 0, shifts: 0, late: 0 });
   // actual from clock pairs (Sydney date of clock-in)
   const perEmp: Record<string, any[]> = {};
   clocks.forEach((c: any) => (perEmp[c.employee_id] ||= []).push(c));
@@ -199,7 +199,6 @@ export async function loadOperations(bid: string, r: Range) {
         const hrs = Math.max(0, (t - inAt - breakMs) / 3600000);
         if (hrs < 24) {
           const E = getE(eid); E.actual += hrs; E.shifts++;
-          if (hrs > 10) E.overtimeDays++;
           const d = sydDate(inIso); dayHours[d] = (dayHours[d] || 0) + hrs;
           const tb = trendMap[bucket(d)]; if (tb) { tb.hours += hrs; tb.labour += hrs * (rateOf(eid)); }
         }
@@ -269,7 +268,7 @@ export async function loadOperations(bid: string, r: Range) {
       actualHours, rosteredHours, variance: r2(actualHours - rosteredHours), labourCost, contractorCost,
       labourPct: revenue ? r2(((labourCost + contractorCost) / revenue) * 100) : 0,
       staffCount: staff.length, activeEmployees: employees.filter((e: any) => e.active !== false).length,
-      lateArrivals: staff.reduce((s, e) => s + e.late, 0), longShifts: staff.reduce((s, e) => s + e.overtimeDays, 0),
+      lateArrivals: staff.reduce((s, e) => s + e.late, 0),
       staff, departments: Object.values(deptMap), hourHeat, leave: leaveInRange.length, pendingRequests, unapprovedDays,
     },
     compliance: {
