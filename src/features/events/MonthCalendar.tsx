@@ -51,7 +51,7 @@ export default function MonthCalendar({ bookings, leads, runsheets, customers, v
     return { adults: Number(sheet?.adult_guests ?? b.adults ?? b.guest_count ?? 0), kids: Number(sheet?.kids_guests ?? b.kids ?? 0) };
   };
   const guestCount = (b: Booking) => guestSplit(b).adults + guestSplit(b).kids;
-  const dateCount = filtered.filter(b => String(b.event_date).startsWith(format(month, "yyyy-MM"))).length;
+  const dateCount = active.filter(b => String(b.event_date).startsWith(format(month, "yyyy-MM"))).length;
 
   const renderEventDetail = (b: Booking) => {
     const place = placeOf(b); const customer = customerOf(b); const time = `${to12(String(b.start_time || "").slice(0, 5))} – ${to12(bookingEnd(b))}`;
