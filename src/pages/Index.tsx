@@ -43,7 +43,7 @@ const Index = () => {
             <img
               src="/regal-logo.png"
               alt="Pro Regal Management"
-              className="h-24 w-24 lg:h-20 lg:w-20 mx-auto rounded-2xl object-cover shadow-xl shadow-primary/10 pulse-ring"
+              className="h-24 lg:h-20 w-auto mx-auto rounded-2xl object-contain shadow-xl shadow-primary/10 pulse-ring"
             />
           </div>
           <div className="space-y-1">
