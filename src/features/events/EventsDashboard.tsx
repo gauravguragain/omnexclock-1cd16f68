@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { Link as RouterLink, useParams } from "react-router-dom";
-import MonthCalendar from "./MonthCalendar";
 import { addDays, addMonths, endOfMonth, endOfWeek, format, isSameMonth, startOfMonth, startOfWeek } from "date-fns";
 import { CalendarDays, CalendarPlus, ChevronLeft, ChevronRight, MapPin, Plus, UserPlus, Users, UtensilsCrossed, Building2, CalendarClock } from "lucide-react";
 import { Button } from "@/components/ui/button";
