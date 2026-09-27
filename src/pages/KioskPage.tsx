@@ -142,7 +142,7 @@ export default function KioskPage() {
 
     return () => {
       observer.disconnect();
-      document.title = "Regal Clock";
+      document.title = "Pro Regal Management";
     };
   }, [urlBusinessCode]);
 

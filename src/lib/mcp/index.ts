@@ -9,10 +9,10 @@ const projectRef = import.meta.env.VITE_SUPABASE_PROJECT_ID ?? "project-ref-unse
 
 export default defineMcp({
   name: "regalclock",
-  title: "Regal Clock",
+  title: "Pro Regal Management",
   version: "0.1.0",
   instructions:
-    "Tools for Regal Clock sales & events. Call list_businesses first to get a business_id, then list leads, upcoming bookings, open tasks, or create a task.",
+    "Tools for Pro Regal Management sales & events. Call list_businesses first to get a business_id, then list leads, upcoming bookings, open tasks, or create a task.",
   auth: auth.oauth.issuer({
     issuer: `https://${projectRef}.supabase.co/auth/v1`,
     acceptedAudiences: "authenticated",

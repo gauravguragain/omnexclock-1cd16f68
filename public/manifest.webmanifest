@@ -1,8 +1,8 @@
 {
   "id": "/omnexclock-main",
-  "name": "Regal Clock",
-  "short_name": "Regal Clock",
-  "description": "Regal Clock workforce and employee management",
+  "name": "Pro Regal Management",
+  "short_name": "Pro Regal Management",
+  "description": "Pro Regal Management — Workforce and Sales Management",
   "theme_color": "#12100f",
   "background_color": "#12100f",
   "display": "standalone",
