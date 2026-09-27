@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { Link as RouterLink, useParams } from "react-router-dom";
-import MonthCalendar from "./MonthCalendar";
 import { addDays, addMonths, endOfMonth, endOfWeek, format, isSameMonth, startOfMonth, startOfWeek } from "date-fns";
 import { CalendarDays, CalendarPlus, ChevronLeft, ChevronRight, MapPin, Plus, UserPlus, Users, UtensilsCrossed, Building2, CalendarClock } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -13,7 +12,6 @@ const d = (s: string) => new Date(`${s}T00:00:00`);
 export default function EventsDashboard({ businessId, ownerView = false, canOpenSales = true }: { businessId?: string; ownerView?: boolean; canOpenSales?: boolean } = {}) {
   const crm = useCrmData(businessId); const ev = useEventsData(businessId); const { businessCode } = useParams();
   const [month, setMonth] = useState(startOfMonth(new Date()));
-  const [showCal, setShowCal] = useState(false);
   // Owner view is strictly read-only: links render as plain text and never navigate elsewhere.
   const Link = ({ to, className, children }: any) => ownerView ? <span className={`${className || ""} pointer-events-none`}>{children}</span> : <RouterLink to={to} className={className}>{children}</RouterLink>;
   if (!businessId && !crm.business) return null;
@@ -99,7 +97,7 @@ export default function EventsDashboard({ businessId, ownerView = false, canOpen
         <div className="mt-3 flex gap-2"><Button size="icon" variant="outline" className="h-8 w-8" onClick={() => setMonth(addMonths(month, -1))}><ChevronLeft className="h-4 w-4" /></Button><Button size="icon" variant="outline" className="h-8 w-8" onClick={() => setMonth(addMonths(month, 1))}><ChevronRight className="h-4 w-4" /></Button><Button size="sm" variant="secondary" onClick={() => setMonth(startOfMonth(new Date()))}>Today</Button></div>
         <div className="mt-4 grid grid-cols-7 gap-y-1 text-center text-sm">{["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map(x => <span key={x} className="text-[10px] uppercase tracking-wider text-muted-foreground">{x}</span>)}
           {days.map(x => { const k = format(x, "yyyy-MM-dd"); return <span key={k} className={`relative mx-auto flex h-8 w-8 items-center justify-center rounded-full ${k === today ? "bg-primary text-primary-foreground font-semibold" : isSameMonth(x, month) ? "" : "text-muted-foreground/50"}`}>{format(x, "d")}{eventDays.has(k) && <span className="absolute bottom-0.5 h-1 w-1 rounded-full bg-primary ring-1 ring-card" />}</span>; })}</div>
-        <div className="mt-3 flex justify-between text-xs"><span className="text-muted-foreground">• Event day</span>{ownerView ? <button type="button" className="text-primary" onClick={() => setShowCal(v => !v)}>{showCal ? "Hide full calendar" : "View full calendar ›"}</button> : <Link to={`${base}/calendar`} className="text-primary">View full calendar ›</Link>}</div>
+        <div className="mt-3 flex justify-between text-xs"><span className="text-muted-foreground">• Event day</span>{ownerView ? <RouterLink to={`/b/${businessCode}/operations/calendar`} className="text-primary">View full calendar ›</RouterLink> : <Link to={`${base}/calendar`} className="text-primary">View full calendar ›</Link>}</div>
       </CardContent></Card>
     </div>
 
@@ -135,7 +133,6 @@ export default function EventsDashboard({ businessId, ownerView = false, canOpen
           <span className="rounded-full bg-primary/15 p-2 text-primary"><I className="h-4 w-4" /></span><div className="flex-1"><p className="text-sm font-medium">{t}</p><p className="text-xs text-muted-foreground">{s}</p></div><ChevronRight className="h-4 w-4 text-muted-foreground" /></Link>)}</div>
        </CardContent></Card>}
     </div>
-    {ownerView && showCal && <MonthCalendar readOnly bookings={crm.bookings.filter(b => b.booking_kind !== "catering")} leads={crm.leads.filter((l: any) => l.lead_kind !== "catering" && l.event_type !== "catering")} runsheets={crm.runsheets} customers={ev.customers} venues={ev.venues} onView={() => {}} onEdit={() => {}} />}
     <div className="space-y-4 border-t border-border pt-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between"><div><h2 className="font-serif text-2xl font-semibold">Catering</h2><p className="text-sm text-muted-foreground">Deliveries and pickups, kept separate from venue events.</p></div></div>
       <div className="grid min-w-0 gap-4 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
