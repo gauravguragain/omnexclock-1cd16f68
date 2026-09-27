@@ -99,6 +99,8 @@ export async function loadOperations(bid: string, r: Range) {
 
   const empIds = employees.map((e: any) => e.id);
   const empById: Record<string, any> = Object.fromEntries(employees.map((e: any) => [e.id, e]));
+  // Labour cost uses the admin hourly rate; falls back to pay rate when no admin rate is set.
+  const rateOf = (id: string) => Number(empById[id]?.admin_hourly_rate) || Number(empById[id]?.pay_rate) || 0;
 
   const [clocks, shifts, requests, approvals] = await Promise.all([
     inChunks(empIds, c => db.from("clock_events").select("employee_id,event_type,timestamp").in("employee_id", c).gte("timestamp", fromTs).lt("timestamp", toTs).order("timestamp")),
@@ -199,7 +201,7 @@ export async function loadOperations(bid: string, r: Range) {
           const E = getE(eid); E.actual += hrs; E.shifts++;
           if (hrs > 10) E.overtimeDays++;
           const d = sydDate(inIso); dayHours[d] = (dayHours[d] || 0) + hrs;
-          const tb = trendMap[bucket(d)]; if (tb) { tb.hours += hrs; tb.labour += hrs * (Number(empById[eid]?.pay_rate) || 0); }
+          const tb = trendMap[bucket(d)]; if (tb) { tb.hours += hrs; tb.labour += hrs * (rateOf(eid)); }
         }
         inAt = null;
       }
@@ -215,7 +217,7 @@ export async function loadOperations(bid: string, r: Range) {
       if (timeToH(local) - timeToH(s.start_time) > 5 / 60) E.late++;
     }
   });
-  Object.values(empStats).forEach(E => { E.cost = r2(E.actual * (Number(empById[E.id]?.pay_rate) || 0)); E.actual = r2(E.actual); E.rostered = r2(E.rostered); });
+  Object.values(empStats).forEach(E => { E.cost = r2(E.actual * (rateOf(E.id))); E.actual = r2(E.actual); E.rostered = r2(E.rostered); });
   const staff = Object.values(empStats).filter(e => e.actual || e.rostered).sort((a, b) => b.actual - a.actual);
   const actualHours = r2(staff.reduce((s, e) => s + e.actual, 0));
   const rosteredHours = r2(staff.reduce((s, e) => s + e.rostered, 0));
