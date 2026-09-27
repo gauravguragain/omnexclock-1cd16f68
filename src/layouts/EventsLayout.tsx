@@ -7,7 +7,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useBusiness } from "@/contexts/BusinessContext";
 import { Button } from "@/components/ui/button";
 import { useSessionGuard } from "@/hooks/useSessionGuard";
-import { BarChart3, BookOpen, CalendarDays, ChefHat, ClipboardList, Contact, GlassWater, Home, LayoutDashboard, ListFilter, LogOut, Menu, PartyPopper, PlusCircle, Settings, Truck, UserPlus, Users, Warehouse, X, CalendarCheck, Utensils, UserCheck, Wallet } from "lucide-react";
+import { BarChart3, BookOpen, CalendarDays, ChefHat, ClipboardList, Contact, GlassWater, Home, LayoutDashboard, ListFilter, LogOut, Menu, PartyPopper, PlusCircle, Settings, Truck, UserPlus, Users, Warehouse, X, CalendarCheck, Utensils, UserCheck, Wallet, History } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const SECTIONS: { title: string; items: { to: string; label: string; icon: any }[] }[] = [
@@ -18,7 +18,7 @@ const SECTIONS: { title: string; items: { to: string; label: string; icon: any }
   { title: "People", items: [{ to: "customers", label: "Customers", icon: Users }, { to: "coordinators", label: "Coordinators", icon: UserCheck }, { to: "stakeholders", label: "Stakeholders & vendors", icon: Contact }] },
   { title: "Menus", items: [{ to: "menu-books", label: "Menu books", icon: BookOpen }, { to: "dishes", label: "Dishes", icon: ChefHat }, { to: "drinks", label: "Drinks", icon: GlassWater }] },
   { title: "Venue", items: [{ to: "spaces", label: "Spaces", icon: Warehouse }] },
-  { title: "", items: [{ to: "reports", label: "Reports", icon: BarChart3 }, { to: "settings", label: "Settings", icon: Settings }] },
+  { title: "", items: [{ to: "reports", label: "Reports", icon: BarChart3 }, { to: "audit", label: "Audit log", icon: History }, { to: "settings", label: "Settings", icon: Settings }] },
 ];
 
 export default function EventsLayout({ mode = "events" }: { mode?: "events" | "catering" }) {

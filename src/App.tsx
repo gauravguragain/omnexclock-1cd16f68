@@ -60,7 +60,7 @@ const PayDetailsPage = React.lazy(() => import("./pages/admin/PayDetailsPage"));
 const InvoicesPage = React.lazy(() => import("./pages/admin/InvoicesPage"));
 const EventsLayout = React.lazy(() => import("./layouts/EventsLayout"));
 const ev = (k: string) => React.lazy(() => import("./pages/events/EventsWorkspace").then(m => ({ default: (m.EventsPages as any)[k] })));
-const EventsPages: Record<string, React.ComponentType> = Object.fromEntries(["Dashboard","Pipeline","Inspections","Tasks","Settings","EventLeads","CateringLeads","CateringLeadDetail","Events","CateringBookings","NewEvent","NewCatering","Calendar","Payments","EventDetail","CateringDetail","Customers","Stakeholders","Coordinators","MenuBooks","Dishes","Drinks","Spaces","SpaceGallery","Reports","RunsheetView","LeadDetail"].map(k => [k, ev(k)]));
+const EventsPages: Record<string, React.ComponentType> = Object.fromEntries(["Dashboard","Pipeline","Inspections","Tasks","Settings","EventLeads","CateringLeads","CateringLeadDetail","Events","CateringBookings","NewEvent","NewCatering","Calendar","Payments","AuditLog","EventDetail","CateringDetail","Customers","Stakeholders","Coordinators","MenuBooks","Dishes","Drinks","Spaces","SpaceGallery","Reports","RunsheetView","LeadDetail"].map(k => [k, ev(k)]));
 function SalesRedirect() { const { businessCode } = useParams(); return <Navigate to={`/b/${businessCode}/events`} replace />; }
 function CateringRedirect({ destination, withId = false, withRunsheet = false }: { destination: string; withId?: boolean; withRunsheet?: boolean }) {
   const { businessCode, id, runsheetId } = useParams();
@@ -158,6 +158,7 @@ const App = () => (
                     <Route path="catering-bookings/new" element={<CateringRedirect destination="bookings/new" />} />
                     <Route path="calendar" element={<EventsPages.Calendar />} />
                     <Route path="payments" element={<EventsPages.Payments />} />
+                    <Route path="audit" element={<EventsPages.AuditLog />} />
                     <Route path="inspections" element={<EventsPages.Inspections />} />
                     <Route path="tasks" element={<EventsPages.Tasks />} />
                     <Route path="customers" element={<EventsPages.Customers />} />
