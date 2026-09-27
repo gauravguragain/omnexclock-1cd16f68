@@ -20,14 +20,6 @@ type CalendarProps = {
   readOnly?: boolean;
 };
 
-  const TONES = [
-  "bg-primary/15 text-primary",
-  "bg-secondary text-secondary-foreground",
-  "bg-accent text-accent-foreground",
-  "bg-muted text-foreground",
-  "bg-destructive/15 text-destructive",
-];
-const DOT_TONES = ["bg-primary", "bg-secondary-foreground", "bg-accent-foreground", "bg-muted-foreground", "bg-destructive"];
 
 export default function MonthCalendar({ bookings, leads, runsheets, customers, venues, onView, onEdit, readOnly = false }: CalendarProps) {
   const [month, setMonth] = useState(startOfMonth(new Date()));
