@@ -39,9 +39,9 @@ export default function MonthCalendar({ bookings, leads, runsheets, customers, v
   const nameOf = (b: Booking) => b.event_name || leadOf(b)?.full_name || "Event";
   const typeOf = (b: Booking) => b.event_type || leadOf(b)?.event_type || "no_type";
   const placeOf = (b: Booking) => venues.find(v => v.id === b.venue_space_id || v.name === b.venue_space || v.name.toLowerCase().replace(/\s+/g, "_") === b.venue_space)?.name || (b.booking_kind === "catering" ? b.service_location : null) || (b.venue_space ? prettyCrmValue(b.venue_space) : null) || "No venue selected";
-  const allTypes = Array.from(new Set(active.map(typeOf)));
-  const tone = (type: string) => TONES[Math.max(0, allTypes.indexOf(type)) % TONES.length];
-  const dotTone = (type: string) => DOT_TONES[Math.max(0, allTypes.indexOf(type)) % DOT_TONES.length];
+  const isCatering = (b: Booking) => b.booking_kind === "catering";
+  const kindChip = (b: Booking) => isCatering(b) ? "bg-catering/15 text-catering" : "bg-primary/15 text-primary";
+  const kindDot = (b: Booking) => isCatering(b) ? "bg-catering" : "bg-primary";
   const days = eachDayOfInterval({ start: startOfWeek(month, { weekStartsOn: 1 }), end: endOfWeek(endOfMonth(month), { weekStartsOn: 1 }) });
   const eventsOn = (date: string) => active.filter(b => b.event_date === date).sort((a, b) => String(a.start_time || "").localeCompare(String(b.start_time || "")));
   const selected = selectedDate ? eventsOn(selectedDate) : [];
@@ -56,7 +56,7 @@ export default function MonthCalendar({ bookings, leads, runsheets, customers, v
   const renderEventDetail = (b: Booking) => {
     const place = placeOf(b); const customer = customerOf(b); const time = `${to12(String(b.start_time || "").slice(0, 5))} – ${to12(bookingEnd(b))}`;
     return <div className="space-y-3 px-5 py-4">
-      <div className="rounded-md border border-border bg-primary/5 p-3"><p className="text-xs font-semibold">{time}</p><p className="mt-1 font-semibold">{nameOf(b)}</p><p className="mt-1 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground"><span className="flex items-center gap-1"><MapPin className="h-3 w-3" />{place}</span><span className="flex items-center gap-1"><Users className="h-3 w-3" />{guestCount(b)} guests</span></p></div>
+      <div className="rounded-md border border-border bg-primary/5 p-3"><span className={cn("mb-1 inline-block rounded px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide", isCatering(b) ? "bg-catering/15 text-catering" : "bg-primary/15 text-primary")}>{isCatering(b) ? "Catering" : "Event"}</span><p className="text-xs font-semibold">{time}</p><p className="mt-1 font-semibold">{nameOf(b)}</p><p className="mt-1 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground"><span className="flex items-center gap-1"><MapPin className="h-3 w-3" />{place}</span><span className="flex items-center gap-1"><Users className="h-3 w-3" />{guestCount(b)} guests</span></p></div>
       <dl className="divide-y divide-border text-sm">
         <div className="flex justify-between gap-4 py-2"><dt className="flex items-center gap-2 text-muted-foreground"><Tag className="h-4 w-4" />Event type</dt><dd className="text-right">{prettyCrmValue(typeOf(b))}</dd></div>
         <div className="flex justify-between gap-4 py-2"><dt className="flex items-center gap-2 text-muted-foreground"><MapPin className="h-4 w-4" />{b.booking_kind === "catering" ? "Location" : "Venue"}</dt><dd className="text-right">{place}</dd></div>
@@ -82,6 +82,7 @@ export default function MonthCalendar({ bookings, leads, runsheets, customers, v
         </div>
         <div className="ml-auto flex flex-wrap items-center gap-x-3 gap-y-2">
           <span className="whitespace-nowrap text-xs font-medium">{dateCount} {dateCount === 1 ? "event" : "events"}</span>
+          <span className="flex items-center gap-1.5 whitespace-nowrap text-xs text-muted-foreground"><span className="h-2 w-2 rounded-full bg-primary" />Events<span className="ml-2 h-2 w-2 rounded-full bg-catering" />Catering</span>
         </div>
       </div>
       <div className="p-2 sm:p-3">
@@ -90,7 +91,7 @@ export default function MonthCalendar({ bookings, leads, runsheets, customers, v
           const key = format(d, "yyyy-MM-dd"); const list = eventsOn(key);
           return <Button key={key} variant="ghost" aria-label={`${format(d, "EEE, MMM d, yyyy")}, ${list.length} ${list.length === 1 ? "event" : "events"}`} onClick={() => list.length && setSelectedDate(key)} disabled={!list.length} className={cn("h-auto min-h-[76px] min-w-0 flex-col items-stretch justify-start gap-0 overflow-hidden rounded-md border border-border p-1 text-left hover:border-primary/60 hover:bg-primary/5 sm:min-h-[168px] sm:p-2 xl:min-h-[205px]", !isSameMonth(d, month) && "bg-muted/25 text-muted-foreground", isToday(d) && "border-primary bg-primary/5", !list.length && "cursor-default opacity-75 disabled:opacity-75")}>
             <span className={cn("mb-1 self-start text-xs font-semibold sm:mb-2 sm:text-sm", isToday(d) && "text-primary")}>{format(d, "d")}{isToday(d) && <span className="hidden text-[10px] sm:ml-1 sm:inline">(today)</span>}</span>
-            {list.slice(0, 3).map(b => <span key={b.id} role="button" tabIndex={-1} aria-label={`View ${nameOf(b)}`} onClick={e => { e.stopPropagation(); setSelectedBooking(b); }} onKeyDown={e => { if (e.key === "Enter") { e.stopPropagation(); setSelectedBooking(b); } }} className="mb-1 flex w-full cursor-pointer items-center gap-1 overflow-hidden rounded text-[11px] font-normal hover:bg-primary/10"><span className={cn("h-1.5 w-1.5 shrink-0 rounded-full", dotTone(typeOf(b)))} /><span className="hidden shrink-0 text-muted-foreground sm:inline">{String(b.start_time || "").slice(0, 5)}</span><span className={cn("hidden min-w-0 truncate rounded px-1 font-medium sm:inline", tone(typeOf(b)))}>{nameOf(b)}</span></span>)}
+            {list.slice(0, 3).map(b => <span key={b.id} role="button" tabIndex={-1} aria-label={`View ${nameOf(b)}`} onClick={e => { e.stopPropagation(); setSelectedBooking(b); }} onKeyDown={e => { if (e.key === "Enter") { e.stopPropagation(); setSelectedBooking(b); } }} className="mb-1 flex w-full cursor-pointer items-center gap-1 overflow-hidden rounded text-[11px] font-normal hover:bg-primary/10"><span className={cn("h-1.5 w-1.5 shrink-0 rounded-full", kindDot(b))} /><span className="hidden shrink-0 text-muted-foreground sm:inline">{String(b.start_time || "").slice(0, 5)}</span><span className={cn("hidden min-w-0 truncate rounded px-1 font-medium sm:inline", kindChip(b))}>{nameOf(b)}</span></span>)}
             {list.length > 3 && <span className="text-[10px] font-semibold text-primary">+{list.length - 3}</span>}
           </Button>;
         })}</div>
