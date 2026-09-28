@@ -520,6 +520,8 @@ export type Database = {
           guest_count: number
           id: string
           kids: number | null
+          kids_5_to_10: number | null
+          kids_under_5: number | null
           lead_id: string | null
           menu_selection_id: string | null
           notes: string | null
@@ -557,6 +559,8 @@ export type Database = {
           guest_count: number
           id?: string
           kids?: number | null
+          kids_5_to_10?: number | null
+          kids_under_5?: number | null
           lead_id?: string | null
           menu_selection_id?: string | null
           notes?: string | null
@@ -594,6 +598,8 @@ export type Database = {
           guest_count?: number
           id?: string
           kids?: number | null
+          kids_5_to_10?: number | null
+          kids_under_5?: number | null
           lead_id?: string | null
           menu_selection_id?: string | null
           notes?: string | null
