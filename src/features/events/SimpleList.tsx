@@ -13,10 +13,11 @@ const isOther = (v: string) => /^others?$/i.test(v.trim());
 
 export type Field = { key: string; label: string; type?: "text" | "number" | "select" | "email" | "tags"; options?: { value: string; label: string }[]; required?: boolean; placeholder?: string };
 
-export default function SimpleList({ title, subtitle, table, businessId, rows, fields, columns, refresh, archivable, filterKey, filterOptions, groupAZ, extra, nameKey = "name", onOpen, defaults }: {
+export default function SimpleList({ title, subtitle, table, businessId, rows, fields, columns, refresh, archivable, filterKey, filterOptions, groupAZ, groupBy, groupOrder, extra, nameKey = "name", onOpen, defaults }: {
   title: string; subtitle: string; table: string; businessId: string; rows: Row[]; fields: Field[];
   columns: { label: string; render: (r: Row) => ReactNode }[]; refresh: () => void; archivable?: boolean;
-  filterKey?: string; filterOptions?: { value: string; label: string }[]; groupAZ?: boolean; extra?: ReactNode; nameKey?: string; onOpen?: (r: Row) => void; defaults?: Row;
+  filterKey?: string; filterOptions?: { value: string; label: string }[]; groupAZ?: boolean;
+  groupBy?: (r: Row) => string; groupOrder?: (a: string, b: string) => number; extra?: ReactNode; nameKey?: string; onOpen?: (r: Row) => void; defaults?: Row;
 }) {
   const [search, setSearch] = useState(""); const [status, setStatus] = useState("active"); const [filter, setFilter] = useState("all");
   const [editing, setEditing] = useState<Row | null>(null); const [open, setOpen] = useState(false);
@@ -35,7 +36,17 @@ export default function SimpleList({ title, subtitle, table, businessId, rows, f
   const setActive = async (r: Row, active: boolean) => { const { error } = await (supabase.from(table as any) as any).update({ active }).eq("id", r.id); if (error) toast.error(error.message); else refresh(); };
   const remove = async (r: Row) => { if (!confirm(`Delete ${r[nameKey]}?`)) return; const { error } = await (supabase.from(table as any) as any).delete().eq("id", r.id); if (error) toast.error(error.message); else refresh(); };
   const count = (s: string) => rows.filter(r => s === "all" || (s === "active" ? r.active !== false : r.active === false)).length;
-  const groups = groupAZ ? Object.entries(shown.reduce<Record<string, Row[]>>((a, r) => { const k = String(r[nameKey] || "#")[0].toUpperCase(); (a[k] ||= []).push(r); return a; }, {})).sort() : [["", shown] as [string, Row[]]];
+  const groups = useMemo<[string, Row[]][]>(() => {
+    if (groupBy) {
+      const map = new Map<string, Row[]>();
+      for (const r of shown) { const k = groupBy(r) || "Other"; if (!map.has(k)) map.set(k, []); map.get(k)!.push(r); }
+      const entries = [...map.entries()];
+      entries.sort(groupOrder ? (a, b) => groupOrder(a[0], b[0]) : a[0].localeCompare(b[0]));
+      for (const [, list] of entries) list.sort((a, b) => String(a[nameKey] || "").localeCompare(String(b[nameKey] || "")));
+      return entries;
+    }
+    return groupAZ ? Object.entries(shown.reduce<Record<string, Row[]>>((a, r) => { const k = String(r[nameKey] || "#")[0].toUpperCase(); (a[k] ||= []).push(r); return a; }, {})).sort() : [["", shown] as [string, Row[]]];
+  }, [shown, groupBy, groupOrder, groupAZ, nameKey]);
 
   return <div className="space-y-5">
     <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
