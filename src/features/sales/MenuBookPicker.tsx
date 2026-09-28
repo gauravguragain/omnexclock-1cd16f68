@@ -1,13 +1,15 @@
 import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Plus, X } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Pencil, Plus, X } from "lucide-react";
 import { toast } from "sonner";
 
 type Pkg = any;
 const sel = "h-9 w-full rounded-md border border-input bg-background px-3 text-sm";
-type Pick = { course: string; courseId: string; dish: any; protein?: string };
-type InitialSelection = { bookId: string; pkgId: string; picks: Record<string, string[]>; proteins: Record<string, string>; price: string };
+type Pick = { course: string; courseId: string; dish: any; protein?: string; notes?: string; oneOff?: boolean };
+type InitialSelection = { bookId: string; pkgId: string; picks: Record<string, string[]>; proteins: Record<string, string>; price: string; notes?: Record<string, string>; oneOffs?: Record<string, { name: string; diet: string }> };
 
 /** Pick a menu book, then a package, then choose dishes per course from that package's setup. */
 export default function MenuBookPicker({ packages, onAdd, initial, onCancel }: { packages: Pkg[]; onAdd: (pkg: Pkg, picks: Pick[], pricePerHead: number) => void; initial?: InitialSelection; onCancel?: () => void }) {
@@ -15,24 +17,37 @@ export default function MenuBookPicker({ packages, onAdd, initial, onCancel }: {
   const [bookId, setBookId] = useState(initial?.bookId || ""); const [pkgId, setPkgId] = useState(initial?.pkgId || "");
   const [picks, setPicks] = useState<Record<string, string[]>>(initial?.picks || {});
   const [price, setPrice] = useState(initial?.price || ""); const [proteins, setProteins] = useState<Record<string, string>>(initial?.proteins || {});
+  const [notes, setNotes] = useState<Record<string, string>>(initial?.notes || {});
+  const [oneOffs, setOneOffs] = useState<Record<string, { name: string; diet: string }>>(initial?.oneOffs || {});
+  const [otherCourse, setOtherCourse] = useState<string | null>(null);
+  const [otherName, setOtherName] = useState(""); const [otherDiet, setOtherDiet] = useState("veg");
   const pkg = packages.find(p => p.id === pkgId);
   const editing = Boolean(initial);
-  const reset = () => { setPkgId(""); setPicks({}); setPrice(""); setProteins({}); };
+  const reset = () => { setPkgId(""); setPicks({}); setPrice(""); setProteins({}); setNotes({}); setOneOffs({}); setOtherCourse(null); setOtherName(""); };
+  const dishFor = (course: any, id: string) => id.startsWith("other:") ? { id, ...oneOffs[id] } : course.dishes.find((d: any) => d.id === id);
+  const addOther = (course: any) => {
+    const name = otherName.trim(); if (!name) { toast.error("Enter a menu item name"); return; }
+    if (name.length > 120) { toast.error("Menu item name must be 120 characters or less"); return; }
+    const id = `other:${crypto.randomUUID()}`;
+    setOneOffs(v => ({ ...v, [id]: { name, diet: otherDiet } }));
+    setPicks(v => ({ ...v, [course.id]: [...(v[course.id] || []), id] }));
+    setOtherCourse(null); setOtherName(""); setOtherDiet("veg");
+  };
 
   const add = () => {
     if (!pkg) return;
     const over = pkg.courses.find((c: any) => c.picks && (picks[c.id]?.length || 0) > c.picks);
     if (over) return;
     const dietOver = pkg.courses.find((c: any) => {
-      const chosen = (picks[c.id] || []).map(id => c.dishes.find((d: any) => d.id === id)).filter(Boolean);
+       const chosen = (picks[c.id] || []).map(id => dishFor(c, id)).filter(Boolean);
       const separate = c.veg_picks != null || c.non_veg_picks != null;
       return separate && (chosen.filter((d: any) => d.diet === "veg").length > (c.veg_picks ?? 0)
         || chosen.filter((d: any) => d.diet !== "veg").length > (c.non_veg_picks ?? 0));
     });
     if (dietOver) { toast.error(`Too many vegetarian or non-vegetarian choices for ${dietOver.name}`); return; }
-    const missing = pkg.courses.some((c: any) => (picks[c.id] || []).some(id => { const d = c.dishes.find((x: any) => x.id === id); return d?.protein_options?.length && !proteins[`${c.id}:${id}`]; }));
+     const missing = pkg.courses.some((c: any) => (picks[c.id] || []).some(id => { const d = dishFor(c, id); return d?.protein_options?.length && !proteins[`${c.id}:${id}`]; }));
     if (missing) { toast.error("Choose a protein for each dish that needs one"); return; }
-    const chosen = pkg.courses.flatMap((c: any) => (picks[c.id] || []).map(id => { const d = c.dishes.find((x: any) => x.id === id); return { course: c.name, courseId: c.id, dish: d, protein: proteins[`${c.id}:${id}`] }; }).filter((x: Pick) => x.dish));
+     const chosen = pkg.courses.flatMap((c: any) => (picks[c.id] || []).map(id => { const d = dishFor(c, id); return { course: c.name, courseId: c.id, dish: d, protein: proteins[`${c.id}:${id}`], notes: notes[`${c.id}:${id}`]?.trim(), oneOff: id.startsWith("other:") }; }).filter((x: Pick) => x.dish));
     onAdd(pkg, chosen, Number(price) || 0); if (!editing) reset();
   };
 
@@ -40,14 +55,15 @@ export default function MenuBookPicker({ packages, onAdd, initial, onCancel }: {
     <div className="flex items-center justify-between gap-2"><p className="text-xs font-medium uppercase tracking-widest text-primary">{editing ? "Edit added package" : "From a menu book"}</p>{editing && <Button type="button" size="sm" variant="ghost" onClick={onCancel}>Cancel</Button>}</div>
     <div className="grid gap-2 sm:grid-cols-2">
       <select className={sel} value={bookId} onChange={e => { setBookId(e.target.value); reset(); }}><option value="">Choose a menu book…</option>{books.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}</select>
-      <select className={sel} value={pkgId} disabled={!bookId} onChange={e => { setPkgId(e.target.value); setPicks({}); }}><option value="">Choose a package…</option>{packages.filter(p => p.book_id === bookId).map(p => <option key={p.id} value={p.id}>{p.name}</option>)}</select>
+       <select className={sel} value={pkgId} disabled={!bookId} onChange={e => { setPkgId(e.target.value); setPicks({}); setOneOffs({}); setNotes({}); }}><option value="">Choose a package…</option>{packages.filter(p => p.book_id === bookId).map(p => <option key={p.id} value={p.id}>{p.name}</option>)}</select>
     </div>
     {pkg && <div className="space-y-3">
       {pkg.description && <p className="text-xs text-muted-foreground">{pkg.description}</p>}
-      {pkg.courses.map((c: any) => { const chosen = picks[c.id] || []; const chosenDishes = chosen.map(id => c.dishes.find((d: any) => d.id === id)).filter(Boolean); const vegCount = chosenDishes.filter((d: any) => d.diet === "veg").length; const nonVegCount = chosenDishes.length - vegCount; const full = Boolean(c.picks && chosen.length >= c.picks) || (c.veg_picks != null && c.non_veg_picks != null && vegCount >= c.veg_picks && nonVegCount >= c.non_veg_picks); return <div key={c.id} className="space-y-1.5">
+       {pkg.courses.map((c: any) => { const chosen = picks[c.id] || []; const chosenDishes = chosen.map(id => dishFor(c, id)).filter(Boolean); const vegCount = chosenDishes.filter((d: any) => d.diet === "veg").length; const nonVegCount = chosenDishes.length - vegCount; const full = Boolean(c.picks && chosen.length >= c.picks) || (c.veg_picks != null && c.non_veg_picks != null && vegCount >= c.veg_picks && nonVegCount >= c.non_veg_picks); return <div key={c.id} className="space-y-1.5">
         <div className="flex flex-wrap items-center justify-between gap-1 text-sm"><span className="font-medium">{c.name}</span><span className="text-xs text-muted-foreground">{c.veg_picks != null || c.non_veg_picks != null ? `Veg ${vegCount}/${c.veg_picks ?? "∞"} · Non-veg ${nonVegCount}/${c.non_veg_picks ?? "∞"}${c.picks ? ` · Total ${chosen.length}/${c.picks}` : ""}` : c.picks ? `Choose ${c.picks} · ${chosen.length} chosen` : `${chosen.length} chosen`}</span></div>
-        <div className="flex flex-wrap gap-1.5">{chosen.map(id => { const d = c.dishes.find((x: any) => x.id === id); return <Badge key={id} variant="outline" className="gap-1">{d?.diet && <span className="text-primary">{d.diet === "veg" ? "V" : "N"}</span>}{d?.name}{Number(d?.extra_price_per_head) > 0 && <span className="text-primary">+${Number(d.extra_price_per_head).toFixed(2)}/person</span>}{d?.protein_options?.length > 0 && <select aria-label="Protein" className={`ml-1 h-6 rounded border bg-background px-1 text-xs ${proteins[`${c.id}:${id}`] ? "border-input" : "border-destructive"}`} value={proteins[`${c.id}:${id}`] || ""} onChange={e => setProteins(p => ({ ...p, [`${c.id}:${id}`]: e.target.value }))}><option value="">Protein…</option>{d.protein_options.map((o: string) => <option key={o} value={o}>{o}</option>)}</select>}<button type="button" onClick={() => setPicks(p => ({ ...p, [c.id]: chosen.filter(x => x !== id) }))}><X className="h-3 w-3" /></button></Badge>; })}</div>
-        {!full && <select className={sel} value="" onChange={e => e.target.value && setPicks(p => ({ ...p, [c.id]: [...chosen, e.target.value] }))}><option value="">{c.dishes.length ? `Add a ${c.name.toLowerCase()} dish…` : "No dishes in this course"}</option>{c.dishes.filter((d: any) => { const separate = c.veg_picks != null || c.non_veg_picks != null; return !chosen.includes(d.id) && (!separate || (d.diet === "veg" ? vegCount < (c.veg_picks ?? 0) : nonVegCount < (c.non_veg_picks ?? 0))); }).map((d: any) => <option key={d.id} value={d.id}>{d.name} ({d.diet === "veg" ? "Veg" : "Non-veg"}){Number(d.extra_price_per_head) > 0 ? ` · +$${Number(d.extra_price_per_head).toFixed(2)}/person` : ""}{d.protein_options?.length ? " · choose protein" : ""}</option>)}</select>}
+         <div className="flex flex-wrap gap-1.5">{chosen.map(id => { const d = dishFor(c, id); const noteKey = `${c.id}:${id}`; return <Badge key={id} variant="outline" className="group/dish max-w-full gap-1 py-1"><span className="text-primary">{d?.diet === "veg" ? "V" : d?.diet === "seafood" ? "SF" : "N"}</span><span className="max-w-[12rem] truncate" title={d?.name}>{d?.name}</span>{Number(d?.extra_price_per_head) > 0 && <span className="text-primary">+${Number(d.extra_price_per_head).toFixed(2)}/person</span>}{d?.protein_options?.length > 0 && <select aria-label="Protein" className={`ml-1 h-6 rounded border bg-background px-1 text-xs ${proteins[noteKey] ? "border-input" : "border-destructive"}`} value={proteins[noteKey] || ""} onChange={e => setProteins(p => ({ ...p, [noteKey]: e.target.value }))}><option value="">Protein…</option>{d.protein_options.map((o: string) => <option key={o} value={o}>{o}</option>)}</select>}<Popover><PopoverTrigger asChild><Button type="button" size="icon" variant="ghost" title={`Customise ${d?.name}`} aria-label={`Customise ${d?.name}`} className={`h-6 w-6 ${notes[noteKey] ? "text-primary" : "opacity-60 sm:opacity-0 sm:group-hover/dish:opacity-100 sm:group-focus-within/dish:opacity-100"}`}><Pencil className="h-3 w-3" /></Button></PopoverTrigger><PopoverContent className="w-72 space-y-2"><label className="text-sm font-medium" htmlFor={`note-${id}`}>Customisations for {d?.name}</label><Input id={`note-${id}`} maxLength={500} placeholder="e.g. no onion, mild spice" value={notes[noteKey] || ""} onChange={e => setNotes(p => ({ ...p, [noteKey]: e.target.value }))} /></PopoverContent></Popover><Button type="button" size="icon" variant="ghost" title={`Remove ${d?.name}`} aria-label={`Remove ${d?.name}`} className="h-6 w-6" onClick={() => setPicks(p => ({ ...p, [c.id]: chosen.filter(x => x !== id) }))}><X className="h-3 w-3" /></Button></Badge>; })}</div>
+         {!full && <select className={sel} value="" onChange={e => { if (e.target.value === "__other__") { setOtherCourse(c.id); setOtherName(""); } else if (e.target.value) setPicks(p => ({ ...p, [c.id]: [...chosen, e.target.value] })); }}><option value="">{`Add a ${c.name.toLowerCase()} dish…`}</option>{c.dishes.filter((d: any) => { const separate = c.veg_picks != null || c.non_veg_picks != null; return !chosen.includes(d.id) && (!separate || (d.diet === "veg" ? vegCount < (c.veg_picks ?? 0) : nonVegCount < (c.non_veg_picks ?? 0))); }).map((d: any) => <option key={d.id} value={d.id}>{d.name} ({d.diet === "veg" ? "Veg" : "Non-veg"}){Number(d.extra_price_per_head) > 0 ? ` · +$${Number(d.extra_price_per_head).toFixed(2)}/person` : ""}{d.protein_options?.length ? " · choose protein" : ""}</option>)}<option value="__other__">Other (type your own)…</option></select>}
+         {otherCourse === c.id && <div className="flex flex-wrap items-center gap-2"><Input className="min-w-40 flex-1" autoFocus maxLength={120} aria-label={`Other ${c.name} item`} placeholder="One-off menu item" value={otherName} onChange={e => setOtherName(e.target.value)} onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); addOther(c); } }} /><select className="h-9 rounded-md border border-input bg-background px-2 text-sm" aria-label="Diet" value={otherDiet} onChange={e => setOtherDiet(e.target.value)}><option value="veg">Vegetarian</option><option value="nonveg">Non-vegetarian</option><option value="seafood">Seafood</option></select><Button type="button" size="sm" onClick={() => addOther(c)}>Add</Button><Button type="button" size="icon" variant="ghost" aria-label="Cancel other item" onClick={() => setOtherCourse(null)}><X className="h-4 w-4" /></Button></div>}
       </div>; })}
       <div className="flex flex-wrap items-center gap-2">
         <div className="flex items-center gap-1.5"><span className="text-xs text-muted-foreground">$</span><input type="number" min="0" step="0.01" value={price} onChange={e => setPrice(e.target.value)} placeholder="Price per guest" className="h-9 w-32 rounded-md border border-input bg-background px-3 text-sm" /></div>
