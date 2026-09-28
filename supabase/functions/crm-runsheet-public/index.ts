@@ -27,6 +27,7 @@ Deno.serve(async (req) => {
     if (sel.data?.id) {
        const r = await db.from("crm_menu_selection_items").select("id, course, item_name, notes, quantity, service_start_time, service_end_time, created_at").eq("selection_id", sel.data.id).order("created_at");
       items = r.data || [];
+      (sel.data as any).beverage_detail = await loadBeverageDetail(db, rs.business_id, sel.data.beverage_package);
     }
     // strip anything price-related and internal
     const { share_token: _s, internal_share_token: _i, ops_notes: _o, foh_notes: _f, distributed_to: _d, ...safe } = rs;
