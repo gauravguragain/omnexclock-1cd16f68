@@ -38,6 +38,42 @@ const runOneTimeGlobalSyncRefresh = async () => {
 
 void runOneTimeGlobalSyncRefresh();
 
+// Recover from stale builds: when a lazily-loaded page chunk no longer exists
+// (new deploy replaced hashed files), clear caches and hard-reload once.
+const CHUNK_RELOAD_KEY = "chunk_reload_at";
+const recoverFromStaleChunk = async () => {
+  const last = Number(sessionStorage.getItem(CHUNK_RELOAD_KEY) || 0);
+  if (Date.now() - last < 30_000) return; // avoid reload loops
+  sessionStorage.setItem(CHUNK_RELOAD_KEY, String(Date.now()));
+  try {
+    if ("serviceWorker" in navigator) {
+      const regs = await navigator.serviceWorker.getRegistrations();
+      await Promise.all(regs.map((r) => r.unregister()));
+    }
+    if ("caches" in window) {
+      const keys = await caches.keys();
+      await Promise.all(keys.map((k) => caches.delete(k)));
+    }
+  } catch {
+    // reload anyway
+  }
+  const url = new URL(window.location.href);
+  url.searchParams.set("r", Date.now().toString());
+  window.location.replace(url.toString());
+};
+const isChunkError = (msg: string) =>
+  /Failed to fetch dynamically imported module|Importing a module script failed|error loading dynamically imported module|Loading chunk/i.test(msg);
+window.addEventListener("vite:preloadError", (e) => {
+  e.preventDefault();
+  void recoverFromStaleChunk();
+});
+window.addEventListener("unhandledrejection", (e) => {
+  if (isChunkError(String(e.reason?.message ?? e.reason ?? ""))) void recoverFromStaleChunk();
+});
+window.addEventListener("error", (e) => {
+  if (isChunkError(String(e.message ?? ""))) void recoverFromStaleChunk();
+});
+
 // Silently check for SW updates without forcing reload
 if ("serviceWorker" in navigator) {
   navigator.serviceWorker.ready.then((registration) => {
