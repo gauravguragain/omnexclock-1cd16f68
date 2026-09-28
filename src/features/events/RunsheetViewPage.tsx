@@ -1,3 +1,4 @@
+import { loadBeverageDetail } from "@/lib/beverageDetail";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { downloadRunsheetPdf } from "@/lib/runsheetDownload";
 import { Link, Navigate, useLocation, useParams } from "react-router-dom";
@@ -186,6 +187,7 @@ export default function RunsheetViewPage() {
       setRs(data);
       if (data?.lead_id) {
         const sel = await supabase.from("crm_menu_selections").select("*").eq("lead_id", data.lead_id).order("updated_at", { ascending: false }).limit(1).maybeSingle();
+        if (sel.data) (sel.data as any).beverage_detail = await loadBeverageDetail(supabase, data.business_id, sel.data.beverage_package);
         setSelection(sel.data);
         if (sel.data) { const r = await supabase.from("crm_menu_selection_items").select("*").eq("selection_id", sel.data.id).order("created_at"); setItems(r.data || []); }
       }
