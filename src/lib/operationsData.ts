@@ -146,8 +146,8 @@ export async function loadOperations(bid: string, r: Range) {
   const paidByBooking: Record<string, number> = {};
   (payments as any[]).forEach(p => { if (p.booking_id) paidByBooking[p.booking_id] = (paidByBooking[p.booking_id] || 0) + (Number(p.amount) || 0); });
   const balanceOf = (b: any) => Math.max(0, Number(b.total_amount || 0) - (paidByBooking[b.id] || 0));
-  const upcoming = live.filter((b: any) => b.event_date >= today);
-  const outstandingBalance = sum(upcoming, balanceOf);
+  const upcomingBookings = live.filter((b: any) => b.event_date >= today);
+  const outstandingBalance = sum(upcomingBookings, balanceOf);
   const overdueBalances = live.filter((b: any) => b.balance_due_date && b.balance_due_date < today && b.event_date >= addDays(today, -60) && b.status !== "completed" && b.status !== "paid" && balanceOf(b) > 0);
   const cancelledInRange = bookings.filter((b: any) => CLOSED_BOOKING.includes((b.status || "").toLowerCase()) && b.event_date >= r.from && b.event_date <= r.to).length;
 
