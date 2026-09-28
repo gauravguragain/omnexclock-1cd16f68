@@ -337,6 +337,13 @@
       "when": 1790556651789,
       "tag": "0047_drop_legacy_runsheet_and_invite_policies",
       "breakpoints": true
+    },
+    {
+      "idx": 48,
+      "version": "7",
+      "when": 1790560206444,
+      "tag": "0048_imports_flag_venue_clash",
+      "breakpoints": true
     }
   ]
 }
