@@ -302,6 +302,13 @@
       "when": 1790551825991,
       "tag": "0042_runsheet_terms",
       "breakpoints": true
+    },
+    {
+      "idx": 43,
+      "version": "7",
+      "when": 1790556100796,
+      "tag": "0043_lock_admin_invitation_updates",
+      "breakpoints": true
     }
   ]
 }
