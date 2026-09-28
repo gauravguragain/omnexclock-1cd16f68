@@ -345,7 +345,7 @@ export default function OperationsPage() {
                 <DataTable cols={["Space", "Events", "Guests", "Revenue", "Event hours", "Days used %"]} rows={d.venue.venues.map(v => [v.name, v.events, v.guests, money(v.revenue), num(v.hours), `${v.occupancy}%`])} />
               </Panel>
               <Panel title="Upcoming 30 days">
-                <DataTable cols={["Date", "Time", "Event", "Type", "Space", "Guests", "Value", "Deposit"]} rows={d.venue.upcoming.map((b: any) => [fmtDate(b.event_date), b.start_time ? b.start_time.slice(0, 5) : "—", b.event_name || "—", b.booking_kind === "catering" ? "Catering" : (b.event_type_display || b.event_type || "Event"), b.venue_space || "—", b.guest_count || "—", money(Number(b.total_amount) || 0), b.deposit_paid ? "Paid" : "Not paid"])} />
+                <DataTable cols={["Date", "Time", "Event", "Type", "Space", "Guests", "Value", "Deposit"]} rows={d.venue.upcoming.map((b: any) => [fmtDate(b.event_date), b.start_time ? b.start_time.slice(0, 5) : "—", b.event_label || b.event_name || "—", b.event_type_display || b.event_type || "—", b.venue_space || (b.booking_kind === "catering" ? "Off-site catering" : "—"), b.guest_count || "—", money(Number(b.total_amount) || 0), b.deposit_paid ? "Paid" : "Not paid"])} />
               </Panel>
             </TabsContent>
 
