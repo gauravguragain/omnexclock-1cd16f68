@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { getCaller, jsonError, serviceClient } from "../_shared/auth.ts";
+import { renderMenuHtml } from "../_shared/menuHtml.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -498,6 +499,16 @@ serve(async (req) => {
         from: `${b.businessName || "Pro Regal Management"} <noreply@regalmanagement.com.au>`,
         to: [b.to],
         subject: `${b.kind === "confirmation" ? "Booking confirmed" : "Run sheet"} — ${b.eventTitle}${b.dateLabel ? ` (${b.dateLabel})` : ""}`,
+        html,
+      };
+    } else if ((body as any).type === "menu") {
+      const b = body as any;
+      if (!b.to || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(b.to) || !Array.isArray(b.sections)) throw new Error("Missing required fields for menu email");
+      const html = renderMenuHtml({ businessName: b.businessName, title: b.title, recipientName: b.recipientName, message: b.message, sections: b.sections.slice(0, 60) }, { forEmail: true });
+      emailPayload = {
+        from: `${b.businessName || "Pro Regal Management"} <noreply@regalmanagement.com.au>`,
+        to: [b.to],
+        subject: `${String(b.title || "Our menu").slice(0, 120)} — ${b.businessName || "Pro Regal"}`,
         html,
       };
     } else {
