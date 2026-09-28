@@ -58,7 +58,7 @@ function A4Preview({ children, documentRef }: { children: React.ReactNode; docum
   </div>;
 }
 
-export function RunsheetDocument({ rs, lead, b, items, selection, businessName, businessPhone, businessEmail, terms }: { rs: any; lead: any; b: any; items: any[]; selection: any; businessName?: string; businessPhone?: string; businessEmail?: string; terms?: string | null }) {
+export function RunsheetDocument({ rs, lead, b, items, selection, businessName, businessPhone, businessEmail, terms, internal = false }: { rs: any; lead: any; b: any; items: any[]; selection: any; businessName?: string; businessPhone?: string; businessEmail?: string; terms?: string | null; internal?: boolean }) {
   const PKG = ["package", "kids_package", "manual"];
   const pkgs = items.filter(i => i.course === "package" || i.course === "kids_package");
   const stalls = items.filter(i => i.course === "live_stall");
@@ -148,7 +148,9 @@ export function RunsheetDocument({ rs, lead, b, items, selection, businessName, 
           {rs.special_requests && <p className="mt-2">Special requests: {rs.special_requests}</p>}
           <h2 className="mt-4 font-bold">FOH service schedule</h2>
           {fohSchedule.length ? fohSchedule.map((s, i) => <p key={i} className="pl-3">• {s.time ? to12(s.time) : "—"} – {s.label}{s.detail ? ` (${s.detail})` : ""}</p>) : <p className="pl-3 text-muted-foreground">No floor timings set.</p>}
-          {rs.client_notes && <div className="mt-4 break-inside-avoid"><h2 className="font-bold">Client notes</h2><p className="whitespace-pre-line pl-3">{rs.client_notes}</p></div>}
+           {rs.client_notes && <div className="mt-4 break-inside-avoid"><h2 className="font-bold">Client notes</h2><p className="whitespace-pre-line pl-3">{rs.client_notes}</p></div>}
+           {internal && rs.ops_notes && <div className="mt-4 break-inside-avoid text-kitchen-note"><h2 className="font-bold">Kitchen team notes</h2><p className="whitespace-pre-line pl-3">{rs.ops_notes}</p></div>}
+           {internal && rs.foh_notes && <div className="mt-4 break-inside-avoid text-foh-note"><h2 className="font-bold">Front of house notes</h2><p className="whitespace-pre-line pl-3">{rs.foh_notes}</p></div>}
         </div>
       </div>
     </section>
@@ -203,18 +205,19 @@ export default function RunsheetViewPage() {
     ? b ? `/b/${businessCode}/catering/bookings/${b.id}` : `/b/${businessCode}/catering/leads`
     : b ? `/b/${businessCode}/events/events/${b.id}` : back;
   const issueCatering = async () => { const { data, error } = await supabase.from("crm_runsheets").update({ status: "sent", sent_at: new Date().toISOString(), generated_at: new Date().toISOString() } as any).eq("id", rs.id).select().single(); if (error) { toast.error(error.message); return null; } setRs(data); crm.refresh(); return data; };
-  const copyLink = async () => { await navigator.clipboard.writeText(runsheetPublicUrl(rs)); toast.success("Web link copied"); };
+   const copyLink = async (internal: boolean) => { await navigator.clipboard.writeText(runsheetPublicUrl(rs, internal)); toast.success(internal ? "Internal link copied" : "Client link copied"); };
 
   return <div className="mx-auto w-full max-w-[210mm] space-y-6">
     <p className="flex items-center gap-1 text-sm text-muted-foreground print:hidden"><Link to={backTo} className="hover:text-primary">{isCatering ? "Catering" : "Events"}</Link><ChevronRight className="h-3 w-3" /><span>Run Sheet</span><ChevronRight className="h-3 w-3" /><span className="font-medium text-foreground">Details</span></p>
     <div className="flex flex-wrap gap-2 print:hidden">
       <Button variant="outline" asChild><Link to={backTo}><ArrowLeft className="mr-2 h-4 w-4" />{isCatering ? "Back to booking" : "Back to event"}</Link></Button>
-      <Button variant="outline" onClick={copyLink}><LinkIcon className="mr-2 h-4 w-4" />Copy web link</Button>
+       <Button variant="outline" onClick={() => copyLink(false)}><LinkIcon className="mr-2 h-4 w-4" />Copy client link</Button>
+       <Button variant="outline" onClick={() => copyLink(true)}><LinkIcon className="mr-2 h-4 w-4" />Copy internal link</Button>
       <Button variant="outline" onClick={() => window.print()}><Printer className="mr-2 h-4 w-4" />Print</Button>
       <Button variant="outline" disabled={dl} onClick={async () => { if (!docRef.current) return; setDl(true); try { await downloadRunsheetPdf(docRef.current, `Run sheet - ${title}`); } catch { toast.error("Could not create PDF"); } setDl(false); }}><Download className="mr-2 h-4 w-4" />{dl ? "Preparing…" : "Download PDF"}</Button>
       {lead && (rs.sent_at || isCatering) && <Button onClick={() => setSendOpen(true)}><Mail className="mr-2 h-4 w-4" />{rs.sent_at ? "Resend Email" : "Send run sheet"}</Button>}
     </div>
-    <A4Preview documentRef={docRef}><RunsheetDocument rs={rs} lead={lead} b={b} items={items} selection={selection} businessName={crm.business?.name} businessPhone={crm.business?.phone || ""} businessEmail={crm.business?.email || ""} terms={runsheetTermsFor(crm.settings, b)} /></A4Preview>
+     <A4Preview documentRef={docRef}><RunsheetDocument internal rs={rs} lead={lead} b={b} items={items} selection={selection} businessName={crm.business?.name} businessPhone={crm.business?.phone || ""} businessEmail={crm.business?.email || ""} terms={runsheetTermsFor(crm.settings, b)} /></A4Preview>
     {lead && <SendRunsheetDialog mode={isCatering && !rs.sent_at ? "issue" : "resend"} onIssue={issueCatering} open={sendOpen} onOpenChange={setSendOpen} rs={rs} lead={lead} booking={b} businessName={crm.business?.name || ""} />}
   </div>;
 }
@@ -236,7 +239,7 @@ export function PublicRunsheetPage() {
         <Button variant="outline" onClick={() => window.print()}><Printer className="mr-2 h-4 w-4" />Print</Button>
         <Button disabled={dl} onClick={async () => { if (!docRef.current) return; setDl(true); try { await downloadRunsheetPdf(docRef.current, `Run sheet - ${runsheetTitle(data.lead, data.booking)}`); } catch { toast.error("Could not create PDF"); } setDl(false); }}><Download className="mr-2 h-4 w-4" />{dl ? "Preparing…" : "Download PDF"}</Button>
       </div>
-        <A4Preview documentRef={docRef}><RunsheetDocument rs={data.rs} lead={data.lead} b={data.booking} items={data.items || []} selection={data.selection} businessName={data.businessName} businessPhone={data.businessPhone || ""} businessEmail={data.businessEmail || ""} terms={data.terms} /></A4Preview>
+         <A4Preview documentRef={docRef}><RunsheetDocument internal={data.internal === true} rs={data.rs} lead={data.lead} b={data.booking} items={data.items || []} selection={data.selection} businessName={data.businessName} businessPhone={data.businessPhone || ""} businessEmail={data.businessEmail || ""} terms={data.terms} /></A4Preview>
     </div>
   </div>;
 }

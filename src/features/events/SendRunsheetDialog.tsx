@@ -11,7 +11,7 @@ import { prettyCrmValue } from "@/features/sales/types";
 import { to12 } from "./useEventsData";
 import { getAppOrigin } from "@/lib/appOrigin";
 
-export const runsheetPublicUrl = (rs: any) => `${getAppOrigin()}/runsheet/${rs.id}?t=${rs.share_token}`;
+export const runsheetPublicUrl = (rs: any, internal = false) => `${getAppOrigin()}/runsheet/${rs.id}?t=${internal ? rs.internal_share_token : rs.share_token}`;
 
 
 type Person = { key: string; name: string; email: string; kind: "confirmation" | "runsheet" };
@@ -42,8 +42,9 @@ export default function SendRunsheetDialog({ open, onOpenChange, rs, lead, booki
       const staff = (st.data || []).filter((s: any) => s.email);
       const g: Group[] = [
         { title: "Event managers", people: (mgr.data || []).map((m: any) => ({ key: `m-${m.user_id}`, name: m.full_name || m.email, email: m.email, kind: "confirmation" as const })) },
-        { title: "Kitchen — sent the run sheet", people: staff.filter((s: any) => s.stakeholder_type === "kitchen").map((s: any) => ({ key: s.id, name: s.full_name, email: s.email, kind: "runsheet" as const })) },
-        { title: "Coordinators — sent the run sheet", people: staff.filter((s: any) => s.stakeholder_type === "coordinator").map((s: any) => ({ key: s.id, name: s.full_name, email: s.email, kind: "runsheet" as const })) },
+        { title: "Kitchen — internal run sheet", people: staff.filter((s: any) => s.stakeholder_type === "kitchen").map((s: any) => ({ key: s.id, name: s.full_name, email: s.email, kind: "runsheet" as const })) },
+        { title: "Coordinators — internal run sheet", people: staff.filter((s: any) => s.stakeholder_type === "coordinator").map((s: any) => ({ key: s.id, name: s.full_name, email: s.email, kind: "runsheet" as const })) },
+        { title: "Other stakeholders & vendors — internal run sheet", people: staff.filter((s: any) => !["kitchen", "coordinator"].includes(s.stakeholder_type)).map((s: any) => ({ key: s.id, name: s.full_name, email: s.email, kind: "runsheet" as const })) },
       ];
       setGroups(g);
       // Resend: preselect whoever was emailed before. Issue: client + me + every coordinator/kitchen contact.
@@ -82,7 +83,7 @@ export default function SendRunsheetDialog({ open, onOpenChange, rs, lead, booki
     };
     const ok: string[] = []; const failed: string[] = [];
     for (const r of recipients) {
-      const { data, error } = await supabase.functions.invoke("send-email", { body: { ...base, kind: r.kind, to: r.email, recipientName: r.key === "client" ? lead.full_name : r.name } });
+      const { data, error } = await supabase.functions.invoke("send-email", { body: { ...base, viewUrl: runsheetPublicUrl(sheet, r.kind === "runsheet"), kind: r.kind, to: r.email, recipientName: r.key === "client" ? lead.full_name : r.name } });
       if (error || !data?.success) failed.push(r.email); else ok.push(r.email);
     }
     if (ok.length) {
@@ -122,7 +123,7 @@ export default function SendRunsheetDialog({ open, onOpenChange, rs, lead, booki
             {g.people.map(p => <Item key={p.key} p={p} />)}
           </div>)}
         </div>
-        <p className="mt-2 text-xs text-muted-foreground">Each email links to the live run sheet — no prices shown. Add kitchen contacts under Stakeholders & vendors (type "kitchen") and coordinators under People → Coordinators.</p>
+       <p className="mt-2 text-xs text-muted-foreground">The client and event managers receive the client copy. Kitchen, coordinators, stakeholders and vendors receive the internal copy with team notes. Add recipients under Stakeholders & vendors.</p>
       </div>
       <DialogFooter>
         <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>

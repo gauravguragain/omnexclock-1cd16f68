@@ -677,6 +677,8 @@
   --muted: 0 0% 83%;
   --muted-foreground: 0 0% 35%;
   --border: 0 0% 20%;
+  --kitchen-note: 0 72% 36%;
+  --foh-note: 214 72% 36%;
   color-scheme: light;
 }
 
