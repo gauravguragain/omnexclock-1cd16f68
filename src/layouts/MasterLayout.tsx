@@ -1,3 +1,4 @@
+import { OutletSuspense } from "@/components/OutletFallback";
 import { useAuth } from "@/contexts/AuthContext";
 import { useBusiness } from "@/contexts/BusinessContext";
 import { Navigate, Outlet, Link, useLocation } from "react-router-dom";
@@ -152,7 +153,7 @@ export default function MasterLayout() {
           </div>
         </header>
         <div className="min-h-0 flex-1 overflow-y-auto p-3 lg:p-6 page-enter has-bottom-nav lg:pb-6">
-          <Outlet />
+          <OutletSuspense><Outlet /></OutletSuspense>
         </div>
       </main>
 

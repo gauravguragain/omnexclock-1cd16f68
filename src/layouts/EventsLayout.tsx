@@ -1,3 +1,4 @@
+import { OutletSuspense } from "@/components/OutletFallback";
 import { useEffect, useState } from "react";
 import { Link, Navigate, NavLink, Outlet, useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -92,7 +93,7 @@ export default function EventsLayout({ mode = "events" }: { mode?: "events" | "c
          <div className="space-y-1 border-t border-border/40 p-4"><Link to={`/b/${businessCode}/admin`} onClick={() => setOpen(false)} className="flex items-center gap-3 rounded-md px-3 py-3 text-sm text-muted-foreground hover:bg-muted"><Home className="h-4 w-4" />Business Admin</Link><button onClick={signOut} className="flex w-full items-center gap-3 rounded-md px-3 py-3 text-sm text-muted-foreground hover:bg-muted"><LogOut className="h-4 w-4" />Sign out</button></div>
        </div>
      </div>}
-     <main className="min-w-0 flex-1 p-4 pb-24 sm:p-6 sm:pb-24 lg:p-8 print:!p-0"><Outlet /></main>
+     <main className="min-w-0 flex-1 p-4 pb-24 sm:p-6 sm:pb-24 lg:p-8 print:!p-0"><OutletSuspense><Outlet /></OutletSuspense></main>
      <nav className="fixed inset-x-0 bottom-0 z-30 grid grid-cols-5 border-t border-border/40 bg-background/95 backdrop-blur lg:hidden print:!hidden" style={{ paddingBottom: "env(safe-area-inset-bottom)" }}>
        {(mode === "catering"
          ? [{ to: "leads", label: "Leads", icon: Utensils }, { to: "bookings", label: "Bookings", icon: Truck }, { to: "customers", label: "Customers", icon: Users }, { to: "menu-books", label: "Menus", icon: BookOpen }]

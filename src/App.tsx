@@ -67,6 +67,27 @@ function CateringRedirect({ destination, withId = false, withRunsheet = false }:
   const suffix = `${withId && id ? `/${id}` : ""}${withRunsheet && runsheetId ? `/runsheet/${runsheetId}` : ""}`;
   return <Navigate to={`/b/${businessCode}/catering/${destination}${suffix}${window.location.search}`} replace />;
 }
+// Warm up the most-used page files in the background once the browser is idle,
+// so switching sections feels instant. Purely a download hint — no behaviour change.
+if (typeof window !== "undefined") {
+  const warm = () => {
+    [
+      () => import("./layouts/AdminLayout"),
+      () => import("./pages/admin/DashboardPage"),
+      () => import("./pages/admin/TimesheetsPage"),
+      () => import("./pages/admin/RosterPage"),
+      () => import("./pages/admin/EmployeesPage"),
+      () => import("./pages/OperationsPage"),
+      () => import("./layouts/EventsLayout"),
+      () => import("./pages/events/EventsWorkspace"),
+    ].forEach((load, i) => setTimeout(() => load().catch(() => {}), i * 400));
+  };
+  const conn = (navigator as any).connection;
+  if (!conn?.saveData) {
+    const ric = (window as any).requestIdleCallback as ((cb: () => void, o?: any) => void) | undefined;
+    window.addEventListener("load", () => (ric ? ric(warm, { timeout: 4000 }) : setTimeout(warm, 2500)), { once: true });
+  }
+}
 const PublicEnquiryPage = React.lazy(() => import("./pages/PublicEnquiryPage"));
 const GuestMenuPage = React.lazy(() => import("./pages/GuestMenuPage"));
 const BookingConfirmationPage = React.lazy(() => import("./pages/BookingConfirmationPage"));
