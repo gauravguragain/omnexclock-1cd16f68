@@ -62,7 +62,7 @@ export function RunsheetDocument({ rs, lead, b, items, selection, businessName, 
   const PKG = ["package", "kids_package", "manual"];
   const pkgs = items.filter(i => i.course === "package" || i.course === "kids_package");
   const stalls = items.filter(i => i.course === "live_stall");
-  const kidsRow = items.find(i => i.course === "kids_package");
+  const kidsRows = items.filter(i => i.course === "kids_package"); const kidsRow = kidsRows[0];
   const courses = items.filter(i => !PKG.includes(i.course) && i.course !== "live_stall" && i.course !== "beverage" && (kidsRow || i.course !== "Kids Menu"))
     .reduce((m: Record<string, any[]>, i) => { const c = i.course || "Other"; (m[c] ||= []).push(i); return m; }, {});
   const schedule: any[] = rs.service_schedule || [];
@@ -91,7 +91,7 @@ export function RunsheetDocument({ rs, lead, b, items, selection, businessName, 
     return <div className={`grid grid-cols-[20%_30%_20%_30%] divide-x divide-border border border-border text-xs${bold ? " font-bold" : ""}`}>
       <div className={`p-2 ${heavy}`}>{catering && <span className="block text-[10px]">{pickup ? "Pickup window" : "Delivery window"}</span>}{time}</div>
       <div className={`p-2 ${heavy}`}>{eventTitle}</div>
-      <div className="p-2">Adults: {rs.adult_guests ?? b?.adults ?? "—"}<br />Kids: {rs.kids_guests ?? b?.kids ?? 0}</div>
+      <div className="p-2">Adults: {rs.adult_guests ?? b?.adults ?? "—"}<br />{b?.kids_5_to_10 != null || b?.kids_under_5 != null ? <>Kids (5–10): {b?.kids_5_to_10 ?? 0}<br />Kids (under 5): {b?.kids_under_5 ?? 0}</> : <>Kids: {rs.kids_guests ?? b?.kids ?? 0}</>}</div>
       {catering
         ? <div className="p-2"><span className="block text-[10px]">{pickup ? "Pickup" : "Delivery to"}</span><span className={heavy}>{pickup ? (businessName || "At venue") : (b?.service_location || lead?.service_location || "—")}</span></div>
         : <div className="p-2"><span className="block text-[10px]">Venue</span><span className={heavy}>{prettyCrmValue(b?.venue_space || lead?.venue_space || "—")}</span></div>}
@@ -133,7 +133,7 @@ export function RunsheetDocument({ rs, lead, b, items, selection, businessName, 
           <h2 className="font-bold">Menu selection{pkgs.length ? ` – ${pkgs.map(p => p.item_name).join(" · ")}` : ""}</h2>
            {Object.entries(courses as Record<string, any[]>).map(([course, dishes]) => <div key={course} className="mt-2 break-inside-avoid"><h3 className="pl-3 font-semibold">{course}{courseTime(course) ? ` — ${courseTime(course)}` : ""}</h3>{dishes.map(d => <p key={d.id} className="pl-6">- {d.item_name}{d.notes ? <span className="font-semibold"> — {d.notes}</span> : null}</p>)}</div>)}
           {otherSchedule.length > 0 && <div className="mt-2 break-inside-avoid">{otherSchedule.map((s, i) => <p key={i} className="pl-3">• {s.time ? to12(s.time) : "—"} – {s.label}{s.detail ? ` (${s.detail})` : ""}</p>)}</div>}
-          {kidsRow && !courses["Kids Menu"] && <p className="mt-2">Kids menu: {kidsRow.quantity || rs.kids_guests || 0} kids</p>}
+          {kidsRows.map(k => <p key={k.id || k.item_name} className="mt-2">{k.item_name === "Kids menu" ? "Kids menu" : k.item_name}: {k.quantity || 0} kids</p>)}
           {selection?.beverage_package && <p className="mt-2">Beverages: {prettyCrmValue(selection.beverage_package)}</p>}
           {selection?.corkage_enabled && <p className="mt-1">Host is bringing their own drinks.</p>}
           {selection?.dietary_requirements && <p className="mt-2">Dietary: {selection.dietary_requirements}</p>}
