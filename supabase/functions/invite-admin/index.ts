@@ -98,6 +98,7 @@ serve(async (req) => {
     // Build role label and induction guide URL
     const roleLabels: Record<string, string> = {
       super_admin: "Super Admin",
+      owner: "Owner",
       admin: "Admin",
       viewer: "Viewer",
       roster_admin: "Roster Admin",
@@ -129,7 +130,7 @@ serve(async (req) => {
       <div style="font-family:'Segoe UI',Arial,sans-serif;max-width:600px;margin:0 auto;color:#1a1a1a;">
         <div style="text-align:center;padding:30px 0 20px;">
           <h1 style="color:#ac845d;font-size:24px;margin:0;">Pro Regal Management</h1>
-          <p style="color:#666;font-size:13px;margin:4px 0 0;">Time & Workforce Management</p>
+          <p style="color:#666;font-size:13px;margin:4px 0 0;">Workforce and Sales Management</p>
         </div>
         
         <div style="background:#f8f9fa;border-radius:12px;padding:30px;margin:16px 0;">
