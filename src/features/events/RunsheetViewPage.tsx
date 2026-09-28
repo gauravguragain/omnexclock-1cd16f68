@@ -60,7 +60,7 @@ function A4Preview({ children, documentRef }: { children: React.ReactNode; docum
 
 export function RunsheetDocument({ rs, lead, b, items, selection, businessName, businessPhone, businessEmail, terms, internal = false }: { rs: any; lead: any; b: any; items: any[]; selection: any; businessName?: string; businessPhone?: string; businessEmail?: string; terms?: string | null; internal?: boolean }) {
   const PKG = ["package", "kids_package", "manual"];
-  const pkgs = items.filter(i => i.course === "package" || i.course === "kids_package");
+  const pkgs = items.filter(i => i.course === "package");
   const stalls = items.filter(i => i.course === "live_stall");
   const kidsRows = items.filter(i => i.course === "kids_package"); const kidsRow = kidsRows[0];
   const courses = items.filter(i => !PKG.includes(i.course) && i.course !== "live_stall" && i.course !== "beverage" && (kidsRow || i.course !== "Kids Menu"))
