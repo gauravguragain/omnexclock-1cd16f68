@@ -4829,6 +4829,10 @@ export type Database = {
         Args: { _business_code: string; _business_name: string }
         Returns: string
       }
+      save_menu_selection: {
+        Args: { _items: Json; _selection: Json }
+        Returns: Json
+      }
       submit_employee_request: {
         Args: {
           _business_code?: string
