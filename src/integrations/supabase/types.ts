@@ -809,6 +809,13 @@ export type Database = {
             foreignKeyName: "crm_confirmation_tokens_booking_id_fkey"
             columns: ["booking_id"]
             isOneToOne: false
+            referencedRelation: "crm_booking_venue_clashes"
+            referencedColumns: ["booking_id"]
+          },
+          {
+            foreignKeyName: "crm_confirmation_tokens_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
             referencedRelation: "crm_bookings"
             referencedColumns: ["id"]
           },
@@ -2186,6 +2193,13 @@ export type Database = {
             foreignKeyName: "crm_payments_booking_id_fkey"
             columns: ["booking_id"]
             isOneToOne: false
+            referencedRelation: "crm_booking_venue_clashes"
+            referencedColumns: ["booking_id"]
+          },
+          {
+            foreignKeyName: "crm_payments_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
             referencedRelation: "crm_bookings"
             referencedColumns: ["id"]
           },
@@ -2321,6 +2335,13 @@ export type Database = {
           updated_by?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "crm_runsheets_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "crm_booking_venue_clashes"
+            referencedColumns: ["booking_id"]
+          },
           {
             foreignKeyName: "crm_runsheets_booking_id_fkey"
             columns: ["booking_id"]
@@ -2536,6 +2557,13 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "crm_tasks_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "crm_booking_venue_clashes"
+            referencedColumns: ["booking_id"]
+          },
           {
             foreignKeyName: "crm_tasks_booking_id_fkey"
             columns: ["booking_id"]
@@ -4363,6 +4391,41 @@ export type Database = {
           theme?: Json | null
         }
         Relationships: []
+      }
+      crm_booking_venue_clashes: {
+        Row: {
+          booking_id: string | null
+          business_id: string | null
+          clash_end: string | null
+          clash_id: string | null
+          clash_label: string | null
+          clash_start: string | null
+          clash_venue: string | null
+          lead_id: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_bookings_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_bookings_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses_public"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_bookings_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: true
+            referencedRelation: "crm_leads"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       employees_public: {
         Row: {
