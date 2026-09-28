@@ -9,42 +9,27 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Loader2, Mail, Printer } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
-import { renderMenuHtml, type MenuSection } from "../../../supabase/functions/_shared/menuHtml";
+import { renderMenuHtml, buildSectionsFromRows, MENU_FONTS_LINK, type MenuSection } from "../../../supabase/functions/_shared/menuHtml";
 import type { Row } from "./useEventsData";
 
 type Data = { business: { id: string; name?: string } | null; books: Row[]; packages: Row[]; courses: Row[]; courseItems: Row[]; dishes: Row[]; drinks: Row[]; customers: Row[] };
 export type MenuShareLead = { id: string; full_name?: string | null; email?: string | null; customer_id?: string | null };
 
 export function buildMenuSections(d: Data, packageIds: string[], includeDrinks: boolean): MenuSection[] {
-  const out: MenuSection[] = [];
-  const pkgs = d.books.flatMap(b => d.packages.filter(p => p.book_id === b.id && packageIds.includes(p.id)));
-  for (const p of pkgs) {
-    const book = d.books.find(b => b.id === p.book_id);
-    const courses = d.courses.filter(c => c.package_id === p.id).sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0)).map(c => {
-      const picks = [c.picks != null && `Choose ${c.picks}`, c.veg_picks != null && `${c.veg_picks} vegetarian`, c.non_veg_picks != null && `${c.non_veg_picks} non-vegetarian`].filter(Boolean).join(" · ");
-      const items = d.courseItems.filter(ci => ci.course_id === c.id).map(ci => {
-        const extra = Number(ci.extra_price_per_head) > 0 ? `+$${Number(ci.extra_price_per_head).toFixed(2)} per person` : "";
-        if (ci.drink_id) { const x = d.drinks.find(y => y.id === ci.drink_id); return x && { name: x.name, note: extra || undefined }; }
-        const x = d.dishes.find(y => y.id === ci.dish_id); if (!x) return null;
-        const prot = (ci.protein_options || []).length ? `Choice of ${(ci.protein_options as string[]).join(", ")}` : "";
-        return { name: x.name, tag: x.diet === "veg" ? "V" : undefined, note: [prot, extra].filter(Boolean).join(" · ") || undefined };
-      }).filter(Boolean) as MenuSection["courses"][number]["items"];
-      return { name: c.name, note: picks || undefined, items };
-    }).filter(c => c.items.length);
-    out.push({ title: p.name, subtitle: book?.name, description: p.description || undefined, courses });
-  }
-  if (includeDrinks) {
-    const active = d.drinks.filter(x => x.active !== false);
-    const courses = [["soft", "Soft drinks"], ["hard", "Beer, wine & spirits"]].map(([k, name]) => ({ name, items: active.filter(x => (x.kind || "soft") === k).map(x => ({ name: x.name, price: x.price != null ? Number(x.price) : null })) })).filter(c => c.items.length);
-    if (courses.length) out.push({ title: "Drinks list", subtitle: "Beverages", courses });
-  }
-  return out;
+  const items = d.courseItems.map(ci => {
+    const dish = ci.dish_id ? d.dishes.find(x => x.id === ci.dish_id) : null;
+    const drink = ci.drink_id ? d.drinks.find(x => x.id === ci.drink_id) : null;
+    return { ...ci, name: dish?.name || drink?.name || "", diet: dish?.diet, kind: drink?.kind };
+  });
+  return buildSectionsFromRows({ books: d.books, packages: d.packages, courses: d.courses, items, drinks: d.drinks }, packageIds, includeDrinks);
 }
+
+export const PRINT_STYLES = `@page{size:A4 landscape;margin:0}html,body{margin:0;background:#f3eee3;-webkit-print-color-adjust:exact;print-color-adjust:exact}@media print{.menu-section{border:0!important;margin:0!important}.menu-page{break-after:page;page-break-after:always;min-height:180mm;box-sizing:border-box}body>div{padding:0!important}}`;
 
 export function printMenu(businessName: string, title: string, sections: MenuSection[]) {
   const w = window.open("", "_blank"); if (!w) { toast.error("Allow pop-ups to print the menu"); return; }
   const body = renderMenuHtml({ businessName, title, logoUrl: `${window.location.origin}/regal-logo.png`, sections });
-  w.document.write(`<!doctype html><html><head><title>${title.replace(/</g, "")}</title><style>@page{size:A4;margin:0}html,body{margin:0;background:#0d0d0d;-webkit-print-color-adjust:exact;print-color-adjust:exact}</style></head><body>${body}<script>window.onload=()=>setTimeout(()=>window.print(),300)<\/script></body></html>`);
+  w.document.write(`<!doctype html><html><head><title>${title.replace(/</g, "")}</title><link rel="stylesheet" href="${MENU_FONTS_LINK}"><style>${PRINT_STYLES}</style></head><body>${body}<script>window.onload=()=>setTimeout(()=>window.print(),700)<\/script></body></html>`);
   w.document.close();
 }
 
@@ -57,6 +42,7 @@ export default function MenuShareDialog({ open, onOpenChange, data: d, source, l
   const [name, setName] = useState(lead?.full_name || "");
   const [message, setMessage] = useState("");
   const [sending, setSending] = useState(false);
+  const [linkScope, setLinkScope] = useState<"all" | "selected" | "none">("all");
   const bizName = d.business?.name || "Pro Regal";
   const books = d.books.filter(b => b.active !== false);
   const sections = useMemo(() => buildMenuSections(d, pkgIds, drinks), [d, pkgIds, drinks]);
@@ -69,11 +55,17 @@ export default function MenuShareDialog({ open, onOpenChange, data: d, source, l
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) return toast.error("Enter a valid email address");
     setSending(true);
     try {
-      const { data, error } = await supabase.functions.invoke("send-email", { body: { type: "menu", to: email.trim(), recipientName: name || undefined, businessName: bizName, title, message: message || undefined, sections } });
-      if (error || (data as any)?.success === false) throw new Error((data as any)?.error || error?.message || "Email failed");
       const linked = customerId || d.customers.find(c => (c.email || "").toLowerCase() === email.trim().toLowerCase())?.id || null;
       const summary = [...d.packages.filter(p => pkgIds.includes(p.id)).map(p => p.name), ...(drinks ? ["Drinks list"] : [])].join(", ");
-      await (supabase.from("crm_menu_sends" as any) as any).insert({ business_id: d.business!.id, customer_id: linked, lead_id: lead?.id || null, recipient_email: email.trim(), source, summary, package_ids: pkgIds, include_drinks: drinks, sent_by: user?.id || null });
+      const sendRow = await (supabase.from("crm_menu_sends" as any) as any).insert({ business_id: d.business!.id, customer_id: linked, lead_id: lead?.id || null, recipient_email: email.trim(), source, summary, package_ids: pkgIds, include_drinks: drinks, sent_by: user?.id || null }).select("id").single();
+      let viewUrl: string | undefined;
+      if (linkScope !== "none") {
+        const token = crypto.randomUUID();
+        const lr = await (supabase.from("crm_menu_share_links" as any) as any).insert({ token, business_id: d.business!.id, menu_send_id: sendRow.data?.id || null, all_active: linkScope === "all", package_ids: linkScope === "all" ? null : pkgIds, include_drinks: drinks || linkScope === "all", recipient_name: name || null, created_by: user?.id || null });
+        if (!lr.error) viewUrl = `https://regalmanagement.com.au/m/${token}`;
+      }
+      const { data, error } = await supabase.functions.invoke("send-email", { body: { type: "menu", to: email.trim(), recipientName: name || undefined, businessName: bizName, title, message: message || undefined, viewUrl, sections } });
+      if (error || (data as any)?.success === false) throw new Error((data as any)?.error || error?.message || "Email failed");
       if (lead?.id) await (supabase.from("crm_timeline_events" as any) as any).insert({ business_id: d.business!.id, lead_id: lead.id, event_type: "menu_sent", title: `Menu emailed to ${email.trim()}`, details: { summary }, actor_id: user?.id || null });
       toast.success(`Menu sent to ${email.trim()}${linked && source !== "lead_menu" ? " · saved to customer profile" : ""}`);
       onOpenChange(false);
@@ -81,7 +73,7 @@ export default function MenuShareDialog({ open, onOpenChange, data: d, source, l
   };
 
   return <Dialog open={open} onOpenChange={onOpenChange}><DialogContent className="max-h-[92dvh] overflow-y-auto sm:max-w-2xl">
-    <DialogHeader><DialogTitle className="font-serif text-2xl">Print or email menu</DialogTitle><DialogDescription>Pick any menu books and packages, and optionally the drinks list. Printed and emailed in Pro Regal black and gold.</DialogDescription></DialogHeader>
+    <DialogHeader><DialogTitle className="font-serif text-2xl">Print or email menu</DialogTitle><DialogDescription>Pick any menu books and packages, and optionally the drinks list. Printed and emailed in the Pro Regal ivory and gold menu layout.</DialogDescription></DialogHeader>
     <div className="space-y-4">
       <div className="max-h-64 space-y-3 overflow-y-auto rounded-md border p-3">
         {books.map(b => { const pk = d.packages.filter(p => p.book_id === b.id && p.active !== false); const all = pk.length > 0 && pk.every(p => pkgIds.includes(p.id)); return <div key={b.id}>
@@ -95,6 +87,7 @@ export default function MenuShareDialog({ open, onOpenChange, data: d, source, l
         {!lead && <div className="space-y-1.5 sm:col-span-2"><Label>Customer</Label><select value={customerId} onChange={e => pickCustomer(e.target.value)} className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"><option value="">Not linked — type an email below</option>{d.customers.map(c => <option key={c.id} value={c.id}>{c.full_name}{c.email ? ` · ${c.email}` : ""}</option>)}</select></div>}
         <div className="space-y-1.5"><Label>Recipient name</Label><Input value={name} onChange={e => setName(e.target.value)} /></div>
         <div className="space-y-1.5"><Label>Email</Label><Input type="email" value={email} onChange={e => setEmail(e.target.value)} /></div>
+        <div className="space-y-1.5 sm:col-span-2"><Label>Online menu link in the email (open for 15 days)</Label><select value={linkScope} onChange={e => setLinkScope(e.target.value as any)} className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"><option value="all">All active menu books &amp; packages (plus drinks list)</option><option value="selected">Only the packages selected above</option><option value="none">No online link</option></select></div>
         <div className="space-y-1.5 sm:col-span-2"><Label>Message (optional)</Label><Textarea rows={3} maxLength={1000} value={message} onChange={e => setMessage(e.target.value)} /></div>
       </div>
       <p className="text-xs text-muted-foreground">{sections.length} section{sections.length === 1 ? "" : "s"} selected.{!lead && " Emails sent to a linked customer are recorded on their profile as Menu sent."}</p>

@@ -504,7 +504,9 @@ serve(async (req) => {
     } else if ((body as any).type === "menu") {
       const b = body as any;
       if (!b.to || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(b.to) || !Array.isArray(b.sections)) throw new Error("Missing required fields for menu email");
-      const html = renderMenuHtml({ businessName: b.businessName, title: b.title, recipientName: b.recipientName, message: b.message, sections: b.sections.slice(0, 60) }, { forEmail: true });
+      const viewUrl = typeof b.viewUrl === "string" && /^https:\/\/(www\.)?regalmanagement\.com\.au\/m\/[0-9a-f-]{36}$/.test(b.viewUrl) ? b.viewUrl : undefined;
+      const logoUrl = "https://regalmanagement.com.au/regal-logo.png";
+      const html = renderMenuHtml({ businessName: b.businessName, title: b.title, recipientName: b.recipientName, message: b.message, viewUrl, logoUrl, sections: b.sections.slice(0, 60) }, { forEmail: true });
       emailPayload = {
         from: `${b.businessName || "Pro Regal Management"} <noreply@regalmanagement.com.au>`,
         to: [b.to],

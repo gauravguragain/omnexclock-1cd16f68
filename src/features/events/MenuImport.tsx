@@ -7,12 +7,13 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Download, Loader2, Upload } from "lucide-react";
 import type { Row } from "./useEventsData";
 
-const MENU_HEADERS = ["Menu book", "Package", "Type (food/beverage)", "Package description", "Course", "Course picks", "Veg picks", "Non-veg picks", "Item", "Diet or kind (veg/nonveg or soft/hard)", "Protein choices (comma separated)", "Extra $ per person"];
+const MENU_HEADERS = ["Menu book", "Package", "Type (food/beverage)", "Menu title", "Style line", "Subtitle", "Price per person", "Price shown on menu", "Min guests", "Package description", "Course", "Course total picks", "Veg picks", "Non-veg picks", "Seafood picks", "Course breakdown note", "Item", "Diet or kind (veg/nonveg/seafood or soft/hard)", "Protein choices (comma separated)", "Extra $ per person"];
 const MENU_SAMPLE = [
-  ["Nepali Express", "Silver Package", "food", "Buffet for 50+ guests", "Starters", 3, 2, 1, "Veg Momo", "veg", "", ""],
-  ["Nepali Express", "Silver Package", "food", "", "Starters", "", "", "", "Chicken Choila", "nonveg", "Chicken, Lamb", 2],
-  ["Nepali Express", "Silver Package", "food", "", "Mains", 2, "", "", "Dal Bhat", "veg", "", ""],
-  ["Nepali Express", "Drinks Package", "beverage", "4 hour package", "Drinks", 3, "", "", "Coke", "soft", "", ""],
+  ["Western Menu", "Tier 1", "food", "Western Menu", "Shared · Buffet · Style", "Tier 1 Buffet Selection", 75, "", 30, "", "Entrée", 3, 2, 1, "", "", "Mushroom & mozzarella arancini, truffle mayo", "veg", "", ""],
+  ["Western Menu", "Tier 1", "food", "", "", "", "", "", "", "", "Entrée", "", "", "", "", "", "Chicken satay, peanut sauce", "nonveg", "", ""],
+  ["Western Menu", "Tier 1", "food", "", "", "", "", "", "", "", "Sides", 2, "", "", "", "Any 2 sides", "Roasted potato, garlic & rosemary", "veg", "", ""],
+  ["Western Menu", "Tier 2", "food", "Western Menu", "Shared · Buffet · Style", "Tier 2 Buffet Selection", 90, "$90–100", 30, "", "Mains", 3, 1, 1, 1, "", "Grilled barramundi, lemon butter", "seafood", "", ""],
+  ["Beverages", "Drinks Package", "beverage", "", "", "", 35, "", "", "4 hour package", "Drinks", 3, "", "", "", "", "Coke", "soft", "", ""],
 ];
 const DRINK_HEADERS = ["Drink name", "Kind (soft/hard)", "Price"];
 const DRINK_SAMPLE = [["Coke", "soft", 4.5], ["House Red Wine (glass)", "hard", 12]];
@@ -54,7 +55,7 @@ export function MenuImportButton({ data: d }: { data: Data }) {
   const run = async (file: File) => {
     if (!d.business) return; const bid = d.business.id; setBusy(true); const log: string[] = [];
     try {
-      const rows = (await readRows(file)).map(r => ({ book: norm(col(r, "menu book")), pkg: norm(r[Object.keys(r).find(k => key(k) === "package") || "Package"]), type: key(col(r, "type")) === "beverage" ? "beverage" : "food", desc: norm(col(r, "package description")), course: norm(col(r, "course")) || "Menu", picks: num(col(r, "course picks")), veg: num(col(r, "veg picks")), nonveg: num(col(r, "non-veg picks")), item: norm(col(r, "item")), diet: key(col(r, "diet")), proteins: norm(col(r, "protein")), extra: num(col(r, "extra")) ?? 0 })).filter(r => r.book && r.pkg && r.item);
+      const rows = (await readRows(file)).map(r => ({ book: norm(col(r, "menu book")), pkg: norm(r[Object.keys(r).find(k => key(k) === "package") || "Package"]), type: key(col(r, "type")) === "beverage" ? "beverage" : "food", desc: norm(col(r, "package description")), course: norm(col(r, "course")) || "Menu", picks: num(col(r, "course total")) ?? num(col(r, "course picks")), veg: num(col(r, "veg picks")), nonveg: num(col(r, "non-veg picks")), item: norm(col(r, "item")), diet: key(col(r, "diet")), proteins: norm(col(r, "protein")), extra: num(col(r, "extra")) ?? 0, menuTitle: norm(col(r, "menu title")), style: norm(col(r, "style")), subtitle: norm(col(r, "subtitle")), price: num(col(r, "price per")), priceLabel: norm(col(r, "price shown")), minGuests: num(col(r, "min guest")), seafood: num(col(r, "seafood")), cnote: norm(col(r, "course breakdown")) })).filter(r => r.book && r.pkg && r.item);
       if (!rows.length) throw new Error("No rows found. Make sure Menu book, Package and Item are filled.");
       const books = new Map(d.books.map(b => [key(b.name), b.id as string]));
       const dishes = new Map(d.dishes.map(x => [key(x.name), x.id as string]));
@@ -68,16 +69,16 @@ export function MenuImportButton({ data: d }: { data: Data }) {
         if (!bookId) { const r = await (supabase.from("crm_menu_books" as any) as any).insert({ business_id: bid, name: first.book, sort_order: books.size }).select().single(); if (r.error) throw r.error; bookId = r.data.id as string; books.set(key(first.book), bookId); log.push(`Created menu book "${first.book}"`); }
         if (d.packages.some(p => p.book_id === bookId && key(p.name) === key(first.pkg))) { log.push(`Skipped "${first.pkg}" — already exists in ${first.book}`); continue; }
         const bev = first.type === "beverage";
-        const pr = await (supabase.from("crm_packages" as any) as any).insert({ business_id: bid, book_id: bookId, name: first.pkg, package_type: first.type, description: g.find(r => r.desc)?.desc || null, price_per_head: 0, min_guests: 1 }).select().single(); if (pr.error) throw pr.error;
+        const pr = await (supabase.from("crm_packages" as any) as any).insert({ business_id: bid, book_id: bookId, name: first.pkg, package_type: first.type, description: g.find(r => r.desc)?.desc || null, menu_title: g.find(r => r.menuTitle)?.menuTitle || null, style_label: g.find(r => r.style)?.style || null, subtitle: g.find(r => r.subtitle)?.subtitle || null, price_label: g.find(r => r.priceLabel)?.priceLabel || null, price_per_head: g.find(r => r.price != null)?.price ?? 0, min_guests: g.find(r => r.minGuests != null)?.minGuests ?? 1 }).select().single(); if (pr.error) throw pr.error;
         const courseOrder: string[] = []; g.forEach(r => { if (!courseOrder.includes(key(r.course))) courseOrder.push(key(r.course)); });
         for (const [i, ck] of courseOrder.entries()) {
           const items = g.filter(r => key(r.course) === ck); const c0 = items[0];
-          const cr = await (supabase.from("crm_package_courses" as any) as any).insert({ business_id: bid, package_id: pr.data.id, name: c0.course, picks: items.find(r => r.picks != null)?.picks ?? null, veg_picks: bev ? null : items.find(r => r.veg != null)?.veg ?? null, non_veg_picks: bev ? null : items.find(r => r.nonveg != null)?.nonveg ?? null, sort_order: i }).select().single(); if (cr.error) throw cr.error;
+          const cr = await (supabase.from("crm_package_courses" as any) as any).insert({ business_id: bid, package_id: pr.data.id, name: c0.course, picks: items.find(r => r.picks != null)?.picks ?? null, veg_picks: bev ? null : items.find(r => r.veg != null)?.veg ?? null, non_veg_picks: bev ? null : items.find(r => r.nonveg != null)?.nonveg ?? null, seafood_picks: bev ? null : items.find(r => r.seafood != null)?.seafood ?? null, notes: items.find(r => r.cnote)?.cnote || null, sort_order: i }).select().single(); if (cr.error) throw cr.error;
           const inserts = [];
           for (const it of items) {
             const map = bev ? drinks : dishes; let id = map.get(key(it.item));
             if (!id) {
-              const r = await (supabase.from((bev ? "crm_drinks" : "crm_dishes") as any) as any).insert({ business_id: bid, name: it.item, ...(bev ? { kind: it.diet === "hard" ? "hard" : "soft" } : { diet: it.diet.startsWith("non") ? "nonveg" : "veg" }) }).select().single(); if (r.error) throw r.error;
+              const r = await (supabase.from((bev ? "crm_drinks" : "crm_dishes") as any) as any).insert({ business_id: bid, name: it.item, ...(bev ? { kind: it.diet === "hard" ? "hard" : "soft" } : { diet: it.diet.startsWith("sea") ? "seafood" : it.diet.startsWith("non") || it.diet === "meat" ? "nonveg" : "veg" }) }).select().single(); if (r.error) throw r.error;
               id = r.data.id as string; map.set(key(it.item), id);
             }
             inserts.push(bev ? { business_id: bid, course_id: cr.data.id, drink_id: id, extra_price_per_head: it.extra } : { business_id: bid, course_id: cr.data.id, dish_id: id, protein_options: it.proteins.split(",").map(s => s.trim()).filter(Boolean), extra_price_per_head: it.extra });
@@ -92,7 +93,7 @@ export function MenuImportButton({ data: d }: { data: Data }) {
   return <Dialog open={open} onOpenChange={o => { setOpen(o); if (!o) setResult([]); }}>
     <Button variant="outline" onClick={() => setOpen(true)}><Upload className="mr-2 h-4 w-4" />Import</Button>
     <ImportShell title="Import menu books & packages" desc="New menu books, dishes and drinks are created automatically. Packages that already exist in the same menu book are skipped." busy={busy} result={result} onFile={run}
-      onTemplate={() => downloadTemplate("menu-packages-template.xlsx", MENU_HEADERS, MENU_SAMPLE, ["One row per dish or drink.", "Rows with the same Menu book + Package build one package; rows with the same Course are grouped into that course.", "Type: food or beverage.", "Picks columns are optional — only fill them on the first row of a course.", "Diet or kind: veg / nonveg for food, soft / hard for drinks.", "Extra $ per person is optional (surcharge for that item).", "Delete the example rows before uploading."])} />
+      onTemplate={() => downloadTemplate("menu-packages-template.xlsx", MENU_HEADERS, MENU_SAMPLE, ["One row per dish or drink.", "Rows with the same Menu book + Package build one package; rows with the same Course are grouped into that course.", "Type: food or beverage.", "Package details (Menu title, Style line, Subtitle, prices, Min guests, description) only need filling on the first row of each package.", "Menu title = the large script heading (e.g. Western Menu). Style line = small top line (e.g. Shared · Buffet · Style). Subtitle = e.g. Tier 1 Buffet Selection.", "Price per person = number (75). Price shown on menu = optional text for ranges (e.g. $90–100).", "Course picks only need filling on the first row of a course: Course total picks, then how many Veg / Non-veg / Seafood items guests choose.", "Course breakdown note is optional (e.g. Any 2 sides); left blank it is built from the picks.", "Diet or kind: veg / nonveg / seafood for food, soft / hard for drinks. Items are grouped under Vegetarian, Non-vegetarian and Seafood on the menu.", "Extra $ per person is optional (surcharge for that item).", "Delete the example rows before uploading."])} />
   </Dialog>;
 }
 
