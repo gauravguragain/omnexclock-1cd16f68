@@ -57,3 +57,43 @@ export async function downloadRunsheetPdf(el: HTMLElement, fileName: string) {
     copy.remove();
   }
 }
+
+// Split the newspaper-style agenda into A4 pages: fill the left column, then the
+// right column, and only then continue on a new page (each page starts cleanly).
+function paginateFlow(root: HTMLElement) {
+  const flow = root.querySelector<HTMLElement>("[data-runsheet-flow]");
+  if (!flow) return;
+  const pxPerMm = root.getBoundingClientRect().width / 210;
+  const pageH = 297 * pxPerMm, margin = 10 * pxPerMm, pad = 16, safety = 24;
+  const blocks = Array.from(flow.children) as HTMLElement[];
+  const heights = blocks.map(b => b.getBoundingClientRect().height);
+  const flowTop = flow.getBoundingClientRect().top - root.getBoundingClientRect().top;
+  let avail = pageH - margin - flowTop - pad * 2 - safety;
+  const pages: HTMLElement[][][] = [[[], []]];
+  let col = 0, used = 0;
+  blocks.forEach((b, i) => {
+    const h = heights[i];
+    if (used > 0 && used + h > avail) {
+      if (col === 0) { col = 1; used = 0; }
+      else { pages.push([[], []]); col = 0; used = 0; avail = pageH - margin * 2 - pad * 2 - safety; }
+    }
+    pages[pages.length - 1][col].push(b); used += h;
+  });
+  const cls = flow.className.replace(/\bcolumns-2\b/, "").replace(/\[column-rule[^\s]*\]/, "");
+  const frag = document.createDocumentFragment();
+  pages.forEach(([left, right], p) => {
+    const page = document.createElement("div");
+    page.className = `${cls} grid grid-cols-2`;
+    if (p > 0) { page.setAttribute("data-pdf-break", ""); page.style.borderTop = "1px solid hsl(var(--border))"; }
+    [left, right].forEach((items, c) => {
+      const column = document.createElement("div");
+      column.style.minWidth = "0";
+      column.style.padding = c === 0 ? "0 16px 0 0" : "0 0 0 16px";
+      if (c === 0) column.style.borderRight = "1px solid hsl(var(--border))";
+      items.forEach(it => column.appendChild(it));
+      page.appendChild(column);
+    });
+    frag.appendChild(page);
+  });
+  flow.replaceWith(frag);
+}
