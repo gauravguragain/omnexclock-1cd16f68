@@ -58,7 +58,7 @@ function A4Preview({ children, documentRef }: { children: React.ReactNode; docum
   </div>;
 }
 
-export function RunsheetDocument({ rs, lead, b, items, selection, businessName, terms }: { rs: any; lead: any; b: any; items: any[]; selection: any; businessName?: string; terms?: string | null }) {
+export function RunsheetDocument({ rs, lead, b, items, selection, businessName, businessPhone, businessEmail, terms }: { rs: any; lead: any; b: any; items: any[]; selection: any; businessName?: string; businessPhone?: string; businessEmail?: string; terms?: string | null }) {
   const PKG = ["package", "kids_package", "manual"];
   const pkgs = items.filter(i => i.course === "package" || i.course === "kids_package");
   const stalls = items.filter(i => i.course === "live_stall");
@@ -86,21 +86,24 @@ export function RunsheetDocument({ rs, lead, b, items, selection, businessName, 
     ["Client:", lead?.full_name, lead?.phone],
     [catering ? (pickup ? "Pickup Contact:" : "Delivery Contact:") : "Onsite Contact:", rs.onsite_contact_name, rs.onsite_contact_phone],
   ];
-  const summary = <div className="grid grid-cols-[20%_30%_20%_30%] divide-x divide-border border border-border text-xs">
-    <div className="p-2 font-medium">{catering && <span className="block text-[10px] font-normal">{pickup ? "Pickup window" : "Delivery window"}</span>}{time}</div>
-    <div className="p-2 font-medium">{eventTitle}</div>
-    <div className="p-2">Adults: {rs.adult_guests ?? b?.adults ?? "—"}<br />Kids: {rs.kids_guests ?? b?.kids ?? 0}</div>
-    {catering
-      ? <div className="p-2"><span className="block text-[10px]">{pickup ? "Pickup" : "Delivery to"}</span><span className="font-medium">{pickup ? (businessName || "At venue") : (b?.service_location || lead?.service_location || "—")}</span></div>
-      : <div className="p-2"><span className="block text-[10px]">Venue</span><span className="font-medium">{prettyCrmValue(b?.venue_space || lead?.venue_space || "—")}</span></div>}
-  </div>;
+  const Summary = ({ bold = false }: { bold?: boolean }) => {
+    const heavy = bold ? "font-bold" : "font-medium";
+    return <div className={`grid grid-cols-[20%_30%_20%_30%] divide-x divide-border border border-border text-xs${bold ? " font-bold" : ""}`}>
+      <div className={`p-2 ${heavy}`}>{catering && <span className="block text-[10px]">{pickup ? "Pickup window" : "Delivery window"}</span>}{time}</div>
+      <div className={`p-2 ${heavy}`}>{eventTitle}</div>
+      <div className="p-2">Adults: {rs.adult_guests ?? b?.adults ?? "—"}<br />Kids: {rs.kids_guests ?? b?.kids ?? 0}</div>
+      {catering
+        ? <div className="p-2"><span className="block text-[10px]">{pickup ? "Pickup" : "Delivery to"}</span><span className={heavy}>{pickup ? (businessName || "At venue") : (b?.service_location || lead?.service_location || "—")}</span></div>
+        : <div className="p-2"><span className="block text-[10px]">Venue</span><span className={heavy}>{prettyCrmValue(b?.venue_space || lead?.venue_space || "—")}</span></div>}
+    </div>;
+  };
 
   return <article className="runsheet-monochrome bg-background font-sans text-foreground">
     <header className="flex items-start justify-between gap-6">
       <div>
         <h1 className="text-2xl font-bold">{catering ? `Catering ${pickup ? "Pickup" : "Delivery"} Order` : `${eventType} Event Order`}</h1>
         <p className="mt-1 text-base font-bold">{date}</p>
-        <p className="mt-1 text-xs text-muted-foreground">{businessName || "Pro Regal Pavilion"}</p>
+        <p className="mt-1 text-xs text-muted-foreground">{businessName || "Pro Regal Pavilion"}{(businessPhone || businessEmail) && <span className="font-medium text-foreground">  ·  {[businessPhone, businessEmail].filter(Boolean).join("  ·  ")}</span>}</p>
       </div>
       <img src="/regal-logo.png" alt={businessName || "Logo"} className="h-16 w-28 object-contain object-right" />
     </header>
@@ -118,12 +121,12 @@ export function RunsheetDocument({ rs, lead, b, items, selection, businessName, 
 
     <section className="mt-5">
       <div className="flex justify-between bg-primary px-3 py-2 text-sm font-semibold text-primary-foreground"><span>Event Summary – {date}</span><span>Day 1 of 1</span></div>
-      {summary}
+      <Summary />
     </section>
 
     <section className="mt-4">
-      <div className="flex justify-between bg-primary px-3 py-2 text-sm font-semibold text-primary-foreground"><span>Agenda – {date}</span><span>Day 1 of 1</span></div>
-      <div className="bg-muted">{summary}</div>
+      <div className="flex justify-between bg-primary px-3 py-2 text-sm font-bold text-primary-foreground"><span>Agenda – {date}</span><span>Day 1 of 1</span></div>
+      <div className="bg-muted"><Summary bold /></div>
       <div className="grid grid-cols-2 border-x border-b border-border text-xs leading-relaxed">
         <div className="min-w-0 border-r border-border p-4">
           {stalls.length > 0 && <div className="mb-4 break-inside-avoid"><h2 className="font-bold">Live Stalls{stalls[0].service_start_time ? ` — ${to12(stalls[0].service_start_time)}${stalls[0].service_end_time ? ` to ${to12(stalls[0].service_end_time)}` : ""}` : ""}</h2>{stalls.map(s => <p key={s.id} className="pl-3">• {String(s.item_name || "").replace(/_/g, " ")}</p>)}</div>}
@@ -139,7 +142,6 @@ export function RunsheetDocument({ rs, lead, b, items, selection, businessName, 
         </div>
         <div className="min-w-0 p-4">
           <h2 className="font-bold">Setup & Additional Information</h2>
-          <p className="mt-1 font-semibold">{eventTitle}</p>
           {setup.map(s => <p key={s} className="pl-3">• {s}</p>)}
           {rs.setup_notes && <p className="mt-2 whitespace-pre-line pl-3">{rs.setup_notes}</p>}
           {rs.access_time && <p className="mt-2">Decor / vendor access: {to12(rs.access_time)}</p>}
@@ -212,7 +214,7 @@ export default function RunsheetViewPage() {
       <Button variant="outline" disabled={dl} onClick={async () => { if (!docRef.current) return; setDl(true); try { await downloadRunsheetPdf(docRef.current, `Run sheet - ${title}`); } catch { toast.error("Could not create PDF"); } setDl(false); }}><Download className="mr-2 h-4 w-4" />{dl ? "Preparing…" : "Download PDF"}</Button>
       {lead && (rs.sent_at || isCatering) && <Button onClick={() => setSendOpen(true)}><Mail className="mr-2 h-4 w-4" />{rs.sent_at ? "Resend Email" : "Send run sheet"}</Button>}
     </div>
-    <A4Preview documentRef={docRef}><RunsheetDocument rs={rs} lead={lead} b={b} items={items} selection={selection} businessName={crm.business?.name} terms={runsheetTermsFor(crm.settings, b)} /></A4Preview>
+    <A4Preview documentRef={docRef}><RunsheetDocument rs={rs} lead={lead} b={b} items={items} selection={selection} businessName={crm.business?.name} businessPhone={crm.business?.phone || ""} businessEmail={crm.business?.email || ""} terms={runsheetTermsFor(crm.settings, b)} /></A4Preview>
     {lead && <SendRunsheetDialog mode={isCatering && !rs.sent_at ? "issue" : "resend"} onIssue={issueCatering} open={sendOpen} onOpenChange={setSendOpen} rs={rs} lead={lead} booking={b} businessName={crm.business?.name || ""} />}
   </div>;
 }
@@ -234,7 +236,7 @@ export function PublicRunsheetPage() {
         <Button variant="outline" onClick={() => window.print()}><Printer className="mr-2 h-4 w-4" />Print</Button>
         <Button disabled={dl} onClick={async () => { if (!docRef.current) return; setDl(true); try { await downloadRunsheetPdf(docRef.current, `Run sheet - ${runsheetTitle(data.lead, data.booking)}`); } catch { toast.error("Could not create PDF"); } setDl(false); }}><Download className="mr-2 h-4 w-4" />{dl ? "Preparing…" : "Download PDF"}</Button>
       </div>
-        <A4Preview documentRef={docRef}><RunsheetDocument rs={data.rs} lead={data.lead} b={data.booking} items={data.items || []} selection={data.selection} businessName={data.businessName} terms={data.terms} /></A4Preview>
+        <A4Preview documentRef={docRef}><RunsheetDocument rs={data.rs} lead={data.lead} b={data.booking} items={data.items || []} selection={data.selection} businessName={data.businessName} businessPhone={data.businessPhone || ""} businessEmail={data.businessEmail || ""} terms={data.terms} /></A4Preview>
     </div>
   </div>;
 }

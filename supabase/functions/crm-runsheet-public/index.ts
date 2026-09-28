@@ -18,7 +18,7 @@ Deno.serve(async (req) => {
       rs.lead_id ? db.from("crm_leads").select("full_name, phone, event_type, venue_space").eq("id", rs.lead_id).maybeSingle() : { data: null },
       rs.booking_id ? db.from("crm_bookings").select("event_date, start_time, end_time, duration_minutes, venue_space, event_type, booking_kind, fulfilment_method, service_location, event_name").eq("id", rs.booking_id).maybeSingle()
         : rs.lead_id ? db.from("crm_bookings").select("event_date, start_time, end_time, duration_minutes, venue_space, event_type, booking_kind, fulfilment_method, service_location, event_name").eq("lead_id", rs.lead_id).limit(1).maybeSingle() : { data: null },
-      db.from("businesses").select("name").eq("id", rs.business_id).maybeSingle(),
+      db.from("businesses").select("name, phone, email").eq("id", rs.business_id).maybeSingle(),
       rs.lead_id ? db.from("crm_menu_selections").select("id, beverage_package, corkage_enabled, dietary_requirements, allergies").eq("lead_id", rs.lead_id).order("updated_at", { ascending: false }).limit(1).maybeSingle() : { data: null },
       db.from("crm_settings").select("runsheet_terms, runsheet_terms_enabled").eq("business_id", rs.business_id).maybeSingle(),
     ]);
@@ -29,7 +29,7 @@ Deno.serve(async (req) => {
     }
     // strip anything price-related and internal
     const { share_token: _s, ops_notes: _o, distributed_to: _d, ...safe } = rs;
-    return json({ rs: safe, lead: lead.data, booking: booking.data, businessName: biz.data?.name || "", selection: sel.data, items, terms: booking.data?.booking_kind === "catering" || settings.data?.runsheet_terms_enabled === false ? null : (settings.data?.runsheet_terms?.trim() || DEFAULT_TERMS) });
+    return json({ rs: safe, lead: lead.data, booking: booking.data, businessName: biz.data?.name || "", businessPhone: biz.data?.phone || "", businessEmail: biz.data?.email || "", selection: sel.data, items, terms: booking.data?.booking_kind === "catering" || settings.data?.runsheet_terms_enabled === false ? null : (settings.data?.runsheet_terms?.trim() || DEFAULT_TERMS) });
   } catch (e) {
     console.error(e);
     return json({ error: "Unable to load run sheet" }, 500);
