@@ -186,7 +186,13 @@ export async function loadOperations(bid: string, r: Range) {
   // Bookings often carry no event type of their own (imports store it on the lead), so fall back to the linked lead.
   const typeOf = (b: any) => b.event_type || (b.lead_id ? leadById[b.lead_id]?.event_type : "") || "";
   const eventTypes = tally(events, b => pretty(typeOf(b)));
-  const upcoming = live.filter((b: any) => b.event_date >= today && b.event_date <= addDays(today, 30)).sort((a: any, b: any) => a.event_date.localeCompare(b.event_date)).map((b: any) => ({ ...b, event_type_display: pretty(typeOf(b)) }));
+  const nameOf = (b: any) => {
+    if (b.event_name?.trim()) return b.event_name;
+    const lead = b.lead_id ? leadById[b.lead_id] : null;
+    const t = pretty(typeOf(b));
+    return lead?.full_name ? (t ? `${t} – ${lead.full_name}` : lead.full_name) : "";
+  };
+  const upcoming = live.filter((b: any) => b.event_date >= today && b.event_date <= addDays(today, 30)).sort((a: any, b: any) => a.event_date.localeCompare(b.event_date)).map((b: any) => ({ ...b, event_name: nameOf(b), event_type_display: pretty(typeOf(b)) }));
 
 
   const inspInRange = inspections.filter((i: any) => { const d = i.starts_at || i.proposed_at; if (!d) return false; const s = sydDate(d); return s >= r.from && s <= r.to; });
