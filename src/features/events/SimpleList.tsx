@@ -13,11 +13,11 @@ const isOther = (v: string) => /^others?$/i.test(v.trim());
 
 export type Field = { key: string; label: string; type?: "text" | "number" | "select" | "email" | "tags"; options?: { value: string; label: string }[]; required?: boolean; placeholder?: string };
 
-export default function SimpleList({ title, subtitle, table, businessId, rows, fields, columns, refresh, archivable, filterKey, filterOptions, groupAZ, groupBy, groupOrder, extra, nameKey = "name", onOpen, defaults }: {
+export default function SimpleList({ title, subtitle, table, businessId, rows, fields, columns, refresh, archivable, filterKey, filterOptions, groupAZ, groupBy, groupOrder, groupLabel, extra, nameKey = "name", onOpen, defaults }: {
   title: string; subtitle: string; table: string; businessId: string; rows: Row[]; fields: Field[];
   columns: { label: string; render: (r: Row) => ReactNode }[]; refresh: () => void; archivable?: boolean;
   filterKey?: string; filterOptions?: { value: string; label: string }[]; groupAZ?: boolean;
-  groupBy?: (r: Row) => string; groupOrder?: (a: string, b: string) => number; extra?: ReactNode; nameKey?: string; onOpen?: (r: Row) => void; defaults?: Row;
+  groupBy?: (r: Row) => string; groupOrder?: (a: string, b: string) => number; groupLabel?: (k: string) => string; extra?: ReactNode; nameKey?: string; onOpen?: (r: Row) => void; defaults?: Row;
 }) {
   const [search, setSearch] = useState(""); const [status, setStatus] = useState("active"); const [filter, setFilter] = useState("all");
   const [editing, setEditing] = useState<Row | null>(null); const [open, setOpen] = useState(false);
