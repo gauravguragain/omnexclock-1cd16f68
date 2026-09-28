@@ -9,9 +9,20 @@ import OptionSelect from "./OptionSelect";
 import MultiOptionSelect from "./MultiOptionSelect";
 import DateField from "./DateField";
 
-export default function LeadFormDialog({ open, onOpenChange, businessId, options, lead, leads, onSaved, defaultKind = "event", lockedKind }: { open: boolean; onOpenChange: (open:boolean)=>void; businessId:string; options:CrmOption[]; lead?:CrmLead|null; leads:CrmLead[]; onSaved:()=>void; defaultKind?: string; lockedKind?: "event" | "catering" }) {
-   const { user } = useAuth(); const [saving, setSaving] = useState(false); const [email, setEmail] = useState(""); const [phone, setPhone] = useState(""); const [kind, setKind] = useState(lockedKind || lead?.lead_kind || defaultKind);
-   useEffect(() => { setEmail(lead?.email || ""); setPhone(lead?.phone || ""); setKind(lockedKind || lead?.lead_kind || defaultKind); }, [lead, open, defaultKind, lockedKind]);
+export default function LeadFormDialog({ open, onOpenChange, businessId, options, lead, leads, onSaved, defaultKind = "event", lockedKind, presetCustomerId }: { open: boolean; onOpenChange: (open:boolean)=>void; businessId:string; options:CrmOption[]; lead?:CrmLead|null; leads:CrmLead[]; onSaved:()=>void; defaultKind?: string; lockedKind?: "event" | "catering"; presetCustomerId?: string | null }) {
+    const { user } = useAuth(); const [saving, setSaving] = useState(false); const [email, setEmail] = useState(""); const [phone, setPhone] = useState(""); const [kind, setKind] = useState(lockedKind || lead?.lead_kind || defaultKind);
+    const [customers, setCustomers] = useState<any[]>([]); const [custSearch, setCustSearch] = useState(""); const [picked, setPicked] = useState<any | null>(null);
+    useEffect(() => { setEmail(lead?.email || ""); setPhone(lead?.phone || ""); setKind(lockedKind || lead?.lead_kind || defaultKind); }, [lead, open, defaultKind, lockedKind]);
+    useEffect(() => {
+      if (!open || lead) return;
+      (supabase.from("crm_customers" as any) as any).select("id, full_name, phone, email, company").eq("business_id", businessId).order("full_name").then(({ data }: any) => {
+        const list = data || []; setCustomers(list);
+        if (presetCustomerId) { const c = list.find((x: any) => x.id === presetCustomerId); if (c) pick(c); }
+      });
+    }, [open, lead, businessId, presetCustomerId]);
+    useEffect(() => { if (!open) { setPicked(null); setCustSearch(""); } }, [open]);
+    const pick = (c: any) => { setPicked(c); setEmail(c.email || ""); setPhone(c.phone || ""); };
+    const custMatches = customers.filter(c => `${c.full_name} ${c.phone || ""} ${c.email || ""}`.toLowerCase().includes(custSearch.toLowerCase())).slice(0, 6);
   const duplicate = useMemo(() => leads.find((row) => row.id !== lead?.id && ((email && row.email?.toLowerCase() === email.toLowerCase()) || (phone && row.phone?.replace(/\D/g, "") === phone.replace(/\D/g, "")))), [email, phone, leads, lead?.id]);
   const list = (type:string) => options.filter((option) => option.option_type === type && option.active);
    const isCatering = kind === "catering";
