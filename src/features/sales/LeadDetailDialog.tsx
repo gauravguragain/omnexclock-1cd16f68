@@ -4,13 +4,16 @@ import GuestMenuLinkCard from "./GuestMenuLinkCard";
 import { supabase } from "@/integrations/supabase/client"; import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button"; import { Dialog, DialogContent } from "@/components/ui/dialog"; import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input"; import { Label } from "@/components/ui/label"; import { Textarea } from "@/components/ui/textarea"; import { Badge } from "@/components/ui/badge"; import { Checkbox } from "@/components/ui/checkbox";
-import { ArrowRight, Bot, CalendarPlus, Check, Clock, Download, Mail, Pencil, Phone, Plus, X } from "lucide-react"; import { toast } from "sonner"; import { format } from "date-fns";
+import { ArrowRight, Bot, CalendarPlus, Check, ChevronLeft, ChevronRight, Clock, Download, Info, Mail, Pencil, Phone, Plus, X } from "lucide-react"; import { toast } from "sonner"; import { format } from "date-fns";
 import venueBanner from "@/assets/regal-venue-banner.jpg"; import OptionSelect from "./OptionSelect"; import DateField from "./DateField"; import { TimeDropdownPicker } from "@/components/TimeDropdownPicker";
 import MultiOptionSelect from "./MultiOptionSelect";
 const INTERACTION_TYPES=[{value:"phone_call",label:"Phone call"},{value:"email",label:"Email"},{value:"in_person",label:"In person"},{value:"message",label:"Message"}];
 export const COURSE_CATEGORY:Record<string,string>={"Entrees (Veg)":"entrees_veg","Entrees (Non-veg)":"entrees_nonveg","Veg Mains":"veg_mains","Non-veg Mains":"nonveg_mains","Sides":"sides","Dessert":"dessert","Kids Menu":"kids_menu"};
 export const DISH_COURSES=["Entrees (Veg)","Entrees (Non-veg)","Veg Mains","Non-veg Mains","Sides","Dessert","Kids Menu"];
 import type { CrmInspection, CrmInteraction, CrmLead, CrmOption, CrmTask } from "./types"; import { CRM_LEAD_STATUSES, leadStageUpdate, prettyCrmValue } from "./types"; import { buildBookingConfirmationPdf } from "@/lib/bookingConfirmationPdf"; import RunsheetTab from "./RunsheetTab"; import LeadStakeholdersTab from "./LeadStakeholdersTab";
+
+/** Journey order shown in the stepper — mirrors the real sales process. */
+const LEAD_STEPS=[{value:"timeline",label:"Timeline"},{value:"inspection",label:"Inspection"},{value:"booking",label:"Confirmation"},{value:"tasting",label:"Menu tasting"},{value:"menu",label:"Menu"},{value:"stakeholders",label:"Stakeholders"},{value:"runsheet",label:"Runsheet"}];
 
 export function LeadDetailView({ lead, open, initialTab, options, interactions, inspections, tasks, menuItems, booking, businessName, onSaved }:{ lead:CrmLead|null; open:boolean; initialTab?:string; options:CrmOption[]; interactions:CrmInteraction[]; inspections:CrmInspection[]; tasks:CrmTask[]; menuItems:any[]; booking:any; businessName:string; onSaved:()=>void }) {
   const { user } = useAuth(); const [busy,setBusy]=useState(false); const [ai,setAi]=useState<any>(null); const [selectedMenu,setSelectedMenu]=useState<string[]>([]); const [customItems,setCustomItems]=useState<{key:string;name:string;pricePerHead:number;flatPrice:number;bookId?:string;pkgId?:string}[]>([]); const [guestOverride,setGuestOverride]=useState<number|null>(null);
@@ -26,6 +29,9 @@ export function LeadDetailView({ lead, open, initialTab, options, interactions, 
   const [liveStalls,setLiveStalls]=useState<{key:string;name:string;pricePerHead:number;flatPrice:number;startTime:string;endTime:string}[]>([]); const [stallDraft,setStallDraft]=useState({name:"",pricePerHead:"",flatPrice:"",startTime:"17:30",endTime:"18:30"}); const [stallsRequired,setStallsRequired]=useState(false);
   const [insDate,setInsDate]=useState(""); const [insStart,setInsStart]=useState("10:00"); const [insEnd,setInsEnd]=useState("11:00"); const [followDate,setFollowDate]=useState(""); const [followTime,setFollowTime]=useState("09:00"); const [bookStart,setBookStart]=useState(String(booking?.start_time||"18:00").slice(0,5)); const [bookEnd,setBookEnd]=useState("23:00"); const [durationHours,setDurationHours]=useState<number|string>(booking?.duration_minutes?Number(booking.duration_minutes)/60:5);
   const [tastingEnabled,setTastingEnabled]=useState(false); const [tastingDate,setTastingDate]=useState(""); const [tastingTime,setTastingTime]=useState("11:00");
+  const [tab,setTab]=useState(initialTab||"timeline");
+  const [adults,setAdults]=useState(""); const [kidsN,setKidsN]=useState(""); const [bookTotal,setBookTotal]=useState(""); const [bookDeposit,setBookDeposit]=useState("");
+  const [hasSelection,setHasSelection]=useState(false); const [stakeCount,setStakeCount]=useState(0); const [runsheetCount,setRunsheetCount]=useState(0);
   const timeToMin=(t:string)=>{const[h,m]=t.split(":").map(Number);return h*60+m;};
   const minToTime=(m:number)=>{const hh=Math.floor(m/60)%24;const mm=m%60;return `${String(hh).padStart(2,"0")}:${String(mm).padStart(2,"0")}`;};
   const prettyTime=(value:string)=>{const[h,m]=value.split(":").map(Number);return `${h%12===0?12:h%12}:${String(m||0).padStart(2,"0")} ${h>=12?"PM":"AM"}`;};
