@@ -25,7 +25,7 @@ Deno.serve(async (req) => {
     ]);
     let items: unknown[] = [];
     if (sel.data?.id) {
-      const r = await db.from("crm_menu_selection_items").select("id, course, item_name, quantity, service_start_time, service_end_time, created_at").eq("selection_id", sel.data.id).order("created_at");
+       const r = await db.from("crm_menu_selection_items").select("id, course, item_name, notes, quantity, service_start_time, service_end_time, created_at").eq("selection_id", sel.data.id).order("created_at");
       items = r.data || [];
     }
     // strip anything price-related and internal
