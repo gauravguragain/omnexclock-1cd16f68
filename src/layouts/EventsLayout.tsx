@@ -9,7 +9,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useBusiness } from "@/contexts/BusinessContext";
 import { Button } from "@/components/ui/button";
 import { useSessionGuard } from "@/hooks/useSessionGuard";
-import { BarChart3, BookOpen, Building2, CalendarDays, ChefHat, ClipboardList, Contact, GlassWater, Home, LayoutDashboard, ListFilter, LogOut, Menu, PartyPopper, PlusCircle, Settings, Truck, UserPlus, Users, Warehouse, X, CalendarCheck, Utensils, UserCheck, Wallet, History } from "lucide-react";
+import { BarChart3, BookOpen, Building2, CalendarDays, ChefHat, ClipboardList, Contact, GlassWater, LayoutDashboard, ListFilter, LogOut, Menu, PartyPopper, PlusCircle, Settings, Truck, UserPlus, Users, Warehouse, X, CalendarCheck, Utensils, UserCheck, Wallet, History } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const SECTIONS: { title: string; items: { to: string; label: string; icon: any }[] }[] = [
