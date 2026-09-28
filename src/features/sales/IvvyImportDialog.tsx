@@ -54,6 +54,9 @@ function parseCsv(text: string): Row[] {
   return body.filter(r => r.some(v => v.trim())).map(r => Object.fromEntries(head.map((h, i) => [h.trim().toLowerCase().replace(/\s+/g, " "), (r[i] ?? "").trim()])));
 }
 const col = (r: Row, ...names: string[]) => { for (const n of names) { const v = r[n.toLowerCase()]; if (v) return v; } return ""; };
+// Finds a phone value under any heading containing "phone" or "mobile" (iVvy renames these between export types).
+const phoneOf = (r: Row) => col(r, "Phone", "Mobile", "Phone Number", "Contact Number", "Contact Phone", "Mobile Phone", "Phone (Mobile)", "Phone (Work)", "Work Phone", "Home Phone")
+  || Object.entries(r).find(([k, v]) => v && /phone|mobile/.test(k))?.[1] || "";
 const parseDate = (s: string) => { // "Saturday, 26 September 2026" or "26/09/2026" or "2026-09-26"
   const m = s.match(/(\d{1,2})\s+([A-Za-z]+)\s+(\d{4})/);
   if (m) {
