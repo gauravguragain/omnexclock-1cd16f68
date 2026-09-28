@@ -1527,6 +1527,7 @@ export type Database = {
           item_name: string
           menu_item_id: string | null
           notes: string | null
+          one_off_diet: string | null
           package_group_key: string | null
           price_per_head: number | null
           quantity: number
@@ -1547,6 +1548,7 @@ export type Database = {
           item_name: string
           menu_item_id?: string | null
           notes?: string | null
+          one_off_diet?: string | null
           package_group_key?: string | null
           price_per_head?: number | null
           quantity?: number
@@ -1567,6 +1569,7 @@ export type Database = {
           item_name?: string
           menu_item_id?: string | null
           notes?: string | null
+          one_off_diet?: string | null
           package_group_key?: string | null
           price_per_head?: number | null
           quantity?: number
