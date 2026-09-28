@@ -36,7 +36,8 @@ async function readRows(file: File): Promise<Record<string, unknown>[]> {
   const ws = wb.Sheets[wb.SheetNames.find(n => n !== "How to fill") || wb.SheetNames[0]];
   return XLSX.utils.sheet_to_json(ws, { defval: "" });
 }
-const col = (r: Record<string, unknown>, starts: string) => { const k = Object.keys(r).find(k => k.toLowerCase().startsWith(starts)); return k ? r[k] : ""; };
+const col = (r: Record<string, unknown>, starts: string) => { const k = Object.keys(r).find(k => k.trim().toLowerCase().replace(/\s+/g, " ").startsWith(starts)); return k ? r[k] : ""; };
+const drinkKind = (r: Record<string, unknown>) => { const k = Object.keys(r).find(k => /\b(kind|category|type)\b/i.test(k.trim())); return k ? norm(r[k]) : ""; };
 
 type Data = { business: { id: string } | null; books: Row[]; packages: Row[]; dishes: Row[]; drinks: Row[]; refresh: () => void };
 
@@ -55,7 +56,7 @@ export function MenuImportButton({ data: d }: { data: Data }) {
   const run = async (file: File) => {
     if (!d.business) return; const bid = d.business.id; setBusy(true); const log: string[] = [];
     try {
-      const rows = (await readRows(file)).map(r => ({ book: norm(col(r, "menu book")), pkg: norm(r[Object.keys(r).find(k => key(k) === "package") || "Package"]), type: key(col(r, "type")) === "beverage" ? "beverage" : "food", desc: norm(col(r, "package description")), course: norm(col(r, "course")) || "Menu", picks: num(col(r, "course total")) ?? num(col(r, "course picks")), veg: num(col(r, "veg picks")), nonveg: num(col(r, "non-veg picks")), item: norm(col(r, "item")), diet: key(col(r, "diet")), proteins: norm(col(r, "protein")), extra: num(col(r, "extra")) ?? 0, menuTitle: norm(col(r, "menu title")), style: norm(col(r, "style")), subtitle: norm(col(r, "subtitle")), price: num(col(r, "price per")), priceLabel: norm(col(r, "price shown")), minGuests: num(col(r, "min guest")), seafood: num(col(r, "seafood")), cnote: norm(col(r, "course breakdown")) })).filter(r => r.book && r.pkg && r.item);
+      const rows = (await readRows(file)).map(r => ({ book: norm(col(r, "menu book")), pkg: norm(r[Object.keys(r).find(k => key(k) === "package") || "Package"]), type: key(col(r, "type")) === "beverage" ? "beverage" : "food", desc: norm(col(r, "package description")), course: norm(col(r, "course")) || "Menu", picks: num(col(r, "course total")) ?? num(col(r, "course picks")), veg: num(col(r, "veg picks")), nonveg: num(col(r, "non-veg picks")), item: norm(col(r, "item")), diet: key(col(r, "diet")), dietRaw: norm(col(r, "diet")), proteins: norm(col(r, "protein")), extra: num(col(r, "extra")) ?? 0, menuTitle: norm(col(r, "menu title")), style: norm(col(r, "style")), subtitle: norm(col(r, "subtitle")), price: num(col(r, "price per")), priceLabel: norm(col(r, "price shown")), minGuests: num(col(r, "min guest")), seafood: num(col(r, "seafood")), cnote: norm(col(r, "course breakdown")) })).filter(r => r.book && r.pkg && r.item);
       if (!rows.length) throw new Error("No rows found. Make sure Menu book, Package and Item are filled.");
       const books = new Map(d.books.map(b => [key(b.name), b.id as string]));
       const dishes = new Map(d.dishes.map(x => [key(x.name), x.id as string]));
@@ -78,7 +79,7 @@ export function MenuImportButton({ data: d }: { data: Data }) {
           for (const it of items) {
             const map = bev ? drinks : dishes; let id = map.get(key(it.item));
             if (!id) {
-              const r = await (supabase.from((bev ? "crm_drinks" : "crm_dishes") as any) as any).insert({ business_id: bid, name: it.item, ...(bev ? { kind: it.diet === "hard" ? "hard" : "soft" } : { diet: it.diet.startsWith("sea") ? "seafood" : it.diet.startsWith("non") || it.diet === "meat" ? "nonveg" : "veg" }) }).select().single(); if (r.error) throw r.error;
+              const r = await (supabase.from((bev ? "crm_drinks" : "crm_dishes") as any) as any).insert({ business_id: bid, name: it.item, ...(bev ? { kind: it.dietRaw || "soft" } : { diet: it.diet.startsWith("sea") ? "seafood" : it.diet.startsWith("non") || it.diet === "meat" ? "nonveg" : "veg" }) }).select().single(); if (r.error) throw r.error;
               id = r.data.id as string; map.set(key(it.item), id);
             }
             inserts.push(bev ? { business_id: bid, course_id: cr.data.id, drink_id: id, extra_price_per_head: it.extra } : { business_id: bid, course_id: cr.data.id, dish_id: id, protein_options: it.proteins.split(",").map(s => s.trim()).filter(Boolean), extra_price_per_head: it.extra });
@@ -102,7 +103,7 @@ export function DrinksImportButton({ data: d }: { data: Data }) {
   const run = async (file: File) => {
     if (!d.business) return; setBusy(true); const log: string[] = [];
     try {
-      const rows = (await readRows(file)).map(r => ({ name: norm(col(r, "drink")), kind: norm(col(r, "kind")) || "soft", price: num(col(r, "price")) })).filter(r => r.name);
+      const rows = (await readRows(file)).map(r => ({ name: norm(col(r, "drink")) || norm(col(r, "name")), kind: drinkKind(r) || "soft", price: num(col(r, "price")) })).filter(r => r.name);
       if (!rows.length) throw new Error("No drinks found. Fill the Drink name column.");
       const existing = new Map(d.drinks.map(x => [key(x.name), x.id as string]));
       let added = 0, updated = 0;
