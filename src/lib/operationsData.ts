@@ -86,7 +86,7 @@ export async function loadOperations(bid: string, r: Range) {
       rows(db.from("employees").select("id,name,department,pay_rate,admin_hourly_rate,active").eq("business_id", bid)),
       rows(db.from("crm_leads").select("id,full_name,source,event_type,status,lead_kind,estimated_value,estimated_guest_count,created_at,preferred_dates,assigned_to,lost_reason,decline_reason").eq("business_id", bid)),
       rows(db.from("crm_bookings").select("id,lead_id,event_name,event_type,event_date,start_time,end_time,duration_minutes,guest_count,adults,kids,venue_space,total_amount,deposit_amount,deposit_paid,balance_due_date,status,booking_kind").eq("business_id", bid)),
-      rows(db.from("crm_payments").select("booking_id,amount,payment_type").eq("business_id", bid)),
+      rows(db.from("crm_payments").select("booking_id,amount").eq("business_id", bid)),
       rows(db.from("crm_inspections").select("id,status,starts_at,proposed_at").eq("business_id", bid)),
       rows(db.from("crm_tasks").select("id,title,status,due_at,priority").eq("business_id", bid)),
       rows(db.from("fsl_entries").select("id,form_id,entry_date,status,out_of_range,staff_name,created_at").eq("business_id", bid).gte("entry_date", r.from).lte("entry_date", r.to)),
@@ -140,13 +140,12 @@ export async function loadOperations(bid: string, r: Range) {
   const cateringRevenue = sum(cater, b => b.total_amount) + cateringDeliveriesRevenue;
   const revenue = eventRevenue + cateringRevenue;
   const guests = sum(inRange, b => b.guest_count || (Number(b.adults || 0) + Number(b.kids || 0))) + sum(catering, c => c.number_of_guests);
-  const rangeBookingIds = new Set(inRange.map((b: any) => b.id));
-  const depositsCollected = sum((payments as any[]).filter(p => rangeBookingIds.has(p.booking_id) && p.payment_type === "deposit"), p => p.amount);
   // Outstanding balance: totals are often unknown when a deposit is taken, so only bookings with a
   // real total contribute, and everything actually paid (all payment records, not just the deposit)
   // is subtracted. A booking can never contribute less than $0.
   const paidByBooking: Record<string, number> = {};
   (payments as any[]).forEach(p => { if (p.booking_id) paidByBooking[p.booking_id] = (paidByBooking[p.booking_id] || 0) + (Number(p.amount) || 0); });
+  const depositsCollected = sum(inRange, (b: any) => Math.min(Math.max(0, paidByBooking[b.id] || 0), Math.max(0, Number(b.deposit_amount || 0))));
   const balanceOf = (b: any) => Math.max(0, Number(b.total_amount || 0) - (paidByBooking[b.id] || 0));
   const upcomingBookings = live.filter((b: any) => b.event_date >= today);
   const outstandingBalance = sum(upcomingBookings, balanceOf);
