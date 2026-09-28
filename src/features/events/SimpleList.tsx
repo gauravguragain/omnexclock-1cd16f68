@@ -36,6 +36,8 @@ export default function SimpleList({ title, subtitle, table, businessId, rows, f
   const setActive = async (r: Row, active: boolean) => { const { error } = await (supabase.from(table as any) as any).update({ active }).eq("id", r.id); if (error) toast.error(error.message); else refresh(); };
   const remove = async (r: Row) => { if (!confirm(`Delete ${r[nameKey]}?`)) return; const { error } = await (supabase.from(table as any) as any).delete().eq("id", r.id); if (error) toast.error(error.message); else refresh(); };
   const count = (s: string) => rows.filter(r => s === "all" || (s === "active" ? r.active !== false : r.active === false)).length;
+  const groupKey = groupAZ ? Object.entries(shown.reduce<Record<string, Row[]>>((a, r) => { const k = String(r[nameKey] || "#")[0].toUpperCase(); (a[k] ||= []).push(r); return a; }, {})).sort() : [["", shown] as [string, Row[]]];
+  const labelFor = (k: string) => (groupLabel ? groupLabel(k) : k);
   const groups = useMemo<[string, Row[]][]>(() => {
     if (groupBy) {
       const map = new Map<string, Row[]>();
@@ -45,8 +47,8 @@ export default function SimpleList({ title, subtitle, table, businessId, rows, f
       for (const [, list] of entries) list.sort((a, b) => String(a[nameKey] || "").localeCompare(String(b[nameKey] || "")));
       return entries;
     }
-    return groupAZ ? Object.entries(shown.reduce<Record<string, Row[]>>((a, r) => { const k = String(r[nameKey] || "#")[0].toUpperCase(); (a[k] ||= []).push(r); return a; }, {})).sort() : [["", shown] as [string, Row[]]];
-  }, [shown, groupBy, groupOrder, groupAZ, nameKey]);
+    return groupKey;
+  }, [shown, groupBy, groupOrder, groupAZ, nameKey, groupKey]);
 
   return <div className="space-y-5">
     <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
