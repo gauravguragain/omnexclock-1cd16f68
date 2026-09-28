@@ -85,8 +85,8 @@ const overline = (t: string) => `<p style="margin:0;color:${GOLD};font-family:${
 function itemsTable(items: MenuItem[], dotted = false): string {
   if (dotted) {
     const rows = items.map((it) => `<tr>
-      <td valign="bottom" style="padding:6px 0;font-family:${SERIF};font-size:14px;color:${INK};line-height:1.4;">${esc(it.name)}${it.note ? `<br><span style="color:${MUTED};font-family:${SANS};font-size:11px;font-style:italic;">${esc(it.note)}</span>` : ""}</td>
-      <td valign="bottom" style="padding:6px 4px;width:100%;"><div style="border-bottom:1px dotted ${GOLD_SOFT};height:1em;"></div></td>
+      <td valign="bottom" style="padding:6px 0;width:62%;font-family:${SERIF};font-size:14px;color:${INK};line-height:1.4;">${esc(it.name)}${it.note ? `<br><span style="color:${MUTED};font-family:${SANS};font-size:11px;font-style:italic;">${esc(it.note)}</span>` : ""}</td>
+      <td valign="bottom" style="padding:6px 4px;"><div style="border-bottom:1px dotted ${GOLD_SOFT};height:1em;"></div></td>
       <td valign="bottom" style="padding:6px 0 6px 4px;white-space:nowrap;text-align:right;color:${GOLD};font-family:${SERIF};font-size:14px;font-weight:600;">${it.price != null && !isNaN(Number(it.price)) ? money(Number(it.price)) : ""}</td>
     </tr>`);
     return `<table role="presentation" style="width:100%;border-collapse:collapse;margin:4px 0 8px;">${rows.join("")}</table>`;
