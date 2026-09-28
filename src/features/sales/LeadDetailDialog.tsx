@@ -38,7 +38,7 @@ export function LeadDetailView({ lead, open, initialTab, options, interactions, 
   const [menuLoaded,setMenuLoaded]=useState(false); const [menuSaving,setMenuSaving]=useState(false); const [menuDirty,setMenuDirty]=useState(false);
   const draftKey=lead?.id?`menu-draft:${lead.id}`:"";
   const restoreDraft=(serverUpdatedAt:string|null)=>{if(!draftKey)return;try{const raw=localStorage.getItem(draftKey);if(!raw)return;const d=JSON.parse(raw);const serverTime=serverUpdatedAt?Date.parse(serverUpdatedAt):0;if(!d?.savedAt||d.savedAt<=serverTime){localStorage.removeItem(draftKey);return;}setSelectedMenu(d.selectedMenu||[]);setCustomItems(d.customItems||[]);setDishes(d.dishes||[]);setKids({...{enabled:false,count:"",price:"",countU5:"",priceU5:""},...(d.kids||{})});setManual(d.manual||[]);setLiveStalls(d.liveStalls||[]);setStallsRequired(!!d.stallsRequired);setCorkage(d.corkage||{enabled:false,perHead:"",flat:""});setCorkageNote(d.corkageNote||"");setExtras(d.extras||{dietary:"",allergies:"",beverage:""});setBeverageChoice(d.beverageChoice||"");setBevPrice(d.bevPrice||{perHead:"",flat:""});if(d.guestOverride!=null)setGuestOverride(d.guestOverride);setMenuDirty(true);toast.info("Restored your unsaved menu changes — click Save menu selection to keep them.");}catch{/* ignore bad draft */}};
-  const { payments } = usePayments(lead?.business_id, booking?.id);
+  const { payments } = usePayments(lead?.business_id, booking?.id ?? null);
   const received = payments.reduce((sum,p)=>sum+Number(p.amount||0),0);
   const timeToMin=(t:string)=>{const[h,m]=t.split(":").map(Number);return h*60+m;};
   const minToTime=(m:number)=>{const hh=Math.floor(m/60)%24;const mm=m%60;return `${String(hh).padStart(2,"0")}:${String(mm).padStart(2,"0")}`;};
