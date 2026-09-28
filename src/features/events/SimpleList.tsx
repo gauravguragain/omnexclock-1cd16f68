@@ -1,4 +1,4 @@
-import { FormEvent, ReactNode, useMemo, useState } from "react";
+import { FormEvent, ReactNode, useDeferredValue, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -20,9 +20,11 @@ export default function SimpleList({ title, subtitle, table, businessId, rows, f
 }) {
   const [search, setSearch] = useState(""); const [status, setStatus] = useState("active"); const [filter, setFilter] = useState("all");
   const [editing, setEditing] = useState<Row | null>(null); const [open, setOpen] = useState(false);
+  const q = useDeferredValue(search).toLowerCase();
+  const hay = useMemo(() => new Map(rows.map(r => [r, JSON.stringify(r).toLowerCase()])), [rows]);
   const shown = useMemo(() => rows.filter(r => (!archivable || status === "all" || (status === "active" ? r.active !== false : r.active === false))
     && (!filterKey || filter === "all" || r[filterKey] === filter)
-    && JSON.stringify(r).toLowerCase().includes(search.toLowerCase())), [rows, search, status, filter, archivable, filterKey]);
+    && (!q || (hay.get(r) || "").includes(q))), [rows, q, hay, status, filter, archivable, filterKey]);
   const save = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault(); const f = new FormData(e.currentTarget); const values: Row = {};
     fields.forEach(fd => { const v = f.get(fd.key); values[fd.key] = fd.type === "number" ? (v ? Number(v) : null) : fd.type === "tags" ? String(v || "").split(",").map(s => s.trim()).filter(Boolean) : (v ? String(v) : null); });
