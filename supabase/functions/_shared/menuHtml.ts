@@ -57,7 +57,22 @@ export function buildSectionsFromRows(d: MenuRows, packageIds: string[] | null, 
   if (includeDrinks && d.drinks) {
     const active = d.drinks.filter((x) => x.active !== false);
     const kindLabel = (k: string) => k === "soft" ? "Soft drinks" : k === "hard" ? "Beer, wine & spirits" : k.replace(/\b\p{L}/gu, (c) => c.toUpperCase());
-    const kinds = [...new Set(active.map((x) => String(x.kind || "soft").trim() || "soft"))].sort((a, b) => (a === "soft" ? -1 : b === "soft" ? 1 : a === "hard" ? -1 : b === "hard" ? 1 : a.localeCompare(b)));
+    const KIND_ORDER = ["beer", "cocktail", "ready to serve", "wine", "whiskey", "gin", "vodka", "tequila"];
+    const kindRank = (k: string) => {
+      const l = k.toLowerCase();
+      const i = KIND_ORDER.findIndex((o) => l.includes(o));
+      return i === -1 ? KIND_ORDER.length : i;
+    };
+    const kinds = [...new Set(active.map((x) => String(x.kind || "soft").trim() || "soft"))].sort((a, b) => {
+      const ra = kindRank(a), rb = kindRank(b);
+      if (ra !== rb) return ra - rb;
+      if (ra < KIND_ORDER.length) return a.localeCompare(b);
+      if (a === "soft") return 1;
+      if (b === "soft") return -1;
+      if (a === "hard") return 1;
+      if (b === "hard") return -1;
+      return a.localeCompare(b);
+    });
     const groups = kinds.map((k) => ({ label: kindLabel(k), items: active.filter((x) => (String(x.kind || "soft").trim() || "soft") === k).map((x) => ({ name: x.name, price: x.price != null ? Number(x.price) : null })) })).filter((g) => g.items.length);
     if (groups.length) out.push({ kind: "drinks", title: "Drinks list", menuTitle: "Drinks", styleLabel: "Bar · Beverages", courses: [{ name: "Beverages", groups }] });
   }
