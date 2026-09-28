@@ -1,3 +1,4 @@
+import { OutletSuspense } from "@/components/OutletFallback";
 import { useAuth } from "@/contexts/AuthContext";
 import { useBusiness } from "@/contexts/BusinessContext";
 import { Badge } from "@/components/ui/badge";
@@ -324,7 +325,7 @@ export default function AdminLayout() {
         </header>
         {/* Content — scrollable below fixed header */}
         <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden overscroll-y-contain p-3 lg:p-6 page-enter has-bottom-nav lg:pb-6 scroll-native">
-          <Outlet />
+          <OutletSuspense><Outlet /></OutletSuspense>
         </div>
       </main>
 
