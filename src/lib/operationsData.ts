@@ -80,11 +80,12 @@ export async function loadOperations(bid: string, r: Range) {
   const fromTs = new Date(r.from + "T00:00:00+10:00").toISOString();
   const toTs = new Date(addDays(r.to, 1) + "T00:00:00+10:00").toISOString();
 
-  const [employees, leadsAll, bookings, inspections, tasks, fslEntries, fslForms, maint, docs, invOrders, barOrders, catering, contractorInv] =
+  const [employees, leadsAll, bookings, payments, inspections, tasks, fslEntries, fslForms, maint, docs, invOrders, barOrders, catering, contractorInv] =
     await Promise.all([
       rows(db.from("employees").select("id,name,department,pay_rate,admin_hourly_rate,active").eq("business_id", bid)),
       rows(db.from("crm_leads").select("id,full_name,source,event_type,status,lead_kind,estimated_value,estimated_guest_count,created_at,preferred_dates,assigned_to,lost_reason,decline_reason").eq("business_id", bid)),
       rows(db.from("crm_bookings").select("id,lead_id,event_name,event_type,event_date,start_time,end_time,duration_minutes,guest_count,adults,kids,venue_space,total_amount,deposit_amount,deposit_paid,balance_due_date,status,booking_kind").eq("business_id", bid)),
+      rows(db.from("crm_payments").select("booking_id,amount").eq("business_id", bid)),
       rows(db.from("crm_inspections").select("id,status,starts_at,proposed_at").eq("business_id", bid)),
       rows(db.from("crm_tasks").select("id,title,status,due_at,priority").eq("business_id", bid)),
       rows(db.from("fsl_entries").select("id,form_id,entry_date,status,out_of_range,staff_name,created_at").eq("business_id", bid).gte("entry_date", r.from).lte("entry_date", r.to)),
@@ -139,8 +140,15 @@ export async function loadOperations(bid: string, r: Range) {
   const revenue = eventRevenue + cateringRevenue;
   const guests = sum(inRange, b => b.guest_count || (Number(b.adults || 0) + Number(b.kids || 0))) + sum(catering, c => c.number_of_guests);
   const depositsCollected = sum(inRange.filter((b: any) => b.deposit_paid), b => b.deposit_amount);
-  const outstandingBalance = sum(live.filter((b: any) => b.event_date >= today), b => Number(b.total_amount || 0) - (b.deposit_paid ? Number(b.deposit_amount || 0) : 0));
-  const overdueBalances = live.filter((b: any) => b.balance_due_date && b.balance_due_date < today && b.event_date >= addDays(today, -60) && b.status !== "completed" && b.status !== "paid");
+  // Outstanding balance: totals are often unknown when a deposit is taken, so only bookings with a
+  // real total contribute, and everything actually paid (all payment records, not just the deposit)
+  // is subtracted. A booking can never contribute less than $0.
+  const paidByBooking: Record<string, number> = {};
+  (payments as any[]).forEach(p => { if (p.booking_id) paidByBooking[p.booking_id] = (paidByBooking[p.booking_id] || 0) + (Number(p.amount) || 0); });
+  const balanceOf = (b: any) => Math.max(0, Number(b.total_amount || 0) - (paidByBooking[b.id] || 0));
+  const upcoming = live.filter((b: any) => b.event_date >= today);
+  const outstandingBalance = sum(upcoming, balanceOf);
+  const overdueBalances = live.filter((b: any) => b.balance_due_date && b.balance_due_date < today && b.event_date >= addDays(today, -60) && b.status !== "completed" && b.status !== "paid" && balanceOf(b) > 0);
   const cancelledInRange = bookings.filter((b: any) => CLOSED_BOOKING.includes((b.status || "").toLowerCase()) && b.event_date >= r.from && b.event_date <= r.to).length;
 
   // trend buckets: daily if <=45 days, else monthly
