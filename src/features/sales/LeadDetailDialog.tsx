@@ -34,6 +34,9 @@ export function LeadDetailView({ lead, open, initialTab, options, interactions, 
   const [tab,setTab]=useState(initialTab||"timeline");
     const [adults,setAdults]=useState(""); const [kids5To10,setKids5To10]=useState(""); const [kidsUnder5,setKidsUnder5]=useState(""); const [savedEstimate,setSavedEstimate]=useState<number|null>(null); const [bookDeposit,setBookDeposit]=useState("");
   const [hasSelection,setHasSelection]=useState(false); const [stakeCount,setStakeCount]=useState(0); const [runsheetCount,setRunsheetCount]=useState(0);
+  const [menuLoaded,setMenuLoaded]=useState(false); const [menuSaving,setMenuSaving]=useState(false); const [menuDirty,setMenuDirty]=useState(false);
+  const draftKey=lead?.id?`menu-draft:${lead.id}`:"";
+  const restoreDraft=(serverUpdatedAt:string|null)=>{if(!draftKey)return;try{const raw=localStorage.getItem(draftKey);if(!raw)return;const d=JSON.parse(raw);const serverTime=serverUpdatedAt?Date.parse(serverUpdatedAt):0;if(!d?.savedAt||d.savedAt<=serverTime){localStorage.removeItem(draftKey);return;}setSelectedMenu(d.selectedMenu||[]);setCustomItems(d.customItems||[]);setDishes(d.dishes||[]);setKids(d.kids||{enabled:false,count:"",price:""});setManual(d.manual||[]);setLiveStalls(d.liveStalls||[]);setStallsRequired(!!d.stallsRequired);setCorkage(d.corkage||{enabled:false,perHead:"",flat:""});setExtras(d.extras||{dietary:"",allergies:"",beverage:""});setBeverageChoice(d.beverageChoice||"");setBevPrice(d.bevPrice||{perHead:"",flat:""});if(d.guestOverride!=null)setGuestOverride(d.guestOverride);setMenuDirty(true);toast.info("Restored your unsaved menu changes — click Save menu selection to keep them.");}catch{/* ignore bad draft */}};
   const { payments } = usePayments(lead?.business_id, booking?.id);
   const received = payments.reduce((sum,p)=>sum+Number(p.amount||0),0);
   const timeToMin=(t:string)=>{const[h,m]=t.split(":").map(Number);return h*60+m;};
@@ -62,14 +65,15 @@ export function LeadDetailView({ lead, open, initialTab, options, interactions, 
   const dishCategories=new Set(Object.values(COURSE_CATEGORY));
   const groupedMenu=useMemo(()=>{const map=new Map<string,any[]>();menuItems.filter(i=>!dishCategories.has(i.category)).forEach(i=>{const key=i.category||"Other";map.set(key,[...(map.get(key)||[]),i]);});return Array.from(map.entries());},[menuItems]);
   useEffect(()=>{if(!lead?.id||!open)return;let cancelled=false;(async()=>{
-     setHasSelection(false);setSavedEstimate(null);
-    const{data:sel}=await supabase.from("crm_menu_selections").select("*").eq("lead_id",lead.id).maybeSingle();
-     if(cancelled||!sel)return;const s:any=sel;setHasSelection(true);setSavedEstimate(Number(s.total_estimate||0));
+     setHasSelection(false);setSavedEstimate(null);setMenuLoaded(false);setMenuDirty(false);
+    const{data:sel,error:selErr}=await supabase.from("crm_menu_selections").select("*").eq("lead_id",lead.id).maybeSingle();
+     if(cancelled)return;if(selErr){toast.error("Could not load the saved menu — please refresh before editing.");return;}
+     if(!sel){restoreDraft(null);setMenuLoaded(true);return;}const s:any=sel;setHasSelection(true);setSavedEstimate(Number(s.total_estimate||0));
     if(s.guest_count)setGuestOverride(Number(s.guest_count));
     setCorkage({enabled:!!s.corkage_enabled,perHead:s.corkage_per_head!=null?String(s.corkage_per_head):"",flat:s.corkage_flat!=null?String(s.corkage_flat):""});
     setExtras({dietary:s.dietary_requirements||"",allergies:s.allergies||"",beverage:s.beverage_package||""});setBeverageChoice(s.beverage_package||"");setBevPrice({perHead:"",flat:""});
-    const{data:items}=await supabase.from("crm_menu_selection_items").select("*").eq("selection_id",s.id);
-    if(cancelled)return;const rows:any[]=items||[];
+    const{data:items,error:itemsErr}=await supabase.from("crm_menu_selection_items").select("*").eq("selection_id",s.id);
+    if(cancelled)return;if(itemsErr){toast.error("Could not load the saved menu items — please refresh before editing.");return;}const rows:any[]=items||[];
     setSelectedMenu(rows.filter(i=>i.menu_item_id).map(i=>i.menu_item_id));
     const packageRows=rows.filter(i=>!i.menu_item_id&&i.course==="package");setCustomItems(packageRows.map((i,n)=>({key:i.package_group_key||`l${n}`,name:i.item_name,pricePerHead:Number(i.price_per_head||0),flatPrice:Number(i.flat_price||0),pkgId:i.source_package_id||undefined,bookId:bookPackages.find((p:any)=>p.id===i.source_package_id)?.book_id})));
     const stalls=rows.filter(i=>i.course==="live_stall").map((i,n)=>({key:`v${n}`,name:i.item_name,pricePerHead:Number(i.price_per_head||0),flatPrice:Number(i.flat_price||0),startTime:String(i.service_start_time||"17:30").slice(0,5),endTime:String(i.service_end_time||"18:30").slice(0,5)}));
@@ -78,7 +82,14 @@ export function LeadDetailView({ lead, open, initialTab, options, interactions, 
     setManual(rows.filter(i=>i.course==="manual").map((i,n)=>({key:`m${n}`,name:i.item_name,pricePerHead:Number(i.price_per_head||0),flatPrice:Number(i.flat_price||0)})));
     const bev=rows.find(i=>i.course==="beverage");if(bev)setBevPrice({perHead:bev.price_per_head!=null?String(bev.price_per_head):"",flat:bev.flat_price!=null?String(bev.flat_price):""});
      setDishes(rows.filter(i=>!i.menu_item_id&&i.course&&!["package","live_stall","kids_package","manual","beverage"].includes(i.course)).map((i,n)=>({key:`d${n}`,course:i.course,name:i.selected_protein&&i.item_name.endsWith(` (${i.selected_protein})`)?i.item_name.slice(0,-(` (${i.selected_protein})`.length)):i.item_name,pricePerHead:Number(i.price_per_head||0),pkg:i.package_group_key||undefined,courseId:i.source_course_id||undefined,dishId:i.source_dish_id||undefined,protein:i.selected_protein||undefined,notes:i.notes||undefined,oneOff:!!i.source_course_id&&!i.source_dish_id,diet:i.one_off_diet||undefined})));
+     restoreDraft(s.updated_at||null);setMenuLoaded(true);
   })();return()=>{cancelled=true;};},[lead?.id,open,menuReload,bookPackages]);
+  // Autosave an in-progress menu locally so nothing is lost if the window closes, the page reloads or saving fails.
+  useEffect(()=>{if(!menuLoaded||!draftKey)return;const snapshot={selectedMenu,customItems,dishes,kids,manual,liveStalls,stallsRequired,corkage,extras,beverageChoice,bevPrice,guestOverride};const t=setTimeout(()=>{const sig=JSON.stringify(snapshot);if((window as any).__menuSig?.[draftKey]===undefined){(window as any).__menuSig={...((window as any).__menuSig||{}),[draftKey]:sig};return;}if((window as any).__menuSig[draftKey]===sig)return;(window as any).__menuSig[draftKey]=sig;try{localStorage.setItem(draftKey,JSON.stringify({...snapshot,savedAt:Date.now()}));setMenuDirty(true);}catch{/* storage full */}},400);return()=>clearTimeout(t);},[menuLoaded,draftKey,selectedMenu,customItems,dishes,kids,manual,liveStalls,stallsRequired,corkage,extras,beverageChoice,bevPrice,guestOverride]);
+  useEffect(()=>{if(!menuDirty)return;const h=(e:BeforeUnloadEvent)=>{e.preventDefault();e.returnValue="";};window.addEventListener("beforeunload",h);return()=>window.removeEventListener("beforeunload",h);},[menuDirty]);
+  // Kids menu pulls the two age groups from the Confirmation tab.
+  const confirmKids=(Number(kids5To10)||0)+(Number(kidsUnder5)||0);
+  useEffect(()=>{if(kids.enabled&&kids.count===""&&confirmKids>0)setKids(v=>({...v,count:String(confirmKids)}));},[kids.enabled,confirmKids]);
   if(!lead)return null;
    const legacyKids=booking?.kids_5_to_10==null&&booking?.kids_under_5==null?Number(booking?.kids||0):0;
    const confirmedGuests=(Number(adults)||0)+(Number(kids5To10)||0)+(Number(kidsUnder5)||0)+(kids5To10===""&&kidsUnder5===""?legacyKids:0)||Number(booking?.guest_count||lead.estimated_guest_count||1);
