@@ -64,9 +64,17 @@ export function RecordPaymentDialog({ open, onOpenChange, booking, bookings, sug
 }) {
   const [form, setForm] = useState({ booking_id: "", amount: "", paid_on: sydneyToday(), payment_type: "deposit", method: "bank_transfer", reference: "", notes: "" });
   const [saving, setSaving] = useState(false);
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const [search, setSearch] = useState("");
   useEffect(() => {
-    if (open) setForm({ booking_id: booking?.id || "", amount: suggested && suggested.amount > 0 ? String(suggested.amount) : "", paid_on: sydneyToday(), payment_type: suggested?.type || "deposit", method: "bank_transfer", reference: "", notes: "" });
+    if (open) { setForm({ booking_id: booking?.id || "", amount: suggested && suggested.amount > 0 ? String(suggested.amount) : "", paid_on: sydneyToday(), payment_type: suggested?.type || "deposit", method: "bank_transfer", reference: "", notes: "" }); setSearch(""); }
   }, [open]);
+  const sortedBookings = useMemo(() => sortUpcomingFirst(bookings || []), [bookings]);
+  const filteredBookings = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return sortedBookings;
+    return sortedBookings.filter(b => bookingLabel(b).toLowerCase().includes(q));
+  }, [sortedBookings, search]);
   const target = booking || bookings?.find(b => b.id === form.booking_id);
   const save = async () => {
     const amt = Number(form.amount);
