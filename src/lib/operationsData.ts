@@ -192,7 +192,12 @@ export async function loadOperations(bid: string, r: Range) {
     const t = pretty(typeOf(b));
     return lead?.full_name ? (t ? `${t} – ${lead.full_name}` : lead.full_name) : "";
   };
-  const upcoming = live.filter((b: any) => b.event_date >= today && b.event_date <= addDays(today, 30)).sort((a: any, b: any) => a.event_date.localeCompare(b.event_date)).map((b: any) => ({ ...b, event_name: nameOf(b), event_type_display: pretty(typeOf(b)) }));
+  const upcoming = live.filter((b: any) => b.event_date >= today && b.event_date <= addDays(today, 30)).sort((a: any, b: any) => a.event_date.localeCompare(b.event_date)).map((b: any) => {
+    const lead = b.lead_id ? leadById[b.lead_id] : null;
+    const t = pretty(typeOf(b));
+    const label = lead?.full_name ? (t ? `${t} – ${lead.full_name}` : lead.full_name) : (b.event_name || "");
+    return { ...b, event_name: nameOf(b), event_type_display: t, event_label: label };
+  });
 
 
   const inspInRange = inspections.filter((i: any) => { const d = i.starts_at || i.proposed_at; if (!d) return false; const s = sydDate(d); return s >= r.from && s <= r.to; });
