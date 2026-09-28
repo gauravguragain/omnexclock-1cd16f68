@@ -371,7 +371,9 @@ export default function RunsheetTab({ lead, booking, options, onSaved }: {
             <div key={row.key} className="grid gap-2 sm:grid-cols-[9rem_auto_9rem_1fr_1.4fr_auto] sm:items-center">
               <TimeDropdownPicker value={row.time || startTime} onChange={(value) => setSchedule((v) => v.map((r, i) => (i === index ? { ...r, time: value } : r)))} />
               <span className="hidden text-center text-xs text-muted-foreground sm:block">to</span>
-              <TimeDropdownPicker value={row.end || row.time || startTime} onChange={(value) => setSchedule((v) => v.map((r, i) => (i === index ? { ...r, end: value } : r)))} />
+              {row.end
+                ? <div className="flex items-center gap-1"><TimeDropdownPicker value={row.end} onChange={(value) => setSchedule((v) => v.map((r, i) => (i === index ? { ...r, end: value } : r)))} /><button type="button" aria-label="Remove end time" className="text-xs text-muted-foreground hover:text-destructive" onClick={() => setSchedule((v) => v.map((r, i) => (i === index ? { ...r, end: undefined } : r)))}>×</button></div>
+                : <Button type="button" variant="outline" size="sm" className="h-10" onClick={() => setSchedule((v) => v.map((r, i) => (i === index ? { ...r, time: r.time || startTime, end: minutesToTime(timeToMinutes(r.time || startTime) + 30) } : r)))}>+ End time</Button>}
               <select
                 value={courseOptions.includes(row.label) ? row.label : "__custom__"}
                 onChange={(event) => { const value = event.target.value; setSchedule((v) => v.map((r, i) => (i === index ? { ...r, label: value === "__custom__" ? "" : value } : r))); }}
