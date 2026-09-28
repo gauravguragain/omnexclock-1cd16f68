@@ -142,6 +142,7 @@ export default function IvvyImportDialog({ open, onOpenChange, businessId, onDon
       if (ids.length) { for (let i = 0; i < ids.length; i += BATCH) { const { error } = await retry(() => supabase.from("crm_payments").delete().in("booking_id", ids.slice(i, i + BATCH)).eq("reference", "Spreadsheet import")); if (error) throw error; } }
       const payRows = paid.map(c => ({ business_id: businessId, booking_id: bookingId[c.ref], amount: c.deposit, paid_on: c.date || today, payment_type: "deposit", method: "other", reference: "Spreadsheet import", notes: `Deposit: ${c.depositRaw}` }));
       for (let i = 0; i < payRows.length; i += BATCH) { const { error } = await retry(() => supabase.from("crm_payments").insert(payRows.slice(i, i + BATCH) as any)); if (error) throw error; }
+      await supabase.rpc("crm_merge_first_name_contacts" as any, { _business_id: businessId });
       toast.success(`Imported ${leadRows.length} clients, ${bookingRows.length} bookings and ${payRows.length} deposits.`); if (clashes) toast.warning(`${clashes} imported booking(s) clash with another booking in the same hall — check the "⚠ Venue clash" note on each.`, { duration: 12000 });
       setClients([]); onOpenChange(false); onDone();
     } catch (e: any) { toast.error(e.message || "Import failed"); }
@@ -234,7 +235,8 @@ export default function IvvyImportDialog({ open, onOpenChange, businessId, onDon
         const { error } = await retry(() => supabase.from("crm_payments").insert(paymentRows.slice(i, i + BATCH) as any));
         if (error) throw error;
       }
-      toast.success(`Imported ${leadRows.length} leads, ${bookingRows.length} bookings and ${paymentRows.length} payments from iVvy.`); if (clashes) toast.warning(`${clashes} imported booking(s) clash with another booking in the same hall — check the "⚠ Venue clash" note on each.`, { duration: 12000 });
+      const { data: mergedCount } = await supabase.rpc("crm_merge_first_name_contacts" as any, { _business_id: businessId });
+      toast.success(`Imported ${leadRows.length} leads, ${bookingRows.length} bookings and ${paymentRows.length} payments from iVvy.${Number(mergedCount) > 0 ? ` Merged ${mergedCount} duplicate contact(s).` : ""}`); if (clashes) toast.warning(`${clashes} imported booking(s) clash with another booking in the same hall — check the "⚠ Venue clash" note on each.`, { duration: 12000 });
       setItems([]); onOpenChange(false); onDone();
     } catch (e: any) { toast.error(e.message || "Import failed"); }
     finally { setBusy(false); setProgress(""); }
