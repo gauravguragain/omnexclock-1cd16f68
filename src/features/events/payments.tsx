@@ -93,8 +93,31 @@ export function RecordPaymentDialog({ open, onOpenChange, booking, bookings, sug
   const set = (k: string, v: string) => setForm(f => ({ ...f, [k]: v }));
   return <Dialog open={open} onOpenChange={onOpenChange}><DialogContent className="max-w-md"><DialogHeader><DialogTitle>Record payment</DialogTitle></DialogHeader>
     <div className="space-y-3">
-      {!booking && <div><Label>Booking</Label><Select value={form.booking_id} onValueChange={v => set("booking_id", v)}><SelectTrigger><SelectValue placeholder="Choose a booking" /></SelectTrigger>
-        <SelectContent>{sortUpcomingFirst(bookings || []).map(b => <SelectItem key={b.id} value={b.id}>{b.event_date ? format(new Date(b.event_date + "T00:00"), "d MMM yyyy") : ""} · {[b.client_name, b.event_name || b.event_type].filter(Boolean).join(" — ") || "Booking"}</SelectItem>)}</SelectContent></Select></div>}
+      {!booking && <div><Label>Booking</Label>
+        <Popover open={pickerOpen} onOpenChange={o => { setPickerOpen(o); if (o) setSearch(""); }}>
+          <PopoverTrigger asChild>
+            <Button type="button" variant="outline" role="combobox" aria-expanded={pickerOpen} className="w-full justify-between font-normal">
+              <span className="truncate">{target ? bookingLabel(target) : "Choose a booking"}</span>
+              <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start">
+            <Command shouldFilter={false}>
+              <CommandInput placeholder="Search bookings by name, event or date…" value={search} onValueChange={setSearch} />
+              <CommandList>
+                {filteredBookings.length === 0 ? <CommandEmpty>No bookings match “{search}”.</CommandEmpty> :
+                  <CommandGroup>
+                    {filteredBookings.map(b => (
+                      <CommandItem key={b.id} value={b.id} onSelect={() => { set("booking_id", b.id); setPickerOpen(false); setSearch(""); }}>
+                        <span className="truncate">{bookingLabel(b)}</span>
+                      </CommandItem>
+                    ))}
+                  </CommandGroup>}
+              </CommandList>
+            </Command>
+          </PopoverContent>
+        </Popover>
+      </div>}
       <div className="grid grid-cols-2 gap-3">
         <div><Label>Type</Label><Select value={form.payment_type} onValueChange={v => set("payment_type", v)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{Object.entries(PAYMENT_TYPES).map(([k, v]) => <SelectItem key={k} value={k}>{v}</SelectItem>)}</SelectContent></Select></div>
         <div><Label>Amount (AUD)</Label><Input type="number" inputMode="decimal" min="0" step="0.01" value={form.amount} onChange={e => set("amount", e.target.value)} /></div>
