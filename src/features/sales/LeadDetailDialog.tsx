@@ -1,4 +1,4 @@
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import MenuBookPicker from "./MenuBookPicker";
 import GuestMenuLinkCard from "./GuestMenuLinkCard";
 import LeadMenuShareButton from "../events/LeadMenuShareButton";
@@ -87,7 +87,7 @@ export function LeadDetailView({ lead, open, initialTab, options, interactions, 
   // Fill in menu-book links once packages finish loading, without reloading (and overwriting) the menu.
   useEffect(()=>{bookPackagesRef.current=bookPackages;if(bookPackages.length)setCustomItems(items=>items.some(i=>i.pkgId&&!i.bookId)?items.map(i=>i.pkgId&&!i.bookId?{...i,bookId:bookPackages.find((p:any)=>p.id===i.pkgId)?.book_id}:i):items);},[bookPackages]);
   // Autosave an in-progress menu locally so nothing is lost if the window closes, the page reloads or saving fails.
-  useEffect(()=>{if(!menuLoaded||!draftKey)return;const snapshot={selectedMenu,customItems,dishes,kids,manual,liveStalls,stallsRequired,corkage,extras,beverageChoice,bevPrice,guestOverride};const t=setTimeout(()=>{const sig=JSON.stringify(snapshot);if((window as any).__menuSig?.[draftKey]===undefined){(window as any).__menuSig={...((window as any).__menuSig||{}),[draftKey]:sig};return;}if((window as any).__menuSig[draftKey]===sig)return;(window as any).__menuSig[draftKey]=sig;try{localStorage.setItem(draftKey,JSON.stringify({...snapshot,savedAt:Date.now()}));setMenuDirty(true);}catch{/* storage full */}},400);return()=>clearTimeout(t);},[menuLoaded,draftKey,selectedMenu,customItems,dishes,kids,manual,liveStalls,stallsRequired,corkage,extras,beverageChoice,bevPrice,guestOverride]);
+  useEffect(()=>{if(!menuLoaded||!draftKey)return;const snapshot={selectedMenu,customItems,dishes,kids,manual,liveStalls,stallsRequired,corkage,extras,beverageChoice,bevPrice,guestOverride};const t=setTimeout(()=>{const sig=JSON.stringify({...snapshot,customItems:customItems.map(({bookId,...i}:any)=>i)});if((window as any).__menuSig?.[draftKey]===undefined){(window as any).__menuSig={...((window as any).__menuSig||{}),[draftKey]:sig};return;}if((window as any).__menuSig[draftKey]===sig)return;(window as any).__menuSig[draftKey]=sig;try{localStorage.setItem(draftKey,JSON.stringify({...snapshot,savedAt:Date.now()}));setMenuDirty(true);}catch{/* storage full */}},400);return()=>clearTimeout(t);},[menuLoaded,draftKey,selectedMenu,customItems,dishes,kids,manual,liveStalls,stallsRequired,corkage,extras,beverageChoice,bevPrice,guestOverride]);
   useEffect(()=>{if(!menuDirty)return;const h=(e:BeforeUnloadEvent)=>{e.preventDefault();e.returnValue="";};window.addEventListener("beforeunload",h);return()=>window.removeEventListener("beforeunload",h);},[menuDirty]);
   // Kids menu pulls the two age groups from the Confirmation tab.
   const confirmKids=(Number(kids5To10)||0)+(Number(kidsUnder5)||0);
