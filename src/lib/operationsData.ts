@@ -182,8 +182,12 @@ export async function loadOperations(bid: string, r: Range) {
   const dows = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
   const byDow = dows.map(d => ({ name: d, events: 0, guests: 0 }));
   events.forEach((b: any) => { const i = (new Date(b.event_date + "T12:00:00Z").getUTCDay() + 6) % 7; byDow[i].events++; byDow[i].guests += Number(b.guest_count) || 0; });
-  const eventTypes = tally(events, b => pretty(b.event_type));
-  const upcoming = live.filter((b: any) => b.event_date >= today && b.event_date <= addDays(today, 30)).sort((a: any, b: any) => a.event_date.localeCompare(b.event_date));
+  const leadById: Record<string, any> = Object.fromEntries(leadsAll.map((l: any) => [l.id, l]));
+  // Bookings often carry no event type of their own (imports store it on the lead), so fall back to the linked lead.
+  const typeOf = (b: any) => b.event_type || (b.lead_id ? leadById[b.lead_id]?.event_type : "") || "";
+  const eventTypes = tally(events, b => pretty(typeOf(b)));
+  const upcoming = live.filter((b: any) => b.event_date >= today && b.event_date <= addDays(today, 30)).sort((a: any, b: any) => a.event_date.localeCompare(b.event_date)).map((b: any) => ({ ...b, event_type_display: pretty(typeOf(b)) }));
+
 
   const inspInRange = inspections.filter((i: any) => { const d = i.starts_at || i.proposed_at; if (!d) return false; const s = sydDate(d); return s >= r.from && s <= r.to; });
   const inspStatus = tally(inspInRange, i => pretty(i.status));
