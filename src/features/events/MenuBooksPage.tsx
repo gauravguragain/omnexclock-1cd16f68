@@ -8,9 +8,10 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Archive, ArchiveRestore, Loader2, Pencil, Plus, Trash2, X } from "lucide-react";
+import { Archive, ArchiveRestore, Loader2, Printer, Pencil, Plus, Trash2, X } from "lucide-react";
 import { useEventsData, type Row } from "./useEventsData";
 import { MenuImportButton } from "./MenuImport";
+import MenuShareDialog from "./MenuShareDialog";
 
 type CourseDraft = { key: string; name: string; picks: string; vegPicks: string; nonVegPicks: string; items: string[]; proteins?: Record<string, string>; extraPrices?: Record<string, string> };
 const COURSE_PRESETS = ["Starters", "Entrées", "Mains", "Sides", "Desserts"];
@@ -18,7 +19,7 @@ const COURSE_PRESETS = ["Starters", "Entrées", "Mains", "Sides", "Desserts"];
 export default function MenuBooksPage() {
   const d = useEventsData(); const [status, setStatus] = useState("active");
   const [bookOpen, setBookOpen] = useState<Row | null | "new">(null);
-  const [pkg, setPkg] = useState<Row | null>(null); const [pkgOpen, setPkgOpen] = useState(false);
+  const [pkg, setPkg] = useState<Row | null>(null); const [share, setShare] = useState(false); const [pkgOpen, setPkgOpen] = useState(false);
   if (!d.business) return null;
   const bid = d.business.id;
   const books = d.books.filter(b => status === "all" || (status === "active" ? b.active : !b.active));
@@ -35,7 +36,7 @@ export default function MenuBooksPage() {
   return <div className="space-y-5">
     <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
       <div><p className="text-xs font-medium uppercase tracking-widest text-primary">Catering</p><h1 className="font-serif text-3xl font-semibold">Menu books</h1><p className="text-sm text-muted-foreground">{d.packages.length} packages across {d.books.length} menu books.</p></div>
-      <div className="flex flex-wrap gap-2"><MenuImportButton data={d as any} /><Button variant="outline" onClick={() => setBookOpen("new")}><Plus className="mr-2 h-4 w-4" />Menu book</Button><Button onClick={() => { setPkg(null); setPkgOpen(true); }} disabled={!d.books.length}><Plus className="mr-2 h-4 w-4" />Add new menu</Button></div>
+      <div className="flex flex-wrap gap-2"><MenuImportButton data={d as any} /><Button variant="outline" onClick={() => setShare(true)}><Printer className="mr-2 h-4 w-4" />Print / email</Button><Button variant="outline" onClick={() => setBookOpen("new")}><Plus className="mr-2 h-4 w-4" />Menu book</Button><Button onClick={() => { setPkg(null); setPkgOpen(true); }} disabled={!d.books.length}><Plus className="mr-2 h-4 w-4" />Add new menu</Button></div>
     </div>
     <div className="flex gap-2">{["active", "archived", "all"].map(s => <Button key={s} size="sm" variant={status === s ? "default" : "outline"} className="capitalize" onClick={() => setStatus(s)}>{s} ({d.books.filter(b => s === "all" || (s === "active" ? b.active : !b.active)).length})</Button>)}</div>
     {!d.books.length && <p className="text-sm text-muted-foreground">Create a menu book first (for example "Nepali Express" or "Indian Catering Packages").</p>}
@@ -49,6 +50,7 @@ export default function MenuBooksPage() {
 
     <Dialog open={!!bookOpen} onOpenChange={o => !o && setBookOpen(null)}><DialogContent><DialogHeader><DialogTitle>{bookOpen === "new" ? "New menu book" : "Edit menu book"}</DialogTitle></DialogHeader>
       <form key={bookOpen === "new" ? "n" : (bookOpen as Row)?.id} onSubmit={saveBook} className="space-y-3"><div className="space-y-1.5"><Label>Name *</Label><Input name="name" required defaultValue={bookOpen && bookOpen !== "new" ? bookOpen.name : ""} /></div><div className="space-y-1.5"><Label>Description</Label><Input name="description" defaultValue={bookOpen && bookOpen !== "new" ? bookOpen.description || "" : ""} /></div><DialogFooter><Button>Save</Button></DialogFooter></form></DialogContent></Dialog>
+    {share && <MenuShareDialog open={share} onOpenChange={setShare} data={d as any} source="menu_books" />}
     {pkgOpen && <PackageEditor open={pkgOpen} onClose={() => setPkgOpen(false)} pkg={pkg} data={d} />}
   </div>;
 }

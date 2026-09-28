@@ -8,6 +8,8 @@ import { useCrmData } from "@/features/sales/useCrmData";
 import { useEventsData, type Row } from "./useEventsData";
 import SimpleList from "./SimpleList";
 import { DrinksImportButton } from "./MenuImport";
+import MenuShareDialog from "./MenuShareDialog";
+import { supabase as sbMenu } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { format } from "date-fns";
@@ -21,6 +23,8 @@ const usage = (courseItems: Row[], key: "dish_id" | "drink_id", id: string, cour
 export function CustomersPage() {
   const d = useEventsData(); const crm = useCrmData(); const [open, setOpen] = useState<Row | null>(null);
   const { businessCode } = useParams();
+  const [menuSends, setMenuSends] = useState<Row[]>([]);
+  useEffect(() => { setMenuSends([]); if (!open) return; (sbMenu.from("crm_menu_sends" as any) as any).select("*").eq("customer_id", open.id).order("sent_at", { ascending: false }).then(({ data }: any) => setMenuSends(data || [])); }, [open?.id]);
   const eventsFor = (c: Row) => crm.bookings.filter(b => b.customer_id === c.id || crm.leads.find(l => l.id === b.lead_id)?.customer_id === c.id);
   if (!d.business) return null;
   const openEvents = open ? eventsFor(open).slice().sort((a, b) => String(b.event_date).localeCompare(String(a.event_date))) : [];
@@ -45,6 +49,10 @@ export function CustomersPage() {
         <div className="flex flex-wrap gap-2">
           <Button size="sm" asChild><Link to={`/b/${businessCode}/events/leads/events?new=1&customer=${open.id}`}><Plus className="mr-1.5 h-4 w-4" />New event lead</Link></Button>
           <Button size="sm" variant="outline" asChild><Link to={`/b/${businessCode}/catering/bookings/new?customer=${open.id}`}><Plus className="mr-1.5 h-4 w-4" />New catering booking</Link></Button>
+        </div>
+        <div className="space-y-2">
+          <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Menus sent</p>
+          {menuSends.length ? menuSends.map(m => <div key={m.id} className="flex justify-between gap-3 border-b border-border pb-2 text-sm"><div className="min-w-0"><p className="font-medium"><Badge variant="secondary" className="mr-2">Menu sent</Badge>{m.summary || "Menu"}</p><p className="text-xs text-muted-foreground">To {m.recipient_email}</p></div><span className="shrink-0 text-xs text-muted-foreground">{new Date(m.sent_at).toLocaleString("en-AU", { timeZone: "Australia/Sydney", day: "numeric", month: "short", year: "numeric", hour: "numeric", minute: "2-digit", hour12: true })}</span></div>) : <p className="text-sm text-muted-foreground">No menus sent yet.</p>}
         </div>
         <div className="space-y-2">
           <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Event history</p>
@@ -86,9 +94,9 @@ export function DishesPage() {
 }
 
 export function DrinksPage() {
-  const d = useEventsData(); if (!d.business) return null;
+  const d = useEventsData(); const [share, setShare] = useState(false); if (!d.business) return null;
   const opts = [{ value: "soft", label: "Soft drink" }, { value: "hard", label: "Hard drink" }];
-  return <SimpleList title="Drinks" subtitle={`${d.drinks.length} drinks shared across every package.`} table="crm_drinks" businessId={d.business.id} rows={d.drinks} refresh={d.refresh} archivable groupAZ filterKey="kind" filterOptions={opts} extra={<DrinksImportButton data={d as any} />}
+  return <SimpleList title="Drinks" subtitle={`${d.drinks.length} drinks shared across every package.`} table="crm_drinks" businessId={d.business.id} rows={d.drinks} refresh={d.refresh} archivable groupAZ filterKey="kind" filterOptions={opts} extra={<><DrinksImportButton data={d as any} /><Button variant="outline" onClick={() => setShare(true)}>Print / email</Button>{share && <MenuShareDialog open={share} onOpenChange={setShare} data={d as any} source="drinks" defaultDrinks />}</>}
     fields={[{ key: "name", label: "Drink name", required: true }, { key: "kind", label: "Kind", type: "select", options: opts }, { key: "price", label: "Price ($)", type: "number" }]}
     columns={[{ label: "Drink", render: r => r.name }, { label: "Kind", render: r => <Badge variant="outline">{r.kind === "soft" ? "Soft" : "Hard"}</Badge> }, { label: "Price", render: r => r.price != null ? `$${Number(r.price).toFixed(2)}` : <span className="text-muted-foreground">—</span> }, { label: "Used", render: r => <span className="text-muted-foreground">{usage(d.courseItems, "drink_id", r.id, d.courses)}</span> }]} />;
 }
