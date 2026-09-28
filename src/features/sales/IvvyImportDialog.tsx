@@ -9,6 +9,17 @@ import { readClientList, type ClientRow } from "./clientListImport";
 
 const BATCH = 25;
 const sleep = (ms: number) => new Promise(r => setTimeout(r, ms));
+// Marks the leads behind clashing imported bookings so the clash is visible on the event lead, not just the booking note.
+async function flagClashingLeads(refs: string[]) {
+  if (!refs.length) return;
+  for (let i = 0; i < refs.length; i += BATCH) {
+    const { data } = await retry(() => supabase.from("crm_leads").select("id, tags").in("external_ref", refs.slice(i, i + BATCH)));
+    for (const l of (data || []) as any[]) {
+      const tags = Array.isArray(l.tags) ? l.tags : [];
+      if (!tags.includes("venue clash")) await supabase.from("crm_leads").update({ tags: [...tags, "venue clash"] } as any).eq("id", l.id);
+    }
+  }
+}
 // Retries a save when the connection drops ("Failed to fetch") so large imports on slow networks still finish.
 async function retry<T extends { error: any }>(fn: () => PromiseLike<T>): Promise<T> {
   let last: any;
