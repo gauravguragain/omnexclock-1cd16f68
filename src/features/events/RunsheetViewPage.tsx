@@ -133,7 +133,7 @@ export function RunsheetDocument({ rs, lead, b, items, selection, businessName, 
           <h2 className="font-bold">Menu selection{pkgs.length ? ` – ${pkgs.map(p => p.item_name).join(" · ")}` : ""}</h2>
            {Object.entries(courses as Record<string, any[]>).map(([course, dishes]) => <div key={course} className="mt-2 break-inside-avoid"><h3 className="pl-3 font-semibold">{course}{courseTime(course) ? ` — ${courseTime(course)}` : ""}</h3>{dishes.map(d => <p key={d.id} className="pl-6">- {d.item_name}{d.notes ? <span className="font-semibold"> — {d.notes}</span> : null}</p>)}</div>)}
           {otherSchedule.length > 0 && <div className="mt-2 break-inside-avoid">{otherSchedule.map((s, i) => <p key={i} className="pl-3">• {s.time ? to12(s.time) : "—"} – {s.label}{s.detail ? ` (${s.detail})` : ""}</p>)}</div>}
-          {kidsRows.map(k => <p key={k.id || k.item_name} className="mt-2">{k.item_name === "Kids menu" ? "Kids menu" : k.item_name}: {k.quantity || 0} kids</p>)}
+          {kidsRows.length > 0 && <p className="mt-2">Kids menu: {kidsRows.reduce((s, k) => s + (Number(k.quantity) || 0), 0)} kids</p>}
           {selection?.beverage_package && <p className="mt-2">Beverages: {prettyCrmValue(selection.beverage_package)}</p>}
           {selection?.corkage_enabled && <p className="mt-1">Host is bringing their own drinks.</p>}
           {selection?.dietary_requirements && <p className="mt-2">Dietary: {selection.dietary_requirements}</p>}
