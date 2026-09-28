@@ -64,7 +64,7 @@ function PackageEditor({ open, onClose, pkg, data: d }: { open: boolean; onClose
   const bev = f.package_type === "beverage";
   const pool = bev ? d.drinks.filter(x => x.active).map(x => ({ id: `drink:${x.id}`, name: x.name, tag: x.kind === "soft" ? "Soft" : x.kind === "hard" ? "Hard" : String(x.kind || "Drink"), price: Number(x.price) || 0 })) : d.dishes.filter(x => x.active).map(x => ({ id: x.id, name: x.name, tag: x.diet === "veg" ? "V" : x.diet === "seafood" ? "SF" : "N", price: 0 }));
   const upd = (key: string, patch: Partial<CourseDraft>) => setCourses(cs => cs.map(c => c.key === key ? { ...c, ...patch } : c));
-  const checks = [["Menu book selected", !!f.book_id], ["Package named", !!f.name], ["At least one item", courses.some(c => c.items.length)]] as const;
+  const checks = [["Menu book selected", !!f.book_id], ["Package named", !!f.name], ["At least one item", bev || courses.some(c => c.items.length)]] as const;
 
   const addDish = async (course: CourseDraft) => {
     const nd = newDish[course.key]; if (!nd?.name) return;
