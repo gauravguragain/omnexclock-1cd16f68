@@ -1,10 +1,5 @@
 # Roadmap
 
-- [x] Lead flow redesign — concierge layout with stage sidebar, mobile stage rail, progress header and Back/Next controls
-- [x] Preserve confirmation form and all seven existing workflows and saving actions
-- [x] Verify desktop and mobile navigation, booking form and preview errors
-- [x] Imports bypass venue clash block; clashes flagged in app
-- [x] Add per-dish customisations and one-off Other choices to lead menu courses
-- [x] Make saved menu-book package selections editable without recreating them
-- [x] Sync menu estimate, booking total, deposit received, Payments and Operations
-- [x] Split confirmation children into ages 5–10 and under 5 while preserving the total kids count
+- [x] Verify refresh button renders on Sales & Marketing (desktop + mobile) in preview
+- [x] Venue clash: stale self-referencing warning on "18th Birthday – Amit" (03 Oct) — root cause was an old import bug; current clash code already excludes self-matches. Migration 0060 recomputes every flagged booking and strips only false warnings (genuine clashes kept), plus cleans lead "venue clash" tags.
+- [ ] Publish so the cleanup runs on the live site (Live DB still shows the stale warning until then)
