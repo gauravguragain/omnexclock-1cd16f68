@@ -102,7 +102,7 @@ export default function CateringDetailPage({ view }: { view: "lead" | "booking" 
       return { key, packageId: pk?.id || "", dishes };
     }));
     setTeam({ coordinator: rs?.event_coordinator || "", coordinator_phone: rs?.event_coordinator_phone || "", onsite_name: rs?.onsite_contact_name || "", onsite_phone: rs?.onsite_contact_phone || "", client_notes: rs?.client_notes || booking.notes || "" });
-    setFoodRows((rs?.service_schedule || []).map((s: any) => ({ time: s.time || "", label: s.label || "" })));
+    setFoodRows((rs?.service_schedule || []).map((s: any) => ({ time: s.time || "", label: s.label || "", ...(s.end ? { end: s.end } : {}) })));
     setFohRows((rs?.service_schedule_foh || []).map((s: any) => ({ time: s.time || "", label: s.label || "" })));
     setEditBkOpen(true);
   };
