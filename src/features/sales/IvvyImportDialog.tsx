@@ -137,7 +137,7 @@ export default function IvvyImportDialog({ open, onOpenChange, businessId, onDon
           lead_kind: catering ? "catering" : "event",
           preferred_dates: date ? [date] : [], estimated_guest_count: guests > 0 ? guests : null,
           estimated_value: num(col(r, "Total Amount")), status: lStatus,
-          lead_outcome: lStatus === "deposit_received" || lStatus === "full_payment_received" ? "confirmed" : lStatus === "cold" ? "declined" : "new",
+          lead_outcome: lStatus === "full_payment_received" ? "confirmed" : lStatus === "cold" ? "declined" : "new",
           decline_reason: status === "cancelled" ? (col(r, "Cancel Reason") || "Cancelled in iVvy") : null,
           tags: ["ivvy", `ivvy:${code}`, col(r, "Sales Person") && `sales:${col(r, "Sales Person")}`].filter(Boolean) as string[],
           created_by: user?.id ?? null, updated_by: user?.id ?? null,
