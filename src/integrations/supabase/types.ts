@@ -1722,6 +1722,77 @@ export type Database = {
           },
         ]
       }
+      crm_menu_sends: {
+        Row: {
+          business_id: string
+          customer_id: string | null
+          id: string
+          include_drinks: boolean
+          lead_id: string | null
+          package_ids: string[]
+          recipient_email: string
+          sent_at: string
+          sent_by: string | null
+          source: string
+          summary: string | null
+        }
+        Insert: {
+          business_id: string
+          customer_id?: string | null
+          id?: string
+          include_drinks?: boolean
+          lead_id?: string | null
+          package_ids?: string[]
+          recipient_email: string
+          sent_at?: string
+          sent_by?: string | null
+          source?: string
+          summary?: string | null
+        }
+        Update: {
+          business_id?: string
+          customer_id?: string | null
+          id?: string
+          include_drinks?: boolean
+          lead_id?: string | null
+          package_ids?: string[]
+          recipient_email?: string
+          sent_at?: string
+          sent_by?: string | null
+          source?: string
+          summary?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_menu_sends_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_menu_sends_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses_public"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_menu_sends_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "crm_customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_menu_sends_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "crm_leads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       crm_options: {
         Row: {
           active: boolean
