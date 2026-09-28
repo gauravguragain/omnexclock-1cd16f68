@@ -58,7 +58,7 @@ function A4Preview({ children, documentRef }: { children: React.ReactNode; docum
   </div>;
 }
 
-export function RunsheetDocument({ rs, lead, b, items, selection, businessName, terms }: { rs: any; lead: any; b: any; items: any[]; selection: any; businessName?: string; terms?: string | null }) {
+export function RunsheetDocument({ rs, lead, b, items, selection, businessName, businessPhone, businessEmail, terms }: { rs: any; lead: any; b: any; items: any[]; selection: any; businessName?: string; businessPhone?: string; businessEmail?: string; terms?: string | null }) {
   const PKG = ["package", "kids_package", "manual"];
   const pkgs = items.filter(i => i.course === "package" || i.course === "kids_package");
   const stalls = items.filter(i => i.course === "live_stall");
@@ -86,21 +86,24 @@ export function RunsheetDocument({ rs, lead, b, items, selection, businessName, 
     ["Client:", lead?.full_name, lead?.phone],
     [catering ? (pickup ? "Pickup Contact:" : "Delivery Contact:") : "Onsite Contact:", rs.onsite_contact_name, rs.onsite_contact_phone],
   ];
-  const summary = <div className="grid grid-cols-[20%_30%_20%_30%] divide-x divide-border border border-border text-xs">
-    <div className="p-2 font-medium">{catering && <span className="block text-[10px] font-normal">{pickup ? "Pickup window" : "Delivery window"}</span>}{time}</div>
-    <div className="p-2 font-medium">{eventTitle}</div>
-    <div className="p-2">Adults: {rs.adult_guests ?? b?.adults ?? "—"}<br />Kids: {rs.kids_guests ?? b?.kids ?? 0}</div>
-    {catering
-      ? <div className="p-2"><span className="block text-[10px]">{pickup ? "Pickup" : "Delivery to"}</span><span className="font-medium">{pickup ? (businessName || "At venue") : (b?.service_location || lead?.service_location || "—")}</span></div>
-      : <div className="p-2"><span className="block text-[10px]">Venue</span><span className="font-medium">{prettyCrmValue(b?.venue_space || lead?.venue_space || "—")}</span></div>}
-  </div>;
+  const Summary = ({ bold = false }: { bold?: boolean }) => {
+    const heavy = bold ? "font-bold" : "font-medium";
+    return <div className={`grid grid-cols-[20%_30%_20%_30%] divide-x divide-border border border-border text-xs${bold ? " font-bold" : ""}`}>
+      <div className={`p-2 ${heavy}`}>{catering && <span className="block text-[10px]">{pickup ? "Pickup window" : "Delivery window"}</span>}{time}</div>
+      <div className={`p-2 ${heavy}`}>{eventTitle}</div>
+      <div className="p-2">Adults: {rs.adult_guests ?? b?.adults ?? "—"}<br />Kids: {rs.kids_guests ?? b?.kids ?? 0}</div>
+      {catering
+        ? <div className="p-2"><span className="block text-[10px]">{pickup ? "Pickup" : "Delivery to"}</span><span className={heavy}>{pickup ? (businessName || "At venue") : (b?.service_location || lead?.service_location || "—")}</span></div>
+        : <div className="p-2"><span className="block text-[10px]">Venue</span><span className={heavy}>{prettyCrmValue(b?.venue_space || lead?.venue_space || "—")}</span></div>}
+    </div>;
+  };
 
   return <article className="runsheet-monochrome bg-background font-sans text-foreground">
     <header className="flex items-start justify-between gap-6">
       <div>
         <h1 className="text-2xl font-bold">{catering ? `Catering ${pickup ? "Pickup" : "Delivery"} Order` : `${eventType} Event Order`}</h1>
         <p className="mt-1 text-base font-bold">{date}</p>
-        <p className="mt-1 text-xs text-muted-foreground">{businessName || "Pro Regal Pavilion"}</p>
+        <p className="mt-1 text-xs text-muted-foreground">{businessName || "Pro Regal Pavilion"}{(businessPhone || businessEmail) && <span className="font-medium text-foreground">  ·  {[businessPhone, businessEmail].filter(Boolean).join("  ·  ")}</span>}</p>
       </div>
       <img src="/regal-logo.png" alt={businessName || "Logo"} className="h-16 w-28 object-contain object-right" />
     </header>
