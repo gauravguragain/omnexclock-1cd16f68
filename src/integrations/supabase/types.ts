@@ -4265,6 +4265,10 @@ export type Database = {
           user_id: string
         }[]
       }
+      crm_merge_first_name_contacts: {
+        Args: { _business_id: string }
+        Returns: number
+      }
       crm_next_event_order: { Args: { _business_id: string }; Returns: string }
       delete_employee: { Args: { _employee_id: string }; Returns: boolean }
       delete_employee_request: {
