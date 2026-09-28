@@ -29,7 +29,7 @@ Deno.serve(async (req) => {
     }
     // strip anything price-related and internal
     const { share_token: _s, ops_notes: _o, distributed_to: _d, ...safe } = rs;
-    return json({ rs: safe, lead: lead.data, booking: booking.data, businessName: biz.data?.name || "", selection: sel.data, items, terms: booking.data?.booking_kind === "catering" || settings.data?.runsheet_terms_enabled === false ? null : (settings.data?.runsheet_terms?.trim() || DEFAULT_TERMS) });
+    return json({ rs: safe, lead: lead.data, booking: booking.data, businessName: biz.data?.name || "", businessPhone: biz.data?.phone || "", businessEmail: biz.data?.email || "", selection: sel.data, items, terms: booking.data?.booking_kind === "catering" || settings.data?.runsheet_terms_enabled === false ? null : (settings.data?.runsheet_terms?.trim() || DEFAULT_TERMS) });
   } catch (e) {
     console.error(e);
     return json({ error: "Unable to load run sheet" }, 500);
