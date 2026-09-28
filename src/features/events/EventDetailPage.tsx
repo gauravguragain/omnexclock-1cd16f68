@@ -8,6 +8,9 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { useCrmData } from "@/features/sales/useCrmData";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import SendRunsheetDialog from "./SendRunsheetDialog";
 import { BookingPaymentsCard } from "./payments";
 import { prettyCrmValue } from "@/features/sales/types";
@@ -22,6 +25,7 @@ export default function EventDetailPage({ kind }: { kind: "event" | "catering" }
   const { businessCode, id } = useParams(); const nav = useNavigate();
   const crm = useCrmData(); const ev = useEventsData();
   const [items, setItems] = useState<any[]>([]); const [selection, setSelection] = useState<any>(null); const [sendOpen, setSendOpen] = useState(false);
+  const [editOpen, setEditOpen] = useState(false); const [form, setForm] = useState({ full_name: "", email: "", phone: "" }); const [saving, setSaving] = useState(false);
   const b: any = crm.bookings.find(x => x.id === id);
   useEffect(() => {
     if (!b?.menu_selection_id && !b?.lead_id) return;
@@ -53,6 +57,17 @@ export default function EventDetailPage({ kind }: { kind: "event" | "catering" }
   const guests = Number(adults || 0) + Number(kidsN || 0);
   const date = new Date(`${b.event_date}T00:00:00`);
   const cancelled = b.status === "cancelled";
+  const openEdit = () => { setForm({ full_name: lead?.full_name || customer?.full_name || "", email: lead?.email || customer?.email || "", phone: lead?.phone || customer?.phone || "" }); setEditOpen(true); };
+  const saveClient = async () => {
+    if (!form.full_name.trim()) return toast.error("Client name is required");
+    setSaving(true);
+    const vals = { full_name: form.full_name.trim(), email: form.email.trim() || null, phone: form.phone.trim() || null };
+    const { error } = await supabase.from("crm_leads").update(vals as any).eq("id", lead.id);
+    if (!error && b.customer_id) await supabase.from("crm_customers").update(vals as any).eq("id", b.customer_id);
+    setSaving(false);
+    if (error) return toast.error(error.message);
+    toast.success("Client details updated"); setEditOpen(false); crm.refresh?.(true as any);
+  };
   const title = b.event_name || lead?.full_name || "Event";
   const PKG = ["package", "kids_package", "manual"];
   const pkgs = items.filter(i => PKG.includes(i.course)); const stalls = items.filter(i => i.course === "live_stall");
@@ -68,7 +83,7 @@ export default function EventDetailPage({ kind }: { kind: "event" | "catering" }
       <div className="border-l-2 border-primary pl-4"><p className="text-xs font-medium uppercase tracking-widest text-primary">{kind === "event" ? "Events" : "Catering"}</p>
         <h1 className="flex items-center gap-3 font-serif text-3xl font-semibold">{title}<Badge variant={cancelled ? "destructive" : "secondary"}>{cancelled ? "Cancelled" : "Live"}</Badge></h1>
         <p className="text-sm text-muted-foreground">Event Order {b.event_order_number || "—"} · {prettyCrmValue(b.event_type || lead?.event_type || "event")}</p></div>
-      <div className="flex flex-wrap gap-2">{lead && (kind === "catering" ? <><Button variant="outline" onClick={openCateringSheet}><FileText className="mr-2 h-4 w-4" />Preview run sheet</Button>{rs && <Button onClick={() => setSendOpen(true)}><Mail className="mr-2 h-4 w-4" />{rs.sent_at ? "Resend run sheet" : "Send run sheet"}</Button>}</> : <><Button variant="outline" onClick={() => { if (rs?.sent_at) nav(`/b/${businessCode}/events/runsheet/${rs.id}`); else { nav(`/b/${businessCode}/events/lead/${lead.id}?tab=runsheet`); } }}><FileText className="mr-2 h-4 w-4" />Run sheet</Button><Button onClick={() => nav(`/b/${businessCode}/events/lead/${lead.id}`)}><Pencil className="mr-2 h-4 w-4" />Edit</Button>{rs?.sent_at && <Button variant="outline" onClick={() => setSendOpen(true)}><Mail className="mr-2 h-4 w-4" />Resend Email</Button>}</>)}</div>
+      <div className="flex flex-wrap gap-2">{lead && (kind === "catering" ? <><Button variant="outline" onClick={openCateringSheet}><FileText className="mr-2 h-4 w-4" />Preview run sheet</Button>{rs && <Button onClick={() => setSendOpen(true)}><Mail className="mr-2 h-4 w-4" />{rs.sent_at ? "Resend run sheet" : "Send run sheet"}</Button>}</> : <><Button variant="outline" onClick={() => nav(`/b/${businessCode}/events/lead/${lead.id}?tab=confirmation`)}><FileText className="mr-2 h-4 w-4" />Run sheet</Button><Button onClick={openEdit}><Pencil className="mr-2 h-4 w-4" />Edit</Button>{rs?.sent_at && <Button variant="outline" onClick={() => setSendOpen(true)}><Mail className="mr-2 h-4 w-4" />Resend Email</Button>}</>)}</div>
     </div>
 
     <Card><CardContent className="grid divide-y divide-border p-0 sm:grid-cols-4 sm:divide-x sm:divide-y-0">
@@ -117,6 +132,11 @@ export default function EventDetailPage({ kind }: { kind: "event" | "catering" }
         <Section icon={History} title="Record"><Row k="Event Order" v={b.event_order_number} /><Row k="Run sheet" v={rs ? `Revision ${rs.revision || 1}${rs.sent_at ? " · issued" : " · draft"}` : "Not started"} /><Row k="Created" v={format(new Date(b.created_at), "d MMM yyyy, h:mm a")} /></Section>
       </div>
     </div>
+    <Dialog open={editOpen} onOpenChange={setEditOpen}><DialogContent><DialogHeader><DialogTitle>Edit client details</DialogTitle></DialogHeader>
+      <div className="space-y-3"><div><Label>Client name</Label><Input value={form.full_name} onChange={e => setForm({ ...form, full_name: e.target.value })} /></div>
+      <div><Label>Email</Label><Input type="email" value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} /></div>
+      <div><Label>Phone</Label><Input type="tel" value={form.phone} onChange={e => setForm({ ...form, phone: e.target.value })} /></div></div>
+      <DialogFooter><Button variant="outline" onClick={() => setEditOpen(false)}>Cancel</Button><Button disabled={saving} onClick={saveClient}>{saving ? "Saving…" : "Save"}</Button></DialogFooter></DialogContent></Dialog>
     {lead && rs && <SendRunsheetDialog mode={kind === "catering" && !rs.sent_at ? "issue" : "resend"} onIssue={issueCatering} open={sendOpen} onOpenChange={setSendOpen} rs={rs} lead={lead} booking={b} businessName={crm.business.name} />}
   </div>;
 }
