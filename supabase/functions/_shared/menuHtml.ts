@@ -108,8 +108,8 @@ function renderSection(s: MenuSection, logo: string, forEmail: boolean): string 
       ${s.styleLabel ? overline(s.styleLabel.replace(/\s*·\s*/g, "  ·  ")) : ""}
       <div style="width:44px;height:1px;background:${GOLD};margin:12px auto 6px;"></div>
       <h2 style="margin:0;color:${GOLD};font-family:${SCRIPT};font-weight:400;font-size:60px;line-height:1.15;">${esc(s.menuTitle || s.title)}</h2>
-      ${s.tier ? `<p style="margin:6px 0 14px;color:${INK};font-family:${SERIF};font-size:15px;letter-spacing:5px;text-transform:uppercase;">${esc(s.tier)}</p>` : ""}
-      <div style="margin:10px 0 18px;">${pill(s.title)}</div>
+       ${s.tier ? `<p style="margin:6px 0 14px;color:${INK};font-family:${SERIF};font-size:15px;letter-spacing:5px;text-transform:uppercase;">${esc(s.tier)}</p>` : ""}
+       ${s.kind === "drinks" ? `<p style="margin:10px 0 18px;color:${MUTED};font-family:${SERIF};font-size:13px;font-style:italic;">A selection from our bar, served throughout your event</p>` : `<div style="margin:10px 0 18px;">${pill(s.title)}</div>`}
       ${s.priceLabel ? `<div style="display:inline-block;min-width:170px;padding:18px 28px;border:1px solid ${LINE};border-radius:6px;background:#fff;">
         <p style="margin:0;color:${INK};font-family:${SERIF};font-size:30px;">${esc(s.priceLabel)}</p>
         <p style="margin:4px 0 0;color:${MUTED};font-family:${SANS};font-size:9px;letter-spacing:3px;text-transform:uppercase;">Per person</p></div>` : ""}
@@ -126,14 +126,17 @@ function renderSection(s: MenuSection, logo: string, forEmail: boolean): string 
         ${s.courses.map((c, i) => `<tr style="background:${i % 2 ? "#fff" : "#f8f3e8"};"><td style="padding:10px;font-family:${SERIF};font-size:14px;">${esc(c.name)}</td><td style="padding:10px;text-align:center;color:${GOLD};font-weight:600;">${c.total ?? "—"}</td><td style="padding:10px;">${esc(c.breakdown || "")}</td></tr>`).join("")}
       </table>
     </div>` : "";
+  const isDrinks = s.kind === "drinks";
   const courses = s.courses.map((c) => `
     <div class="menu-page course" style="padding:30px 28px 22px;">
-      ${overline(s.kind === "drinks" ? "Drinks list" : s.book || s.title)}
-      <h3 style="margin:8px 0 2px;color:${GOLD};font-family:${SERIF};font-weight:600;font-size:28px;text-transform:uppercase;letter-spacing:1px;">${esc(c.name)}</h3>
-      ${c.total ? `<p style="margin:0 0 14px;color:${MUTED};font-family:${SANS};font-size:11px;letter-spacing:1px;">Select <b style="color:${GOLD};">${c.total} item${c.total === 1 ? "" : "s"}</b> in total</p>` : `<div style="height:10px;"></div>`}
+      ${overline(isDrinks ? "Drinks list" : s.book || s.title)}
+      ${isDrinks ? `<div style="height:10px;"></div>` : `<h3 style="margin:8px 0 2px;color:${GOLD};font-family:${SERIF};font-weight:600;font-size:28px;text-transform:uppercase;letter-spacing:1px;">${esc(c.name)}</h3>`}
+      ${!isDrinks && c.total ? `<p style="margin:0 0 14px;color:${MUTED};font-family:${SANS};font-size:11px;letter-spacing:1px;">Select <b style="color:${GOLD};">${c.total} item${c.total === 1 ? "" : "s"}</b> in total</p>` : `<div style="height:10px;"></div>`}
       ${(c.groups || [{ items: c.items || [] }]).map((g) => `
-        ${g.label ? `<div style="margin:16px 0 4px;padding-bottom:6px;border-bottom:1px solid ${LINE};"><span style="color:${INK};font-family:${SERIF};font-size:14px;letter-spacing:2px;text-transform:uppercase;">${esc(g.label)}</span>${g.choose != null ? `&nbsp;&nbsp;${pill(`Choose ${g.choose}`)}` : ""}</div>` : ""}
-        ${itemsTable(g.items)}`).join("")}
+        ${g.label ? (isDrinks
+          ? `<div style="margin:22px 0 6px;text-align:center;"><span style="color:${GOLD};font-family:${SERIF};font-size:19px;letter-spacing:3px;text-transform:uppercase;">${esc(g.label)}</span><div style="width:34px;height:1px;background:${GOLD_SOFT};margin:6px auto 0;"></div></div>`
+          : `<div style="margin:16px 0 4px;padding-bottom:6px;border-bottom:1px solid ${LINE};"><span style="color:${INK};font-family:${SERIF};font-size:14px;letter-spacing:2px;text-transform:uppercase;">${esc(g.label)}</span>${g.choose != null ? `&nbsp;&nbsp;${pill(`Choose ${g.choose}`)}` : ""}</div>`) : ""}
+        ${itemsTable(g.items, isDrinks)}`).join("")}
     </div>`).join("");
   return `<div class="menu-section" style="margin:0 0 26px;background:${PAPER};border:1px solid ${LINE};border-radius:4px;${forEmail ? "" : "overflow:hidden;"}">${cover}${overview}${courses}</div>`;
 }
