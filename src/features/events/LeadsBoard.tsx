@@ -18,9 +18,8 @@ export default function LeadsBoard({ kind }: { kind: "event" | "catering" }) {
   const crm = useCrmData(); const nav = useNavigate(); const { businessCode } = useParams();
   const [tab, setTab] = useState("new"); const [search, setSearch] = useState("");
   const [formOpen, setFormOpen] = useState(false); const [editing, setEditing] = useState<CrmLead | null>(null);
-  const [params, setParams] = useSearchParams(); const presetCustomer = params.get("customer");
-  useEffect(() => { if (params.get("new") === "1") { setEditing(null); setFormOpen(true); } }, [params]);
-  useEffect(() => { if (!formOpen && (params.get("new") || params.get("customer"))) setParams({}, { replace: true }); }, [formOpen]);
+  const [params, setParams] = useSearchParams(); const [presetCustomer, setPresetCustomer] = useState<string | null>(null);
+  useEffect(() => { if (params.get("new") === "1") { setEditing(null); setPresetCustomer(params.get("customer")); setFormOpen(true); setParams({}, { replace: true }); } }, [params]);
   const [declining, setDeclining] = useState<CrmLead | null>(null); const [reason, setReason] = useState(""); const [importOpen, setImportOpen] = useState(false);
    const mine = useMemo(() => crm.leads.filter(l => (l.lead_kind === "catering" || l.event_type === "catering" ? "catering" : "event") === kind), [crm.leads, kind]);
   const outcome = (l: CrmLead) => l.lead_outcome || "new";
