@@ -1,3 +1,4 @@
+import { computeTimesheetEntries, filterTimesheetEntriesByDateRange, getTimesheetEventWindow } from "@/lib/timesheetUtils";
 import { supabase } from "@/integrations/supabase/client";
 
 export const SYDNEY = "Australia/Sydney";
@@ -236,7 +237,12 @@ export async function loadOperations(bid: string, r: Range) {
   staff.forEach(e => { const d = e.department || "—"; deptMap[d] ||= { name: d, hours: 0, cost: 0 }; deptMap[d].hours = r2(deptMap[d].hours + e.actual); deptMap[d].cost = r2(deptMap[d].cost + e.cost); });
   const leaveInRange = requests.filter((q: any) => q.status === "approved" && q.start_date && q.start_date <= r.to && (q.end_date || q.start_date) >= r.from);
   const pendingRequests = requests.filter((q: any) => q.status === "pending").length;
-  const unapprovedDays = approvals.filter((a: any) => !a.approved).length;
+  // Match the Timesheets tab: every worked session (clock-in inside the range) without an approval counts as pending.
+  const tsWin = getTimesheetEventWindow(r.from, r.to, 36, 36);
+  const tsClocks = await inChunks(empIds, c => db.from("clock_events").select("employee_id,event_type,timestamp").in("employee_id", c).gte("timestamp", tsWin.fromISO).lte("timestamp", tsWin.toISO).order("timestamp"));
+  const approvedKeys = new Set(approvals.filter((a: any) => a.approved).map((a: any) => `${a.employee_id}-${a.date}`));
+  const unapprovedDays = filterTimesheetEntriesByDateRange(computeTimesheetEntries(tsClocks), r.from, r.to)
+    .filter(e => !approvedKeys.has(`${e.employee_id}-${e.date}`)).length;
 
   // ---------- Compliance ----------
   const formName: Record<string, string> = Object.fromEntries(fslForms.map((f: any) => [f.id, f.name]));
