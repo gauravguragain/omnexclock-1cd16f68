@@ -181,6 +181,16 @@ export default function IvvyImportDialog({ open, onOpenChange, businessId, onDon
         if (error) throw error;
         (data || []).forEach((d: any) => { idByCode[d.external_ref] = d.id + "|" + (d.customer_id ?? ""); });
       }
+      // Fill in phone numbers on the linked customer records too (iVvy exports gained phone later).
+      const custPhone: Record<string, string> = {};
+      for (const { code, row: r } of items) {
+        const ph = col(r, "Phone", "Mobile", "Phone Number", "Contact Number", "Contact Phone");
+        const cid = (idByCode[code] || "|").split("|")[1];
+        if (ph && cid) custPhone[cid] = ph;
+      }
+      for (const [cid, ph] of Object.entries(custPhone)) {
+        await retry(() => supabase.from("crm_customers").update({ phone: ph } as any).eq("id", cid));
+      }
       const bookingRows = items.filter(p => p.status !== "cancelled" && p.date).map(({ code, row: r, date, catering }) => {
         const [leadId, customerId] = (idByCode[code] || "|").split("|");
         const guests = Math.max(1, Math.round(num(col(r, "Total Attendees Guaranteed"))));
