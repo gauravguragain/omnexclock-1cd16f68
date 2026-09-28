@@ -1793,6 +1793,67 @@ export type Database = {
           },
         ]
       }
+      crm_menu_share_links: {
+        Row: {
+          all_active: boolean
+          business_id: string
+          created_at: string
+          created_by: string | null
+          expires_at: string
+          include_drinks: boolean
+          menu_send_id: string | null
+          package_ids: string[] | null
+          recipient_name: string | null
+          token: string
+        }
+        Insert: {
+          all_active?: boolean
+          business_id: string
+          created_at?: string
+          created_by?: string | null
+          expires_at?: string
+          include_drinks?: boolean
+          menu_send_id?: string | null
+          package_ids?: string[] | null
+          recipient_name?: string | null
+          token?: string
+        }
+        Update: {
+          all_active?: boolean
+          business_id?: string
+          created_at?: string
+          created_by?: string | null
+          expires_at?: string
+          include_drinks?: boolean
+          menu_send_id?: string | null
+          package_ids?: string[] | null
+          recipient_name?: string | null
+          token?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_menu_share_links_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_menu_share_links_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses_public"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_menu_share_links_menu_send_id_fkey"
+            columns: ["menu_send_id"]
+            isOneToOne: false
+            referencedRelation: "crm_menu_sends"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       crm_options: {
         Row: {
           active: boolean
@@ -1935,8 +1996,10 @@ export type Database = {
           id: string
           name: string
           non_veg_picks: number | null
+          notes: string | null
           package_id: string
           picks: number | null
+          seafood_picks: number | null
           sort_order: number
           veg_picks: number | null
         }
@@ -1946,8 +2009,10 @@ export type Database = {
           id?: string
           name: string
           non_veg_picks?: number | null
+          notes?: string | null
           package_id: string
           picks?: number | null
+          seafood_picks?: number | null
           sort_order?: number
           veg_picks?: number | null
         }
@@ -1957,8 +2022,10 @@ export type Database = {
           id?: string
           name?: string
           non_veg_picks?: number | null
+          notes?: string | null
           package_id?: string
           picks?: number | null
+          seafood_picks?: number | null
           sort_order?: number
           veg_picks?: number | null
         }
@@ -1994,10 +2061,14 @@ export type Database = {
           created_at: string
           description: string | null
           id: string
+          menu_title: string | null
           min_guests: number
           name: string
           package_type: string
+          price_label: string | null
           price_per_head: number
+          style_label: string | null
+          subtitle: string | null
           updated_at: string
         }
         Insert: {
@@ -2007,10 +2078,14 @@ export type Database = {
           created_at?: string
           description?: string | null
           id?: string
+          menu_title?: string | null
           min_guests?: number
           name: string
           package_type?: string
+          price_label?: string | null
           price_per_head?: number
+          style_label?: string | null
+          subtitle?: string | null
           updated_at?: string
         }
         Update: {
@@ -2020,10 +2095,14 @@ export type Database = {
           created_at?: string
           description?: string | null
           id?: string
+          menu_title?: string | null
           min_guests?: number
           name?: string
           package_type?: string
+          price_label?: string | null
           price_per_head?: number
+          style_label?: string | null
+          subtitle?: string | null
           updated_at?: string
         }
         Relationships: [
@@ -4601,6 +4680,7 @@ export type Database = {
         }[]
       }
       get_guest_menu: { Args: { _token: string }; Returns: Json }
+      get_menu_share: { Args: { _token: string }; Returns: Json }
       get_my_employee_documents: {
         Args: { _business_code: string; _employee_code: string }
         Returns: {
