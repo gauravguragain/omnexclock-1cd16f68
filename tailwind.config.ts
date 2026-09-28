@@ -78,6 +78,8 @@ export default {
           DEFAULT: "hsl(var(--warning))",
           foreground: "hsl(var(--warning-foreground))",
         },
+        "kitchen-note": "hsl(var(--kitchen-note))",
+        "foh-note": "hsl(var(--foh-note))",
       },
       borderRadius: {
         lg: "var(--radius)",

@@ -2209,8 +2209,10 @@ export type Database = {
           event_coordinator: string | null
           event_coordinator_phone: string | null
           event_order_number: string | null
+          foh_notes: string | null
           generated_at: string | null
           id: string
+          internal_share_token: string
           kids_guests: number | null
           lead_id: string
           onsite_contact_name: string | null
@@ -2245,8 +2247,10 @@ export type Database = {
           event_coordinator?: string | null
           event_coordinator_phone?: string | null
           event_order_number?: string | null
+          foh_notes?: string | null
           generated_at?: string | null
           id?: string
+          internal_share_token?: string
           kids_guests?: number | null
           lead_id: string
           onsite_contact_name?: string | null
@@ -2281,8 +2285,10 @@ export type Database = {
           event_coordinator?: string | null
           event_coordinator_phone?: string | null
           event_order_number?: string | null
+          foh_notes?: string | null
           generated_at?: string | null
           id?: string
+          internal_share_token?: string
           kids_guests?: number | null
           lead_id?: string
           onsite_contact_name?: string | null

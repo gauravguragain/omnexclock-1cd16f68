@@ -12,8 +12,9 @@ Deno.serve(async (req) => {
     const id = url.searchParams.get("id") || ""; const t = url.searchParams.get("t") || "";
     if (!UUID.test(id) || !UUID.test(t)) return json({ error: "Invalid link" }, 400);
     const db = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
-    const { data: rs } = await db.from("crm_runsheets").select("*").eq("id", id).eq("share_token", t).maybeSingle();
+    const { data: rs } = await db.from("crm_runsheets").select("*").eq("id", id).or(`share_token.eq.${t},internal_share_token.eq.${t}`).maybeSingle();
     if (!rs) return json({ error: "Run sheet not found" }, 404);
+    const internal = rs.internal_share_token === t;
     const [lead, booking, biz, sel, settings] = await Promise.all([
       rs.lead_id ? db.from("crm_leads").select("full_name, phone, event_type, venue_space").eq("id", rs.lead_id).maybeSingle() : { data: null },
       rs.booking_id ? db.from("crm_bookings").select("event_date, start_time, end_time, duration_minutes, venue_space, event_type, booking_kind, fulfilment_method, service_location, event_name").eq("id", rs.booking_id).maybeSingle()
@@ -28,8 +29,8 @@ Deno.serve(async (req) => {
       items = r.data || [];
     }
     // strip anything price-related and internal
-    const { share_token: _s, ops_notes: _o, distributed_to: _d, ...safe } = rs;
-    return json({ rs: safe, lead: lead.data, booking: booking.data, businessName: biz.data?.name || "", businessPhone: biz.data?.phone || "", businessEmail: biz.data?.email || "", selection: sel.data, items, terms: booking.data?.booking_kind === "catering" || settings.data?.runsheet_terms_enabled === false ? null : (settings.data?.runsheet_terms?.trim() || DEFAULT_TERMS) });
+    const { share_token: _s, internal_share_token: _i, ops_notes: _o, foh_notes: _f, distributed_to: _d, ...safe } = rs;
+    return json({ rs: internal ? { ...safe, ops_notes: _o, foh_notes: _f } : safe, internal, lead: lead.data, booking: booking.data, businessName: biz.data?.name || "", businessPhone: biz.data?.phone || "", businessEmail: biz.data?.email || "", selection: sel.data, items, terms: booking.data?.booking_kind === "catering" || settings.data?.runsheet_terms_enabled === false ? null : (settings.data?.runsheet_terms?.trim() || DEFAULT_TERMS) });
   } catch (e) {
     console.error(e);
     return json({ error: "Unable to load run sheet" }, 500);

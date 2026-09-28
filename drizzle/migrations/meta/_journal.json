@@ -386,6 +386,13 @@
       "when": 1790606805567,
       "tag": "0054_fix_venue_clash_self_match",
       "breakpoints": true
+    },
+    {
+      "idx": 55,
+      "version": "7",
+      "when": 1790608876418,
+      "tag": "0055_runsheet_internal_notes_and_link",
+      "breakpoints": true
     }
   ]
 }

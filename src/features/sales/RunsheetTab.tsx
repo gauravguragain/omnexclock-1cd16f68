@@ -57,7 +57,7 @@ export default function RunsheetTab({ lead, booking, options, onSaved }: {
   const [form, setForm] = useState({
     event_order_number: "", booking_reference: "", sales_person: "", sales_person_phone: "", event_coordinator: "", event_coordinator_phone: "",
     onsite_contact_name: "", onsite_contact_phone: "", adult_guests: "", kids_guests: "",
-    access_time: "", setup_notes: "", special_requests: "", distributed_to: "", ops_notes: "", client_notes: "",
+    access_time: "", setup_notes: "", special_requests: "", distributed_to: "", ops_notes: "", foh_notes: "", client_notes: "",
   });
   const [accessEnabled, setAccessEnabled] = useState(false);
   const [setupItems, setSetupItems] = useState<string[]>([]);
@@ -107,7 +107,7 @@ export default function RunsheetTab({ lead, booking, options, onSaved }: {
         adult_guests: row.adult_guests != null ? String(row.adult_guests) : "",
         kids_guests: row.kids_guests != null ? String(row.kids_guests) : "",
         access_time: row.access_time || "", setup_notes: row.setup_notes || "", special_requests: row.special_requests || "",
-        distributed_to: row.distributed_to || "", ops_notes: row.ops_notes || "", client_notes: row.client_notes || "",
+        distributed_to: row.distributed_to || "", ops_notes: row.ops_notes || "", foh_notes: row.foh_notes || "", client_notes: row.client_notes || "",
       });
       setAccessEnabled(Boolean(row.access_time));
       setSetupItems(row.setup_items || []);
@@ -236,7 +236,7 @@ export default function RunsheetTab({ lead, booking, options, onSaved }: {
       service_schedule: schedule.map(({ time, label, detail }) => ({ time, label, detail })),
       service_schedule_foh: fohSchedule.map(({ time, label, detail }) => ({ time, label, detail })),
       special_requests: form.special_requests || null, distributed_to: form.distributed_to || null,
-      ops_notes: form.ops_notes || null, client_notes: form.client_notes || null,
+       ops_notes: form.ops_notes || null, foh_notes: form.foh_notes || null, client_notes: form.client_notes || null,
       updated_by: user?.id, ...extra,
     };
     if (!runsheet) payload.created_by = user?.id;
@@ -432,7 +432,8 @@ export default function RunsheetTab({ lead, booking, options, onSaved }: {
             {accessEnabled && <TimeDropdownPicker value={form.access_time || "10:00"} onChange={(value) => setForm((prev) => ({ ...prev, access_time: value }))} />}
           </div>
           <div className="space-y-1.5"><Label>Setup notes</Label><Textarea rows={3} value={form.setup_notes} onChange={set("setup_notes")} placeholder="8 chairs per table, gift table on stage…" /></div>
-          <div className="space-y-1.5"><Label>Notes for the team only</Label><Textarea rows={2} value={form.ops_notes} onChange={set("ops_notes")} placeholder="Kitchen and floor reminders" /></div>
+           <div className="space-y-1.5"><Label>Kitchen team notes</Label><Textarea rows={2} value={form.ops_notes} onChange={set("ops_notes")} placeholder="Notes for the kitchen team" /></div>
+           <div className="space-y-1.5"><Label>Front of house notes</Label><Textarea rows={2} value={form.foh_notes} onChange={set("foh_notes")} placeholder="Notes for the front of house team" /></div>
         </div>
 
         <div className="space-y-3 rounded-lg border border-border p-4">
