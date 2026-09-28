@@ -7,3 +7,4 @@
 - [x] Add per-dish customisations and one-off Other choices to lead menu courses
 - [x] Make saved menu-book package selections editable without recreating them
 - [x] Sync menu estimate, booking total, deposit received, Payments and Operations
+- [x] Split confirmation children into ages 5–10 and under 5 while preserving the total kids count
