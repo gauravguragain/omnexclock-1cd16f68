@@ -4,3 +4,4 @@ Lead detail uses one shared seven-stage concierge layout in the full page and di
 Event menu estimates synchronize into event booking totals in the database, while received amounts always come from crm_payments; this keeps Sales and Operations aligned without overwriting catering or imported bookings lacking a menu.
 Event confirmation stores the two child age counts separately while keeping crm_bookings.kids as their sum; other guest-count consumers continue to work unchanged.
 - Menu selections save only through the save_menu_selection RPC (one transaction replaces the selection and all its items), so a save can never half-apply or revert.
+- Venue-clash UI and imports read crm_booking_venue_clashes live; booking notes and lead tags never store clash state, preventing stale import warnings.
