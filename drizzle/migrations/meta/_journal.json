@@ -316,6 +316,27 @@
       "when": 1790556418783,
       "tag": "0044_portal_code_bruteforce_guard",
       "breakpoints": true
+    },
+    {
+      "idx": 45,
+      "version": "7",
+      "when": 1790556607954,
+      "tag": "0045_scope_dish_photos_and_logo_listing",
+      "breakpoints": true
+    },
+    {
+      "idx": 46,
+      "version": "7",
+      "when": 1790556623017,
+      "tag": "0046_business_logos_admin_select",
+      "breakpoints": true
+    },
+    {
+      "idx": 47,
+      "version": "7",
+      "when": 1790556651789,
+      "tag": "0047_drop_legacy_runsheet_and_invite_policies",
+      "breakpoints": true
     }
   ]
 }
