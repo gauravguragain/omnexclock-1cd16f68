@@ -81,7 +81,7 @@ export function RecordPaymentDialog({ open, onOpenChange, booking, bookings, sug
   return <Dialog open={open} onOpenChange={onOpenChange}><DialogContent className="max-w-md"><DialogHeader><DialogTitle>Record payment</DialogTitle></DialogHeader>
     <div className="space-y-3">
       {!booking && <div><Label>Booking</Label><Select value={form.booking_id} onValueChange={v => set("booking_id", v)}><SelectTrigger><SelectValue placeholder="Choose a booking" /></SelectTrigger>
-        <SelectContent>{(bookings || []).map(b => <SelectItem key={b.id} value={b.id}>{b.event_date ? format(new Date(b.event_date + "T00:00"), "d MMM yyyy") : ""} · {b.event_name || b.event_type || "Booking"}</SelectItem>)}</SelectContent></Select></div>}
+        <SelectContent>{sortUpcomingFirst(bookings || []).map(b => <SelectItem key={b.id} value={b.id}>{b.event_date ? format(new Date(b.event_date + "T00:00"), "d MMM yyyy") : ""} · {b.event_name || b.event_type || "Booking"}</SelectItem>)}</SelectContent></Select></div>}
       <div className="grid grid-cols-2 gap-3">
         <div><Label>Type</Label><Select value={form.payment_type} onValueChange={v => set("payment_type", v)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{Object.entries(PAYMENT_TYPES).map(([k, v]) => <SelectItem key={k} value={k}>{v}</SelectItem>)}</SelectContent></Select></div>
         <div><Label>Amount (AUD)</Label><Input type="number" inputMode="decimal" min="0" step="0.01" value={form.amount} onChange={e => set("amount", e.target.value)} /></div>
@@ -147,4 +147,12 @@ export function BookingPaymentsCard({ booking, onChanged }: { booking: any; onCh
     </div>) : <p className="text-sm text-muted-foreground">No payments recorded yet. Recording the deposit moves the lead to Deposit received; full payment moves it to Full payment received.</p>}</div>
     <RecordPaymentDialog open={open} onOpenChange={setOpen} booking={booking} suggested={suggested} onSaved={changed} />
   </CardContent></Card>;
+}
+
+/** Upcoming events (soonest first), then past events (most recent first). */
+function sortUpcomingFirst(list: any[]) {
+  const today = new Date().toLocaleDateString("en-CA", { timeZone: "Australia/Sydney" });
+  const up = list.filter(b => b.event_date && b.event_date >= today).sort((a, b) => a.event_date.localeCompare(b.event_date));
+  const past = list.filter(b => !b.event_date || b.event_date < today).sort((a, b) => (b.event_date || "").localeCompare(a.event_date || ""));
+  return [...up, ...past];
 }

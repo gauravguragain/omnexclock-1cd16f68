@@ -12,6 +12,7 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import SendRunsheetDialog from "./SendRunsheetDialog";
+import OptionSelect from "@/features/sales/OptionSelect";
 import { BookingPaymentsCard } from "./payments";
 import { prettyCrmValue } from "@/features/sales/types";
 import { useEventsData, bookingEnd, minutesBetween, to12 } from "./useEventsData";
@@ -25,7 +26,7 @@ export default function EventDetailPage({ kind }: { kind: "event" | "catering" }
   const { businessCode, id } = useParams(); const nav = useNavigate();
   const crm = useCrmData(); const ev = useEventsData();
   const [items, setItems] = useState<any[]>([]); const [selection, setSelection] = useState<any>(null); const [sendOpen, setSendOpen] = useState(false);
-  const [editOpen, setEditOpen] = useState(false); const [form, setForm] = useState({ full_name: "", email: "", phone: "" }); const [saving, setSaving] = useState(false);
+  const [editOpen, setEditOpen] = useState(false); const [form, setForm] = useState({ full_name: "", email: "", phone: "", event_type: "" }); const [saving, setSaving] = useState(false);
   const b: any = crm.bookings.find(x => x.id === id);
   useEffect(() => {
     if (!b?.menu_selection_id && !b?.lead_id) return;
@@ -57,16 +58,18 @@ export default function EventDetailPage({ kind }: { kind: "event" | "catering" }
   const guests = Number(adults || 0) + Number(kidsN || 0);
   const date = new Date(`${b.event_date}T00:00:00`);
   const cancelled = b.status === "cancelled";
-  const openEdit = () => { setForm({ full_name: lead?.full_name || customer?.full_name || "", email: lead?.email || customer?.email || "", phone: lead?.phone || customer?.phone || "" }); setEditOpen(true); };
+  const openEdit = () => { setForm({ full_name: lead?.full_name || customer?.full_name || "", email: lead?.email || customer?.email || "", phone: lead?.phone || customer?.phone || "", event_type: lead?.event_type || b.event_type || "" }); setEditOpen(true); };
   const saveClient = async () => {
     if (!form.full_name.trim()) return toast.error("Client name is required");
     setSaving(true);
     const vals = { full_name: form.full_name.trim(), email: form.email.trim() || null, phone: form.phone.trim() || null };
-    const { error } = await supabase.from("crm_leads").update(vals as any).eq("id", lead.id);
+    const eventType = form.event_type.trim() || null;
+    const { error } = lead ? await supabase.from("crm_leads").update({ ...vals, ...(eventType ? { event_type: eventType } : {}) } as any).eq("id", lead.id) : { error: null };
+    if (!error && eventType) await supabase.from("crm_bookings").update({ event_type: eventType } as any).eq("id", b.id);
     if (!error && b.customer_id) await supabase.from("crm_customers").update(vals as any).eq("id", b.customer_id);
     setSaving(false);
     if (error) return toast.error(error.message);
-    toast.success("Client details updated"); setEditOpen(false); crm.refresh?.(true as any);
+    toast.success("Event details updated"); setEditOpen(false); crm.refresh?.(true as any);
   };
   const title = b.event_name || lead?.full_name || "Event";
   const PKG = ["package", "kids_package", "manual"];
@@ -132,10 +135,11 @@ export default function EventDetailPage({ kind }: { kind: "event" | "catering" }
         <Section icon={History} title="Record"><Row k="Event Order" v={b.event_order_number} /><Row k="Run sheet" v={rs ? `Revision ${rs.revision || 1}${rs.sent_at ? " · issued" : " · draft"}` : "Not started"} /><Row k="Created" v={format(new Date(b.created_at), "d MMM yyyy, h:mm a")} /></Section>
       </div>
     </div>
-    <Dialog open={editOpen} onOpenChange={setEditOpen}><DialogContent><DialogHeader><DialogTitle>Edit client details</DialogTitle></DialogHeader>
+    <Dialog open={editOpen} onOpenChange={setEditOpen}><DialogContent><DialogHeader><DialogTitle>Edit event details</DialogTitle></DialogHeader>
       <div className="space-y-3"><div><Label>Client name</Label><Input value={form.full_name} onChange={e => setForm({ ...form, full_name: e.target.value })} /></div>
       <div><Label>Email</Label><Input type="email" value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} /></div>
-      <div><Label>Phone</Label><Input type="tel" value={form.phone} onChange={e => setForm({ ...form, phone: e.target.value })} /></div></div>
+      <div><Label>Phone</Label><Input type="tel" value={form.phone} onChange={e => setForm({ ...form, phone: e.target.value })} /></div>
+      <div><Label>Event type</Label><OptionSelect name="event_type" options={crm.options.filter((o: any) => o.option_type === "event_type" && o.active)} defaultValue={form.event_type} emptyLabel="Choose event type…" onChange={v => setForm(f => ({ ...f, event_type: v }))} /></div></div>
       <DialogFooter><Button variant="outline" onClick={() => setEditOpen(false)}>Cancel</Button><Button disabled={saving} onClick={saveClient}>{saving ? "Saving…" : "Save"}</Button></DialogFooter></DialogContent></Dialog>
     {lead && rs && <SendRunsheetDialog mode={kind === "catering" && !rs.sent_at ? "issue" : "resend"} onIssue={issueCatering} open={sendOpen} onOpenChange={setSendOpen} rs={rs} lead={lead} booking={b} businessName={crm.business.name} />}
   </div>;
