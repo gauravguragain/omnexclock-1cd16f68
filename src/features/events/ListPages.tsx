@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Mail, MapPin, Phone, Building2, Plus } from "lucide-react";
@@ -25,7 +25,8 @@ export function CustomersPage() {
   const { businessCode } = useParams();
   const [menuSends, setMenuSends] = useState<Row[]>([]);
   useEffect(() => { setMenuSends([]); if (!open) return; (sbMenu.from("crm_menu_sends" as any) as any).select("*").eq("customer_id", open.id).order("sent_at", { ascending: false }).then(({ data }: any) => setMenuSends(data || [])); }, [open?.id]);
-  const eventsFor = (c: Row) => crm.bookings.filter(b => b.customer_id === c.id || crm.leads.find(l => l.id === b.lead_id)?.customer_id === c.id);
+  const eventMap = useMemo(() => { const leadCust = new Map(crm.leads.map(l => [l.id, l.customer_id])); const m = new Map<string, any[]>(); crm.bookings.forEach(b => { const ids = new Set([b.customer_id, leadCust.get(b.lead_id)].filter(Boolean)); ids.forEach(id => { if (!m.has(id)) m.set(id, []); m.get(id)!.push(b); }); }); return m; }, [crm.bookings, crm.leads]);
+  const eventsFor = (c: Row) => eventMap.get(c.id) || [];
   if (!d.business) return null;
   const openEvents = open ? eventsFor(open).slice().sort((a, b) => String(b.event_date).localeCompare(String(a.event_date))) : [];
   const upcoming = openEvents.filter(b => b.event_date >= new Date().toLocaleDateString("en-CA"));
