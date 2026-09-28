@@ -22,7 +22,7 @@ function TermsPage({ terms, businessName }: { terms: string; businessName?: stri
   return <section data-pdf-break className="mt-10 break-before-page pt-2 text-[10.5px] leading-snug" style={{ breakBefore: "page" }}>
     <header className="flex items-start justify-between gap-6 border-b border-border pb-3">
       <h1 className="text-xl font-bold">Terms &amp; Conditions</h1>
-      <img src="/regal-logo.png" alt={businessName || "Logo"} className="h-12 w-24 object-contain object-right" />
+      <img src="/regal-logo.png" alt={businessName || "Logo"} className="h-14 w-28 object-contain object-right" />
     </header>
     <div className="mt-3 space-y-2">{blocks.map((b, i) => /^\d+\.\s/.test(b) || (b.length < 90 && !/[.:]$/.test(b) && i > 0)
       ? <h2 key={i} className="pt-1 text-xs font-bold">{b}</h2>
@@ -104,9 +104,9 @@ export function RunsheetDocument({ rs, lead, b, items, selection, businessName, 
       <div>
         <h1 className="text-2xl font-bold">{catering ? `Catering ${pickup ? "Pickup" : "Delivery"} Order` : `${eventType} Event Order`}</h1>
         <p className="mt-1 text-base font-bold">{date}</p>
-        <p className="mt-1 text-xs text-muted-foreground">{businessName || "Pro Regal Pavilion"}{(businessPhone || businessEmail) && <span className="font-medium text-foreground">  ·  {[businessPhone, businessEmail].filter(Boolean).join("  ·  ")}</span>}</p>
+        <p className="mt-1 text-xs font-bold text-foreground">{[businessName || "Pro Regal Pavilion", businessPhone, businessEmail].filter(Boolean).join("  ·  ")}</p>
       </div>
-      <img src="/regal-logo.png" alt={businessName || "Logo"} className="h-16 w-28 object-contain object-right" />
+      <img src="/regal-logo.png" alt={businessName || "Logo"} className="h-20 w-36 object-contain object-right" />
     </header>
 
     <div className="mt-5 grid grid-cols-[1.1fr_1fr] gap-5 text-xs">
