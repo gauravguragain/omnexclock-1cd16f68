@@ -54,6 +54,7 @@ export function LeadDetailView({ lead, open, initialTab, options, interactions, 
   const beverageLabel=beverageOptions.find(o=>o.value===beverageChoice)?.label||(beverageChoice?prettyCrmValue(beverageChoice):"");
   const beverageTotal=beverageChoice?lineTotal(Number(bevPrice.perHead||0),Number(bevPrice.flat||0)):0;
   const total=packageTotal+corkageTotal+stallTotal+kidsTotal+manualTotal+beverageTotal;
+  useEffect(()=>{if(booking?.total_amount!=null)setBookTotal(String(booking.total_amount));else setBookTotal(total?String(total):"");},[booking?.id,booking?.total_amount,total]);
   const kidsCatalogue=Array.from(new Map(bookPackages.flatMap((p:any)=>(p.courses||[]).filter((c:any)=>/kid/i.test(c.name)).flatMap((c:any)=>c.dishes||[])).map((d:any)=>[d.name,d])).values());
   const dishCategories=new Set(Object.values(COURSE_CATEGORY));
   const groupedMenu=useMemo(()=>{const map=new Map<string,any[]>();menuItems.filter(i=>!dishCategories.has(i.category)).forEach(i=>{const key=i.category||"Other";map.set(key,[...(map.get(key)||[]),i]);});return Array.from(map.entries());},[menuItems]);
