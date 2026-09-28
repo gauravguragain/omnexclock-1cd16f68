@@ -90,6 +90,7 @@ if (typeof window !== "undefined") {
 }
 const PublicEnquiryPage = React.lazy(() => import("./pages/PublicEnquiryPage"));
 const GuestMenuPage = React.lazy(() => import("./pages/GuestMenuPage"));
+const MenuSharePage = React.lazy(() => import("./pages/MenuSharePage"));
 const BookingConfirmationPage = React.lazy(() => import("./pages/BookingConfirmationPage"));
 const MasterDashboardPage = React.lazy(() => import("./pages/master/MasterDashboardPage"));
 const MasterBusinessesPage = React.lazy(() => import("./pages/master/MasterBusinessesPage"));
@@ -126,6 +127,7 @@ const App = () => (
                   <Route path="/.lovable/oauth/consent" element={<OAuthConsentPage />} />
                   <Route path="/runsheet/:runsheetId" element={<PublicRunsheetPage />} />
                   <Route path="/menu/:token" element={<GuestMenuPage />} />
+                  <Route path="/m/:token" element={<MenuSharePage />} />
                   <Route path="/reset-password" element={<ResetPasswordPage />} />
                   <Route path="/register-business" element={<RegisterBusinessPage />} />
                   <Route path="/hub" element={<BusinessHubPage />} />
