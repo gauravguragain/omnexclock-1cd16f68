@@ -21,7 +21,9 @@ export default function ReportsPage() {
     const group = (key: (b: any) => string) => Object.entries(bookings.reduce<Record<string, { count: number; revenue: number; guests: number }>>((a, b) => { const k = key(b) || "Not set"; a[k] ||= { count: 0, revenue: 0, guests: 0 }; a[k].count++; a[k].revenue += Number(b.total_amount || 0); a[k].guests += Number(b.guest_count || 0); return a; }, {})).sort((a, b) => b[1].count - a[1].count);
     const byType = group(b => prettyCrmValue(b.event_type || crm.leads.find(l => l.id === b.lead_id)?.event_type || ""));
     const byHall = group(b => b.venue_space);
-    const leads = crm.leads.filter(l => l.created_at >= from && l.lead_kind !== "catering" && l.event_type !== "catering");
+    // Leads are dated by their event date (falls back to created date) so migrated data stays in its own month.
+    const leadDate = (l: any) => (Array.isArray(l.preferred_dates) && l.preferred_dates[0]) || String(l.created_at).slice(0, 10);
+    const leads = crm.leads.filter(l => leadDate(l) >= from && l.lead_kind !== "catering" && l.event_type !== "catering");
     const bySource = Object.entries(leads.reduce<Record<string, { total: number; won: number }>>((a, l) => { const k = prettyCrmValue(l.source); a[k] ||= { total: 0, won: 0 }; a[k].total++; if (l.lead_outcome === "confirmed" || l.status === "full_payment_received") a[k].won++; return a; }, {})).sort((a, b) => b[1].total - a[1].total);
     return { bookings, byMonth, byType, byHall, bySource, leads };
   }, [crm.bookings, crm.leads, months]);
