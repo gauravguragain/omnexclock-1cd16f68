@@ -69,7 +69,8 @@ export function RunsheetDocument({ rs, lead, b, items, selection, businessName, 
   const fohSchedule: any[] = rs.service_schedule_foh || [];
   const normCourse = (v: string) => v.trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/s$/, "");
   const matchesCourse = (s: any, course: string) => { const c = normCourse(course); const l = normCourse(String(s.label || "")); return l && (l.includes(c) || c.includes(l)); };
-  const courseTime = (course: string) => { const hit = schedule.find((s: any) => matchesCourse(s, course)); return hit?.time ? to12(hit.time) : ""; };
+  const slot = (s: any) => s?.time ? `${to12(s.time)}${s.end && s.end !== s.time ? ` – ${to12(s.end)}` : ""}` : "";
+  const courseTime = (course: string) => slot(schedule.find((s: any) => matchesCourse(s, course)));
   const otherSchedule = schedule.filter((s: any) => !Object.keys(courses).some((c) => matchesCourse(s, c)));
   const setup: string[] = rs.setup_items || [];
   const date = b?.event_date ? format(new Date(`${b.event_date}T00:00:00`), "EEEE, d MMMM yyyy") : "Date to be confirmed";
