@@ -1,10 +1,4 @@
 # Roadmap
 
-- [x] Lead flow redesign — concierge layout with stage sidebar, mobile stage rail, progress header and Back/Next controls
-- [x] Preserve confirmation form and all seven existing workflows and saving actions
-- [x] Verify desktop and mobile navigation, booking form and preview errors
-- [x] Imports bypass venue clash block; clashes flagged in app
-- [x] Add per-dish customisations and one-off Other choices to lead menu courses
-- [x] Make saved menu-book package selections editable without recreating them
-- [x] Sync menu estimate, booking total, deposit received, Payments and Operations
-- [x] Split confirmation children into ages 5–10 and under 5 while preserving the total kids count
+- [ ] Verify refresh button renders on Sales & Marketing (desktop + mobile) in preview
+- [ ] Venue clash warning still showing on calendar for Royal Splendar Hall 03 Oct 2026 vs "18th Birthday – Amit" — find and fix stale/incorrect clash flag across the app
