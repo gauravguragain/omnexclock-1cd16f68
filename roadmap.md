@@ -4,5 +4,6 @@
 - [x] Preserve confirmation form and all seven existing workflows and saving actions
 - [x] Verify desktop and mobile navigation, booking form and preview errors
 - [x] Imports bypass venue clash block; clashes flagged in app
-- [ ] Add per-dish customisations and one-off Other choices to lead menu courses
-- [ ] Make saved menu-book package selections editable without recreating them
+- [x] Add per-dish customisations and one-off Other choices to lead menu courses
+- [x] Make saved menu-book package selections editable without recreating them
+- [x] Sync menu estimate, booking total, deposit received, Payments and Operations

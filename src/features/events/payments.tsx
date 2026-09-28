@@ -25,10 +25,10 @@ export function paymentSummary(booking: any, payments: CrmPayment[]) {
   const total = Number(booking?.total_amount) || 0;
   const deposit = Number(booking?.deposit_amount) || 0;
   const paid = Math.round(payments.reduce((s, p) => s + Number(p.amount || 0), 0) * 100) / 100;
-  const balance = Math.round((total - paid) * 100) / 100;
+  const balance = total > 0 ? Math.max(0, Math.round((total - paid) * 100) / 100) : 0;
   const today = sydneyToday();
   const status = total > 0 && paid >= total ? "paid" : paid <= 0 ? "unpaid" : paid >= deposit && deposit > 0 ? "deposit" : "part";
-  const overdue = balance > 0 && ((!!booking?.balance_due_date && booking.balance_due_date < today) || (paid < deposit && !!booking?.deposit_due_date && booking.deposit_due_date < today));
+  const overdue = (balance > 0 && !!booking?.balance_due_date && booking.balance_due_date < today) || (deposit > 0 && paid < deposit && !!booking?.deposit_due_date && booking.deposit_due_date < today);
   return { total, deposit, paid, balance, status, overdue };
 }
 

@@ -140,12 +140,12 @@ export async function loadOperations(bid: string, r: Range) {
   const cateringRevenue = sum(cater, b => b.total_amount) + cateringDeliveriesRevenue;
   const revenue = eventRevenue + cateringRevenue;
   const guests = sum(inRange, b => b.guest_count || (Number(b.adults || 0) + Number(b.kids || 0))) + sum(catering, c => c.number_of_guests);
-  const depositsCollected = sum(inRange.filter((b: any) => b.deposit_paid), b => b.deposit_amount);
   // Outstanding balance: totals are often unknown when a deposit is taken, so only bookings with a
   // real total contribute, and everything actually paid (all payment records, not just the deposit)
   // is subtracted. A booking can never contribute less than $0.
   const paidByBooking: Record<string, number> = {};
   (payments as any[]).forEach(p => { if (p.booking_id) paidByBooking[p.booking_id] = (paidByBooking[p.booking_id] || 0) + (Number(p.amount) || 0); });
+  const depositsCollected = sum(inRange, (b: any) => Math.min(Math.max(0, paidByBooking[b.id] || 0), Math.max(0, Number(b.deposit_amount || 0))));
   const balanceOf = (b: any) => Math.max(0, Number(b.total_amount || 0) - (paidByBooking[b.id] || 0));
   const upcomingBookings = live.filter((b: any) => b.event_date >= today);
   const outstandingBalance = sum(upcomingBookings, balanceOf);
