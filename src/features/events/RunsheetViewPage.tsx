@@ -129,31 +129,27 @@ export function RunsheetDocument({ rs, lead, b, items, selection, businessName, 
     <section className="mt-4">
       <div className="flex justify-between bg-primary px-3 py-2 text-sm font-bold text-primary-foreground"><span>Agenda – {date}</span><span>Day 1 of 1</span></div>
       <div className="bg-muted"><Summary bold /></div>
-      <div className="grid grid-cols-2 border-x border-b border-border text-xs leading-relaxed">
-        <div className="min-w-0 border-r border-border p-4">
-          {stalls.length > 0 && <div className="mb-4 break-inside-avoid"><h2 className="font-bold">Live Stalls{stalls[0].service_start_time ? ` — ${to12(stalls[0].service_start_time)}${stalls[0].service_end_time ? ` to ${to12(stalls[0].service_end_time)}` : ""}` : ""}</h2>{stalls.map(s => <p key={s.id} className="pl-3">• {String(s.item_name || "").replace(/_/g, " ").replace(/\b\p{L}/gu, letter => letter.toLocaleUpperCase())}</p>)}</div>}
-          <h2 className="font-bold">Menu selection{pkgs.length ? ` – ${pkgs.map(p => p.item_name).join(" · ")}` : ""}</h2>
-           {Object.entries(courses as Record<string, any[]>).map(([course, dishes]) => <div key={course} className="mt-2 break-inside-avoid"><h3 className="pl-3 font-semibold">{course}{courseTime(course) ? ` — ${courseTime(course)}` : ""}</h3>{dishes.map(d => <p key={d.id} className="pl-6">- {d.item_name}{d.notes ? <span className="font-semibold"> — {d.notes}</span> : null}</p>)}</div>)}
-          {otherSchedule.length > 0 && <div className="mt-2 break-inside-avoid">{otherSchedule.map((s, i) => <p key={i} className="pl-3">• {slot(s) || "—"} – {s.label}{s.detail ? ` (${s.detail})` : ""}</p>)}</div>}
-          {kidsRows.length > 0 && <p className="mt-2">Kids menu: {kidsRows.reduce((s, k) => s + (Number(k.quantity) || 0), 0)} kids</p>}
-          {selection?.beverage_package && <p className="mt-2">Beverages: {prettyCrmValue(selection.beverage_package)}</p>}
-          {selection?.corkage_enabled && <p className="mt-1">Host is bringing their own drinks{selection?.corkage_note ? `: ${selection.corkage_note}` : ""}.</p>}
-          {selection?.dietary_requirements && <p className="mt-2">Dietary: {selection.dietary_requirements}</p>}
-          {selection?.allergies && <p className="mt-1 font-semibold">ALLERGIES: {selection.allergies}</p>}
-          {!items.length && <p className="mt-2 text-muted-foreground">No menu saved yet.</p>}
-        </div>
-        <div className="min-w-0 p-4">
-          <h2 className="font-bold">Setup & Additional Information</h2>
-          {setup.map(s => <p key={s} className="pl-3">• {s}</p>)}
-          {rs.setup_notes && <p className="mt-2 whitespace-pre-line pl-3">{rs.setup_notes}</p>}
-          {rs.access_time && <p className="mt-2">Decor / vendor access: {to12(rs.access_time)}</p>}
-          {rs.special_requests && <p className="mt-2">Special requests: {rs.special_requests}</p>}
-          <h2 className="mt-4 font-bold">FOH service schedule</h2>
-          {fohSchedule.length ? fohSchedule.map((s, i) => <p key={i} className="pl-3">• {slot(s) || "—"} – {s.label}{s.detail ? ` (${s.detail})` : ""}</p>) : <p className="pl-3 text-muted-foreground">No floor timings set.</p>}
-           {rs.client_notes && <div className="mt-4 break-inside-avoid"><h2 className="font-bold">Client notes</h2><p className="whitespace-pre-line pl-3">{rs.client_notes}</p></div>}
-           {internal && rs.ops_notes && <div className="mt-4 break-inside-avoid text-kitchen-note"><h2 className="font-bold">Kitchen team notes</h2><p className="whitespace-pre-line pl-3">{rs.ops_notes}</p></div>}
-           {internal && rs.foh_notes && <div className="mt-4 break-inside-avoid text-foh-note"><h2 className="font-bold">Front of house notes</h2><p className="whitespace-pre-line pl-3">{rs.foh_notes}</p></div>}
-        </div>
+      {/* Newspaper-style flow: content fills the left column, then the right, before a new page. */}
+      <div data-runsheet-flow className="runsheet-flow columns-2 gap-8 border-x border-b border-border p-4 text-xs leading-relaxed [column-rule:1px_solid_hsl(var(--border))] [&>*]:break-inside-avoid">
+          {stalls.length > 0 && <div className="pb-3"><h2 className="font-bold">Live Stalls{stalls[0].service_start_time ? ` — ${to12(stalls[0].service_start_time)}${stalls[0].service_end_time ? ` to ${to12(stalls[0].service_end_time)}` : ""}` : ""}</h2>{stalls.map(s => <p key={s.id} className="pl-3">• {String(s.item_name || "").replace(/_/g, " ").replace(/\b\p{L}/gu, letter => letter.toLocaleUpperCase())}</p>)}</div>}
+          <div><h2 className="font-bold">Menu selection{pkgs.length ? ` – ${pkgs.map(p => p.item_name).join(" · ")}` : ""}</h2></div>
+          {Object.entries(courses as Record<string, any[]>).map(([course, dishes]) => <div key={course} className="pt-2"><h3 className="pl-3 font-semibold">{course}{courseTime(course) ? ` — ${courseTime(course)}` : ""}</h3>{dishes.map(d => <p key={d.id} className="pl-6">- {d.item_name}{d.notes ? <span className="font-semibold"> — {d.notes}</span> : null}</p>)}</div>)}
+          {otherSchedule.length > 0 && <div className="pt-2">{otherSchedule.map((s, i) => <p key={i} className="pl-3">• {slot(s) || "—"} – {s.label}{s.detail ? ` (${s.detail})` : ""}</p>)}</div>}
+          {kidsRows.length > 0 && <div className="pt-2"><p>Kids menu: {kidsRows.reduce((s, k) => s + (Number(k.quantity) || 0), 0)} kids</p></div>}
+          {selection?.beverage_package && <div className="pt-3"><h2 className="font-bold">Beverages – {selection.beverage_detail?.name || prettyCrmValue(selection.beverage_package)}</h2>{selection.beverage_detail?.description && <p className="pl-3 italic">{selection.beverage_detail.description}</p>}</div>}
+          {(selection?.beverage_detail?.sections || []).filter((sec: any) => sec.name || sec.items.length || sec.notes).map((sec: any, i: number) => <div key={i} className="pt-1"><h3 className="pl-3 font-semibold">{sec.name}{sec.picks ? ` (choose ${sec.picks})` : ""}</h3>{sec.notes && <p className="whitespace-pre-line pl-6">{sec.notes}</p>}{sec.items.map((n: string) => <p key={n} className="pl-6">- {n}</p>)}</div>)}
+          {selection?.corkage_enabled && <div className="pt-1"><p>Corkage: host is bringing their own drinks{selection?.corkage_note ? ` – ${selection.corkage_note}` : ""}.</p></div>}
+          {selection?.dietary_requirements && <div className="pt-2"><p>Dietary: {selection.dietary_requirements}</p></div>}
+          {selection?.allergies && <div className="pt-1"><p className="font-semibold">ALLERGIES: {selection.allergies}</p></div>}
+          {!items.length && <div className="pt-2"><p className="text-muted-foreground">No menu saved yet.</p></div>}
+          <div className="pt-4"><h2 className="font-bold">Setup & Additional Information</h2>{setup.map(s => <p key={s} className="pl-3">• {s}</p>)}</div>
+          {rs.setup_notes && <div className="pt-2"><p className="whitespace-pre-line pl-3">{rs.setup_notes}</p></div>}
+          {rs.access_time && <div className="pt-2"><p>Decor / vendor access: {to12(rs.access_time)}</p></div>}
+          {rs.special_requests && <div className="pt-2"><p>Special requests: {rs.special_requests}</p></div>}
+          <div className="pt-4"><h2 className="font-bold">FOH service schedule</h2>{fohSchedule.length ? fohSchedule.map((s, i) => <p key={i} className="pl-3">• {slot(s) || "—"} – {s.label}{s.detail ? ` (${s.detail})` : ""}</p>) : <p className="pl-3 text-muted-foreground">No floor timings set.</p>}</div>
+          {rs.client_notes && <div className="pt-4"><h2 className="font-bold">Client notes</h2><p className="whitespace-pre-line pl-3">{rs.client_notes}</p></div>}
+          {internal && rs.ops_notes && <div className="pt-4 text-kitchen-note"><h2 className="font-bold">Kitchen team notes</h2><p className="whitespace-pre-line pl-3">{rs.ops_notes}</p></div>}
+          {internal && rs.foh_notes && <div className="pt-4 text-foh-note"><h2 className="font-bold">Front of house notes</h2><p className="whitespace-pre-line pl-3">{rs.foh_notes}</p></div>}
       </div>
     </section>
 
