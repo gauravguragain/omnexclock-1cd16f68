@@ -91,7 +91,7 @@ export function RunsheetDocument({ rs, lead, b, items, selection, businessName, 
     const heavy = bold ? "font-bold" : "font-medium";
     return <div className={`grid grid-cols-[20%_30%_20%_30%] divide-x divide-border border border-border text-xs${bold ? " font-bold" : ""}`}>
       <div className={`p-2 ${heavy}`}>{catering && <span className="block text-[10px]">{pickup ? "Pickup window" : "Delivery window"}</span>}{time}</div>
-      <div className={`p-2 ${heavy}`}>{eventTitle}</div>
+      <div className={`p-2 ${heavy}`}>{catering ? eventTitle : eventType}</div>
       <div className="p-2">Adults: {rs.adult_guests ?? b?.adults ?? "—"}<br />{b?.kids_5_to_10 != null || b?.kids_under_5 != null ? <>Kids (5–10): {b?.kids_5_to_10 ?? 0}<br />Kids (under 5): {b?.kids_under_5 ?? 0}</> : <>Kids: {rs.kids_guests ?? b?.kids ?? 0}</>}</div>
       {catering
         ? <div className="p-2"><span className="block text-[10px]">{pickup ? "Pickup" : "Delivery to"}</span><span className={heavy}>{pickup ? (businessName || "At venue") : (b?.service_location || lead?.service_location || "—")}</span></div>
@@ -133,7 +133,7 @@ export function RunsheetDocument({ rs, lead, b, items, selection, businessName, 
           {stalls.length > 0 && <div className="mb-4 break-inside-avoid"><h2 className="font-bold">Live Stalls{stalls[0].service_start_time ? ` — ${to12(stalls[0].service_start_time)}${stalls[0].service_end_time ? ` to ${to12(stalls[0].service_end_time)}` : ""}` : ""}</h2>{stalls.map(s => <p key={s.id} className="pl-3">• {String(s.item_name || "").replace(/_/g, " ").replace(/\b\p{L}/gu, letter => letter.toLocaleUpperCase())}</p>)}</div>}
           <h2 className="font-bold">Menu selection{pkgs.length ? ` – ${pkgs.map(p => p.item_name).join(" · ")}` : ""}</h2>
            {Object.entries(courses as Record<string, any[]>).map(([course, dishes]) => <div key={course} className="mt-2 break-inside-avoid"><h3 className="pl-3 font-semibold">{course}{courseTime(course) ? ` — ${courseTime(course)}` : ""}</h3>{dishes.map(d => <p key={d.id} className="pl-6">- {d.item_name}{d.notes ? <span className="font-semibold"> — {d.notes}</span> : null}</p>)}</div>)}
-          {otherSchedule.length > 0 && <div className="mt-2 break-inside-avoid">{otherSchedule.map((s, i) => <p key={i} className="pl-3">• {s.time ? to12(s.time) : "—"}{s.end ? ` – ${to12(s.end)}` : ""} – {s.label}{s.detail ? ` (${s.detail})` : ""}</p>)}</div>}
+          {otherSchedule.length > 0 && <div className="mt-2 break-inside-avoid">{otherSchedule.map((s, i) => <p key={i} className="pl-3">• {slot(s) || "—"} – {s.label}{s.detail ? ` (${s.detail})` : ""}</p>)}</div>}
           {kidsRows.length > 0 && <p className="mt-2">Kids menu: {kidsRows.reduce((s, k) => s + (Number(k.quantity) || 0), 0)} kids</p>}
           {selection?.beverage_package && <p className="mt-2">Beverages: {prettyCrmValue(selection.beverage_package)}</p>}
           {selection?.corkage_enabled && <p className="mt-1">Host is bringing their own drinks{selection?.corkage_note ? `: ${selection.corkage_note}` : ""}.</p>}
@@ -148,7 +148,7 @@ export function RunsheetDocument({ rs, lead, b, items, selection, businessName, 
           {rs.access_time && <p className="mt-2">Decor / vendor access: {to12(rs.access_time)}</p>}
           {rs.special_requests && <p className="mt-2">Special requests: {rs.special_requests}</p>}
           <h2 className="mt-4 font-bold">FOH service schedule</h2>
-          {fohSchedule.length ? fohSchedule.map((s, i) => <p key={i} className="pl-3">• {s.time ? to12(s.time) : "—"} – {s.label}{s.detail ? ` (${s.detail})` : ""}</p>) : <p className="pl-3 text-muted-foreground">No floor timings set.</p>}
+          {fohSchedule.length ? fohSchedule.map((s, i) => <p key={i} className="pl-3">• {slot(s) || "—"} – {s.label}{s.detail ? ` (${s.detail})` : ""}</p>) : <p className="pl-3 text-muted-foreground">No floor timings set.</p>}
            {rs.client_notes && <div className="mt-4 break-inside-avoid"><h2 className="font-bold">Client notes</h2><p className="whitespace-pre-line pl-3">{rs.client_notes}</p></div>}
            {internal && rs.ops_notes && <div className="mt-4 break-inside-avoid text-kitchen-note"><h2 className="font-bold">Kitchen team notes</h2><p className="whitespace-pre-line pl-3">{rs.ops_notes}</p></div>}
            {internal && rs.foh_notes && <div className="mt-4 break-inside-avoid text-foh-note"><h2 className="font-bold">Front of house notes</h2><p className="whitespace-pre-line pl-3">{rs.foh_notes}</p></div>}
