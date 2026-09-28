@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Download, Plus, Search, Upload } from "lucide-react";
 import { useCrmData } from "@/features/sales/useCrmData";
+import OptionSelect from "@/features/sales/OptionSelect";
 import LeadFormDialog from "@/features/sales/LeadFormDialog";
 import IvvyImportDialog from "@/features/sales/IvvyImportDialog";
 import { prettyCrmValue, type CrmLead } from "@/features/sales/types";
@@ -59,7 +60,7 @@ export default function LeadsBoard({ kind }: { kind: "event" | "catering" }) {
       </div>
     </CardContent></Card>)}{!shown.length && <p className="text-sm text-muted-foreground">No leads here.</p>}</div>
     <Dialog open={!!declining} onOpenChange={o => !o && setDeclining(null)}><DialogContent><DialogHeader><DialogTitle>Decline {declining?.full_name}</DialogTitle></DialogHeader>
-      <select value={reason} onChange={e => setReason(e.target.value)} className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"><option value="">Choose a reason</option>{reasons.map(r => <option key={r.id} value={r.value}>{r.label}</option>)}</select>
+      <OptionSelect key={declining?.id || "none"} name="decline_reason" emptyLabel="Choose a reason" defaultValue={reason} options={reasons} onChange={setReason} />
       <DialogFooter><Button variant="outline" onClick={() => setDeclining(null)}>Cancel</Button><Button variant="destructive" onClick={decline}>Decline lead</Button></DialogFooter></DialogContent></Dialog>
      <LeadFormDialog open={formOpen} onOpenChange={setFormOpen} businessId={crm.business.id} options={crm.options} lead={editing} leads={crm.leads} onSaved={crm.refresh} defaultKind={kind} lockedKind={kind} presetCustomerId={presetCustomer} />
   </div>;

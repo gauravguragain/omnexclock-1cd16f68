@@ -1,3 +1,4 @@
+import OptionSelect from "./OptionSelect";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -304,15 +305,7 @@ export default function RunsheetTab({ lead, booking, options, onSaved }: {
 
   const pickPerson = (key: keyof typeof form, phoneKey: keyof typeof form) => (event: { target: { value: string } }) => { const v = event.target.value; const match = stakeholders.find((p) => p.full_name === v); setForm((prev) => ({ ...prev, [key]: v, ...(match?.phone ? { [phoneKey]: match.phone } : {}) })); };
   const PersonSelect = ({ value, personKey, phoneKey, placeholder }: { value: string; personKey: keyof typeof form; phoneKey: keyof typeof form; placeholder: string }) => (
-    <select
-      value={value}
-      onChange={pickPerson(personKey, phoneKey)}
-      className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
-    >
-      <option value="">{placeholder}</option>
-      {value && !coordinators.some((p) => p.full_name === value) ? <option value={value}>{value}</option> : null}
-      {coordinators.map((p) => <option key={p.id} value={p.full_name}>{p.full_name}</option>)}
-    </select>
+    <OptionSelect name={`person_${String(personKey)}`} emptyLabel={placeholder} defaultValue={value} options={coordinators.map((p) => ({ id: p.id, value: p.full_name, label: p.full_name }))} onChange={(v) => { if (v !== value) pickPerson(personKey, phoneKey)({ target: { value: v } }); }} />
   );
   const set = (key: keyof typeof form) => (event: { target: { value: string } }) => setForm((prev) => ({ ...prev, [key]: event.target.value }));
   const revision = Number(runsheet?.revision || 1);
