@@ -98,7 +98,20 @@ export function DrinksPage() {
   const d = useEventsData(); const [share, setShare] = useState(false); if (!d.business) return null;
   const kindLabel = (k: string) => k === "soft" ? "Soft drink" : k === "hard" ? "Hard drink" : k.replace(/\b\p{L}/gu, c => c.toUpperCase());
   const opts = [...new Set(["soft", "hard", ...d.drinks.map((x: any) => String(x.kind || "soft").trim() || "soft")])].map(k => ({ value: k, label: kindLabel(k) }));
-  return <SimpleList title="Drinks" subtitle={`${d.drinks.length} drinks shared across every package.`} table="crm_drinks" businessId={d.business.id} rows={d.drinks} refresh={d.refresh} archivable groupAZ filterKey="kind" filterOptions={opts} extra={<><DrinksImportButton data={d as any} /><Button variant="outline" onClick={() => setShare(true)}>Print / email</Button>{share && <MenuShareDialog open={share} onOpenChange={setShare} data={d as any} source="drinks" defaultDrinks />}</>}
+  const KIND_ORDER = ["beer", "cocktail", "ready to serve", "wine", "whiskey", "gin", "vodka", "tequila"];
+  const kindRank = (k: string) => { const l = k.toLowerCase(); const i = KIND_ORDER.findIndex(o => l.includes(o)); return i === -1 ? KIND_ORDER.length : i; };
+  const kindOf = (x: any) => String(x.kind || "soft").trim() || "soft";
+  const kindOrder = (a: string, b: string) => {
+    const ra = kindRank(a), rb = kindRank(b);
+    if (ra !== rb) return ra - rb;
+    if (ra < KIND_ORDER.length) return a.localeCompare(b);
+    if (a === "soft") return 1;
+    if (b === "soft") return -1;
+    if (a === "hard") return 1;
+    if (b === "hard") return -1;
+    return a.localeCompare(b);
+  };
+  return <SimpleList title="Drinks" subtitle={`${d.drinks.length} drinks shared across every package.`} table="crm_drinks" businessId={d.business.id} rows={d.drinks} refresh={d.refresh} archivable groupBy={kindOf} groupOrder={kindOrder} filterKey="kind" filterOptions={opts} extra={<><DrinksImportButton data={d as any} /><Button variant="outline" onClick={() => setShare(true)}>Print / email</Button>{share && <MenuShareDialog open={share} onOpenChange={setShare} data={d as any} source="drinks" defaultDrinks />}</>}
     fields={[{ key: "name", label: "Drink name", required: true }, { key: "kind", label: "Kind", type: "text", placeholder: "e.g. Soft drink, Wine, Beer" }, { key: "price", label: "Price ($)", type: "number" }]}
     columns={[{ label: "Drink", render: r => r.name }, { label: "Kind", render: r => <Badge variant="outline">{kindLabel(String(r.kind || "soft"))}</Badge> }, { label: "Price", render: r => r.price != null ? `$${Number(r.price).toFixed(2)}` : <span className="text-muted-foreground">—</span> }, { label: "Used", render: r => <span className="text-muted-foreground">{usage(d.courseItems, "drink_id", r.id, d.courses)}</span> }]} />;
 }
