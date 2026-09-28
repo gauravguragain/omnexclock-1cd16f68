@@ -9,7 +9,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useBusiness } from "@/contexts/BusinessContext";
 import { Button } from "@/components/ui/button";
 import { useSessionGuard } from "@/hooks/useSessionGuard";
-import { BarChart3, BookOpen, CalendarDays, ChefHat, ClipboardList, Contact, GlassWater, Home, LayoutDashboard, ListFilter, LogOut, Menu, PartyPopper, PlusCircle, Settings, Truck, UserPlus, Users, Warehouse, X, CalendarCheck, Utensils, UserCheck, Wallet, History } from "lucide-react";
+import { BarChart3, BookOpen, Building2, CalendarDays, ChefHat, ClipboardList, Contact, GlassWater, LayoutDashboard, ListFilter, LogOut, Menu, PartyPopper, PlusCircle, Settings, Truck, UserPlus, Users, Warehouse, X, CalendarCheck, Utensils, UserCheck, Wallet, History } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const SECTIONS: { title: string; items: { to: string; label: string; icon: any }[] }[] = [
@@ -77,7 +77,7 @@ export default function EventsLayout({ mode = "events" }: { mode?: "events" | "c
     <aside className="hidden w-64 shrink-0 border-r border-border/40 lg:block print:!hidden"><div className="sticky top-0 h-dvh overflow-y-auto">
        <div className="flex items-center gap-3 border-b border-border/40 p-4">{resolved?.logo_url ? <img src={resolved.logo_url} alt="" className="h-9 w-9 rounded-lg object-cover" /> : <PartyPopper className="h-6 w-6 text-primary" />}<div className="min-w-0 flex-1"><p className="truncate text-sm font-semibold">{resolved?.name}</p><p className="text-[11px] text-primary">{mode === "catering" ? "Catering" : "Events & Sales"}</p></div><ForceRefreshButton className="h-8 w-8 shrink-0" /></div>
       {nav}
-      <div className="space-y-1 border-t border-border/40 p-4"><Link to={`/b/${businessCode}/admin`} className="flex items-center gap-3 rounded-md px-3 py-2 text-sm text-muted-foreground hover:bg-muted"><Home className="h-4 w-4" />Business Admin</Link><button onClick={signOut} className="flex w-full items-center gap-3 rounded-md px-3 py-2 text-sm text-muted-foreground hover:bg-muted"><LogOut className="h-4 w-4" />Sign out</button></div>
+      <div className="space-y-1 border-t border-border/40 p-4"><Link to="/hub" className="flex items-center gap-3 rounded-md px-3 py-2 text-sm text-muted-foreground hover:bg-muted"><Building2 className="h-4 w-4" />Business Hub</Link><button onClick={signOut} className="flex w-full items-center gap-3 rounded-md px-3 py-2 text-sm text-muted-foreground hover:bg-muted"><LogOut className="h-4 w-4" />Sign out</button></div>
     </div></aside>
      <header className="sticky top-0 z-40 border-b border-border/40 bg-background/95 backdrop-blur lg:hidden print:!hidden" style={{ paddingTop: "env(safe-area-inset-top)" }}>
        <div className="flex h-14 items-center gap-2 px-2" style={{ paddingLeft: "max(0.5rem, env(safe-area-inset-left))", paddingRight: "max(0.5rem, env(safe-area-inset-right))" }}>
@@ -92,7 +92,7 @@ export default function EventsLayout({ mode = "events" }: { mode?: "events" | "c
        <div className="absolute inset-y-0 left-0 flex w-[82%] max-w-xs flex-col border-r border-border bg-background shadow-2xl animate-in slide-in-from-left" style={{ paddingTop: "env(safe-area-inset-top)", paddingBottom: "env(safe-area-inset-bottom)" }}>
          <div className="flex items-center justify-between border-b border-border/40 p-3"><p className="pl-2 text-sm font-semibold">Menu</p><Button size="icon" variant="ghost" className="h-11 w-11" aria-label="Close navigation" onClick={() => setOpen(false)}><X className="h-6 w-6" /></Button></div>
          <div className="flex-1 overflow-y-auto">{nav}</div>
-         <div className="space-y-1 border-t border-border/40 p-4"><Link to={`/b/${businessCode}/admin`} onClick={() => setOpen(false)} className="flex items-center gap-3 rounded-md px-3 py-3 text-sm text-muted-foreground hover:bg-muted"><Home className="h-4 w-4" />Business Admin</Link><button onClick={signOut} className="flex w-full items-center gap-3 rounded-md px-3 py-3 text-sm text-muted-foreground hover:bg-muted"><LogOut className="h-4 w-4" />Sign out</button></div>
+         <div className="space-y-1 border-t border-border/40 p-4"><Link to="/hub" onClick={() => setOpen(false)} className="flex items-center gap-3 rounded-md px-3 py-3 text-sm text-muted-foreground hover:bg-muted"><Building2 className="h-4 w-4" />Business Hub</Link><button onClick={signOut} className="flex w-full items-center gap-3 rounded-md px-3 py-3 text-sm text-muted-foreground hover:bg-muted"><LogOut className="h-4 w-4" />Sign out</button></div>
        </div>
      </div>}
      <main className="min-w-0 flex-1 p-4 pb-24 sm:p-6 sm:pb-24 lg:p-8 print:!p-0"><OutletSuspense><Outlet /></OutletSuspense></main>
