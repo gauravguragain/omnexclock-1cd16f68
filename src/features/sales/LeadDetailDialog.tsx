@@ -65,7 +65,7 @@ export function LeadDetailView({ lead, open, initialTab, options, interactions, 
   const dishCategories=new Set(Object.values(COURSE_CATEGORY));
   const groupedMenu=useMemo(()=>{const map=new Map<string,any[]>();menuItems.filter(i=>!dishCategories.has(i.category)).forEach(i=>{const key=i.category||"Other";map.set(key,[...(map.get(key)||[]),i]);});return Array.from(map.entries());},[menuItems]);
   useEffect(()=>{if(!lead?.id||!open)return;let cancelled=false;(async()=>{
-     setHasSelection(false);setSavedEstimate(null);setMenuLoaded(false);setMenuDirty(false);
+     setHasSelection(false);setSavedEstimate(null);setMenuLoaded(false);setMenuDirty(false);if((window as any).__menuSig)delete (window as any).__menuSig[`menu-draft:${lead.id}`];
     const{data:sel,error:selErr}=await supabase.from("crm_menu_selections").select("*").eq("lead_id",lead.id).maybeSingle();
      if(cancelled)return;if(selErr){toast.error("Could not load the saved menu — please refresh before editing.");return;}
      if(!sel){restoreDraft(null);setMenuLoaded(true);return;}const s:any=sel;setHasSelection(true);setSavedEstimate(Number(s.total_estimate||0));
