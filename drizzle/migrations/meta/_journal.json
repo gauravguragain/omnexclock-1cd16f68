@@ -358,6 +358,13 @@
       "when": 1790594449089,
       "tag": "0050_owner_role_read_access",
       "breakpoints": true
+    },
+    {
+      "idx": 51,
+      "version": "7",
+      "when": 1790597570667,
+      "tag": "0051_drinks_price",
+      "breakpoints": true
     }
   ]
 }

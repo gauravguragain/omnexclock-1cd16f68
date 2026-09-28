@@ -1,0 +1,1 @@
+ALTER TABLE public.crm_drinks ADD COLUMN IF NOT EXISTS price numeric(10,2);
