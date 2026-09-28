@@ -4593,10 +4593,9 @@ export type Database = {
       is_admin_of_business: { Args: { _business_id: string }; Returns: boolean }
       is_approved: { Args: { _user_id: string }; Returns: boolean }
       is_master: { Args: never; Returns: boolean }
-      is_owner_of_business: {
-        Args: { _business_id: string; _user_id: string }
-        Returns: boolean
-      }
+      is_owner_of_business:
+        | { Args: { _business_id: string }; Returns: boolean }
+        | { Args: { _business_id: string; _user_id: string }; Returns: boolean }
       is_published_dish_photo: { Args: { _path: string }; Returns: boolean }
       is_roster_admin_of_business: {
         Args: { _business_id: string }
