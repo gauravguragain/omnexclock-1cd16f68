@@ -351,6 +351,13 @@
       "when": 1790566518984,
       "tag": "0049_merge_first_name_contacts",
       "breakpoints": true
+    },
+    {
+      "idx": 50,
+      "version": "7",
+      "when": 1790594449089,
+      "tag": "0050_owner_role_read_access",
+      "breakpoints": true
     }
   ]
 }
