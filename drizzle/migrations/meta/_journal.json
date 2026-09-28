@@ -309,6 +309,13 @@
       "when": 1790556100796,
       "tag": "0043_lock_admin_invitation_updates",
       "breakpoints": true
+    },
+    {
+      "idx": 44,
+      "version": "7",
+      "when": 1790556418783,
+      "tag": "0044_portal_code_bruteforce_guard",
+      "breakpoints": true
     }
   ]
 }

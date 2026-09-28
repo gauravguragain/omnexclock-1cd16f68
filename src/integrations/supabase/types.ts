@@ -3798,6 +3798,27 @@ export type Database = {
           },
         ]
       }
+      portal_code_attempts: {
+        Row: {
+          business_code: string
+          code_hash: string
+          ip: string
+          window_start: string
+        }
+        Insert: {
+          business_code: string
+          code_hash: string
+          ip: string
+          window_start: string
+        }
+        Update: {
+          business_code?: string
+          code_hash?: string
+          ip?: string
+          window_start?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           approved: boolean
@@ -4607,6 +4628,10 @@ export type Database = {
       next_employee_invoice_number: {
         Args: { _employee_id: string }
         Returns: number
+      }
+      portal_rate_guard: {
+        Args: { _business_code: string; _code: string }
+        Returns: undefined
       }
       register_business: {
         Args: { _business_code: string; _business_name: string }
