@@ -56,7 +56,9 @@ export function buildSectionsFromRows(d: MenuRows, packageIds: string[] | null, 
   }
   if (includeDrinks && d.drinks) {
     const active = d.drinks.filter((x) => x.active !== false);
-    const groups = [["soft", "Soft drinks"], ["hard", "Beer, wine & spirits"]].map(([k, label]) => ({ label, items: active.filter((x) => (x.kind || "soft") === k).map((x) => ({ name: x.name, price: x.price != null ? Number(x.price) : null })) })).filter((g) => g.items.length);
+    const kindLabel = (k: string) => k === "soft" ? "Soft drinks" : k === "hard" ? "Beer, wine & spirits" : k.replace(/\b\p{L}/gu, (c) => c.toUpperCase());
+    const kinds = [...new Set(active.map((x) => String(x.kind || "soft").trim() || "soft"))].sort((a, b) => (a === "soft" ? -1 : b === "soft" ? 1 : a === "hard" ? -1 : b === "hard" ? 1 : a.localeCompare(b)));
+    const groups = kinds.map((k) => ({ label: kindLabel(k), items: active.filter((x) => (String(x.kind || "soft").trim() || "soft") === k).map((x) => ({ name: x.name, price: x.price != null ? Number(x.price) : null })) })).filter((g) => g.items.length);
     if (groups.length) out.push({ kind: "drinks", title: "Drinks list", menuTitle: "Drinks", styleLabel: "Bar · Beverages", courses: [{ name: "Beverages", groups }] });
   }
   return out;

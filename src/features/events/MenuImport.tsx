@@ -15,8 +15,8 @@ const MENU_SAMPLE = [
   ["Western Menu", "Tier 2", "food", "Western Menu", "Shared · Buffet · Style", "Tier 2 Buffet Selection", 90, "$90–100", 30, "", "Mains", 3, 1, 1, 1, "", "Grilled barramundi, lemon butter", "seafood", "", ""],
   ["Beverages", "Drinks Package", "beverage", "", "", "", 35, "", "", "4 hour package", "Drinks", 3, "", "", "", "", "Coke", "soft", "", ""],
 ];
-const DRINK_HEADERS = ["Drink name", "Kind (soft/hard)", "Price"];
-const DRINK_SAMPLE = [["Coke", "soft", 4.5], ["House Red Wine (glass)", "hard", 12]];
+const DRINK_HEADERS = ["Drink name", "Kind", "Price"];
+const DRINK_SAMPLE = [["Coke", "Soft drink", 4.5], ["House Red Wine (glass)", "Wine", 12]];
 
 const norm = (s: unknown) => String(s ?? "").trim();
 const key = (s: unknown) => norm(s).toLowerCase();
@@ -102,7 +102,7 @@ export function DrinksImportButton({ data: d }: { data: Data }) {
   const run = async (file: File) => {
     if (!d.business) return; setBusy(true); const log: string[] = [];
     try {
-      const rows = (await readRows(file)).map(r => ({ name: norm(col(r, "drink")), kind: key(col(r, "kind")) === "hard" ? "hard" : "soft", price: num(col(r, "price")) })).filter(r => r.name);
+      const rows = (await readRows(file)).map(r => ({ name: norm(col(r, "drink")), kind: norm(col(r, "kind")) || "soft", price: num(col(r, "price")) })).filter(r => r.name);
       if (!rows.length) throw new Error("No drinks found. Fill the Drink name column.");
       const existing = new Map(d.drinks.map(x => [key(x.name), x.id as string]));
       let added = 0, updated = 0;
@@ -115,6 +115,6 @@ export function DrinksImportButton({ data: d }: { data: Data }) {
   return <Dialog open={open} onOpenChange={o => { setOpen(o); if (!o) setResult([]); }}>
     <Button variant="outline" onClick={() => setOpen(true)}><Upload className="mr-2 h-4 w-4" />Import</Button>
     <ImportShell title="Import drinks list" desc="Drinks with a name that already exists get their kind and price updated; new names are added." busy={busy} result={result} onFile={run}
-      onTemplate={() => downloadTemplate("drinks-template.xlsx", DRINK_HEADERS, DRINK_SAMPLE, ["One row per drink.", "Kind: soft or hard.", "Price in dollars, e.g. 4.50 (optional).", "Delete the example rows before uploading."])} />
+      onTemplate={() => downloadTemplate("drinks-template.xlsx", DRINK_HEADERS, DRINK_SAMPLE, ["One row per drink.", "Kind: whatever category you want (e.g. Soft drink, Wine, Beer, Spirits) — it is saved exactly as typed.", "Price in dollars, e.g. 4.50 (optional).", "Delete the example rows before uploading."])} />
   </Dialog>;
 }

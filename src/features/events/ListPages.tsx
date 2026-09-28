@@ -96,9 +96,10 @@ export function DishesPage() {
 
 export function DrinksPage() {
   const d = useEventsData(); const [share, setShare] = useState(false); if (!d.business) return null;
-  const opts = [{ value: "soft", label: "Soft drink" }, { value: "hard", label: "Hard drink" }];
+  const kindLabel = (k: string) => k === "soft" ? "Soft drink" : k === "hard" ? "Hard drink" : k.replace(/\b\p{L}/gu, c => c.toUpperCase());
+  const opts = [...new Set(["soft", "hard", ...d.drinks.map((x: any) => String(x.kind || "soft").trim() || "soft")])].map(k => ({ value: k, label: kindLabel(k) }));
   return <SimpleList title="Drinks" subtitle={`${d.drinks.length} drinks shared across every package.`} table="crm_drinks" businessId={d.business.id} rows={d.drinks} refresh={d.refresh} archivable groupAZ filterKey="kind" filterOptions={opts} extra={<><DrinksImportButton data={d as any} /><Button variant="outline" onClick={() => setShare(true)}>Print / email</Button>{share && <MenuShareDialog open={share} onOpenChange={setShare} data={d as any} source="drinks" defaultDrinks />}</>}
-    fields={[{ key: "name", label: "Drink name", required: true }, { key: "kind", label: "Kind", type: "select", options: opts }, { key: "price", label: "Price ($)", type: "number" }]}
-    columns={[{ label: "Drink", render: r => r.name }, { label: "Kind", render: r => <Badge variant="outline">{r.kind === "soft" ? "Soft" : "Hard"}</Badge> }, { label: "Price", render: r => r.price != null ? `$${Number(r.price).toFixed(2)}` : <span className="text-muted-foreground">—</span> }, { label: "Used", render: r => <span className="text-muted-foreground">{usage(d.courseItems, "drink_id", r.id, d.courses)}</span> }]} />;
+    fields={[{ key: "name", label: "Drink name", required: true }, { key: "kind", label: "Kind", type: "text", placeholder: "e.g. Soft drink, Wine, Beer" }, { key: "price", label: "Price ($)", type: "number" }]}
+    columns={[{ label: "Drink", render: r => r.name }, { label: "Kind", render: r => <Badge variant="outline">{kindLabel(String(r.kind || "soft"))}</Badge> }, { label: "Price", render: r => r.price != null ? `$${Number(r.price).toFixed(2)}` : <span className="text-muted-foreground">—</span> }, { label: "Used", render: r => <span className="text-muted-foreground">{usage(d.courseItems, "drink_id", r.id, d.courses)}</span> }]} />;
 }
 
