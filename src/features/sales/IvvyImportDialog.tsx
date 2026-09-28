@@ -9,16 +9,15 @@ import { readClientList, type ClientRow } from "./clientListImport";
 
 const BATCH = 25;
 const sleep = (ms: number) => new Promise(r => setTimeout(r, ms));
-// Marks the leads behind clashing imported bookings so the clash is visible on the event lead, not just the booking note.
-async function flagClashingLeads(refs: string[]) {
-  if (!refs.length) return;
-  for (let i = 0; i < refs.length; i += BATCH) {
-    const { data } = await retry(() => supabase.from("crm_leads").select("id, tags").in("external_ref", refs.slice(i, i + BATCH)));
-    for (const l of (data || []) as any[]) {
-      const tags = Array.isArray(l.tags) ? l.tags : [];
-      if (!tags.includes("venue clash")) await supabase.from("crm_leads").update({ tags: [...tags, "venue clash"] } as any).eq("id", l.id);
-    }
+async function countLiveClashes(bookingIds: string[]) {
+  if (!bookingIds.length) return 0;
+  const clashing = new Set<string>();
+  for (let i = 0; i < bookingIds.length; i += BATCH) {
+    const { data, error } = await retry(() => supabase.from("crm_booking_venue_clashes").select("booking_id").in("booking_id", bookingIds.slice(i, i + BATCH)));
+    if (error) throw error;
+    (data || []).forEach(row => row.booking_id && clashing.add(row.booking_id));
   }
+  return clashing.size;
 }
 // Retries a save when the connection drops ("Failed to fetch") so large imports on slow networks still finish.
 async function retry<T extends { error: any }>(fn: () => PromiseLike<T>): Promise<T> {
@@ -169,21 +168,21 @@ export default function IvvyImportDialog({ open, onOpenChange, businessId, onDon
           created_by: user?.id ?? null, updated_by: user?.id ?? null,
         };
       });
-      const bookingId: Record<string, string> = {}; let clashes = 0; const clashRefs: string[] = [];
+       const bookingId: Record<string, string> = {};
       for (let i = 0; i < bookingRows.length; i += BATCH) {
         setProgress(`Bookings ${Math.min(i + BATCH, bookingRows.length)}/${bookingRows.length}`);
-        const { data, error } = await retry(() => supabase.from("crm_bookings").upsert(bookingRows.slice(i, i + BATCH) as any, { onConflict: "business_id,external_ref" }).select("id, external_ref, notes"));
+         const { data, error } = await retry(() => supabase.from("crm_bookings").upsert(bookingRows.slice(i, i + BATCH) as any, { onConflict: "business_id,external_ref" }).select("id, external_ref"));
         if (error) throw error;
-        (data || []).forEach((d: any) => { bookingId[d.external_ref] = d.id; if (String(d.notes || "").includes("Venue clash")) { clashes++; clashRefs.push(d.external_ref); } });
+         (data || []).forEach((d: any) => { bookingId[d.external_ref] = d.id; });
       }
-      await flagClashingLeads(clashRefs);
+       const clashes = await countLiveClashes(Object.values(bookingId));
       const paid = clients.filter(c => c.deposit > 0 && bookingId[c.ref]);
       const ids = paid.map(c => bookingId[c.ref]);
       if (ids.length) { for (let i = 0; i < ids.length; i += BATCH) { const { error } = await retry(() => supabase.from("crm_payments").delete().in("booking_id", ids.slice(i, i + BATCH)).eq("reference", "Spreadsheet import")); if (error) throw error; } }
       const payRows = paid.map(c => ({ business_id: businessId, booking_id: bookingId[c.ref], amount: c.deposit, paid_on: c.date || today, payment_type: "deposit", method: "other", reference: "Spreadsheet import", notes: `Deposit: ${c.depositRaw}` }));
       for (let i = 0; i < payRows.length; i += BATCH) { const { error } = await retry(() => supabase.from("crm_payments").insert(payRows.slice(i, i + BATCH) as any)); if (error) throw error; }
       await supabase.rpc("crm_merge_first_name_contacts" as any, { _business_id: businessId });
-      toast.success(`Imported ${leadRows.length} clients, ${bookingRows.length} bookings and ${payRows.length} deposits.`); if (clashes) toast.warning(`${clashes} imported booking(s) clash with another booking in the same hall — check the "⚠ Venue clash" note on each.`, { duration: 12000 });
+       toast.success(`Imported ${leadRows.length} clients, ${bookingRows.length} bookings and ${payRows.length} deposits.`); if (clashes) toast.warning(`${clashes} imported booking(s) currently overlap another booking in the same hall.`, { duration: 12000 });
       setClients([]); onOpenChange(false); onDone();
     } catch (e: any) { toast.error(e.message || "Import failed"); }
     finally { setBusy(false); setProgress(""); }
@@ -275,14 +274,14 @@ export default function IvvyImportDialog({ open, onOpenChange, businessId, onDon
           created_by: user?.id ?? null, updated_by: user?.id ?? null,
         };
       });
-      const bookingIdByCode: Record<string, string> = {}; let clashes = 0; const clashRefs: string[] = [];
+       const bookingIdByCode: Record<string, string> = {};
       for (let i = 0; i < bookingRows.length; i += BATCH) {
         setProgress(`Bookings ${Math.min(i + BATCH, bookingRows.length)}/${bookingRows.length}`);
-        const { data, error } = await retry(() => supabase.from("crm_bookings").upsert(bookingRows.slice(i, i + BATCH) as any, { onConflict: "business_id,external_ref" }).select("id, external_ref, notes"));
+         const { data, error } = await retry(() => supabase.from("crm_bookings").upsert(bookingRows.slice(i, i + BATCH) as any, { onConflict: "business_id,external_ref" }).select("id, external_ref"));
         if (error) throw error;
-        (data || []).forEach((d: any) => { bookingIdByCode[d.external_ref] = d.id; if (String(d.notes || "").includes("Venue clash")) { clashes++; clashRefs.push(d.external_ref); } });
+         (data || []).forEach((d: any) => { bookingIdByCode[d.external_ref] = d.id; });
       }
-      await flagClashingLeads(clashRefs);
+       const clashes = await countLiveClashes(Object.values(bookingIdByCode));
       // Past events are fully settled (migration) — record the full total as paid so no balance shows due.
       // Future events keep only what iVvy shows as actually paid.
       const paidItems = items.filter(p => p.status !== "cancelled" && bookingIdByCode[p.code]
@@ -305,7 +304,7 @@ export default function IvvyImportDialog({ open, onOpenChange, businessId, onDon
         if (error) throw error;
       }
       const { data: mergedCount } = await supabase.rpc("crm_merge_first_name_contacts" as any, { _business_id: businessId });
-      toast.success(`Imported ${leadRows.length} leads, ${bookingRows.length} bookings and ${paymentRows.length} payments from iVvy.${Number(mergedCount) > 0 ? ` Merged ${mergedCount} duplicate contact(s).` : ""}`); if (clashes) toast.warning(`${clashes} imported booking(s) clash with another booking in the same hall — check the "⚠ Venue clash" note on each.`, { duration: 12000 });
+       toast.success(`Imported ${leadRows.length} leads, ${bookingRows.length} bookings and ${paymentRows.length} payments from iVvy.${Number(mergedCount) > 0 ? ` Merged ${mergedCount} duplicate contact(s).` : ""}`); if (clashes) toast.warning(`${clashes} imported booking(s) currently overlap another booking in the same hall.`, { duration: 12000 });
       setItems([]); onOpenChange(false); onDone();
     } catch (e: any) { toast.error(e.message || "Import failed"); }
     finally { setBusy(false); setProgress(""); }

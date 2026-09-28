@@ -38,7 +38,7 @@ Deno.serve(async (req) => {
       supabase.from("businesses").select("id,name").eq("id", businessId).maybeSingle(),
       supabase.from("crm_leads").select("id,full_name,phone,email,venue_space").eq("business_id", businessId),
       supabase.from("crm_inspections").select("*").eq("business_id", businessId).neq("status", "cancelled"),
-      supabase.from("crm_bookings").select("*").eq("business_id", businessId),
+      supabase.from("crm_bookings").select("*").eq("business_id", businessId).neq("status", "cancelled"),
       supabase.from("crm_tasks").select("*").eq("business_id", businessId).eq("status", "open"),
     ]);
     if (!businessRes.data) return new Response("Calendar not found", { status: 404, headers: corsHeaders });
