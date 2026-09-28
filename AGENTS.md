@@ -1,3 +1,4 @@
 Owner Operations reuses the Sales & Events dashboard with an explicit business ID, so master accounts without a selected business context see the same live data without duplicating dashboard calculations.
 Run-sheet links use separate client and internal bearer tokens; the public function strips team notes for client links, preventing client recipients from reading internal instructions.
 Lead detail uses one shared seven-stage concierge layout in the full page and dialog, preserving each stage's existing form and save handler to avoid workflow divergence.- Menu layout (print, email, online /m/:token) is rendered only by supabase/functions/_shared/menuHtml.ts (buildSectionsFromRows + renderMenuHtml) so all three stay identical.
+Event menu estimates synchronize into event booking totals in the database, while received amounts always come from crm_payments; this keeps Sales and Operations aligned without overwriting catering or imported bookings lacking a menu.
