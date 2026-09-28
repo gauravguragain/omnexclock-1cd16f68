@@ -78,6 +78,6 @@ export default function PaymentsPage() {
       </div>; })}</div> : <p className="text-sm text-muted-foreground">No payments recorded yet.</p>}
     </CardContent></Card>
 
-    <RecordPaymentDialog open={open} onOpenChange={setOpen} bookings={crm.bookings.filter(b => b.status !== "cancelled")} onSaved={() => { refresh(); crm.refresh(); }} />
+    <RecordPaymentDialog open={open} onOpenChange={setOpen} bookings={crm.bookings.filter(b => b.status !== "cancelled").map(b => ({ ...b, client_name: crm.leads.find(l => l.id === b.lead_id)?.full_name }))} onSaved={() => { refresh(); crm.refresh(); }} />
   </div>;
 }
