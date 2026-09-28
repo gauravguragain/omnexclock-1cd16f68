@@ -54,7 +54,7 @@ export function MenuImportButton({ data: d }: { data: Data }) {
   const run = async (file: File) => {
     if (!d.business) return; const bid = d.business.id; setBusy(true); const log: string[] = [];
     try {
-      const rows = (await readRows(file)).map(r => ({ book: norm(col(r, "menu book")), pkg: norm(col(r, "package") === "" ? "" : r[Object.keys(r).find(k => key(k) === "package") || "Package"]), type: key(col(r, "type")) === "beverage" ? "beverage" : "food", desc: norm(col(r, "package description")), course: norm(col(r, "course")) || "Menu", picks: num(col(r, "course picks")), veg: num(col(r, "veg picks")), nonveg: num(col(r, "non-veg picks")), item: norm(col(r, "item")), diet: key(col(r, "diet")), proteins: norm(col(r, "protein")), extra: num(col(r, "extra")) ?? 0 })).filter(r => r.book && r.pkg && r.item);
+      const rows = (await readRows(file)).map(r => ({ book: norm(col(r, "menu book")), pkg: norm(r[Object.keys(r).find(k => key(k) === "package") || "Package"]), type: key(col(r, "type")) === "beverage" ? "beverage" : "food", desc: norm(col(r, "package description")), course: norm(col(r, "course")) || "Menu", picks: num(col(r, "course picks")), veg: num(col(r, "veg picks")), nonveg: num(col(r, "non-veg picks")), item: norm(col(r, "item")), diet: key(col(r, "diet")), proteins: norm(col(r, "protein")), extra: num(col(r, "extra")) ?? 0 })).filter(r => r.book && r.pkg && r.item);
       if (!rows.length) throw new Error("No rows found. Make sure Menu book, Package and Item are filled.");
       const books = new Map(d.books.map(b => [key(b.name), b.id as string]));
       const dishes = new Map(d.dishes.map(x => [key(x.name), x.id as string]));
