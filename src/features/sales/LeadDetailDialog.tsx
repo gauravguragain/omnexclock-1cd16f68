@@ -58,8 +58,9 @@ export function LeadDetailView({ lead, open, initialTab, options, interactions, 
   const dishCategories=new Set(Object.values(COURSE_CATEGORY));
   const groupedMenu=useMemo(()=>{const map=new Map<string,any[]>();menuItems.filter(i=>!dishCategories.has(i.category)).forEach(i=>{const key=i.category||"Other";map.set(key,[...(map.get(key)||[]),i]);});return Array.from(map.entries());},[menuItems]);
   useEffect(()=>{if(!lead?.id||!open)return;let cancelled=false;(async()=>{
+    setHasSelection(false);
     const{data:sel}=await supabase.from("crm_menu_selections").select("*").eq("lead_id",lead.id).maybeSingle();
-    if(cancelled||!sel)return;const s:any=sel;
+    if(cancelled||!sel)return;const s:any=sel;setHasSelection(true);
     if(s.guest_count)setGuestOverride(Number(s.guest_count));
     setCorkage({enabled:!!s.corkage_enabled,perHead:s.corkage_per_head!=null?String(s.corkage_per_head):"",flat:s.corkage_flat!=null?String(s.corkage_flat):""});
     setExtras({dietary:s.dietary_requirements||"",allergies:s.allergies||"",beverage:s.beverage_package||""});setBeverageChoice(s.beverage_package||"");setBevPrice({perHead:"",flat:""});
