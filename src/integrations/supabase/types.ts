@@ -4593,6 +4593,7 @@ export type Database = {
         Args: { _business_id: string; _user_id: string }
         Returns: boolean
       }
+      is_published_dish_photo: { Args: { _path: string }; Returns: boolean }
       is_roster_admin_of_business: {
         Args: { _business_id: string }
         Returns: boolean

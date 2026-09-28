@@ -316,6 +316,13 @@
       "when": 1790556418783,
       "tag": "0044_portal_code_bruteforce_guard",
       "breakpoints": true
+    },
+    {
+      "idx": 45,
+      "version": "7",
+      "when": 1790556607954,
+      "tag": "0045_scope_dish_photos_and_logo_listing",
+      "breakpoints": true
     }
   ]
 }
