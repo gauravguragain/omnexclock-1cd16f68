@@ -18,7 +18,7 @@ import { format, subDays } from "date-fns";
 import type { CrmLead, CrmOption } from "./types";
 import { prettyCrmValue } from "./types";
 import SendRunsheetDialog from "@/features/events/SendRunsheetDialog";
-type RunsheetScheduleLine = { time: string; label: string; detail?: string };
+type RunsheetScheduleLine = { time: string; end?: string; label: string; detail?: string };
 
 const FALLBACK_SETUP_ITEMS = [
   "Black tablecloths", "White tablecloths", "Red carpet", "Smoke machine", "Cold sparkles", "Dry ice",
@@ -233,7 +233,7 @@ export default function RunsheetTab({ lead, booking, options, onSaved }: {
       adult_guests: form.adult_guests ? Number(form.adult_guests) : null,
       kids_guests: form.kids_guests ? Number(form.kids_guests) : null,
       access_time: accessEnabled ? (form.access_time || null) : null, setup_items: setupItems, setup_notes: form.setup_notes || null,
-      service_schedule: schedule.map(({ time, label, detail }) => ({ time, label, detail })),
+      service_schedule: schedule.map(({ time, end, label, detail }) => ({ time, end: end || undefined, label, detail })),
       service_schedule_foh: fohSchedule.map(({ time, label, detail }) => ({ time, label, detail })),
       special_requests: form.special_requests || null, distributed_to: form.distributed_to || null,
        ops_notes: form.ops_notes || null, foh_notes: form.foh_notes || null, client_notes: form.client_notes || null,
@@ -368,8 +368,10 @@ export default function RunsheetTab({ lead, booking, options, onSaved }: {
         </div>
         <div className="space-y-2">
           {schedule.map((row, index) => (
-            <div key={row.key} className="grid gap-2 sm:grid-cols-[9rem_1fr_1.4fr_auto]">
+            <div key={row.key} className="grid gap-2 sm:grid-cols-[9rem_auto_9rem_1fr_1.4fr_auto] sm:items-center">
               <TimeDropdownPicker value={row.time || startTime} onChange={(value) => setSchedule((v) => v.map((r, i) => (i === index ? { ...r, time: value } : r)))} />
+              <span className="hidden text-center text-xs text-muted-foreground sm:block">to</span>
+              <TimeDropdownPicker value={row.end || row.time || startTime} onChange={(value) => setSchedule((v) => v.map((r, i) => (i === index ? { ...r, end: value } : r)))} />
               <select
                 value={courseOptions.includes(row.label) ? row.label : "__custom__"}
                 onChange={(event) => { const value = event.target.value; setSchedule((v) => v.map((r, i) => (i === index ? { ...r, label: value === "__custom__" ? "" : value } : r))); }}
