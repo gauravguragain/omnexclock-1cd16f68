@@ -12,6 +12,7 @@ export async function downloadRunsheetPdf(el: HTMLElement, fileName: string) {
   document.body.appendChild(copy);
   try {
     await Promise.all(Array.from(copy.querySelectorAll("img")).map(img => img.decode().catch(() => undefined)));
+    paginateFlow(copy);
     const top = copy.getBoundingClientRect().top;
     const breaks = Array.from(copy.querySelectorAll<HTMLElement>("[data-pdf-break]")).map(b => Math.round((b.getBoundingClientRect().top - top) * 2)).filter(v => v > 0);
     // Lines of text/images a page cut must never pass through.
