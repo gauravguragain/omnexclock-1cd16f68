@@ -17,7 +17,7 @@ export default function EventsDashboard({ businessId, ownerView = false, canOpen
   if (!businessId && !crm.business) return null;
   const base = `/b/${businessCode}/events`;
   const today = format(new Date(), "yyyy-MM-dd"); const in7 = format(addDays(new Date(), 7), "yyyy-MM-dd");
-   const active = crm.bookings.filter(b => b.status !== "cancelled" && b.booking_kind !== "catering");
+   const active = crm.bookings.filter(b => ["confirmed", "completed"].includes(b.status) && b.booking_kind !== "catering");
   const upcoming = active.filter(b => b.event_date >= today).sort((a, b) => (a.event_date + a.start_time).localeCompare(b.event_date + b.start_time));
   const todays = upcoming.filter(b => b.event_date === today);
   const week = upcoming.filter(b => b.event_date > today && b.event_date <= in7);
@@ -37,7 +37,7 @@ export default function EventsDashboard({ businessId, ownerView = false, canOpen
   let off = 0; const C = 2 * Math.PI * 40;
   const first = todays[0];
   const cBase = `/b/${businessCode}/catering`;
-  const cat = crm.bookings.filter(b => b.status !== "cancelled" && b.booking_kind === "catering");
+  const cat = crm.bookings.filter(b => ["confirmed", "completed"].includes(b.status) && b.booking_kind === "catering");
   const cUp = cat.filter(b => b.event_date >= today).sort((a, b) => (a.event_date + a.start_time).localeCompare(b.event_date + b.start_time));
   const cToday = cUp.filter(b => b.event_date === today);
   const cWeek = cUp.filter(b => b.event_date > today && b.event_date <= in7);
