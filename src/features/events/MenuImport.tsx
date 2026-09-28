@@ -115,6 +115,6 @@ export function DrinksImportButton({ data: d }: { data: Data }) {
   return <Dialog open={open} onOpenChange={o => { setOpen(o); if (!o) setResult([]); }}>
     <Button variant="outline" onClick={() => setOpen(true)}><Upload className="mr-2 h-4 w-4" />Import</Button>
     <ImportShell title="Import drinks list" desc="Drinks with a name that already exists get their kind and price updated; new names are added." busy={busy} result={result} onFile={run}
-      onTemplate={() => downloadTemplate("drinks-template.xlsx", DRINK_HEADERS, DRINK_SAMPLE, ["One row per drink.", "Kind: soft or hard.", "Price in dollars, e.g. 4.50 (optional).", "Delete the example rows before uploading."])} />
+      onTemplate={() => downloadTemplate("drinks-template.xlsx", DRINK_HEADERS, DRINK_SAMPLE, ["One row per drink.", "Kind: whatever category you want (e.g. Soft drink, Wine, Beer, Spirits) — it is saved exactly as typed.", "Price in dollars, e.g. 4.50 (optional).", "Delete the example rows before uploading."])} />
   </Dialog>;
 }
