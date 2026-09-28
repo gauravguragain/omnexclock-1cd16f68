@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { useCrmData } from "@/features/sales/useCrmData";
 import { useEventsData, bookingEnd, to12 } from "./useEventsData";
+import { isConfirmedLeadStage } from "@/features/sales/types";
 
 const d = (s: string) => new Date(`${s}T00:00:00`);
 
@@ -17,7 +18,13 @@ export default function EventsDashboard({ businessId, ownerView = false, canOpen
   if (!businessId && !crm.business) return null;
   const base = `/b/${businessCode}/events`;
   const today = format(new Date(), "yyyy-MM-dd"); const in7 = format(addDays(new Date(), 7), "yyyy-MM-dd");
-   const active = crm.bookings.filter(b => ["confirmed", "completed"].includes(b.status) && b.booking_kind !== "catering");
+  // Same rule as the Events tab: not cancelled, and the lead is at a confirmed stage (or the booking has no lead).
+  const active = crm.bookings.filter(b => {
+    if (b.status === "cancelled" || b.booking_kind === "catering") return false;
+    if (!b.lead_id) return true;
+    const lead = crm.leads.find(l => l.id === b.lead_id);
+    return !!lead && isConfirmedLeadStage(lead.status);
+  });
   const upcoming = active.filter(b => b.event_date >= today).sort((a, b) => (a.event_date + a.start_time).localeCompare(b.event_date + b.start_time));
   const todays = upcoming.filter(b => b.event_date === today);
   const week = upcoming.filter(b => b.event_date > today && b.event_date <= in7);
