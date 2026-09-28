@@ -9,14 +9,25 @@ import OptionSelect from "./OptionSelect";
 import MultiOptionSelect from "./MultiOptionSelect";
 import DateField from "./DateField";
 
-export default function LeadFormDialog({ open, onOpenChange, businessId, options, lead, leads, onSaved, defaultKind = "event", lockedKind }: { open: boolean; onOpenChange: (open:boolean)=>void; businessId:string; options:CrmOption[]; lead?:CrmLead|null; leads:CrmLead[]; onSaved:()=>void; defaultKind?: string; lockedKind?: "event" | "catering" }) {
-   const { user } = useAuth(); const [saving, setSaving] = useState(false); const [email, setEmail] = useState(""); const [phone, setPhone] = useState(""); const [kind, setKind] = useState(lockedKind || lead?.lead_kind || defaultKind);
-   useEffect(() => { setEmail(lead?.email || ""); setPhone(lead?.phone || ""); setKind(lockedKind || lead?.lead_kind || defaultKind); }, [lead, open, defaultKind, lockedKind]);
+export default function LeadFormDialog({ open, onOpenChange, businessId, options, lead, leads, onSaved, defaultKind = "event", lockedKind, presetCustomerId }: { open: boolean; onOpenChange: (open:boolean)=>void; businessId:string; options:CrmOption[]; lead?:CrmLead|null; leads:CrmLead[]; onSaved:()=>void; defaultKind?: string; lockedKind?: "event" | "catering"; presetCustomerId?: string | null }) {
+    const { user } = useAuth(); const [saving, setSaving] = useState(false); const [email, setEmail] = useState(""); const [phone, setPhone] = useState(""); const [kind, setKind] = useState(lockedKind || lead?.lead_kind || defaultKind);
+    const [customers, setCustomers] = useState<any[]>([]); const [custSearch, setCustSearch] = useState(""); const [picked, setPicked] = useState<any | null>(null);
+    useEffect(() => { setEmail(lead?.email || ""); setPhone(lead?.phone || ""); setKind(lockedKind || lead?.lead_kind || defaultKind); }, [lead, open, defaultKind, lockedKind]);
+    useEffect(() => {
+      if (!open || lead) return;
+      (supabase.from("crm_customers" as any) as any).select("id, full_name, phone, email, company").eq("business_id", businessId).order("full_name").then(({ data }: any) => {
+        const list = data || []; setCustomers(list);
+        if (presetCustomerId) { const c = list.find((x: any) => x.id === presetCustomerId); if (c) pick(c); }
+      });
+    }, [open, lead, businessId, presetCustomerId]);
+    useEffect(() => { if (!open) { setPicked(null); setCustSearch(""); } }, [open]);
+    const pick = (c: any) => { setPicked(c); setEmail(c.email || ""); setPhone(c.phone || ""); };
+    const custMatches = customers.filter(c => `${c.full_name} ${c.phone || ""} ${c.email || ""}`.toLowerCase().includes(custSearch.toLowerCase())).slice(0, 6);
   const duplicate = useMemo(() => leads.find((row) => row.id !== lead?.id && ((email && row.email?.toLowerCase() === email.toLowerCase()) || (phone && row.phone?.replace(/\D/g, "") === phone.replace(/\D/g, "")))), [email, phone, leads, lead?.id]);
   const list = (type:string) => options.filter((option) => option.option_type === type && option.active);
    const isCatering = kind === "catering";
    const submit = async (event:FormEvent<HTMLFormElement>) => { event.preventDefault(); setSaving(true); const form = new FormData(event.currentTarget);
-     const values:any = { business_id: businessId, full_name: form.get("full_name"), email: email || null, phone: phone || null, company: form.get("company") || null, source: form.get("source"), event_type: isCatering ? "catering" : form.get("event_type"), preferred_dates: form.get("preferred_date") ? [form.get("preferred_date")] : [], flexible_date: form.get("flexible_date") === "on", estimated_guest_count: form.get("guests") ? Number(form.get("guests")) : null, budget_min: isCatering ? null : (form.get("budget_min") ? Number(form.get("budget_min")) : null), budget_max: isCatering ? null : (form.get("budget_max") ? Number(form.get("budget_max")) : null), estimated_value: form.get("estimated_value") ? Number(form.get("estimated_value")) : 0, venue_space: isCatering ? null : (form.get("venue_space") || null), tags: String(form.get("tags") || "").split(",").map((v)=>v.trim()).filter(Boolean), lead_kind: form.get("lead_kind") || "event", service_location: isCatering ? null : (form.get("service_location") || null), updated_by:user?.id };
+     const values:any = { business_id: businessId, full_name: form.get("full_name"), email: email || null, phone: phone || null, company: form.get("company") || null, customer_id: picked?.id || lead?.customer_id || null, source: form.get("source"), event_type: isCatering ? "catering" : form.get("event_type"), preferred_dates: form.get("preferred_date") ? [form.get("preferred_date")] : [], flexible_date: form.get("flexible_date") === "on", estimated_guest_count: form.get("guests") ? Number(form.get("guests")) : null, budget_min: isCatering ? null : (form.get("budget_min") ? Number(form.get("budget_min")) : null), budget_max: isCatering ? null : (form.get("budget_max") ? Number(form.get("budget_max")) : null), estimated_value: form.get("estimated_value") ? Number(form.get("estimated_value")) : 0, venue_space: isCatering ? null : (form.get("venue_space") || null), tags: String(form.get("tags") || "").split(",").map((v)=>v.trim()).filter(Boolean), lead_kind: form.get("lead_kind") || "event", service_location: isCatering ? null : (form.get("service_location") || null), updated_by:user?.id };
     const result = lead ? await supabase.from("crm_leads").update(values).eq("id", lead.id) : await supabase.from("crm_leads").insert({ ...values, created_by:user?.id });
     setSaving(false); if (result.error) toast.error(result.error.message); else { toast.success(lead ? "Lead updated" : "Lead created"); onOpenChange(false); onSaved(); }
   };
@@ -29,13 +40,24 @@ export default function LeadFormDialog({ open, onOpenChange, businessId, options
      <form onSubmit={submit} className="flex min-h-0 flex-1 flex-col">
        <div className="min-h-0 flex-1 space-y-7 overflow-y-auto px-5 py-5 sm:px-8 sm:py-6">
          <section className="space-y-4" aria-labelledby="lead-contact-heading">
-           <div className="flex items-center gap-2 border-b border-border pb-2"><UserRound className="h-4 w-4 text-primary"/><h3 id="lead-contact-heading" className="text-sm font-semibold">Contact details</h3></div>
-           <div className="grid gap-4 sm:grid-cols-2">
-             <div className="space-y-1.5"><Label htmlFor="lead-full-name">Full name <span className="text-primary">*</span></Label><Input id="lead-full-name" name="full_name" defaultValue={lead?.full_name} required autoFocus/></div>
-             <div className="space-y-1.5"><Label htmlFor="lead-company">Company</Label><Input id="lead-company" name="company" defaultValue={lead?.company || ""}/></div>
-             <div className="space-y-1.5"><Label htmlFor="lead-email">Email</Label><Input id="lead-email" type="email" value={email} onChange={(e)=>setEmail(e.target.value)}/></div>
-             <div className="space-y-1.5"><Label htmlFor="lead-phone">Phone</Label><Input id="lead-phone" type="tel" value={phone} onChange={(e)=>setPhone(e.target.value)}/></div>
-           </div>
+            <div className="flex items-center gap-2 border-b border-border pb-2"><UserRound className="h-4 w-4 text-primary"/><h3 id="lead-contact-heading" className="text-sm font-semibold">Contact details</h3></div>
+            {!lead && !picked && customers.length > 0 && <div className="space-y-2">
+              <Label>Link an existing customer</Label>
+              <Input placeholder="Search customers by name, phone or email" value={custSearch} onChange={(e)=>setCustSearch(e.target.value)}/>
+              {custSearch && <div className="grid gap-2 sm:grid-cols-2">{custMatches.map(c => <button key={c.id} type="button" onClick={()=>pick(c)} className="rounded-md border border-border p-3 text-left text-sm hover:bg-muted/40"><p className="font-medium">{c.full_name}</p><p className="text-xs text-muted-foreground">{[c.phone, c.email].filter(Boolean).join(" · ") || "—"}</p></button>)}{!custMatches.length && <p className="text-sm text-muted-foreground">No matching customers — fill the details below instead.</p>}</div>}
+            </div>}
+            {picked ? <div className="flex items-start justify-between gap-3 rounded-md border border-primary/30 bg-primary/5 p-3">
+              <div className="text-sm"><p className="font-medium">{picked.full_name}</p><p className="text-xs text-muted-foreground">{[picked.phone, picked.email, picked.company].filter(Boolean).join(" · ") || "Existing customer"}</p></div>
+              <input type="hidden" name="full_name" value={picked.full_name}/><input type="hidden" name="company" value={picked.company || ""}/>
+              <Button type="button" size="sm" variant="ghost" onClick={()=>{ setPicked(null); setEmail(""); setPhone(""); }}>Change</Button>
+            </div> : <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-1.5"><Label htmlFor="lead-full-name">Full name <span className="text-primary">*</span></Label><Input id="lead-full-name" name="full_name" defaultValue={lead?.full_name} required autoFocus/></div>
+              <div className="space-y-1.5"><Label htmlFor="lead-company">Company</Label><Input id="lead-company" name="company" defaultValue={lead?.company || ""}/></div>
+            </div>}
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-1.5"><Label htmlFor="lead-email">Email</Label><Input id="lead-email" type="email" value={email} onChange={(e)=>setEmail(e.target.value)}/></div>
+              <div className="space-y-1.5"><Label htmlFor="lead-phone">Phone</Label><Input id="lead-phone" type="tel" value={phone} onChange={(e)=>setPhone(e.target.value)}/></div>
+            </div>
            {duplicate && <div role="alert" className="flex items-start gap-2 rounded-md border border-primary/30 bg-primary/5 p-3 text-sm"><AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-primary"/><span>Possible duplicate: {duplicate.full_name}. Check this contact before saving.</span></div>}
          </section>
          <section className="space-y-4" aria-labelledby="lead-event-heading">

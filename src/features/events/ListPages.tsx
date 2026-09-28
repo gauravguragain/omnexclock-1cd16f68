@@ -1,4 +1,7 @@
 import { useEffect, useState } from "react";
+import { Link, useParams } from "react-router-dom";
+import { Button } from "@/components/ui/button";
+import { Mail, MapPin, Phone, Building2, Plus } from "lucide-react";
 import DishPhotoCell from "./DishPhotoCell";
 import { signDishPhotos } from "./dishPhotos";
 import { useCrmData } from "@/features/sales/useCrmData";
@@ -16,15 +19,37 @@ const usage = (courseItems: Row[], key: "dish_id" | "drink_id", id: string, cour
 
 export function CustomersPage() {
   const d = useEventsData(); const crm = useCrmData(); const [open, setOpen] = useState<Row | null>(null);
+  const { businessCode } = useParams();
   const eventsFor = (c: Row) => crm.bookings.filter(b => b.customer_id === c.id || crm.leads.find(l => l.id === b.lead_id)?.customer_id === c.id);
   if (!d.business) return null;
+  const openEvents = open ? eventsFor(open).slice().sort((a, b) => String(b.event_date).localeCompare(String(a.event_date))) : [];
+  const upcoming = openEvents.filter(b => b.event_date >= new Date().toLocaleDateString("en-CA"));
+  const Detail = ({ icon: Icon, label, value }: { icon: any; label: string; value?: string }) => <div className="flex items-start gap-2 text-sm"><Icon className="mt-0.5 h-4 w-4 shrink-0 text-primary" /><div className="min-w-0"><p className="text-xs text-muted-foreground">{label}</p><p className="break-words">{value || "—"}</p></div></div>;
   return <>
     <SimpleList title="Customers" subtitle="Everyone recorded as a customer, whether added here or through a lead or event." table="crm_customers" businessId={d.business.id} rows={d.customers} refresh={d.refresh} nameKey="full_name" onOpen={setOpen}
       fields={[{ key: "full_name", label: "Name", required: true }, { key: "phone", label: "Phone" }, { key: "email", label: "Email", type: "email" }, { key: "address", label: "Address" }, { key: "company", label: "Company" }, { key: "source", label: "Source", type: "select", options: [{ value: "direct", label: "Direct" }, { value: "lead", label: "Lead" }, { value: "event", label: "Event" }] }]}
       columns={[{ label: "Name", render: r => r.full_name }, { label: "Source", render: r => prettyCrmValue(r.source) }, { label: "Phone", render: r => r.phone || "—" }, { label: "Email", render: r => r.email || "—" }, { label: "Address", render: r => r.address || "—" }, { label: "Events", render: r => eventsFor(r).length }]} />
-    <Dialog open={!!open} onOpenChange={o => !o && setOpen(null)}><DialogContent><DialogHeader><DialogTitle className="font-serif text-2xl">{open?.full_name}</DialogTitle></DialogHeader>
-      <p className="text-sm text-muted-foreground">{[open?.phone, open?.email, open?.address].filter(Boolean).join(" · ")}</p>
-      <div className="space-y-2">{open && eventsFor(open).length ? eventsFor(open).map(b => <div key={b.id} className="flex justify-between border-b pb-2 text-sm"><span>{b.event_name || prettyCrmValue(b.event_type || "Event")} · {b.venue_space}</span><span className="text-muted-foreground">{format(new Date(`${b.event_date}T00:00:00`), "dd MMM yyyy")}</span></div>) : <p className="text-sm text-muted-foreground">No events yet.</p>}</div>
+    <Dialog open={!!open} onOpenChange={o => !o && setOpen(null)}><DialogContent className="max-h-[90dvh] overflow-y-auto sm:max-w-xl"><DialogHeader><DialogTitle className="font-serif text-2xl">{open?.full_name}</DialogTitle></DialogHeader>
+      {open && <div className="space-y-5">
+        <div className="flex flex-wrap items-center gap-2">
+          <Badge variant="outline" className="capitalize">{prettyCrmValue(open.source || "direct")}</Badge>
+          <Badge variant="secondary">{openEvents.length} event{openEvents.length === 1 ? "" : "s"}{upcoming.length ? ` · ${upcoming.length} upcoming` : ""}</Badge>
+        </div>
+        <div className="grid gap-3 rounded-md border border-border p-4 sm:grid-cols-2">
+          <Detail icon={Phone} label="Phone" value={open.phone} />
+          <Detail icon={Mail} label="Email" value={open.email} />
+          <Detail icon={MapPin} label="Address" value={open.address} />
+          <Detail icon={Building2} label="Company" value={open.company} />
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <Button size="sm" asChild><Link to={`/b/${businessCode}/events/leads/events?new=1&customer=${open.id}`}><Plus className="mr-1.5 h-4 w-4" />New event lead</Link></Button>
+          <Button size="sm" variant="outline" asChild><Link to={`/b/${businessCode}/catering/bookings/new?customer=${open.id}`}><Plus className="mr-1.5 h-4 w-4" />New catering booking</Link></Button>
+        </div>
+        <div className="space-y-2">
+          <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Event history</p>
+          {openEvents.length ? openEvents.map(b => <Link key={b.id} to={b.booking_kind === "catering" ? `/b/${businessCode}/catering/bookings/${b.id}` : `/b/${businessCode}/events/events/${b.id}`} className="flex justify-between gap-3 border-b border-border pb-2 text-sm hover:bg-muted/40"><span className="min-w-0 truncate">{b.event_name || prettyCrmValue(b.event_type || "Event")} · {b.venue_space}</span><span className="shrink-0 text-muted-foreground">{format(new Date(`${b.event_date}T00:00:00`), "dd MMM yyyy")}</span></Link>) : <p className="text-sm text-muted-foreground">No events yet.</p>}
+        </div>
+      </div>}
     </DialogContent></Dialog>
   </>;
 }

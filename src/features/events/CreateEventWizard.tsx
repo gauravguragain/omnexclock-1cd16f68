@@ -23,7 +23,8 @@ const Step = ({ n, title, sub, children }: any) => <Card><CardContent className=
 export default function CreateEventWizard({ kind }: { kind: "event" | "catering" }) {
   const crm = useCrmData(); const ev = useEventsData(); const { user } = useAuth();
   const [params] = useSearchParams(); const nav = useNavigate(); const { businessCode } = useParams();
-  const leadId = params.get("lead");
+  const leadId = params.get("lead"); const presetCustomerId = params.get("customer");
+  useEffect(() => { if (presetCustomerId && ev.customers.some(c => c.id === presetCustomerId)) { setMode("existing"); setCustomerId(presetCustomerId); } }, [presetCustomerId, ev.customers.length]);
   const [mode, setMode] = useState<"existing" | "new">("new"); const [customerId, setCustomerId] = useState(""); const [cSearch, setCSearch] = useState("");
   const [cust, setCust] = useState({ full_name: "", phone: "", email: "", address: "" });
   const [f, setF] = useState({ event_name: "", event_type: "", date: "", start: "18:00", end: "23:00", adults: "", kids: "", venue: "", location: "", notes: "", method: "delivery" as "delivery" | "pickup" });
