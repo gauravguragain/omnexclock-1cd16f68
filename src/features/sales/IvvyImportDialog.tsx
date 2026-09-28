@@ -75,6 +75,7 @@ type Prepared = { code: string; row: Row; date: string | null; catering: boolean
 
 export default function IvvyImportDialog({ open, onOpenChange, businessId, onDone, mode = "ivvy" }: { mode?: "ivvy" | "excel"; open: boolean; onOpenChange: (o: boolean) => void; businessId: string; onDone: () => void }) {
   const [items, setItems] = useState<Prepared[]>([]);
+  const [contacts, setContacts] = useState<Row[]>([]);
   const [skipped, setSkipped] = useState(0);
   const [busy, setBusy] = useState(false);
   const [progress, setProgress] = useState("");
@@ -90,7 +91,12 @@ export default function IvvyImportDialog({ open, onOpenChange, businessId, onDon
       setClients(rows); return;
     }
     const rows = parseCsv(await f.text());
-    if (!rows.length || !("code" in rows[0]) || !("main contact" in rows[0])) { toast.error("This doesn't look like an iVvy bookings export."); return; }
+    // iVvy's Bookings export has no phone column — phone numbers come from a Contacts export (Email + a phone column, no booking Code).
+    if (rows.length && !("code" in rows[0]) && "email" in rows[0] && Object.keys(rows[0]).some(k => /phone|mobile/.test(k))) {
+      setContacts(rows.filter(r => phoneOf(r) && (col(r, "Email") || col(r, "Main Contact") || col(r, "First Name") || col(r, "Last Name") || col(r, "Name"))));
+      return;
+    }
+    if (!rows.length || !("code" in rows[0]) || !("main contact" in rows[0])) { toast.error("This doesn't look like an iVvy bookings or contacts export."); return; }
     const out: Prepared[] = []; let skip = 0;
     for (const r of rows) {
       if (!col(r, "Code") || !(col(r, "Main Contact") || col(r, "Booking Name"))) { skip++; continue; }
