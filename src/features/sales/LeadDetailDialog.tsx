@@ -1,6 +1,7 @@
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import MenuBookPicker from "./MenuBookPicker";
 import GuestMenuLinkCard from "./GuestMenuLinkCard";
+import LeadMenuShareButton from "../events/LeadMenuShareButton";
 import { supabase } from "@/integrations/supabase/client"; import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button"; import { Dialog, DialogContent } from "@/components/ui/dialog"; import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input"; import { Label } from "@/components/ui/label"; import { Textarea } from "@/components/ui/textarea"; import { Badge } from "@/components/ui/badge"; import { Checkbox } from "@/components/ui/checkbox";
@@ -146,7 +147,7 @@ export function LeadDetailView({ lead, open, initialTab, options, interactions, 
      {tastingTask&&!tastingEnabled&&<p className="text-sm text-muted-foreground">Save to remove this tasting reminder from the calendar.</p>}
      {(tastingEnabled||tastingTask)&&<Button type="button" disabled={busy} variant={tastingEnabled?"default":"outline"} onClick={saveTasting}>{tastingEnabled?<><CalendarPlus className="mr-2 h-4 w-4"/>{tastingTask?"Update tasting reminder":"Save tasting reminder"}</>:"Remove tasting reminder"}</Button>}
    </TabsContent>
-  <TabsContent value="menu"><form onSubmit={saveMenu} className="grid gap-5 lg:grid-cols-[1.4fr_1fr]">
+  <TabsContent value="menu"><div className="mb-4 flex justify-end"><LeadMenuShareButton lead={{id:lead.id,business_id:lead.business_id,full_name:lead.full_name,email:lead.email,customer_id:(lead as any).customer_id}}/></div><form onSubmit={saveMenu} className="grid gap-5 lg:grid-cols-[1.4fr_1fr]">
     <div className="space-y-5">
       {groupedMenu.length?groupedMenu.map(([category,items])=><section key={category} className="space-y-3">
         <div className="flex items-center gap-3"><h3 className="font-serif text-lg">{category}</h3><span className="h-px flex-1 bg-border"/><span className="text-xs text-muted-foreground">{items.length} options</span></div>
