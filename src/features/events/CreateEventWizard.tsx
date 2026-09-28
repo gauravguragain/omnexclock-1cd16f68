@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
+import OptionSelect from "@/features/sales/OptionSelect";
 import DateField from "@/features/sales/DateField";
 import { TimeDropdownPicker } from "@/components/TimeDropdownPicker";
 import { useCrmData } from "@/features/sales/useCrmData";
@@ -100,7 +101,7 @@ export default function CreateEventWizard({ kind }: { kind: "event" | "catering"
     <Step n="02" title={kind === "catering" ? "Order & timing" : "Event & schedule"} sub={kind === "catering" ? "The order, the delivery or pickup window, and how many it feeds." : "What is being held, when, and how many are coming."}>
       <div className="grid gap-3 sm:grid-cols-2">
         <div className="space-y-1.5"><Label>Event name *</Label><Input value={f.event_name} onChange={e => set("event_name", e.target.value)} /></div>
-        {kind === "event" && <div className="space-y-1.5"><Label>Event type</Label><select value={f.event_type} onChange={e => set("event_type", e.target.value)} className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"><option value="">Choose type</option>{crm.options.filter(o => o.option_type === "event_type" && o.active).map(o => <option key={o.id} value={o.value}>{o.label}</option>)}</select></div>}
+        {kind === "event" && <div className="space-y-1.5"><Label>Event type</Label><OptionSelect name="event_type_pick" emptyLabel="Choose type" defaultValue={f.event_type} options={crm.options.filter(o => o.option_type === "event_type" && o.active)} onChange={v => v !== f.event_type && set("event_type", v)} /></div>}
         <div className="space-y-1.5"><Label>Date *</Label><DateField value={f.date} onChange={v => set("date", v)} /></div>
         <div className="grid grid-cols-2 gap-2"><div className="space-y-1.5"><Label>{kind === "catering" ? (f.method === "pickup" ? "Pickup from *" : "Delivery from *") : "Start *"}</Label><TimeDropdownPicker value={f.start} onChange={v => set("start", v)} /></div><div className="space-y-1.5"><Label>{kind === "catering" ? (f.method === "pickup" ? "Pickup until *" : "Delivery until *") : "End *"}</Label><TimeDropdownPicker value={f.end} onChange={v => set("end", v)} /></div></div>
         <div className="space-y-1.5"><Label>Adults *</Label><Input type="number" min="0" value={f.adults} onChange={e => set("adults", e.target.value)} /></div>
