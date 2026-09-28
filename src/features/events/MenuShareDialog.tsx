@@ -42,6 +42,8 @@ export default function MenuShareDialog({ open, onOpenChange, data: d, source, l
   const [name, setName] = useState(lead?.full_name || "");
   const [message, setMessage] = useState("");
   const [sending, setSending] = useState(false);
+  const [showMatches, setShowMatches] = useState(false);
+  const matches = useMemo(() => { const q = name.trim().toLowerCase(); if (q.length < 2 || customerId) return []; return d.customers.filter(c => String(c.full_name || "").toLowerCase().includes(q) || String(c.email || "").toLowerCase().includes(q)).slice(0, 8); }, [name, customerId, d.customers]);
   const [linkScope, setLinkScope] = useState<"all" | "selected" | "none">("all");
   const bizName = d.business?.name || "Pro Regal";
   const books = d.books.filter(b => b.active !== false);
@@ -84,8 +86,13 @@ export default function MenuShareDialog({ open, onOpenChange, data: d, source, l
         <label className="flex items-center gap-2 border-t pt-3 font-medium"><Checkbox checked={drinks} onCheckedChange={v => setDrinks(v === true)} />Drinks list with prices <span className="text-xs font-normal text-muted-foreground">({d.drinks.filter(x => x.active !== false).length})</span></label>
       </div>
       <div className="grid gap-3 sm:grid-cols-2">
-        {!lead && <div className="space-y-1.5 sm:col-span-2"><Label>Customer</Label><select value={customerId} onChange={e => pickCustomer(e.target.value)} className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"><option value="">Not linked — type an email below</option>{d.customers.map(c => <option key={c.id} value={c.id}>{c.full_name}{c.email ? ` · ${c.email}` : ""}</option>)}</select></div>}
-        <div className="space-y-1.5"><Label>Recipient name</Label><Input value={name} onChange={e => setName(e.target.value)} /></div>
+        <div className="relative space-y-1.5"><Label>Recipient / customer</Label>
+          <Input value={name} placeholder="Type a name to find a customer" autoComplete="off" onFocus={() => setShowMatches(true)} onBlur={() => setTimeout(() => setShowMatches(false), 150)} onChange={e => { setName(e.target.value); setShowMatches(true); if (!lead) setCustomerId(""); }} />
+          {customerId && <p className="text-xs text-primary">Linked to customer profile{!lead && <button type="button" className="ml-2 text-muted-foreground underline" onClick={() => setCustomerId("")}>Unlink</button>}</p>}
+          {!lead && showMatches && matches.length > 0 && <div className="absolute left-0 right-0 top-full z-50 mt-1 max-h-56 overflow-y-auto rounded-md border bg-popover p-1 shadow-md">
+            {matches.map(c => <button key={c.id} type="button" onMouseDown={e => e.preventDefault()} onClick={() => { pickCustomer(c.id); setShowMatches(false); }} className="flex w-full flex-col rounded px-2 py-1.5 text-left text-sm hover:bg-accent"><span>{c.full_name}</span><span className="text-xs text-muted-foreground">{[c.email, c.phone].filter(Boolean).join(" · ") || "No contact details"}</span></button>)}
+          </div>}
+        </div>
         <div className="space-y-1.5"><Label>Email</Label><Input type="email" value={email} onChange={e => setEmail(e.target.value)} /></div>
         <div className="space-y-1.5 sm:col-span-2"><Label>Online menu link in the email (open for 15 days)</Label><select value={linkScope} onChange={e => setLinkScope(e.target.value as any)} className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"><option value="all">All active menu books &amp; packages (plus drinks list)</option><option value="selected">Only the packages selected above</option><option value="none">No online link</option></select></div>
         <div className="space-y-1.5 sm:col-span-2"><Label>Message (optional)</Label><Textarea rows={3} maxLength={1000} value={message} onChange={e => setMessage(e.target.value)} /></div>
