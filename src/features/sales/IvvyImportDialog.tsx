@@ -163,6 +163,7 @@ export default function IvvyImportDialog({ open, onOpenChange, businessId, onDon
           business_id: businessId, external_ref: code,
           full_name: col(r, "Main Contact") || [col(r, "First Name"), col(r, "Last Name")].filter(Boolean).join(" ") || col(r, "Booking Name"),
           email: col(r, "Email") || null, company: col(r, "Company") || null, source: "ivvy",
+          phone: col(r, "Phone", "Mobile", "Phone Number", "Contact Number", "Contact Phone") || null,
           event_type: catering ? "catering" : (col(r, "Booking Name") || "other").toLowerCase().replace(/\s+/g, "_"),
           lead_kind: catering ? "catering" : "event",
           preferred_dates: date ? [date] : [], estimated_guest_count: guests > 0 ? guests : null,
@@ -179,6 +180,16 @@ export default function IvvyImportDialog({ open, onOpenChange, businessId, onDon
         const { data, error } = await retry(() => supabase.from("crm_leads").upsert(leadRows.slice(i, i + BATCH) as any, { onConflict: "business_id,external_ref" }).select("id, external_ref, customer_id"));
         if (error) throw error;
         (data || []).forEach((d: any) => { idByCode[d.external_ref] = d.id + "|" + (d.customer_id ?? ""); });
+      }
+      // Fill in phone numbers on the linked customer records too (iVvy exports gained phone later).
+      const custPhone: Record<string, string> = {};
+      for (const { code, row: r } of items) {
+        const ph = col(r, "Phone", "Mobile", "Phone Number", "Contact Number", "Contact Phone");
+        const cid = (idByCode[code] || "|").split("|")[1];
+        if (ph && cid) custPhone[cid] = ph;
+      }
+      for (const [cid, ph] of Object.entries(custPhone)) {
+        await retry(() => supabase.from("crm_customers").update({ phone: ph } as any).eq("id", cid));
       }
       const bookingRows = items.filter(p => p.status !== "cancelled" && p.date).map(({ code, row: r, date, catering }) => {
         const [leadId, customerId] = (idByCode[code] || "|").split("|");
