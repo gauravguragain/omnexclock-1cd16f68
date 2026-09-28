@@ -1,5 +1,5 @@
 # Roadmap
 
-- [x] Lead flow redesign — journey stepper navigation with completion ticks, Back/Next controls (LeadDetailDialog.tsx)
-- [x] Confirmation tab rebuilt as Refined Dashboard Form (venue chips, logistics, adults/children, financial summary card, gold booking button)
-- [ ] Verify in browser (desktop + mobile width): stepper renders, all tabs open, booking saves, popup dialog renders
+- [x] Lead flow redesign — concierge layout with stage sidebar, mobile stage rail, progress header and Back/Next controls
+- [x] Preserve confirmation form and all seven existing workflows and saving actions
+- [ ] Verify desktop and mobile navigation, booking form and preview errors
