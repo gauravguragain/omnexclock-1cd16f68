@@ -38,11 +38,13 @@ export function PaymentBadge({ status, overdue }: { status: string; overdue?: bo
   return <Badge variant={status === "paid" ? "default" : "outline"} className={status === "unpaid" ? "text-muted-foreground" : ""}>{STATUS_LABEL[status]}</Badge>;
 }
 
-export function usePayments(businessId?: string, bookingId?: string) {
+/** bookingId: undefined = all business payments; null = no booking yet (none). */
+export function usePayments(businessId?: string, bookingId?: string | null) {
   const [payments, setPayments] = useState<CrmPayment[]>([]);
   const [loading, setLoading] = useState(true);
   const refresh = useCallback(async () => {
     if (!businessId) return;
+    if (bookingId === null) { setPayments([]); setLoading(false); return; }
     let q = (supabase as any).from("crm_payments").select("*").eq("business_id", businessId).order("paid_on", { ascending: false }).order("created_at", { ascending: false });
     if (bookingId) q = q.eq("booking_id", bookingId);
     const { data, error } = await q;
@@ -98,7 +100,7 @@ export function RecordPaymentDialog({ open, onOpenChange, booking, bookings, sug
 
 /** Payment tracking card shown on an event or catering booking page. */
 export function BookingPaymentsCard({ booking, onChanged }: { booking: any; onChanged?: () => void }) {
-  const { payments, refresh } = usePayments(booking?.business_id, booking?.id);
+  const { payments, refresh } = usePayments(booking?.business_id, booking?.id ?? null);
   const [open, setOpen] = useState(false);
   const s = useMemo(() => paymentSummary(booking, payments), [booking, payments]);
   const [edit, setEdit] = useState(false);
