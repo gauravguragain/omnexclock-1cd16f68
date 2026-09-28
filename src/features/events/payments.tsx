@@ -186,6 +186,10 @@ export function BookingPaymentsCard({ booking, onChanged }: { booking: any; onCh
 }
 
 /** Upcoming events (soonest first), then past events (most recent first). */
+/** "3 Oct 2026 · Client — Event name" label used by the booking picker. */
+function bookingLabel(b: any) {
+  return `${b?.event_date ? format(new Date(b.event_date + "T00:00"), "d MMM yyyy") : "No date"} · ${[b?.client_name, b?.event_name || b?.event_type].filter(Boolean).join(" — ") || "Booking"}`;
+}
 function sortUpcomingFirst(list: any[]) {
   const today = new Date().toLocaleDateString("en-CA", { timeZone: "Australia/Sydney" });
   const up = list.filter(b => b.event_date && b.event_date >= today).sort((a, b) => a.event_date.localeCompare(b.event_date));
