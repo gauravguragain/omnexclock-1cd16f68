@@ -121,12 +121,12 @@ export function RunsheetDocument({ rs, lead, b, items, selection, businessName, 
 
     <section className="mt-5">
       <div className="flex justify-between bg-primary px-3 py-2 text-sm font-semibold text-primary-foreground"><span>Event Summary – {date}</span><span>Day 1 of 1</span></div>
-      {summary}
+      <Summary />
     </section>
 
     <section className="mt-4">
-      <div className="flex justify-between bg-primary px-3 py-2 text-sm font-semibold text-primary-foreground"><span>Agenda – {date}</span><span>Day 1 of 1</span></div>
-      <div className="bg-muted">{summary}</div>
+      <div className="flex justify-between bg-primary px-3 py-2 text-sm font-bold text-primary-foreground"><span>Agenda – {date}</span><span>Day 1 of 1</span></div>
+      <div className="bg-muted"><Summary bold /></div>
       <div className="grid grid-cols-2 border-x border-b border-border text-xs leading-relaxed">
         <div className="min-w-0 border-r border-border p-4">
           {stalls.length > 0 && <div className="mb-4 break-inside-avoid"><h2 className="font-bold">Live Stalls{stalls[0].service_start_time ? ` — ${to12(stalls[0].service_start_time)}${stalls[0].service_end_time ? ` to ${to12(stalls[0].service_end_time)}` : ""}` : ""}</h2>{stalls.map(s => <p key={s.id} className="pl-3">• {String(s.item_name || "").replace(/_/g, " ")}</p>)}</div>}
@@ -142,7 +142,6 @@ export function RunsheetDocument({ rs, lead, b, items, selection, businessName, 
         </div>
         <div className="min-w-0 p-4">
           <h2 className="font-bold">Setup & Additional Information</h2>
-          <p className="mt-1 font-semibold">{eventTitle}</p>
           {setup.map(s => <p key={s} className="pl-3">• {s}</p>)}
           {rs.setup_notes && <p className="mt-2 whitespace-pre-line pl-3">{rs.setup_notes}</p>}
           {rs.access_time && <p className="mt-2">Decor / vendor access: {to12(rs.access_time)}</p>}
