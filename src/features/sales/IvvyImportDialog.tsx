@@ -81,14 +81,41 @@ export default function IvvyImportDialog({ open, onOpenChange, businessId, onDon
   const [progress, setProgress] = useState("");
 
   const [clients, setClients] = useState<ClientRow[]>([]);
+  const [dupes, setDupes] = useState<{ name: string; date: string; existing: string }[]>([]);
+  // Rows whose client name already has an event on the same date in the system (from a different record) are left out.
+  const findDupes = async (rows: { ref: string; name: string; date: string | null }[]) => {
+    const n = (s: string) => (s || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+    const dates = [...new Set(rows.map(r => r.date).filter(Boolean))] as string[];
+    const found = new Map<string, string>();
+    if (!dates.length) return found;
+    const bookings: any[] = [];
+    for (let i = 0; i < dates.length; i += 100) {
+      const { data } = await supabase.from("crm_bookings").select("external_ref, event_date, event_name, lead_id, customer_id, status").eq("business_id", businessId).in("event_date", dates.slice(i, i + 100));
+      bookings.push(...(data || []).filter((b: any) => b.status !== "cancelled"));
+    }
+    if (!bookings.length) return found;
+    const [{ data: leads }, { data: custs }] = await Promise.all([
+      supabase.from("crm_leads").select("id, full_name").in("id", [...new Set(bookings.map(b => b.lead_id).filter(Boolean))]),
+      supabase.from("crm_customers").select("id, full_name").in("id", [...new Set(bookings.map(b => b.customer_id).filter(Boolean))]),
+    ]);
+    const ln = new Map((leads || []).map((l: any) => [l.id, l.full_name])); const cn = new Map((custs || []).map((c: any) => [c.id, c.full_name]));
+    for (const r of rows) {
+      if (!r.date || !n(r.name)) continue;
+      const hit = bookings.find(b => b.event_date === r.date && b.external_ref !== r.ref && [ln.get(b.lead_id), cn.get(b.customer_id)].some(x => x && n(x) === n(r.name)));
+      if (hit) found.set(r.ref, hit.event_name || ln.get(hit.lead_id) || "Existing event");
+    }
+    return found;
+  };
   const onFile = async (f?: File) => {
     if (!f) return;
-    setItems([]); setClients([]);
+    setItems([]); setClients([]); setDupes([]);
     if (mode === "excel") {
       const { data: sp } = await (supabase.from("crm_venue_spaces" as any) as any).select("name").eq("business_id", businessId).eq("active", true);
       const rows = await readClientList(f, (sp || []).map((x: any) => x.name));
       if (!rows) { toast.error("Couldn't find a 'Client Name' column in this spreadsheet."); return; }
-      setClients(rows); return;
+      const d = await findDupes(rows);
+      setDupes(rows.filter(r => d.has(r.ref)).map(r => ({ name: r.name, date: r.date!, existing: d.get(r.ref)! })));
+      setClients(rows.filter(r => !d.has(r.ref))); return;
     }
     const rows = parseCsv(await f.text());
     // iVvy's Bookings export has no phone column — phone numbers come from a Contacts export (Email + a phone column, no booking Code).
@@ -102,8 +129,12 @@ export default function IvvyImportDialog({ open, onOpenChange, businessId, onDon
       if (!col(r, "Code") || !(col(r, "Main Contact") || col(r, "Booking Name"))) { skip++; continue; }
       out.push({ code: col(r, "Code"), row: r, date: parseDate(col(r, "Event Start Date")), catering: /catering/i.test(col(r, "Booking Name")), status: col(r, "Status").toLowerCase() });
     }
-    setItems(out); setSkipped(skip);
+    const nameOf = (r: Row) => col(r, "Main Contact") || [col(r, "First Name"), col(r, "Last Name")].filter(Boolean).join(" ") || col(r, "Booking Name");
+    const d = await findDupes(out.map(p => ({ ref: p.code, name: nameOf(p.row), date: p.date })));
+    setDupes(out.filter(p => d.has(p.code)).map(p => ({ name: nameOf(p.row), date: p.date!, existing: d.get(p.code)! })));
+    setItems(out.filter(p => !d.has(p.code))); setSkipped(skip);
   };
+
 
   const runClients = async () => {
     setBusy(true);
@@ -296,6 +327,10 @@ export default function IvvyImportDialog({ open, onOpenChange, businessId, onDon
       {contacts.length > 0 && <div className="space-y-2 text-sm">
         <p className="text-muted-foreground">Contacts export detected — phone numbers will be added to matching customers and leads (matched by email, then name).</p>
         <div className="max-h-56 overflow-auto rounded border border-border text-xs"><table className="w-full"><tbody>{contacts.map((r, i) => <tr key={i} className="border-b border-border"><td className="p-1.5 font-medium">{col(r, "Main Contact", "Name") || [col(r, "First Name"), col(r, "Last Name")].filter(Boolean).join(" ")}</td><td className="p-1.5">{col(r, "Email")}</td><td className="p-1.5">{phoneOf(r)}</td></tr>)}</tbody></table></div>
+      </div>}
+      {dupes.length > 0 && <div className="space-y-2 text-sm">
+        <p className="font-medium text-destructive">{dupes.length} row(s) won't be imported — this client already has an event on the same date:</p>
+        <div className="max-h-48 overflow-auto rounded border border-destructive/40 text-xs"><table className="w-full"><tbody>{dupes.map((x, i) => <tr key={i} className="border-b border-border"><td className="p-1.5 font-medium">{x.name}</td><td className="p-1.5 whitespace-nowrap">{x.date}</td><td className="p-1.5 text-muted-foreground">Already in system: {x.existing}</td></tr>)}</tbody></table></div>
       </div>}
       {progress && <p className="text-sm text-muted-foreground">{progress}</p>}
       <DialogFooter><Button variant="outline" disabled={busy} onClick={() => onOpenChange(false)}>Cancel</Button><Button disabled={busy || !(items.length || clients.length || contacts.length)} onClick={run}>{busy ? "Importing…" : `Import ${items.length || clients.length || contacts.length || ""}`}</Button></DialogFooter>
