@@ -167,7 +167,7 @@ export default function IvvyImportDialog({ open, onOpenChange, businessId, onDon
           business_id: businessId, external_ref: code,
           full_name: col(r, "Main Contact") || [col(r, "First Name"), col(r, "Last Name")].filter(Boolean).join(" ") || col(r, "Booking Name"),
           email: col(r, "Email") || null, company: col(r, "Company") || null, source: "ivvy",
-          phone: col(r, "Phone", "Mobile", "Phone Number", "Contact Number", "Contact Phone") || null,
+          phone: phoneOf(r) || null,
           event_type: catering ? "catering" : (col(r, "Booking Name") || "other").toLowerCase().replace(/\s+/g, "_"),
           lead_kind: catering ? "catering" : "event",
           preferred_dates: date ? [date] : [], estimated_guest_count: guests > 0 ? guests : null,
@@ -188,7 +188,7 @@ export default function IvvyImportDialog({ open, onOpenChange, businessId, onDon
       // Fill in phone numbers on the linked customer records too (iVvy exports gained phone later).
       const custPhone: Record<string, string> = {};
       for (const { code, row: r } of items) {
-        const ph = col(r, "Phone", "Mobile", "Phone Number", "Contact Number", "Contact Phone");
+        const ph = phoneOf(r);
         const cid = (idByCode[code] || "|").split("|")[1];
         if (ph && cid) custPhone[cid] = ph;
       }
