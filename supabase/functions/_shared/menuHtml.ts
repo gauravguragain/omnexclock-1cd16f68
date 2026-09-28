@@ -82,7 +82,15 @@ export function buildSectionsFromRows(d: MenuRows, packageIds: string[] | null, 
 const pill = (t: string) => `<span style="display:inline-block;padding:3px 14px;border-radius:999px;background:${GOLD};color:#fff;font-family:${SANS};font-size:9px;font-weight:600;letter-spacing:3px;text-transform:uppercase;">${esc(t)}</span>`;
 const overline = (t: string) => `<p style="margin:0;color:${GOLD};font-family:${SANS};font-size:10px;letter-spacing:5px;text-transform:uppercase;">${esc(t)}</p>`;
 
-function itemsTable(items: MenuItem[]): string {
+function itemsTable(items: MenuItem[], dotted = false): string {
+  if (dotted) {
+    const rows = items.map((it) => `<tr>
+      <td valign="bottom" style="padding:6px 0;font-family:${SERIF};font-size:14px;color:${INK};line-height:1.4;">${esc(it.name)}${it.note ? `<br><span style="color:${MUTED};font-family:${SANS};font-size:11px;font-style:italic;">${esc(it.note)}</span>` : ""}</td>
+      <td valign="bottom" style="padding:6px 4px;width:100%;"><div style="border-bottom:1px dotted ${GOLD_SOFT};height:1em;"></div></td>
+      <td valign="bottom" style="padding:6px 0 6px 4px;white-space:nowrap;text-align:right;color:${GOLD};font-family:${SERIF};font-size:14px;font-weight:600;">${it.price != null && !isNaN(Number(it.price)) ? money(Number(it.price)) : ""}</td>
+    </tr>`);
+    return `<table role="presentation" style="width:100%;border-collapse:collapse;margin:4px 0 8px;">${rows.join("")}</table>`;
+  }
   const rows: string[] = [];
   for (let i = 0; i < items.length; i += 2) {
     const cell = (it?: MenuItem) => it ? `<td valign="top" style="width:50%;padding:7px 14px 7px 0;border-bottom:1px solid ${LINE};font-family:${SANS};font-size:12.5px;color:${INK};line-height:1.45;">
