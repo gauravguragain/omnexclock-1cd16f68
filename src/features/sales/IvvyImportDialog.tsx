@@ -202,8 +202,10 @@ export default function IvvyImportDialog({ open, onOpenChange, businessId, onDon
         (data || []).forEach((d: any) => { bookingIdByCode[d.external_ref] = d.id; if (String(d.notes || "").includes("Venue clash")) { clashes++; clashRefs.push(d.external_ref); } });
       }
       await flagClashingLeads(clashRefs);
-      // Record what was actually paid in iVvy as payment history, so the Payments page reflects reality.
-      const paidItems = items.filter(p => p.status !== "cancelled" && num(col(p.row, "Total Paid")) > 0 && bookingIdByCode[p.code]);
+      // Past events are fully settled (migration) — record the full total as paid so no balance shows due.
+      // Future events keep only what iVvy shows as actually paid.
+      const paidItems = items.filter(p => p.status !== "cancelled" && bookingIdByCode[p.code]
+        && (p.date && p.date <= today ? num(col(p.row, "Total Amount")) > 0 : num(col(p.row, "Total Paid")) > 0));
       const bookingIds = paidItems.map(p => bookingIdByCode[p.code]);
       for (let i = 0; i < bookingIds.length; i += BATCH) {
         const { error } = await retry(() => supabase.from("crm_payments").delete().in("booking_id", bookingIds.slice(i, i + BATCH)).like("reference", "iVvy %"));
@@ -211,7 +213,8 @@ export default function IvvyImportDialog({ open, onOpenChange, businessId, onDon
       }
       const paymentRows = paidItems.map(p => ({
         business_id: businessId, booking_id: bookingIdByCode[p.code],
-        amount: num(col(p.row, "Total Paid")), paid_on: p.date || today,
+        amount: p.date && p.date <= today ? num(col(p.row, "Total Amount")) : num(col(p.row, "Total Paid")),
+        paid_on: p.date || today,
         payment_type: "balance",
         method: "other", reference: `iVvy ${p.code}`, notes: "Migrated from iVvy",
       }));
