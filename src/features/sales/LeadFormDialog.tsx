@@ -40,13 +40,24 @@ export default function LeadFormDialog({ open, onOpenChange, businessId, options
      <form onSubmit={submit} className="flex min-h-0 flex-1 flex-col">
        <div className="min-h-0 flex-1 space-y-7 overflow-y-auto px-5 py-5 sm:px-8 sm:py-6">
          <section className="space-y-4" aria-labelledby="lead-contact-heading">
-           <div className="flex items-center gap-2 border-b border-border pb-2"><UserRound className="h-4 w-4 text-primary"/><h3 id="lead-contact-heading" className="text-sm font-semibold">Contact details</h3></div>
-           <div className="grid gap-4 sm:grid-cols-2">
-             <div className="space-y-1.5"><Label htmlFor="lead-full-name">Full name <span className="text-primary">*</span></Label><Input id="lead-full-name" name="full_name" defaultValue={lead?.full_name} required autoFocus/></div>
-             <div className="space-y-1.5"><Label htmlFor="lead-company">Company</Label><Input id="lead-company" name="company" defaultValue={lead?.company || ""}/></div>
-             <div className="space-y-1.5"><Label htmlFor="lead-email">Email</Label><Input id="lead-email" type="email" value={email} onChange={(e)=>setEmail(e.target.value)}/></div>
-             <div className="space-y-1.5"><Label htmlFor="lead-phone">Phone</Label><Input id="lead-phone" type="tel" value={phone} onChange={(e)=>setPhone(e.target.value)}/></div>
-           </div>
+            <div className="flex items-center gap-2 border-b border-border pb-2"><UserRound className="h-4 w-4 text-primary"/><h3 id="lead-contact-heading" className="text-sm font-semibold">Contact details</h3></div>
+            {!lead && !picked && customers.length > 0 && <div className="space-y-2">
+              <Label>Link an existing customer</Label>
+              <Input placeholder="Search customers by name, phone or email" value={custSearch} onChange={(e)=>setCustSearch(e.target.value)}/>
+              {custSearch && <div className="grid gap-2 sm:grid-cols-2">{custMatches.map(c => <button key={c.id} type="button" onClick={()=>pick(c)} className="rounded-md border border-border p-3 text-left text-sm hover:bg-muted/40"><p className="font-medium">{c.full_name}</p><p className="text-xs text-muted-foreground">{[c.phone, c.email].filter(Boolean).join(" · ") || "—"}</p></button>)}{!custMatches.length && <p className="text-sm text-muted-foreground">No matching customers — fill the details below instead.</p>}</div>}
+            </div>}
+            {picked ? <div className="flex items-start justify-between gap-3 rounded-md border border-primary/30 bg-primary/5 p-3">
+              <div className="text-sm"><p className="font-medium">{picked.full_name}</p><p className="text-xs text-muted-foreground">{[picked.phone, picked.email, picked.company].filter(Boolean).join(" · ") || "Existing customer"}</p></div>
+              <input type="hidden" name="full_name" value={picked.full_name}/><input type="hidden" name="company" value={picked.company || ""}/>
+              <Button type="button" size="sm" variant="ghost" onClick={()=>{ setPicked(null); setEmail(""); setPhone(""); }}>Change</Button>
+            </div> : <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-1.5"><Label htmlFor="lead-full-name">Full name <span className="text-primary">*</span></Label><Input id="lead-full-name" name="full_name" defaultValue={lead?.full_name} required autoFocus/></div>
+              <div className="space-y-1.5"><Label htmlFor="lead-company">Company</Label><Input id="lead-company" name="company" defaultValue={lead?.company || ""}/></div>
+            </div>}
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-1.5"><Label htmlFor="lead-email">Email</Label><Input id="lead-email" type="email" value={email} onChange={(e)=>setEmail(e.target.value)}/></div>
+              <div className="space-y-1.5"><Label htmlFor="lead-phone">Phone</Label><Input id="lead-phone" type="tel" value={phone} onChange={(e)=>setPhone(e.target.value)}/></div>
+            </div>
            {duplicate && <div role="alert" className="flex items-start gap-2 rounded-md border border-primary/30 bg-primary/5 p-3 text-sm"><AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-primary"/><span>Possible duplicate: {duplicate.full_name}. Check this contact before saving.</span></div>}
          </section>
          <section className="space-y-4" aria-labelledby="lead-event-heading">
