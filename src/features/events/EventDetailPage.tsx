@@ -106,7 +106,7 @@ export default function EventDetailPage({ kind }: { kind: "event" | "catering" }
             : <Empty title="No menu selected yet" text="Choose the menu in the lead workflow; it prints on the run sheet." />}
         </Section>
 
-        <Section icon={ListChecks} title="Food serving schedule">{schedule.length ? <ol className="space-y-2">{schedule.map((s, i) => <li key={i} className="flex gap-4 text-sm"><span className="w-20 shrink-0 font-medium">{to12(s.time)}</span><span>{s.label}{s.detail && <span className="text-muted-foreground"> — {s.detail}</span>}</span></li>)}</ol>
+        <Section icon={ListChecks} title="Food serving schedule">{schedule.length ? <ol className="space-y-2">{schedule.map((s, i) => <li key={i} className="flex gap-4 text-sm"><span className="w-32 shrink-0 font-medium">{to12(s.time)}{s.end ? ` – ${to12(s.end)}` : ""}</span><span>{s.label}{s.detail && <span className="text-muted-foreground"> — {s.detail}</span>}</span></li>)}</ol>
           : <Empty title="No food timings yet" text="When each course goes out — add it in the Run sheet step." />}</Section>
 
         <Section icon={ListChecks} title="FOH service schedule">{fohSchedule.length ? <ol className="space-y-2">{fohSchedule.map((s, i) => <li key={i} className="flex gap-4 text-sm"><span className="w-20 shrink-0 font-medium">{to12(s.time)}</span><span>{s.label}{s.detail && <span className="text-muted-foreground"> — {s.detail}</span>}</span></li>)}</ol>
