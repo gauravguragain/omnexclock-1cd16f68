@@ -23,7 +23,8 @@ export default function LeadFormDialog({ open, onOpenChange, businessId, options
     useEffect(() => { if (!open) { setPicked(null); setCustSearch(""); } }, [open]);
     const pick = (c: any) => { setPicked(c); setEmail(c.email || ""); setPhone(c.phone || ""); };
     const custMatches = customers.filter(c => `${c.full_name} ${c.phone || ""} ${c.email || ""}`.toLowerCase().includes(custSearch.toLowerCase())).slice(0, 6);
-  const duplicate = useMemo(() => leads.find((row) => row.id !== lead?.id && ((email && row.email?.toLowerCase() === email.toLowerCase()) || (phone && row.phone?.replace(/\D/g, "") === phone.replace(/\D/g, "")))), [email, phone, leads, lead?.id]);
+  const linkedCustomerId = picked?.id || lead?.customer_id || null;
+  const duplicate = useMemo(() => leads.find((row) => row.id !== lead?.id && !(linkedCustomerId && row.customer_id === linkedCustomerId) && ((email && row.email?.toLowerCase() === email.toLowerCase()) || (phone && row.phone?.replace(/\D/g, "") === phone.replace(/\D/g, "")))), [email, phone, leads, lead?.id, linkedCustomerId]);
   const list = (type:string) => options.filter((option) => option.option_type === type && option.active);
    const isCatering = kind === "catering";
    const submit = async (event:FormEvent<HTMLFormElement>) => { event.preventDefault(); setSaving(true); const form = new FormData(event.currentTarget);
