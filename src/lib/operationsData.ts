@@ -192,16 +192,7 @@ export async function loadOperations(bid: string, r: Range) {
     const t = pretty(typeOf(b));
     return lead?.full_name ? (t ? `${t} – ${lead.full_name}` : lead.full_name) : "";
   };
-  // Upcoming list: Event column is always "Event type – Customer name", Space shows the venue
-  // space or "Off-site catering" for catering bookings.
-  const customerOf = (b: any) => (b.lead_id ? leadById[b.lead_id]?.full_name : "") || b.client_name || b.customer_name || "";
-  const upcomingName = (b: any) => {
-    const t = pretty(typeOf(b));
-    const c = customerOf(b);
-    if (t && c) return `${t} – ${c}`;
-    return t || c || b.event_name || "";
-  };
-  const upcoming = live.filter((b: any) => b.event_date >= today && b.event_date <= addDays(today, 30)).sort((a: any, b: any) => a.event_date.localeCompare(b.event_date)).map((b: any) => ({ ...b, event_name: upcomingName(b), event_type_display: pretty(typeOf(b)), space_display: b.booking_kind === "catering" ? "Off-site catering" : (b.venue_space || "—") }));
+  const upcoming = live.filter((b: any) => b.event_date >= today && b.event_date <= addDays(today, 30)).sort((a: any, b: any) => a.event_date.localeCompare(b.event_date)).map((b: any) => ({ ...b, event_name: nameOf(b), event_type_display: pretty(typeOf(b)) }));
 
 
   const inspInRange = inspections.filter((i: any) => { const d = i.starts_at || i.proposed_at; if (!d) return false; const s = sydDate(d); return s >= r.from && s <= r.to; });
