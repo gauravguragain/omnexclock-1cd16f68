@@ -135,7 +135,7 @@ export function RunsheetDocument({ rs, lead, b, items, selection, businessName, 
           {otherSchedule.length > 0 && <div className="mt-2 break-inside-avoid">{otherSchedule.map((s, i) => <p key={i} className="pl-3">• {s.time ? to12(s.time) : "—"}{s.end ? ` – ${to12(s.end)}` : ""} – {s.label}{s.detail ? ` (${s.detail})` : ""}</p>)}</div>}
           {kidsRows.length > 0 && <p className="mt-2">Kids menu: {kidsRows.reduce((s, k) => s + (Number(k.quantity) || 0), 0)} kids</p>}
           {selection?.beverage_package && <p className="mt-2">Beverages: {prettyCrmValue(selection.beverage_package)}</p>}
-          {selection?.corkage_enabled && <p className="mt-1">Host is bringing their own drinks.</p>}
+          {selection?.corkage_enabled && <p className="mt-1">Host is bringing their own drinks{selection?.corkage_note ? `: ${selection.corkage_note}` : ""}.</p>}
           {selection?.dietary_requirements && <p className="mt-2">Dietary: {selection.dietary_requirements}</p>}
           {selection?.allergies && <p className="mt-1 font-semibold">ALLERGIES: {selection.allergies}</p>}
           {!items.length && <p className="mt-2 text-muted-foreground">No menu saved yet.</p>}

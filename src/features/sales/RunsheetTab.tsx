@@ -152,7 +152,7 @@ export default function RunsheetTab({ lead, booking, options, onSaved }: {
   const corkageNote = useMemo(() => {
     const selection: any = menu.selection;
     if (!selection?.corkage_enabled) return null;
-    return "Host bringing own drinks";
+    return `Host bringing own drinks${selection?.corkage_note ? ` — ${selection.corkage_note}` : ""}`;
   }, [menu.selection]);
 
   const startTime = String(booking?.start_time || "17:30").slice(0, 5);

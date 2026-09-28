@@ -1646,6 +1646,7 @@ export type Database = {
           business_id: string
           corkage_enabled: boolean
           corkage_flat: number | null
+          corkage_note: string | null
           corkage_per_head: number | null
           created_at: string
           created_by: string | null
@@ -1666,6 +1667,7 @@ export type Database = {
           business_id: string
           corkage_enabled?: boolean
           corkage_flat?: number | null
+          corkage_note?: string | null
           corkage_per_head?: number | null
           created_at?: string
           created_by?: string | null
@@ -1686,6 +1688,7 @@ export type Database = {
           business_id?: string
           corkage_enabled?: boolean
           corkage_flat?: number | null
+          corkage_note?: string | null
           corkage_per_head?: number | null
           created_at?: string
           created_by?: string | null
