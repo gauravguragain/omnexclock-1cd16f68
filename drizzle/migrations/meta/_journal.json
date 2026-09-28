@@ -379,6 +379,13 @@
       "when": 1790598673923,
       "tag": "0053_menu_share_links_and_package_fields",
       "breakpoints": true
+    },
+    {
+      "idx": 54,
+      "version": "7",
+      "when": 1790606805567,
+      "tag": "0054_fix_venue_clash_self_match",
+      "breakpoints": true
     }
   ]
 }

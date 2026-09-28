@@ -4418,6 +4418,25 @@ export type Database = {
           user_id: string
         }[]
       }
+      crm_find_venue_clash: {
+        Args: {
+          _business: string
+          _date: string
+          _dur: number
+          _end: string
+          _id: string
+          _ref: string
+          _start: string
+          _venue: string
+        }
+        Returns: {
+          clash_end: string
+          clash_id: string
+          clash_label: string
+          clash_start: string
+          clash_venue: string
+        }[]
+      }
       crm_merge_first_name_contacts: {
         Args: { _business_id: string }
         Returns: number
