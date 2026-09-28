@@ -100,7 +100,7 @@ export function RecordPaymentDialog({ open, onOpenChange, booking, bookings, sug
 
 /** Payment tracking card shown on an event or catering booking page. */
 export function BookingPaymentsCard({ booking, onChanged }: { booking: any; onChanged?: () => void }) {
-  const { payments, refresh } = usePayments(booking?.business_id, booking?.id);
+  const { payments, refresh } = usePayments(booking?.business_id, booking?.id ?? null);
   const [open, setOpen] = useState(false);
   const s = useMemo(() => paymentSummary(booking, payments), [booking, payments]);
   const [edit, setEdit] = useState(false);
