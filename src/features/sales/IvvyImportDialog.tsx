@@ -54,6 +54,9 @@ function parseCsv(text: string): Row[] {
   return body.filter(r => r.some(v => v.trim())).map(r => Object.fromEntries(head.map((h, i) => [h.trim().toLowerCase().replace(/\s+/g, " "), (r[i] ?? "").trim()])));
 }
 const col = (r: Row, ...names: string[]) => { for (const n of names) { const v = r[n.toLowerCase()]; if (v) return v; } return ""; };
+// Finds a phone value under any heading containing "phone" or "mobile" (iVvy renames these between export types).
+const phoneOf = (r: Row) => col(r, "Phone", "Mobile", "Phone Number", "Contact Number", "Contact Phone", "Mobile Phone", "Phone (Mobile)", "Phone (Work)", "Work Phone", "Home Phone")
+  || Object.entries(r).find(([k, v]) => v && /phone|mobile/.test(k))?.[1] || "";
 const parseDate = (s: string) => { // "Saturday, 26 September 2026" or "26/09/2026" or "2026-09-26"
   const m = s.match(/(\d{1,2})\s+([A-Za-z]+)\s+(\d{4})/);
   if (m) {
@@ -72,6 +75,7 @@ type Prepared = { code: string; row: Row; date: string | null; catering: boolean
 
 export default function IvvyImportDialog({ open, onOpenChange, businessId, onDone, mode = "ivvy" }: { mode?: "ivvy" | "excel"; open: boolean; onOpenChange: (o: boolean) => void; businessId: string; onDone: () => void }) {
   const [items, setItems] = useState<Prepared[]>([]);
+  const [contacts, setContacts] = useState<Row[]>([]);
   const [skipped, setSkipped] = useState(0);
   const [busy, setBusy] = useState(false);
   const [progress, setProgress] = useState("");
@@ -87,7 +91,12 @@ export default function IvvyImportDialog({ open, onOpenChange, businessId, onDon
       setClients(rows); return;
     }
     const rows = parseCsv(await f.text());
-    if (!rows.length || !("code" in rows[0]) || !("main contact" in rows[0])) { toast.error("This doesn't look like an iVvy bookings export."); return; }
+    // iVvy's Bookings export has no phone column — phone numbers come from a Contacts export (Email + a phone column, no booking Code).
+    if (rows.length && !("code" in rows[0]) && "email" in rows[0] && Object.keys(rows[0]).some(k => /phone|mobile/.test(k))) {
+      setContacts(rows.filter(r => phoneOf(r) && (col(r, "Email") || col(r, "Main Contact") || col(r, "First Name") || col(r, "Last Name") || col(r, "Name"))));
+      return;
+    }
+    if (!rows.length || !("code" in rows[0]) || !("main contact" in rows[0])) { toast.error("This doesn't look like an iVvy bookings or contacts export."); return; }
     const out: Prepared[] = []; let skip = 0;
     for (const r of rows) {
       if (!col(r, "Code") || !(col(r, "Main Contact") || col(r, "Booking Name"))) { skip++; continue; }
@@ -149,8 +158,37 @@ export default function IvvyImportDialog({ open, onOpenChange, businessId, onDon
     finally { setBusy(false); setProgress(""); }
   };
 
+  // Applies phone numbers from an iVvy Contacts export onto existing customers/leads, matched by email then name.
+  const runContacts = async () => {
+    setBusy(true);
+    try {
+      let updated = 0;
+      for (let i = 0; i < contacts.length; i++) {
+        const r = contacts[i];
+        const phone = phoneOf(r); const email = col(r, "Email").toLowerCase();
+        const name = col(r, "Main Contact", "Name") || [col(r, "First Name"), col(r, "Last Name")].filter(Boolean).join(" ");
+        if (!phone) continue;
+        setProgress(`Contacts ${i + 1}/${contacts.length}`);
+        let q = supabase.from("crm_customers").update({ phone } as any).eq("business_id", businessId);
+        q = email ? q.ilike("email", email) : q.ilike("full_name", name);
+        const { data, error } = await retry(() => q.select("id"));
+        if (error) throw error;
+        if (data?.length) { updated += data.length; continue; }
+        let lq = supabase.from("crm_leads").update({ phone } as any).eq("business_id", businessId);
+        lq = email ? lq.ilike("email", email) : lq.ilike("full_name", name);
+        const { data: ld, error: le } = await retry(() => lq.select("id"));
+        if (le) throw le;
+        updated += ld?.length || 0;
+      }
+      toast.success(`Phone numbers updated on ${updated} record(s).`);
+      setContacts([]); onOpenChange(false); onDone();
+    } catch (e: any) { toast.error(e.message || "Import failed"); }
+    finally { setBusy(false); setProgress(""); }
+  };
+
   const run = async () => {
     if (clients.length) return runClients();
+    if (contacts.length) return runContacts();
     setBusy(true);
     try {
       const { data: { user } } = await supabase.auth.getUser();
@@ -164,7 +202,7 @@ export default function IvvyImportDialog({ open, onOpenChange, businessId, onDon
           business_id: businessId, external_ref: code,
           full_name: col(r, "Main Contact") || [col(r, "First Name"), col(r, "Last Name")].filter(Boolean).join(" ") || col(r, "Booking Name"),
           email: col(r, "Email") || null, company: col(r, "Company") || null, source: "ivvy",
-          phone: col(r, "Phone", "Mobile", "Phone Number", "Contact Number", "Contact Phone") || null,
+          phone: phoneOf(r) || null,
           event_type: catering ? "catering" : (col(r, "Booking Name") || "other").toLowerCase().replace(/\s+/g, "_"),
           lead_kind: catering ? "catering" : "event",
           preferred_dates: date ? [date] : [], estimated_guest_count: guests > 0 ? guests : null,
@@ -185,7 +223,7 @@ export default function IvvyImportDialog({ open, onOpenChange, businessId, onDon
       // Fill in phone numbers on the linked customer records too (iVvy exports gained phone later).
       const custPhone: Record<string, string> = {};
       for (const { code, row: r } of items) {
-        const ph = col(r, "Phone", "Mobile", "Phone Number", "Contact Number", "Contact Phone");
+        const ph = phoneOf(r);
         const cid = (idByCode[code] || "|").split("|")[1];
         if (ph && cid) custPhone[cid] = ph;
       }
@@ -245,7 +283,7 @@ export default function IvvyImportDialog({ open, onOpenChange, businessId, onDon
   const c = (f: (p: Prepared) => boolean) => items.filter(f).length;
   return <Dialog open={open} onOpenChange={o => { if (!busy) onOpenChange(o); }}>
     <DialogContent className="max-w-2xl">
-      <DialogHeader><DialogTitle>{mode === "excel" ? "Import clients from Excel" : "Import past events from iVvy"}</DialogTitle><DialogDescription>{mode === "excel" ? "Upload your client spreadsheet with columns Client Name, Event Date, Event Type, Event Room, Event Start Time and Deposit. Running it again updates clients already imported." : "Upload an iVvy Bookings CSV export. Past bookings are imported as completed history with their payments. Running it again updates bookings already imported."}</DialogDescription></DialogHeader>
+      <DialogHeader><DialogTitle>{mode === "excel" ? "Import clients from Excel" : "Import past events from iVvy"}</DialogTitle><DialogDescription>{mode === "excel" ? "Upload your client spreadsheet with columns Client Name, Event Date, Event Type, Event Room, Event Start Time and Deposit. Running it again updates clients already imported." : "Upload an iVvy Bookings CSV export. Past bookings are imported as completed history with their payments. Running it again updates bookings already imported. The Bookings export has no phone column — to add phone numbers, upload an iVvy Contacts CSV here too and they'll be matched to your customers by email."}</DialogDescription></DialogHeader>
       <Input type="file" accept={mode === "excel" ? ".xlsx,.xls,.csv" : ".csv,text/csv"} disabled={busy} onChange={e => onFile(e.target.files?.[0])} />
       {items.length > 0 && <div className="grid grid-cols-2 gap-2 text-sm">
         {[["Bookings found", items.length], ["Event leads", c(p => !p.catering)], ["Catering leads", c(p => p.catering)], ["Hosted (become bookings)", c(p => p.status !== "cancelled")], ["Past (marked completed)", c(p => p.status !== "cancelled" && p.date && p.date < new Date().toLocaleDateString("en-CA", { timeZone: "Australia/Sydney" }))], ["Cancelled (Cold)", c(p => p.status === "cancelled")], ["Skipped rows", skipped]].map(([l, v]) =>
@@ -255,8 +293,12 @@ export default function IvvyImportDialog({ open, onOpenChange, businessId, onDon
         <div className="grid grid-cols-2 gap-2">{[["Clients found", clients.length], ["With deposit (confirmed)", clients.filter(c => c.deposit > 0).length], ["No deposit (new leads)", clients.filter(c => !c.deposit).length], ["Missing date", clients.filter(c => !c.date).length]].map(([l, v]) => <div key={l as string} className="flex justify-between border-b border-border py-1"><span className="text-muted-foreground">{l}</span><span className="font-medium">{v}</span></div>)}</div>
         <div className="max-h-56 overflow-auto rounded border border-border text-xs"><table className="w-full"><tbody>{clients.map(c => <tr key={c.ref} className="border-b border-border"><td className="p-1.5 font-medium">{c.name}</td><td className="p-1.5">{c.date}</td><td className="p-1.5">{c.eventType}</td><td className="p-1.5">{c.venue}</td><td className="p-1.5 whitespace-nowrap">{c.start}–{c.end}</td><td className="p-1.5">{c.deposit ? `$${c.deposit}` : "—"}</td></tr>)}</tbody></table></div>
       </div>}
+      {contacts.length > 0 && <div className="space-y-2 text-sm">
+        <p className="text-muted-foreground">Contacts export detected — phone numbers will be added to matching customers and leads (matched by email, then name).</p>
+        <div className="max-h-56 overflow-auto rounded border border-border text-xs"><table className="w-full"><tbody>{contacts.map((r, i) => <tr key={i} className="border-b border-border"><td className="p-1.5 font-medium">{col(r, "Main Contact", "Name") || [col(r, "First Name"), col(r, "Last Name")].filter(Boolean).join(" ")}</td><td className="p-1.5">{col(r, "Email")}</td><td className="p-1.5">{phoneOf(r)}</td></tr>)}</tbody></table></div>
+      </div>}
       {progress && <p className="text-sm text-muted-foreground">{progress}</p>}
-      <DialogFooter><Button variant="outline" disabled={busy} onClick={() => onOpenChange(false)}>Cancel</Button><Button disabled={busy || !(items.length || clients.length)} onClick={run}>{busy ? "Importing…" : `Import ${items.length || clients.length || ""}`}</Button></DialogFooter>
+      <DialogFooter><Button variant="outline" disabled={busy} onClick={() => onOpenChange(false)}>Cancel</Button><Button disabled={busy || !(items.length || clients.length || contacts.length)} onClick={run}>{busy ? "Importing…" : `Import ${items.length || clients.length || contacts.length || ""}`}</Button></DialogFooter>
     </DialogContent>
   </Dialog>;
 }
