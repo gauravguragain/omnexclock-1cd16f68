@@ -158,8 +158,37 @@ export default function IvvyImportDialog({ open, onOpenChange, businessId, onDon
     finally { setBusy(false); setProgress(""); }
   };
 
+  // Applies phone numbers from an iVvy Contacts export onto existing customers/leads, matched by email then name.
+  const runContacts = async () => {
+    setBusy(true);
+    try {
+      let updated = 0;
+      for (let i = 0; i < contacts.length; i++) {
+        const r = contacts[i];
+        const phone = phoneOf(r); const email = col(r, "Email").toLowerCase();
+        const name = col(r, "Main Contact", "Name") || [col(r, "First Name"), col(r, "Last Name")].filter(Boolean).join(" ");
+        if (!phone) continue;
+        setProgress(`Contacts ${i + 1}/${contacts.length}`);
+        let q = supabase.from("crm_customers").update({ phone } as any).eq("business_id", businessId);
+        q = email ? q.ilike("email", email) : q.ilike("full_name", name);
+        const { data, error } = await retry(() => q.select("id"));
+        if (error) throw error;
+        if (data?.length) { updated += data.length; continue; }
+        let lq = supabase.from("crm_leads").update({ phone } as any).eq("business_id", businessId);
+        lq = email ? lq.ilike("email", email) : lq.ilike("full_name", name);
+        const { data: ld, error: le } = await retry(() => lq.select("id"));
+        if (le) throw le;
+        updated += ld?.length || 0;
+      }
+      toast.success(`Phone numbers updated on ${updated} record(s).`);
+      setContacts([]); onOpenChange(false); onDone();
+    } catch (e: any) { toast.error(e.message || "Import failed"); }
+    finally { setBusy(false); setProgress(""); }
+  };
+
   const run = async () => {
     if (clients.length) return runClients();
+    if (contacts.length) return runContacts();
     setBusy(true);
     try {
       const { data: { user } } = await supabase.auth.getUser();
