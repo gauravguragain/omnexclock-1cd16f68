@@ -5,6 +5,8 @@ import { Badge } from "@/components/ui/badge";
 import { Copy, Link2, Mail } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
+import { getAppOrigin } from "@/lib/appOrigin";
+
 
 export default function GuestMenuLinkCard({ lead, packages, onSubmitted }: { lead: any; packages: any[]; onSubmitted: () => void }) {
   const [links, setLinks] = useState<any[]>([]);
@@ -14,7 +16,7 @@ export default function GuestMenuLinkCard({ lead, packages, onSubmitted }: { lea
     setLinks(data || []);
   };
   useEffect(() => { load(); }, [lead.id]);
-  const url = (t: string) => `${window.location.origin}/menu/${t}`;
+  const url = (t: string) => `${getAppOrigin()}/menu/${t}`;
   const create = async () => {
     if (!pkg) { toast.error("Choose a package first"); return; }
     const { data, error } = await (supabase.from("crm_guest_menu_links" as any) as any).insert({ business_id: lead.business_id, lead_id: lead.id, package_id: pkg }).select().single();
