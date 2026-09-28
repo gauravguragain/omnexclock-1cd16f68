@@ -43,7 +43,8 @@ export default function SimpleList({ title, subtitle, table, businessId, rows, f
       const map = new Map<string, Row[]>();
       for (const r of shown) { const k = groupBy(r) || "Other"; if (!map.has(k)) map.set(k, []); map.get(k)!.push(r); }
       const entries = [...map.entries()];
-      entries.sort(groupOrder ? (a, b) => groupOrder(a[0], b[0]) : a[0].localeCompare(b[0]));
+      if (groupOrder) entries.sort((a, b) => groupOrder(a[0], b[0]));
+      else entries.sort((a, b) => a[0].localeCompare(b[0]));
       for (const [, list] of entries) list.sort((a, b) => String(a[nameKey] || "").localeCompare(String(b[nameKey] || "")));
       return entries;
     }
