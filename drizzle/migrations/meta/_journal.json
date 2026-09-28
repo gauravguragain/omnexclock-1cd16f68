@@ -421,6 +421,13 @@
       "when": 1790614288970,
       "tag": "0059_atomic_menu_selection_save",
       "breakpoints": true
+    },
+    {
+      "idx": 60,
+      "version": "7",
+      "when": 1790615259640,
+      "tag": "0060_clear_stale_venue_clash_flags",
+      "breakpoints": true
     }
   ]
 }
