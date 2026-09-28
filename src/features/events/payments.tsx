@@ -12,6 +12,9 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { ChevronsUpDown } from "lucide-react";
 
 export type CrmPayment = { id: string; business_id: string; booking_id: string; amount: number; paid_on: string; payment_type: string; method: string; reference: string | null; notes: string | null; created_at: string };
 
@@ -61,9 +64,17 @@ export function RecordPaymentDialog({ open, onOpenChange, booking, bookings, sug
 }) {
   const [form, setForm] = useState({ booking_id: "", amount: "", paid_on: sydneyToday(), payment_type: "deposit", method: "bank_transfer", reference: "", notes: "" });
   const [saving, setSaving] = useState(false);
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const [search, setSearch] = useState("");
   useEffect(() => {
-    if (open) setForm({ booking_id: booking?.id || "", amount: suggested && suggested.amount > 0 ? String(suggested.amount) : "", paid_on: sydneyToday(), payment_type: suggested?.type || "deposit", method: "bank_transfer", reference: "", notes: "" });
+    if (open) { setForm({ booking_id: booking?.id || "", amount: suggested && suggested.amount > 0 ? String(suggested.amount) : "", paid_on: sydneyToday(), payment_type: suggested?.type || "deposit", method: "bank_transfer", reference: "", notes: "" }); setSearch(""); }
   }, [open]);
+  const sortedBookings = useMemo(() => sortUpcomingFirst(bookings || []), [bookings]);
+  const filteredBookings = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return sortedBookings;
+    return sortedBookings.filter(b => bookingLabel(b).toLowerCase().includes(q));
+  }, [sortedBookings, search]);
   const target = booking || bookings?.find(b => b.id === form.booking_id);
   const save = async () => {
     const amt = Number(form.amount);
@@ -82,8 +93,31 @@ export function RecordPaymentDialog({ open, onOpenChange, booking, bookings, sug
   const set = (k: string, v: string) => setForm(f => ({ ...f, [k]: v }));
   return <Dialog open={open} onOpenChange={onOpenChange}><DialogContent className="max-w-md"><DialogHeader><DialogTitle>Record payment</DialogTitle></DialogHeader>
     <div className="space-y-3">
-      {!booking && <div><Label>Booking</Label><Select value={form.booking_id} onValueChange={v => set("booking_id", v)}><SelectTrigger><SelectValue placeholder="Choose a booking" /></SelectTrigger>
-        <SelectContent>{sortUpcomingFirst(bookings || []).map(b => <SelectItem key={b.id} value={b.id}>{b.event_date ? format(new Date(b.event_date + "T00:00"), "d MMM yyyy") : ""} · {[b.client_name, b.event_name || b.event_type].filter(Boolean).join(" — ") || "Booking"}</SelectItem>)}</SelectContent></Select></div>}
+      {!booking && <div><Label>Booking</Label>
+        <Popover open={pickerOpen} onOpenChange={o => { setPickerOpen(o); if (o) setSearch(""); }}>
+          <PopoverTrigger asChild>
+            <Button type="button" variant="outline" role="combobox" aria-expanded={pickerOpen} className="w-full justify-between font-normal">
+              <span className="truncate">{target ? bookingLabel(target) : "Choose a booking"}</span>
+              <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start">
+            <Command shouldFilter={false}>
+              <CommandInput placeholder="Search bookings by name, event or date…" value={search} onValueChange={setSearch} />
+              <CommandList>
+                {filteredBookings.length === 0 ? <CommandEmpty>No bookings match “{search}”.</CommandEmpty> :
+                  <CommandGroup>
+                    {filteredBookings.map(b => (
+                      <CommandItem key={b.id} value={b.id} onSelect={() => { set("booking_id", b.id); setPickerOpen(false); setSearch(""); }}>
+                        <span className="truncate">{bookingLabel(b)}</span>
+                      </CommandItem>
+                    ))}
+                  </CommandGroup>}
+              </CommandList>
+            </Command>
+          </PopoverContent>
+        </Popover>
+      </div>}
       <div className="grid grid-cols-2 gap-3">
         <div><Label>Type</Label><Select value={form.payment_type} onValueChange={v => set("payment_type", v)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{Object.entries(PAYMENT_TYPES).map(([k, v]) => <SelectItem key={k} value={k}>{v}</SelectItem>)}</SelectContent></Select></div>
         <div><Label>Amount (AUD)</Label><Input type="number" inputMode="decimal" min="0" step="0.01" value={form.amount} onChange={e => set("amount", e.target.value)} /></div>
@@ -152,6 +186,10 @@ export function BookingPaymentsCard({ booking, onChanged }: { booking: any; onCh
 }
 
 /** Upcoming events (soonest first), then past events (most recent first). */
+/** "3 Oct 2026 · Client — Event name" label used by the booking picker. */
+function bookingLabel(b: any) {
+  return `${b?.event_date ? format(new Date(b.event_date + "T00:00"), "d MMM yyyy") : "No date"} · ${[b?.client_name, b?.event_name || b?.event_type].filter(Boolean).join(" — ") || "Booking"}`;
+}
 function sortUpcomingFirst(list: any[]) {
   const today = new Date().toLocaleDateString("en-CA", { timeZone: "Australia/Sydney" });
   const up = list.filter(b => b.event_date && b.event_date >= today).sort((a, b) => a.event_date.localeCompare(b.event_date));
