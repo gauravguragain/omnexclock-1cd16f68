@@ -7,6 +7,7 @@ import { signDishPhotos } from "./dishPhotos";
 import { useCrmData } from "@/features/sales/useCrmData";
 import { useEventsData, type Row } from "./useEventsData";
 import SimpleList from "./SimpleList";
+import { DrinksImportButton } from "./MenuImport";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { format } from "date-fns";
@@ -87,8 +88,8 @@ export function DishesPage() {
 export function DrinksPage() {
   const d = useEventsData(); if (!d.business) return null;
   const opts = [{ value: "soft", label: "Soft drink" }, { value: "hard", label: "Hard drink" }];
-  return <SimpleList title="Drinks" subtitle={`${d.drinks.length} drinks shared across every package.`} table="crm_drinks" businessId={d.business.id} rows={d.drinks} refresh={d.refresh} archivable groupAZ filterKey="kind" filterOptions={opts}
-    fields={[{ key: "name", label: "Drink name", required: true }, { key: "kind", label: "Kind", type: "select", options: opts }]}
-    columns={[{ label: "Drink", render: r => r.name }, { label: "Kind", render: r => <Badge variant="outline">{r.kind === "soft" ? "Soft" : "Hard"}</Badge> }, { label: "Used", render: r => <span className="text-muted-foreground">{usage(d.courseItems, "drink_id", r.id, d.courses)}</span> }]} />;
+  return <SimpleList title="Drinks" subtitle={`${d.drinks.length} drinks shared across every package.`} table="crm_drinks" businessId={d.business.id} rows={d.drinks} refresh={d.refresh} archivable groupAZ filterKey="kind" filterOptions={opts} extra={<DrinksImportButton data={d as any} />}
+    fields={[{ key: "name", label: "Drink name", required: true }, { key: "kind", label: "Kind", type: "select", options: opts }, { key: "price", label: "Price ($)", type: "number" }]}
+    columns={[{ label: "Drink", render: r => r.name }, { label: "Kind", render: r => <Badge variant="outline">{r.kind === "soft" ? "Soft" : "Hard"}</Badge> }, { label: "Price", render: r => r.price != null ? `$${Number(r.price).toFixed(2)}` : <span className="text-muted-foreground">—</span> }, { label: "Used", render: r => <span className="text-muted-foreground">{usage(d.courseItems, "drink_id", r.id, d.courses)}</span> }]} />;
 }
 
