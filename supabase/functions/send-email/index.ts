@@ -472,12 +472,12 @@ serve(async (req) => {
         <div style="font-family:'Segoe UI',Arial,sans-serif;max-width:600px;margin:0 auto;color:#1a1a1a;background:#ffffff;">
           <div style="text-align:center;padding:28px 20px 16px;background:#1a1a1a;border-radius:12px 12px 0 0;">
             <h1 style="color:#ac845d;font-size:22px;margin:0;letter-spacing:1px;">${biz}</h1>
-            <p style="color:#a0a0a0;font-size:11px;margin:6px 0 0;text-transform:uppercase;letter-spacing:2px;">${b.kind === "confirmation" ? "Booking Confirmation" : "Event Order &amp; Run Sheet"}</p>
+            <p style="color:#a0a0a0;font-size:11px;margin:6px 0 0;text-transform:uppercase;letter-spacing:2px;">${b.kind === "confirmation" ? "Event Confirmation" : "Event Order &amp; Run Sheet"}</p>
           </div>
           <div style="padding:24px 30px;">
             <p style="font-size:14px;">Hi ${esc(b.recipientName || "there")},</p>
             <p style="font-size:14px;line-height:1.6;color:#444;">${b.kind === "confirmation"
-              ? `${b.resend ? "Here again is the confirmation" : "Thank you — this confirms your booking"} for <strong>${esc(b.eventTitle)}</strong>. Please check the details and the event order below, and let us know if anything needs changing.`
+              ? `${b.resend ? "Here again is the event confirmation" : "Thank you — this is your event confirmation"} for <strong>${esc(b.eventTitle)}</strong>. Please check the details and the event order below, and let us know if anything needs changing.`
               : `${b.resend ? "Here is the run sheet again" : "Here is the run sheet"} for <strong>${esc(b.eventTitle)}</strong>. Please review it before the event.`}</p>
             <div style="margin:18px 0;padding:14px 18px;border:1px solid #e8dcc8;border-left:4px solid #ac845d;border-radius:6px;background:#fbf8f2;">
               <table style="width:100%;border-collapse:collapse;">
@@ -488,7 +488,7 @@ serve(async (req) => {
               <a href="${esc(b.viewUrl)}" style="display:inline-block;background:#ac845d;color:#000;text-decoration:none;padding:13px 34px;border-radius:8px;font-weight:bold;font-size:14px;">${b.kind === "confirmation" ? "View event order" : "View run sheet"}</a>
             </div>
             <p style="font-size:12px;color:#888;line-height:1.5;">The link always shows the latest version. You can print it or save it as a PDF from that page.</p>
-            ${b.kind === "confirmation" ? `<p style="font-size:13px;color:#444;line-height:1.6;">Your event order includes our <strong>Terms &amp; Conditions</strong> on the final page — please review them and get in touch if you have any questions before signing.</p>` : ""}
+            ${b.kind === "confirmation" ? `<p style="font-size:13px;color:#444;line-height:1.6;">Your event order includes our <strong>Terms &amp; Conditions</strong> on the final page — please review them and get in touch if you have any questions before signing. Once you are happy with everything, please <strong>sign the client part of the signature section below the Terms &amp; Conditions</strong> and return it to us — simply reply to this email with a photo or scan of the signed page.</p>` : ""}
             ${b.message ? `<p style="font-size:13px;color:#444;white-space:pre-line;border-top:1px solid #eee;padding-top:12px;">${esc(b.message)}</p>` : ""}
           </div>
           <div style="text-align:center;padding:14px 30px;background:#f8f9fa;border-radius:0 0 12px 12px;">
@@ -498,7 +498,7 @@ serve(async (req) => {
       emailPayload = {
         from: `${b.businessName || "Pro Regal Management"} <noreply@regalmanagement.com.au>`,
         to: [b.to],
-        subject: `${b.kind === "confirmation" ? "Booking confirmed" : "Run sheet"} — ${b.eventTitle}${b.dateLabel ? ` (${b.dateLabel})` : ""}`,
+        subject: `${b.kind === "confirmation" ? "Event confirmed" : "Run sheet"} — ${b.eventTitle}${b.dateLabel ? ` (${b.dateLabel})` : ""}`,
         html,
       };
     } else if ((body as any).type === "menu") {
