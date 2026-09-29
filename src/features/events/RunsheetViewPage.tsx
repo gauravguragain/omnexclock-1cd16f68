@@ -18,7 +18,17 @@ export function runsheetTermsFor(settings: any, booking: any): string | null {
   return (settings?.runsheet_terms ?? "").trim() || DEFAULT_RUNSHEET_TERMS;
 }
 
-function TermsPage({ terms, businessName }: { terms: string; businessName?: string }) {
+const signDateLabel = (d?: string | null) => d ? format(new Date(`${d}T00:00:00`), "dd/MM/yyyy") : "";
+function SignRow({ label, name, date, signature }: { label: string; name?: string | null; date?: string | null; signature?: string | null }) {
+  const blank = (w: string, v?: string) => v ? <span className="font-semibold">{v}</span> : <span className={`inline-block ${w} border-b border-border`} />;
+  return <div className="mt-4 grid grid-cols-3 items-end gap-6 text-xs">
+    <p>{label}: {blank("w-24", name || "")}</p>
+    <p className="flex items-end gap-1">Signature: {signature ? <img src={signature} alt="Signature" className="h-10 w-32 object-contain object-left" /> : <span className="inline-block w-20 border-b border-border" />}</p>
+    <p>Date: {blank("w-20", signDateLabel(date))}</p>
+  </div>;
+}
+
+function TermsPage({ terms, businessName, rs }: { terms: string; businessName?: string; rs?: any }) {
   const blocks = terms.split(/\n\s*\n/).map(b => b.trim()).filter(Boolean);
   return <section data-pdf-break className="mt-10 break-before-page pt-2 text-[10.5px] leading-snug" style={{ breakBefore: "page" }}>
     <header className="flex items-start justify-between gap-6 border-b border-border pb-3">
@@ -28,7 +38,7 @@ function TermsPage({ terms, businessName }: { terms: string; businessName?: stri
     <div className="mt-3 space-y-2">{blocks.map((b, i) => /^\d+\.\s/.test(b) || (b.length < 90 && !/[.:]$/.test(b) && i > 0)
       ? <h2 key={i} className="pt-1 text-xs font-bold">{b}</h2>
       : <p key={i} className="whitespace-pre-line">{b.replace(/^([^:\n]{2,40}):/, "$1:")}</p>)}</div>
-    <div className="mt-6 grid grid-cols-3 gap-6 text-xs"><p>Client name: <span className="inline-block w-20 border-b border-border" /></p><p>Signature: <span className="inline-block w-20 border-b border-border" /></p><p>Date: <span className="inline-block w-20 border-b border-border" /></p></div>
+    <div className="mt-2"><SignRow label="Client name" name={rs?.client_sign_name} date={rs?.client_sign_date} signature={rs?.client_signature} /></div>
   </section>;
 }
 
@@ -152,10 +162,11 @@ export function RunsheetDocument({ rs, lead, b, items, selection, businessName, 
     <footer className="mt-6 text-xs">
       <div className="mt-3 border-t border-dashed border-border pt-6">
         <p className="text-right text-[10px] text-muted-foreground">Printed Date: {format(new Date(), "dd/MM/yyyy")}</p>
-        <div className="mt-4 grid grid-cols-[1fr_1fr_1fr] gap-6"><p>Name: <span className="inline-block w-24 border-b border-border" /></p><p>Signature: <span className="inline-block w-20 border-b border-border" /></p><p>Date: <span className="inline-block w-20 border-b border-border" /></p></div>
+        <SignRow label="Name" name={rs.staff_sign_name} date={rs.staff_sign_date} signature={rs.staff_signature} />
+        {!terms && <SignRow label="Client name" name={rs.client_sign_name} date={rs.client_sign_date} signature={rs.client_signature} />}
       </div>
     </footer>
-    {terms && <TermsPage terms={terms} businessName={businessName} />}
+    {terms && <TermsPage terms={terms} businessName={businessName} rs={rs} />}
   </article>;
 }
 
