@@ -2227,6 +2227,10 @@ export type Database = {
           booking_reference: string | null
           business_id: string
           client_notes: string | null
+          client_sign_date: string | null
+          client_sign_name: string | null
+          client_signature: string | null
+          client_signed_at: string | null
           created_at: string
           created_by: string | null
           distributed_to: string | null
@@ -2254,6 +2258,9 @@ export type Database = {
           setup_notes: string | null
           share_token: string
           special_requests: string | null
+          staff_sign_date: string | null
+          staff_sign_name: string | null
+          staff_signature: string | null
           status: string
           updated_at: string
           updated_by: string | null
@@ -2265,6 +2272,10 @@ export type Database = {
           booking_reference?: string | null
           business_id: string
           client_notes?: string | null
+          client_sign_date?: string | null
+          client_sign_name?: string | null
+          client_signature?: string | null
+          client_signed_at?: string | null
           created_at?: string
           created_by?: string | null
           distributed_to?: string | null
@@ -2292,6 +2303,9 @@ export type Database = {
           setup_notes?: string | null
           share_token?: string
           special_requests?: string | null
+          staff_sign_date?: string | null
+          staff_sign_name?: string | null
+          staff_signature?: string | null
           status?: string
           updated_at?: string
           updated_by?: string | null
@@ -2303,6 +2317,10 @@ export type Database = {
           booking_reference?: string | null
           business_id?: string
           client_notes?: string | null
+          client_sign_date?: string | null
+          client_sign_name?: string | null
+          client_signature?: string | null
+          client_signed_at?: string | null
           created_at?: string
           created_by?: string | null
           distributed_to?: string | null
@@ -2330,6 +2348,9 @@ export type Database = {
           setup_notes?: string | null
           share_token?: string
           special_requests?: string | null
+          staff_sign_date?: string | null
+          staff_sign_name?: string | null
+          staff_signature?: string | null
           status?: string
           updated_at?: string
           updated_by?: string | null
@@ -2388,6 +2409,7 @@ export type Database = {
           reminder_hours: number[]
           runsheet_terms: string | null
           runsheet_terms_enabled: boolean
+          signed_runsheet_email: string | null
           stale_days: number
           updated_at: string
         }
@@ -2406,6 +2428,7 @@ export type Database = {
           reminder_hours?: number[]
           runsheet_terms?: string | null
           runsheet_terms_enabled?: boolean
+          signed_runsheet_email?: string | null
           stale_days?: number
           updated_at?: string
         }
@@ -2424,6 +2447,7 @@ export type Database = {
           reminder_hours?: number[]
           runsheet_terms?: string | null
           runsheet_terms_enabled?: boolean
+          signed_runsheet_email?: string | null
           stale_days?: number
           updated_at?: string
         }
@@ -2439,6 +2463,48 @@ export type Database = {
             foreignKeyName: "crm_settings_business_id_fkey"
             columns: ["business_id"]
             isOneToOne: true
+            referencedRelation: "businesses_public"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      crm_signatures: {
+        Row: {
+          business_id: string
+          created_at: string
+          created_by: string | null
+          id: string
+          image_data: string
+          signer_name: string
+        }
+        Insert: {
+          business_id: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          image_data: string
+          signer_name: string
+        }
+        Update: {
+          business_id?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          image_data?: string
+          signer_name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_signatures_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_signatures_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
             referencedRelation: "businesses_public"
             referencedColumns: ["id"]
           },
