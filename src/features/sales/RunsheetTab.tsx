@@ -119,7 +119,6 @@ export default function RunsheetTab({ lead, booking, options, onSaved }: {
         ...prev,
         adult_guests: String(booking?.guest_count || lead.estimated_guest_count || ""),
         booking_reference: lead.id.slice(0, 10).toUpperCase(),
-        onsite_contact_name: lead.full_name, onsite_contact_phone: lead.phone || "",
          client_notes: "",
       }));
     }
@@ -185,8 +184,6 @@ export default function RunsheetTab({ lead, booking, options, onSaved }: {
       ...prev,
       adult_guests: prev.adult_guests || String(Math.max(0, Number(booking.guest_count || 0) - Number(prev.kids_guests || 0))),
       booking_reference: prev.booking_reference || lead.id.slice(0, 10).toUpperCase(),
-      onsite_contact_name: prev.onsite_contact_name || lead.full_name,
-      onsite_contact_phone: prev.onsite_contact_phone || lead.phone || "",
     }));
     if (!schedule.length && !fohSchedule.length) suggestSchedule();
     toast.success("Runsheet built from the booking and menu");
