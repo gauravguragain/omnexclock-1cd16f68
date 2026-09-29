@@ -68,11 +68,7 @@ export function RunsheetDocument({ rs, lead, b, items, selection, businessName, 
     .reduce((m: Record<string, any[]>, i) => { const c = i.course || "Other"; (m[c] ||= []).push(i); return m; }, {});
   const schedule: any[] = rs.service_schedule || [];
   const fohSchedule: any[] = rs.service_schedule_foh || [];
-  const normCourse = (v: string) => v.trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/s$/, "");
-  const matchesCourse = (s: any, course: string) => { const c = normCourse(course); const l = normCourse(String(s.label || "")); return l && (l.includes(c) || c.includes(l)); };
   const slot = (s: any) => s?.time ? `${to12(s.time)}${s.end && s.end !== s.time ? ` – ${to12(s.end)}` : ""}` : "";
-  const courseTime = (course: string) => slot(schedule.find((s: any) => matchesCourse(s, course)));
-  const otherSchedule = schedule.filter((s: any) => !Object.keys(courses).some((c) => matchesCourse(s, c)));
   const setup: string[] = rs.setup_items || [];
   const date = b?.event_date ? format(new Date(`${b.event_date}T00:00:00`), "EEEE, d MMMM yyyy") : "Date to be confirmed";
   const start = b?.start_time ? String(b.start_time).slice(0, 5) : "";
