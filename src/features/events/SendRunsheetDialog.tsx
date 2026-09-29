@@ -1,7 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
 import { format } from "date-fns";
 import { toast } from "sonner";
-import { Mail, RotateCcw, Send, Check } from "lucide-react";
+import { Mail, RotateCcw, Send, Check, PenLine } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { SignaturePadDialog } from "@/components/SignaturePad";
+import { useSignatures, saveSignature } from "./SignatureLibrary";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -31,6 +36,13 @@ export default function SendRunsheetDialog({ open, onOpenChange, rs, lead, booki
   const [picked, setPicked] = useState<Set<string>>(new Set());
   const [sending, setSending] = useState(false);
   const already = new Set<string>((rs?.emailed_to || []).map((e: string) => e.toLowerCase()));
+  const signatures = useSignatures(lead?.business_id);
+  const [signName, setSignName] = useState(""); const [signDate, setSignDate] = useState(""); const [sigId, setSigId] = useState<string>("none"); const [pad, setPad] = useState(false);
+  useEffect(() => {
+    if (!open) return;
+    setSignName(rs?.staff_sign_name || ""); setSignDate(rs?.staff_sign_date || format(new Date(), "yyyy-MM-dd"));
+  }, [open, rs?.id]);
+  useEffect(() => { if (open && rs?.staff_signature) { const m = signatures.list.find(s => s.image_data === rs.staff_signature); if (m) setSigId(m.id); } }, [open, signatures.list]);
 
   useEffect(() => {
     if (!open) return;
@@ -66,9 +78,15 @@ export default function SendRunsheetDialog({ open, onOpenChange, rs, lead, booki
   const toggleGroup = (ps: Person[]) => setPicked(s => { const n = new Set(s); const on = ps.every(p => n.has(p.key)); ps.forEach(p => on ? n.delete(p.key) : n.add(p.key)); return n; });
 
   const send = async () => {
+    if (sigId && !signName.trim()) { toast.error("Enter the signer's name"); return; }
     setSending(true);
     let sheet = rs;
     if (issuing) { sheet = await onIssue?.(); if (!sheet) { setSending(false); return; } }
+    const sig = signatures.list.find(s => s.id === sigId);
+    const signPatch = { staff_sign_name: signName.trim() || null, staff_sign_date: signDate || null, staff_signature: sig?.image_data || null };
+    const { data: signed, error: signErr } = await supabase.from("crm_runsheets").update(signPatch as any).eq("id", sheet.id).select().single();
+    if (signErr) { toast.error(signErr.message); setSending(false); return; }
+    sheet = signed;
     const start = booking?.start_time ? String(booking.start_time).slice(0, 5) : "";
     const endMin = start && booking?.duration_minutes ? (() => { const [h, m] = start.split(":").map(Number); const t = (h * 60 + m + booking.duration_minutes) % 1440; return `${String(Math.floor(t / 60)).padStart(2, "0")}:${String(t % 60).padStart(2, "0")}`; })() : "";
     const base = {
@@ -124,6 +142,24 @@ export default function SendRunsheetDialog({ open, onOpenChange, rs, lead, booki
         </div>
        <p className="mt-2 text-xs text-muted-foreground">The client and event managers receive the client copy. Kitchen, coordinators, stakeholders and vendors receive the internal copy with team notes. Add recipients under Stakeholders & vendors.</p>
       </div>
+      <div className="space-y-3 rounded-xl border border-border p-4">
+        <p className="text-sm font-medium">Venue signature on the run sheet</p>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div><Label className="text-xs">Name</Label><Input value={signName} maxLength={100} onChange={e => setSignName(e.target.value)} placeholder="Who is sending" /></div>
+          <div><Label className="text-xs">Date</Label><Input type="date" value={signDate} onChange={e => setSignDate(e.target.value)} /></div>
+        </div>
+        <div><Label className="text-xs">Signature</Label>
+          <div className="mt-1 flex gap-2">
+            <Select value={sigId} onValueChange={v => { setSigId(v); const s = signatures.list.find(x => x.id === v); if (s && !signName.trim()) setSignName(s.signer_name); }}>
+              <SelectTrigger className="flex-1"><SelectValue placeholder="Choose a saved signature" /></SelectTrigger>
+              <SelectContent><SelectItem value="none">No signature</SelectItem>{signatures.list.map(s => <SelectItem key={s.id} value={s.id}>{s.signer_name}</SelectItem>)}</SelectContent>
+            </Select>
+            <Button type="button" variant="outline" disabled={!signName.trim()} title={signName.trim() ? "Draw and save a new signature" : "Enter a name first"} onClick={() => setPad(true)}><PenLine className="mr-1 h-4 w-4" />New</Button>
+          </div>
+          {signatures.list.find(s => s.id === sigId) && <img src={signatures.list.find(s => s.id === sigId)!.image_data} alt="Selected signature" className="mt-2 h-14 w-40 rounded border border-border bg-white object-contain" />}
+        </div>
+      </div>
+      <SignaturePadDialog open={pad} onOpenChange={setPad} title={`New signature for ${signName}`} doneLabel="Save & use" onDone={async img => { const s = await saveSignature(lead.business_id, signName, img, user?.id); if (s) { await signatures.reload(); setSigId(s.id); } }} />
       <DialogFooter>
         <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
         <Button disabled={sending || (!issuing && !recipients.length)} onClick={send}>
