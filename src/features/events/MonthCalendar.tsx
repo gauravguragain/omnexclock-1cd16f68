@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
-import { prettyCrmValue, type CrmLead } from "@/features/sales/types";
+import { isConfirmedLeadStage, prettyCrmValue, type CrmLead } from "@/features/sales/types";
 import { bookingEnd, to12 } from "./useEventsData";
 
 type Booking = Record<string, any>;
@@ -25,7 +25,14 @@ export default function MonthCalendar({ bookings, leads, runsheets, customers, v
   const [month, setMonth] = useState(startOfMonth(new Date()));
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
-  const active = bookings.filter(b => b.status !== "cancelled" && b.event_date);
+  // Same rule as the Events list: catering always shows; events only once their
+  // lead has reached Deposit received or later (standalone events without a lead show).
+  const active = bookings.filter(b => {
+    if (b.status === "cancelled" || !b.event_date) return false;
+    if ((b.booking_kind || "event") === "catering" || !b.lead_id) return true;
+    const lead = leads.find(l => l.id === b.lead_id);
+    return !!lead && isConfirmedLeadStage(lead.status);
+  });
   const leadOf = (b: Booking) => leads.find(l => l.id === b.lead_id);
   const customerOf = (b: Booking) => customers.find(c => c.id === b.customer_id) || leadOf(b);
   const nameOf = (b: Booking) => b.event_name || leadOf(b)?.full_name || "Event";
