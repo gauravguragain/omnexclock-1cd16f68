@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { getCaller, jsonError, serviceClient } from "../_shared/auth.ts";
 import { renderMenuHtml } from "../_shared/menuHtml.ts";
+import { C, SANS, details, esc, heading, loadBrand, note, p, renderBrandedEmail, signoff, small, button } from "../_shared/emailLayout.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -61,102 +62,38 @@ serve(async (req) => {
 
 
     let emailPayload: Record<string, unknown>;
+    const firstBiz = caller.roles.find((r) => r.business_id)?.business_id || null;
+    const brand = await loadBrand(admin, body.businessName ? { businessName: body.businessName } : { businessId: firstBiz });
+    if (body.businessName && brand.name !== body.businessName) brand.name = body.businessName;
+    const FROM = (label?: string) => `${brand.name}${label ? ` ${label}` : ""} <noreply@regalmanagement.com.au>`;
+    const tbl = (head: string[], rows: string[][]) => `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;margin:8px 0 22px;font-family:${SANS};font-size:13px;"><tr>${head.map((h) => `<th align="left" style="padding:9px 10px;background:${C.ink};color:${C.gold};font-weight:600;font-size:11px;letter-spacing:1px;text-transform:uppercase;">${esc(h)}</th>`).join("")}</tr>${rows.map((r, i) => `<tr style="background:${i % 2 ? C.sand : "#FFFFFF"};">${r.map((c) => `<td style="padding:8px 10px;border-bottom:1px solid ${C.line};color:${C.ink};">${c}</td>`).join("")}</tr>`).join("")}</table>`;
 
     if (body.type === "roster_notification") {
       if (!body.to || !body.employeeName || !body.shifts) {
         throw new Error("Missing required fields for roster notification");
       }
-
-      const shiftRows = body.shifts
-        .map(
-          (s) =>
-            `<tr>
-              <td style="padding:8px 12px;border:1px solid #e5e7eb;">${s.day}</td>
-              <td style="padding:8px 12px;border:1px solid #e5e7eb;">${s.date}</td>
-              <td style="padding:8px 12px;border:1px solid #e5e7eb;">${s.start}</td>
-              <td style="padding:8px 12px;border:1px solid #e5e7eb;">${s.end}</td>
-              <td style="padding:8px 12px;border:1px solid #e5e7eb;">${s.breakMin}m</td>
-              <td style="padding:8px 12px;border:1px solid #e5e7eb;">${s.notes || "-"}</td>
-            </tr>`
-        )
-        .join("");
-
-      const bizName = body.businessName || "Pro Regal Management";
-      const html = `
-        <div style="font-family:'Segoe UI',Arial,sans-serif;max-width:600px;margin:0 auto;color:#1a1a1a;background:#ffffff;">
-          <div style="text-align:center;padding:30px 20px 16px;background:linear-gradient(135deg,#1a1a1a 0%,#2d2d2d 100%);border-radius:12px 12px 0 0;">
-            <h1 style="color:#ac845d;font-size:24px;margin:0;letter-spacing:1px;">${bizName}</h1>
-            <p style="color:#a0a0a0;font-size:11px;margin:6px 0 0;text-transform:uppercase;letter-spacing:2px;">Roster Update</p>
-          </div>
-          <div style="padding:24px 30px 0;">
-          <p>Hi ${body.employeeName},</p>
-          <p>Your roster for <strong>${body.weekLabel}</strong> has been updated. Here are your shifts:</p>
-          <table style="width:100%;border-collapse:collapse;margin:16px 0;">
-            <thead>
-              <tr style="background:#f3f4f6;">
-                <th style="padding:8px 12px;border:1px solid #e5e7eb;text-align:left;">Day</th>
-                <th style="padding:8px 12px;border:1px solid #e5e7eb;text-align:left;">Date</th>
-                <th style="padding:8px 12px;border:1px solid #e5e7eb;text-align:left;">Start</th>
-                <th style="padding:8px 12px;border:1px solid #e5e7eb;text-align:left;">End</th>
-                <th style="padding:8px 12px;border:1px solid #e5e7eb;text-align:left;">Break</th>
-                <th style="padding:8px 12px;border:1px solid #e5e7eb;text-align:left;">Notes</th>
-              </tr>
-            </thead>
-            <tbody>${shiftRows}</tbody>
-          </table>
-          ${(body.dayEvents && body.dayEvents.length > 0) ? `
-          <h3 style="color:#1a1a1a;margin-top:24px;font-size:16px;">📋 Event Details</h3>
-          ${body.dayEvents.map(ev => `
-            <div style="margin:8px 0;padding:10px 14px;background:#f0f9ff;border:1px solid #bae6fd;border-radius:6px;">
-              <div style="font-size:13px;font-weight:600;color:#0369a1;">${ev.date}${ev.event_space ? ` — ${ev.event_space}` : ''}</div>
-              ${ev.event_type ? `<div style="font-size:12px;color:#475569;margin-top:4px;">Type: <strong>${ev.event_type}</strong></div>` : ''}
-              <div style="font-size:12px;color:#475569;margin-top:2px;">Tables: ${ev.num_tables || 0} (${ev.chairs_per_table || 0} chairs each) · Tablecloth: ${ev.tablecloth_color === 'black' ? '⬛ Black' : '⬜ White'}</div>
-              <div style="font-size:11px;color:#64748b;margin-top:4px;">${[
-                ev.cold_sparkles ? '✨ Cold Sparkles' : '',
-                ev.dry_ice ? '🌫️ Dry Ice' : '',
-                ev.red_carpet ? '🔴 Red Carpet' : '',
-                ev.decor_access ? '🎨 Decor Access' : '',
-              ].filter(Boolean).join(' · ') || 'No extras'}</div>
-              ${ev.notes ? `<div style="font-size:11px;color:#94a3b8;margin-top:4px;font-style:italic;">${ev.notes}</div>` : ''}
-            </div>
-          `).join('')}
-          ` : ''}
-          ${body.portalUrl ? `
-          <div style="margin-top:20px;padding:14px 16px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:6px;">
-            <p style="margin:0;font-size:13px;color:#166534;font-weight:600;">📱 Access Your Employee Portal</p>
-            <p style="margin:4px 0 0;font-size:12px;color:#15803d;line-height:1.5;">
-              1. Open <a href="${body.portalUrl}" style="color:#0369a1;text-decoration:underline;">${body.portalUrl}</a><br/>
-              2. Enter Business Code: <strong>${body.businessCode || ''}</strong><br/>
-              3. Enter your 4-digit Employee Code (provided by your manager)
-            </p>
-          </div>
-          ` : ''}
-          <div style="margin:0 30px 20px;padding:14px 16px;background:#fef9e7;border:1px solid #f5e6b8;border-radius:6px;">
-            <p style="margin:0;font-size:12px;color:#92400e;line-height:1.5;">
-              <strong>⚠️ Disclaimer:</strong> The shift and break times stated in this roster are indicative and may vary according to the operational needs of the business and at the discretion of management. You may be required to start earlier, finish later, or take breaks at different times depending on business demands. Please check with your manager if you have any concerns.
-            </p>
-          </div>
-          </div>
-          <div style="text-align:center;padding:16px 30px;background:#f8f9fa;border-radius:0 0 12px 12px;">
-            <p style="color:#999;font-size:11px;margin:0;">This is an automated notification from <strong>${bizName}</strong>. Please contact your manager if you have questions.</p>
-          </div>
-        </div>
-      `;
-
-      emailPayload = {
-        from: `${bizName} Roster <noreply@regalmanagement.com.au>`,
-        to: [body.to],
-        subject: `Roster Updated – ${body.weekLabel}`,
-        html,
-      };
+      const shiftTable = tbl(["Day", "Date", "Start", "End", "Break", "Notes"], body.shifts.map((s) => [esc(s.day), esc(s.date), esc(s.start), esc(s.end), `${esc(s.breakMin)}m`, esc(s.notes || "-")]));
+      const events = (body.dayEvents && body.dayEvents.length > 0)
+        ? heading("Event details") + body.dayEvents.map((ev) => note(
+            `<strong>${esc(ev.date)}${ev.event_space ? ` — ${esc(ev.event_space)}` : ""}</strong>` +
+            (ev.event_type ? `<br/>Type: ${esc(ev.event_type)}` : "") +
+            `<br/>Tables: ${ev.num_tables || 0} (${ev.chairs_per_table || 0} chairs each) · Tablecloth: ${ev.tablecloth_color === "black" ? "Black" : "White"}` +
+            `<br/>${[ev.cold_sparkles ? "Cold sparkles" : "", ev.dry_ice ? "Dry ice" : "", ev.red_carpet ? "Red carpet" : "", ev.decor_access ? "Decor access" : ""].filter(Boolean).join(" · ") || "No extras"}` +
+            (ev.notes ? `<br/><em>${esc(ev.notes)}</em>` : ""))).join("")
+        : "";
+      const portal = body.portalUrl ? heading("Your employee portal") + p(`1. Open <a href="${esc(body.portalUrl)}" style="color:${C.goldDark};">${esc(body.portalUrl)}</a><br/>2. Enter business code: <strong>${esc(body.businessCode || "")}</strong><br/>3. Enter your 4-digit employee code (provided by your manager)`) : "";
+      const html = renderBrandedEmail({
+        brand, eyebrow: "Roster Update", title: `Your roster for ${body.weekLabel}`, preheader: `Your shifts for ${body.weekLabel}`,
+        bodyHtml: p(`Hi ${esc(body.employeeName)},`) + p(`Your roster for <strong>${esc(body.weekLabel)}</strong> has been updated. Here are your shifts:`) + shiftTable + events + portal +
+          note(`<strong>Please note:</strong> the shift and break times in this roster are indicative and may vary according to the operational needs of the business and at the discretion of management. You may be asked to start earlier, finish later, or take breaks at different times. Please check with your manager if you have any concerns.`),
+        footerNote: "Automated roster notification. Contact your manager with any questions.",
+      });
+      emailPayload = { from: FROM("Roster"), to: [body.to], subject: `Roster Updated – ${body.weekLabel}`, html };
     } else if (body.type === "csv_export") {
       if (!body.recipientEmail || !body.csvData || !body.subject) {
         throw new Error("Missing required fields for CSV export");
       }
-
       const csvBase64 = btoa(unescape(encodeURIComponent(body.csvData)));
-
-      // Parse CSV rows for inline HTML table with styled totals
       const csvLines = body.csvData.split("\n").filter(l => l.trim());
       const parseRow = (line: string): string[] => {
         const cols: string[] = [];
@@ -169,384 +106,121 @@ serve(async (req) => {
         cols.push(cur);
         return cols;
       };
-
       let tableHtml = "";
       if (csvLines.length > 0) {
         const headers = parseRow(csvLines[0]);
-        tableHtml += `<table style="width:100%;border-collapse:collapse;margin:16px 0;font-size:12px;">
-          <thead><tr style="background:#1a1a1a;">
-          ${headers.map(h => `<th style="padding:8px 10px;border:1px solid #333;color:#ac845d;text-align:left;font-size:11px;">${h}</th>`).join("")}
-          </tr></thead><tbody>`;
+        tableHtml += `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;margin:16px 0;font-family:${SANS};font-size:12px;"><tr>${headers.map(h => `<th align="left" style="padding:8px 10px;background:${C.ink};color:${C.gold};font-size:11px;">${esc(h)}</th>`).join("")}</tr>`;
         for (let i = 1; i < csvLines.length; i++) {
           const cols = parseRow(csvLines[i]);
           const isTotalRow = (cols[0] || "").includes("TOTAL");
-          const isBlank = cols.every(c => !c.trim());
-          if (isBlank) {
-            tableHtml += `<tr><td colspan="${headers.length}" style="padding:4px;border:none;"></td></tr>`;
+          if (cols.every(c => !c.trim())) {
+            tableHtml += `<tr><td colspan="${headers.length}" style="padding:4px;"></td></tr>`;
           } else if (isTotalRow) {
-            tableHtml += `<tr style="background:#fef9e7;">
-              ${cols.map(c => `<td style="padding:8px 10px;border:1px solid #e5e7eb;color:#ac845d;font-weight:700;font-size:12px;">${c}</td>`).join("")}
-            </tr>`;
+            tableHtml += `<tr style="background:${C.sand};">${cols.map(c => `<td style="padding:8px 10px;border-bottom:1px solid ${C.line};color:${C.goldDark};font-weight:700;">${esc(c)}</td>`).join("")}</tr>`;
           } else {
-            tableHtml += `<tr style="background:${i % 2 === 0 ? '#f9fafb' : '#ffffff'};">
-              ${cols.map(c => `<td style="padding:6px 10px;border:1px solid #e5e7eb;color:#1a1a1a;">${c}</td>`).join("")}
-            </tr>`;
+            tableHtml += `<tr style="background:${i % 2 === 0 ? C.sand : "#FFFFFF"};">${cols.map(c => `<td style="padding:6px 10px;border-bottom:1px solid ${C.line};color:${C.ink};">${esc(c)}</td>`).join("")}</tr>`;
           }
         }
-        tableHtml += `</tbody></table>`;
+        tableHtml += `</table>`;
       }
-
       emailPayload = {
-        from: "Reports <noreply@regalmanagement.com.au>",
+        from: FROM("Reports"),
         to: [body.recipientEmail],
         subject: body.subject,
-        html: `
-          <div style="font-family:'Segoe UI',Arial,sans-serif;max-width:900px;margin:0 auto;color:#1a1a1a;background:#ffffff;">
-            <div style="text-align:center;padding:30px 20px 16px;background:linear-gradient(135deg,#1a1a1a 0%,#2d2d2d 100%);border-radius:12px 12px 0 0;">
-              <h1 style="color:#ac845d;font-size:24px;margin:0;letter-spacing:1px;">Pro Regal Management</h1>
-              <p style="color:#a0a0a0;font-size:11px;margin:6px 0 0;text-transform:uppercase;letter-spacing:2px;">Report</p>
-            </div>
-            <div style="padding:24px 20px;">
-              <h2 style="margin:0 0 8px;font-size:18px;color:#1a1a1a;">📊 ${body.subject}</h2>
-              <p style="color:#555;font-size:13px;margin:0 0 4px;">The full CSV is also attached for your records.</p>
-              ${tableHtml}
-            </div>
-            <div style="text-align:center;padding:16px 20px;background:#f8f9fa;border-radius:0 0 12px 12px;">
-              <p style="color:#999;font-size:11px;margin:0;">This is an automated report from <strong>Pro Regal Management</strong>.</p>
-            </div>
-          </div>
-        `,
-        attachments: [
-          {
-            filename: body.csvFilename || "report.csv",
-            content: csvBase64,
-            type: "text/csv",
-          },
-        ],
+        html: renderBrandedEmail({ brand, eyebrow: "Report", title: body.subject, width: 900, bodyHtml: p("The full CSV is also attached for your records.") + tableHtml, footerNote: "Automated report." }),
+        attachments: [{ filename: body.csvFilename || "report.csv", content: csvBase64, type: "text/csv" }],
       };
     } else if (body.type === "employee_induction") {
       if (!body.to || !body.employeeName) {
         throw new Error("Missing required fields for employee induction");
       }
-
       const portalUrl = body.portalUrl || "https://www.regalmanagement.com.au/portal";
-
-      const html = `
-        <div style="font-family:'Segoe UI',Arial,sans-serif;max-width:600px;margin:0 auto;color:#1a1a1a;background:#ffffff;">
-          <!-- Header -->
-          <div style="text-align:center;padding:40px 20px 20px;background:linear-gradient(135deg,#1a1a1a 0%,#2d2d2d 100%);border-radius:12px 12px 0 0;">
-            <h1 style="color:#ac845d;font-size:28px;margin:0;letter-spacing:1px;">Pro Regal Management</h1>
-            <p style="color:#a0a0a0;font-size:12px;margin:6px 0 0;text-transform:uppercase;letter-spacing:2px;">Workforce and Sales Management</p>
-          </div>
-          
-          <!-- Welcome Banner -->
-          <div style="background:#fef9e7;padding:24px 30px;border-left:4px solid #ac845d;">
-            <h2 style="margin:0 0 8px;font-size:22px;color:#1a1a1a;">Welcome to the Team, ${body.employeeName}! 🎉</h2>
-            <p style="color:#555;font-size:14px;margin:0;line-height:1.6;">
-              We're thrilled to have you join <strong>${body.businessName || "our team"}</strong>. This packet contains everything you need to get started.
-            </p>
-          </div>
-          
-          <!-- Your Details Card -->
-          <div style="padding:24px 30px;">
-            <h3 style="color:#1a1a1a;font-size:16px;margin:0 0 16px;border-bottom:2px solid #ac845d;padding-bottom:8px;">📋 Your Details</h3>
-            <table style="width:100%;font-size:14px;border-collapse:collapse;">
-              <tr>
-                <td style="padding:10px 12px;background:#f8f9fa;border-radius:6px 0 0 0;font-weight:600;color:#555;width:40%;">Full Name</td>
-                <td style="padding:10px 12px;background:#f8f9fa;border-radius:0 6px 0 0;">${body.employeeName}</td>
-              </tr>
-              <tr>
-                <td style="padding:10px 12px;font-weight:600;color:#555;">Position</td>
-                <td style="padding:10px 12px;">${body.jobTitle || "Team Member"}</td>
-              </tr>
-              <tr>
-                <td style="padding:10px 12px;background:#f8f9fa;font-weight:600;color:#555;">Department</td>
-                <td style="padding:10px 12px;background:#f8f9fa;">${body.department || "General"}</td>
-              </tr>
-              <tr>
-                <td style="padding:10px 12px;font-weight:600;color:#555;">Employee Code</td>
-                <td style="padding:10px 12px;"><span style="font-family:monospace;font-size:18px;font-weight:bold;color:#ac845d;background:#1a1a1a;padding:4px 12px;border-radius:4px;letter-spacing:3px;">${body.employeeCode || "—"}</span></td>
-              </tr>
-            </table>
-          </div>
-          
-          <!-- Getting Started -->
-          <div style="padding:0 30px 24px;">
-            <h3 style="color:#1a1a1a;font-size:16px;margin:0 0 16px;border-bottom:2px solid #ac845d;padding-bottom:8px;">🚀 Getting Started</h3>
-            
-            <!-- Step 1 -->
-            <div style="display:flex;margin-bottom:16px;">
-              <div style="flex-shrink:0;width:32px;height:32px;background:#ac845d;color:#000;border-radius:50%;text-align:center;line-height:32px;font-weight:bold;font-size:14px;margin-right:12px;">1</div>
-              <div>
-                <p style="margin:0;font-weight:600;font-size:14px;color:#1a1a1a;">Access the Employee Portal</p>
-                <p style="margin:4px 0 0;font-size:13px;color:#666;line-height:1.5;">Visit <a href="${portalUrl}" style="color:#ac845d;text-decoration:underline;">${portalUrl}</a> and enter your Business Code: <strong>${body.businessCode || ""}</strong></p>
-              </div>
-            </div>
-            
-            <!-- Step 2 -->
-            <div style="display:flex;margin-bottom:16px;">
-              <div style="flex-shrink:0;width:32px;height:32px;background:#ac845d;color:#000;border-radius:50%;text-align:center;line-height:32px;font-weight:bold;font-size:14px;margin-right:12px;">2</div>
-              <div>
-                <p style="margin:0;font-weight:600;font-size:14px;color:#1a1a1a;">Log In With Your Employee Code</p>
-                <p style="margin:4px 0 0;font-size:13px;color:#666;line-height:1.5;">Use your 4-digit employee code <strong style="font-family:monospace;color:#ac845d;">${body.employeeCode || "—"}</strong> to access your shifts, timesheets, and more.</p>
-              </div>
-            </div>
-            
-            <!-- Step 3 -->
-            <div style="display:flex;margin-bottom:0;">
-              <div style="flex-shrink:0;width:32px;height:32px;background:#ac845d;color:#000;border-radius:50%;text-align:center;line-height:32px;font-weight:bold;font-size:14px;margin-right:12px;">3</div>
-              <div>
-                <p style="margin:0;font-weight:600;font-size:14px;color:#1a1a1a;">Explore Your Portal</p>
-                <p style="margin:4px 0 0;font-size:13px;color:#666;line-height:1.5;">Once logged in, you can view your upcoming shifts, check your timesheets, submit leave requests, and stay connected via the team forum.</p>
-              </div>
-            </div>
-          </div>
-          
-          <!-- What You Can Do -->
-          <div style="padding:0 30px 24px;">
-            <h3 style="color:#1a1a1a;font-size:16px;margin:0 0 16px;border-bottom:2px solid #ac845d;padding-bottom:8px;">📱 What You Can Do on the Portal</h3>
-            <div style="display:grid;gap:8px;">
-              <div style="padding:10px 14px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:6px;font-size:13px;">
-                📅 <strong>Today's Overview</strong> — See today's shift and event setup details at a glance
-              </div>
-              <div style="padding:10px 14px;background:#eff6ff;border:1px solid #bfdbfe;border-radius:6px;font-size:13px;">
-                📋 <strong>View Roster</strong> — Check your upcoming shifts week by week
-              </div>
-              <div style="padding:10px 14px;background:#fef3c7;border:1px solid #fde68a;border-radius:6px;font-size:13px;">
-                📊 <strong>View Timesheets</strong> — Review your worked hours and approval status
-              </div>
-              <div style="padding:10px 14px;background:#f3e8ff;border:1px solid #e9d5ff;border-radius:6px;font-size:13px;">
-                💬 <strong>Team Forum</strong> — Stay connected with announcements and discussions
-              </div>
-              <div style="padding:10px 14px;background:#fce7f3;border:1px solid #fbcfe8;border-radius:6px;font-size:13px;">
-                📝 <strong>Submit Requests</strong> — Apply for leave or flag availability changes
-              </div>
-              <div style="padding:10px 14px;background:#f0f9ff;border:1px solid #bae6fd;border-radius:6px;font-size:13px;">
-                🔔 <strong>Notifications</strong> — Receive updates on roster changes and request approvals
-              </div>
-            </div>
-          </div>
-          
-          <!-- CTA Button -->
-          <div style="text-align:center;padding:0 30px 30px;">
-            <a href="${portalUrl}" style="display:inline-block;background:#ac845d;color:#000;text-decoration:none;padding:14px 40px;border-radius:8px;font-weight:bold;font-size:15px;letter-spacing:0.5px;">
-              Go to Employee Portal →
-            </a>
-          </div>
-          
-          <!-- Important Notes -->
-          <div style="padding:20px 30px;background:#fef2f2;border-top:1px solid #fecaca;">
-            <h4 style="margin:0 0 8px;font-size:13px;color:#991b1b;">🔒 Important Security Notes</h4>
-            <ul style="margin:0;padding:0 0 0 16px;font-size:12px;color:#7f1d1d;line-height:1.7;">
-              <li>Keep your employee code <strong>confidential</strong> — do not share it with others.</li>
-              <li>Contact your manager if you have any issues accessing the portal.</li>
-            </ul>
-          </div>
-          
-          <!-- Footer -->
-          <div style="text-align:center;padding:20px 30px;background:#f8f9fa;border-radius:0 0 12px 12px;">
-            <p style="color:#999;font-size:11px;margin:0;">
-              This is an automated welcome email from <strong>Pro Regal Management</strong>.<br/>
-              If you received this in error, please contact your manager.
-            </p>
-          </div>
-        </div>
-      `;
-
-      emailPayload = {
-        from: `${body.businessName || "Pro Regal Management"} <noreply@regalmanagement.com.au>`,
-        to: [body.to],
-        subject: `Welcome to ${body.businessName || "the team"}, ${body.employeeName}! 🎉 — Your Induction Packet`,
-        html,
-      };
+      const code = `<span style="font-family:monospace;font-size:18px;font-weight:bold;color:${C.gold};background:${C.ink};padding:4px 12px;letter-spacing:3px;">${esc(body.employeeCode || "—")}</span>`;
+      const html = renderBrandedEmail({
+        brand, eyebrow: "Welcome to the Team", title: `Welcome, ${body.employeeName}`, preheader: `Your induction packet for ${brand.name}`,
+        bodyHtml:
+          p(`We're thrilled to have you join <strong>${esc(brand.name)}</strong>. This packet contains everything you need to get started.`) +
+          heading("Your details") +
+          details([["Full name", body.employeeName], ["Position", body.jobTitle || "Team Member"], ["Department", body.department || "General"], ["Employee code", code, { raw: true }]]) +
+          heading("Getting started") +
+          p(`<strong>1. Access the employee portal</strong><br/>Visit <a href="${esc(portalUrl)}" style="color:${C.goldDark};">${esc(portalUrl)}</a> and enter your business code: <strong>${esc(body.businessCode || "")}</strong>`) +
+          p(`<strong>2. Log in with your employee code</strong><br/>Use your 4-digit code <strong>${esc(body.employeeCode || "—")}</strong> to access your shifts, timesheets and more.`) +
+          p(`<strong>3. Explore your portal</strong><br/>View upcoming shifts, check your timesheets, submit leave requests and stay connected via the team forum.`) +
+          heading("On the portal you can") +
+          p(`Today's overview · View roster · View timesheets · Team forum · Submit requests · Notifications`) +
+          button("Go to employee portal", portalUrl) +
+          note(`<strong>Keep your employee code confidential</strong> — do not share it with others. Contact your manager if you have any issues accessing the portal.`, "red"),
+        footerNote: "If you received this in error, please contact your manager.",
+      });
+      emailPayload = { from: FROM(), to: [body.to], subject: `Welcome to ${brand.name}, ${body.employeeName} — Your Induction Packet`, html };
     } else if (body.type === "roster_pdf") {
       if (!body.to || !body.pdfBase64 || !body.weekLabel) {
         throw new Error("Missing required fields for roster PDF email");
       }
-
-      const html = `
-        <div style="font-family:'Segoe UI',Arial,sans-serif;max-width:600px;margin:0 auto;color:#1a1a1a;background:#ffffff;">
-          <!-- Header -->
-          <div style="text-align:center;padding:30px 20px 16px;background:linear-gradient(135deg,#1a1a1a 0%,#2d2d2d 100%);border-radius:12px 12px 0 0;">
-            <h1 style="color:#ac845d;font-size:24px;margin:0;letter-spacing:1px;">${body.businessName || "Pro Regal Management"}</h1>
-            <p style="color:#a0a0a0;font-size:11px;margin:6px 0 0;text-transform:uppercase;letter-spacing:2px;">Roster Report</p>
-          </div>
-          
-          <!-- Body -->
-          <div style="padding:24px 30px;">
-            <h2 style="margin:0 0 12px;font-size:18px;color:#1a1a1a;">📋 Weekly Roster — ${body.weekLabel}</h2>
-            <p style="color:#555;font-size:14px;line-height:1.6;">
-              Hi ${body.adminName || 'Admin'},
-            </p>
-            <p style="color:#555;font-size:14px;line-height:1.6;">
-              Please find the attached roster for <strong>${body.weekLabel}</strong>.
-              ${body.senderName ? `This was sent by <strong>${body.senderName}</strong>.` : ''}
-            </p>
-            <div style="margin:20px 0;padding:14px 16px;background:#f0f9ff;border:1px solid #bae6fd;border-radius:6px;">
-              <p style="margin:0;font-size:13px;color:#0369a1;font-weight:600;">📎 Attachment</p>
-              <p style="margin:4px 0 0;font-size:12px;color:#475569;">
-                The roster PDF is attached to this email. Open it to view the full schedule with all employee shifts, hours, and event details.
-              </p>
-            </div>
-          </div>
-          
-          <!-- Disclaimer -->
-          <div style="padding:16px 30px;background:#fef9e7;border-top:1px solid #f5e6b8;">
-            <p style="margin:0;font-size:11px;color:#92400e;line-height:1.5;">
-              <strong>⚠️ Disclaimer:</strong> The shift and break times stated in this roster are indicative and may vary according to the operational needs of the business and at the discretion of management.
-            </p>
-          </div>
-          
-          <!-- Footer -->
-          <div style="text-align:center;padding:16px 30px;background:#f8f9fa;border-radius:0 0 12px 12px;">
-            <p style="color:#999;font-size:11px;margin:0;">
-              This is an automated email from <strong>Pro Regal Management</strong>.
-            </p>
-          </div>
-        </div>
-      `;
-
-      emailPayload = {
-        from: `${body.businessName || "Pro Regal Management"} <noreply@regalmanagement.com.au>`,
-        to: [body.to],
-        subject: `Roster — ${body.weekLabel}`,
-        html,
-        attachments: [
-          {
-            filename: body.pdfFilename || `roster-${body.weekLabel}.pdf`,
-            content: body.pdfBase64,
-            type: "application/pdf",
-          },
-        ],
-      };
+      const html = renderBrandedEmail({
+        brand, eyebrow: "Roster Report", title: `Weekly roster — ${body.weekLabel}`,
+        bodyHtml: p(`Hi ${esc(body.adminName || "Admin")},`) + p(`Please find attached the roster for <strong>${esc(body.weekLabel)}</strong>.${body.senderName ? ` This was sent by <strong>${esc(body.senderName)}</strong>.` : ""}`) +
+          note(`<strong>Attachment:</strong> open the roster PDF to view the full schedule with all employee shifts, hours and event details.`) +
+          small(`The shift and break times in this roster are indicative and may vary according to the operational needs of the business and at the discretion of management.`),
+      });
+      emailPayload = { from: FROM(), to: [body.to], subject: `Roster — ${body.weekLabel}`, html,
+        attachments: [{ filename: body.pdfFilename || `roster-${body.weekLabel}.pdf`, content: body.pdfBase64, type: "application/pdf" }] };
     } else if (body.type === "report_pdf") {
       if (!body.to || !body.pdfBase64 || !body.subject) {
         throw new Error("Missing required fields for report PDF email");
       }
-
-      const html = `
-        <div style="font-family:'Segoe UI',Arial,sans-serif;max-width:600px;margin:0 auto;color:#1a1a1a;background:#ffffff;">
-          <div style="text-align:center;padding:30px 20px 16px;background:linear-gradient(135deg,#1a1a1a 0%,#2d2d2d 100%);border-radius:12px 12px 0 0;">
-            <h1 style="color:#ac845d;font-size:24px;margin:0;letter-spacing:1px;">${body.businessName || "Pro Regal Management"}</h1>
-            <p style="color:#a0a0a0;font-size:11px;margin:6px 0 0;text-transform:uppercase;letter-spacing:2px;">Report</p>
-          </div>
-          <div style="padding:24px 30px;">
-            <h2 style="margin:0 0 12px;font-size:18px;color:#1a1a1a;">📊 ${body.subject}</h2>
-            <p style="color:#555;font-size:14px;line-height:1.6;">
-              Please find the attached report PDF.
-            </p>
-            <div style="margin:20px 0;padding:14px 16px;background:#f0f9ff;border:1px solid #bae6fd;border-radius:6px;">
-              <p style="margin:0;font-size:13px;color:#0369a1;font-weight:600;">📎 Attachment</p>
-              <p style="margin:4px 0 0;font-size:12px;color:#475569;">
-                ${body.pdfFilename || "report.pdf"} — Open to view the full report with all details.
-              </p>
-            </div>
-          </div>
-          <div style="text-align:center;padding:16px 30px;background:#f8f9fa;border-radius:0 0 12px 12px;">
-            <p style="color:#999;font-size:11px;margin:0;">This is an automated report from <strong>Pro Regal Management</strong>.</p>
-          </div>
-        </div>
-      `;
-
-      emailPayload = {
-        from: `${body.businessName || "Pro Regal Management"} <noreply@regalmanagement.com.au>`,
-        to: [body.to],
-        subject: body.subject,
-        html,
-        attachments: [
-          {
-            filename: body.pdfFilename || "report.pdf",
-            content: body.pdfBase64,
-            type: "application/pdf",
-          },
-        ],
-      };
+      const html = renderBrandedEmail({
+        brand, eyebrow: "Report", title: body.subject,
+        bodyHtml: p("Please find the attached report.") + note(`<strong>Attachment:</strong> ${esc(body.pdfFilename || "report.pdf")} — open it to view the full report.`),
+        footerNote: "Automated report.",
+      });
+      emailPayload = { from: FROM(), to: [body.to], subject: body.subject, html,
+        attachments: [{ filename: body.pdfFilename || "report.pdf", content: body.pdfBase64, type: "application/pdf" }] };
     } else if (body.type === "runsheet") {
       const b = body as any;
       if (!b.to || !b.viewUrl || !b.eventTitle) throw new Error("Missing required fields for run sheet email");
       if (!/^https:\/\/[^\s"'<>]+$/.test(b.viewUrl)) throw new Error("Missing required fields for run sheet email");
-      const esc = (s: unknown) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]!));
-      const biz = esc(b.businessName || "Pro Regal Management");
-      const row = (k: string, v: unknown) => v ? `<tr><td style="padding:6px 0;color:#777;font-size:13px;width:38%;">${k}</td><td style="padding:6px 0;font-size:13px;color:#1a1a1a;">${esc(v)}</td></tr>` : "";
-      const html = `
-        <div style="font-family:'Segoe UI',Arial,sans-serif;max-width:600px;margin:0 auto;color:#1a1a1a;background:#ffffff;">
-          <div style="text-align:center;padding:28px 20px 16px;background:#1a1a1a;border-radius:12px 12px 0 0;">
-            <h1 style="color:#ac845d;font-size:22px;margin:0;letter-spacing:1px;">${biz}</h1>
-            <p style="color:#a0a0a0;font-size:11px;margin:6px 0 0;text-transform:uppercase;letter-spacing:2px;">${b.kind === "confirmation" ? "Event Confirmation" : "Event Order &amp; Run Sheet"}</p>
-          </div>
-          <div style="padding:24px 30px;">
-            <p style="font-size:14px;">Hi ${esc(b.recipientName || "there")},</p>
-            <p style="font-size:14px;line-height:1.6;color:#444;">${b.kind === "confirmation"
-              ? `${b.resend ? "Here again is the event confirmation" : "Thank you — this is your event confirmation"} for <strong>${esc(b.eventTitle)}</strong>. Please check the details and the event order below, and let us know if anything needs changing.`
-              : `${b.resend ? "Here is the run sheet again" : "Here is the run sheet"} for <strong>${esc(b.eventTitle)}</strong>. Please review it before the event.`}</p>
-            <div style="margin:18px 0;padding:14px 18px;border:1px solid #e8dcc8;border-left:4px solid #ac845d;border-radius:6px;background:#fbf8f2;">
-              <table style="width:100%;border-collapse:collapse;">
-                ${row("Date", b.dateLabel)}${row("Time", b.timeLabel)}${row("Venue", b.venue)}${row("Guests", b.guestsLabel)}${row("Event order", b.eventOrder)}
-              </table>
-            </div>
-            <div style="text-align:center;margin:26px 0;">
-              <a href="${esc(b.viewUrl)}" style="display:inline-block;background:#ac845d;color:#000;text-decoration:none;padding:13px 34px;border-radius:8px;font-weight:bold;font-size:14px;">${b.kind === "confirmation" ? "View event order" : "View run sheet"}</a>
-            </div>
-            <p style="font-size:12px;color:#888;line-height:1.5;">The link always shows the latest version. You can print it or save it as a PDF from that page.</p>
-            ${b.kind === "confirmation" ? `<p style="font-size:13px;color:#444;line-height:1.6;">Your event order includes our <strong>Terms &amp; Conditions</strong> on the final page — please review them and get in touch if you have any questions before signing. Once you are happy with everything, please <strong>sign the client part of the signature section below the Terms &amp; Conditions</strong> and return it to us — simply reply to this email with a photo or scan of the signed page.</p>` : ""}
-            ${b.message ? `<p style="font-size:13px;color:#444;white-space:pre-line;border-top:1px solid #eee;padding-top:12px;">${esc(b.message)}</p>` : ""}
-          </div>
-          <div style="text-align:center;padding:14px 30px;background:#f8f9fa;border-radius:0 0 12px 12px;">
-            <p style="color:#999;font-size:11px;margin:0;">Sent by ${biz}.</p>
-          </div>
-        </div>`;
-      emailPayload = {
-        from: `${b.businessName || "Pro Regal Management"} <noreply@regalmanagement.com.au>`,
-        to: [b.to],
-        subject: `${b.kind === "confirmation" ? "Event confirmed" : "Run sheet"} — ${b.eventTitle}${b.dateLabel ? ` (${b.dateLabel})` : ""}`,
-        html,
-      };
+      const conf = b.kind === "confirmation";
+      const html = renderBrandedEmail({
+        brand, eyebrow: conf ? "Event Confirmation" : "Event Order & Run Sheet", title: conf ? "Event Confirmation" : "Your Run Sheet",
+        preheader: `${conf ? "Event confirmation" : "Run sheet"} for ${b.eventTitle}`,
+        bodyHtml:
+          p(`Dear ${esc(b.recipientName || "Guest")},`) +
+          p(conf
+            ? `${b.resend ? "Here again is the event confirmation" : "Thank you for choosing us — we are delighted to confirm your celebration"} for <strong>${esc(b.eventTitle)}</strong>. Please review the details and the event order below, and let us know if anything needs changing.`
+            : `${b.resend ? "Here is the run sheet again" : "Here is the run sheet"} for <strong>${esc(b.eventTitle)}</strong>. Please review it before the event.`) +
+          details([["Event", b.eventTitle], ["Date", b.dateLabel], ["Time", b.timeLabel], ["Venue", b.venue], ["Guests", b.guestsLabel], ["Event order", b.eventOrder]]) +
+          button(conf ? "View event order" : "View run sheet", b.viewUrl) +
+          small("The link always shows the latest version. You can print it or save it as a PDF from that page.") +
+          (conf ? note(`Your event order includes our <strong>Terms &amp; Conditions</strong> on the final page — please review them and get in touch with any questions. Once you are happy, please <strong>sign the client part of the signature section below the Terms &amp; Conditions</strong> and return it to us by replying to this email with a photo or scan of the signed page.`) : "") +
+          (b.message ? p(`<span style="white-space:pre-line;">${esc(b.message)}</span>`) : "") +
+          signoff(brand),
+      });
+      emailPayload = { from: FROM(), to: [b.to],
+        subject: `${conf ? "Event confirmed" : "Run sheet"} — ${b.eventTitle}${b.dateLabel ? ` (${b.dateLabel})` : ""}`, html };
     } else if ((body as any).type === "deposit_confirmation") {
       const b = body as any;
       if (!b.to || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(b.to) || !b.depositAmount) throw new Error("Missing required fields for deposit email");
-      const esc = (s: unknown) => String(s ?? "").slice(0, 300).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]!));
-      const biz = esc(b.businessName || "Pro Regal Management");
-      const row = (k: string, v: unknown, bold = false) => v ? `<tr><td style="padding:7px 0;color:#777;font-size:13px;width:45%;">${k}</td><td style="padding:7px 0;font-size:13px;color:#1a1a1a;${bold ? "font-weight:bold;" : ""}">${esc(v)}</td></tr>` : "";
-      const html = `
-        <div style="font-family:'Segoe UI',Arial,sans-serif;max-width:600px;margin:0 auto;color:#1a1a1a;background:#ffffff;">
-          <div style="text-align:center;padding:28px 20px 16px;background:#1a1a1a;border-radius:12px 12px 0 0;">
-            <h1 style="color:#ac845d;font-size:22px;margin:0;letter-spacing:1px;">${biz}</h1>
-            <p style="color:#a0a0a0;font-size:11px;margin:6px 0 0;text-transform:uppercase;letter-spacing:2px;">Deposit Confirmation</p>
-          </div>
-          <div style="padding:24px 30px;">
-            <p style="font-size:14px;">Dear ${esc(b.recipientName || "Guest")},</p>
-            <p style="font-size:14px;line-height:1.6;color:#444;">Thank you — we are pleased to confirm that we have received your deposit for <strong>${esc(b.eventTitle)}</strong>${b.eventDate ? ` on <strong>${esc(b.eventDate)}</strong>` : ""}. Your date is now secured.</p>
-            <div style="margin:18px 0;padding:14px 18px;border:1px solid #e8dcc8;border-left:4px solid #ac845d;border-radius:6px;background:#fbf8f2;">
-              <table style="width:100%;border-collapse:collapse;">
-                ${row("Deposit received", b.depositAmount, true)}${row("Date received", b.receivedDate)}${row("Payment method", b.method)}${row("Reference", b.reference)}
-                ${row("Total event amount", b.totalAmount)}${row("Balance remaining", b.balanceRemaining, true)}${row("Balance due by", b.balanceDueDate, true)}
-              </table>
-            </div>
-            <p style="font-size:13px;color:#444;line-height:1.6;">${b.balanceDueDate ? `The remaining balance is due by <strong>${esc(b.balanceDueDate)}</strong>. ` : ""}If you have any questions about your payment or event, simply reply to this email and our team will be happy to help.</p>
-            <p style="font-size:13px;color:#444;">Warm regards,<br/>${biz}</p>
-          </div>
-          <div style="text-align:center;padding:14px 30px;background:#f8f9fa;border-radius:0 0 12px 12px;">
-            <p style="color:#999;font-size:11px;margin:0;">Sent by ${biz}. Please keep this email for your records.</p>
-          </div>
-        </div>`;
-      emailPayload = {
-        from: `${b.businessName || "Pro Regal Management"} <noreply@regalmanagement.com.au>`,
-        to: [b.to],
-        subject: `Deposit received — ${String(b.eventTitle || "your event").slice(0, 120)}`,
-        html,
-      };
+      const s = (v: unknown) => (v == null || v === "" ? v : String(v).slice(0, 300));
+      const html = renderBrandedEmail({
+        brand, eyebrow: "Deposit Confirmation", title: "Deposit received with thanks", preheader: `We've received your deposit for ${s(b.eventTitle)}`,
+        bodyHtml:
+          p(`Dear ${esc(s(b.recipientName) || "Guest")},`) +
+          p(`Thank you — we are pleased to confirm that we have received your deposit for <strong>${esc(s(b.eventTitle))}</strong>${b.eventDate ? ` on <strong>${esc(s(b.eventDate))}</strong>` : ""}. Your date is now secured.`) +
+          details([["Deposit received", s(b.depositAmount), { bold: true }], ["Date received", s(b.receivedDate)], ["Payment method", s(b.method)], ["Reference", s(b.reference)],
+            ["Total event amount", s(b.totalAmount)], ["Balance remaining", s(b.balanceRemaining), { bold: true }], ["Balance due by", s(b.balanceDueDate), { bold: true }]]) +
+          p(`${b.balanceDueDate ? `The remaining balance is due by <strong>${esc(s(b.balanceDueDate))}</strong>. ` : ""}If you have any questions about your payment or event, simply reply to this email and our team will be happy to help.`) +
+          signoff(brand),
+        footerNote: "Please keep this email for your records.",
+      });
+      emailPayload = { from: FROM(), to: [b.to], subject: `Deposit received — ${String(b.eventTitle || "your event").slice(0, 120)}`, html };
     } else if ((body as any).type === "menu") {
       const b = body as any;
       if (!b.to || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(b.to) || !Array.isArray(b.sections)) throw new Error("Missing required fields for menu email");
       const viewUrl = typeof b.viewUrl === "string" && /^https:\/\/(www\.)?regalmanagement\.com\.au\/m\/[0-9a-f-]{36}$/.test(b.viewUrl) ? b.viewUrl : undefined;
-      const logoUrl = "https://regalmanagement.com.au/regal-logo.png";
-      const html = renderMenuHtml({ businessName: b.businessName, title: b.title, recipientName: b.recipientName, message: b.message, viewUrl, logoUrl, sections: b.sections.slice(0, 60) }, { forEmail: true });
-      emailPayload = {
-        from: `${b.businessName || "Pro Regal Management"} <noreply@regalmanagement.com.au>`,
-        to: [b.to],
-        subject: `${String(b.title || "Our menu").slice(0, 120)} — ${b.businessName || "Pro Regal"}`,
-        html,
-      };
+      const logoUrl = brand.logoUrl || "https://regalmanagement.com.au/regal-logo.png";
+      const html = renderMenuHtml({ businessName: brand.name, title: b.title, recipientName: b.recipientName, message: b.message, viewUrl, logoUrl, sections: b.sections.slice(0, 60) }, { forEmail: true });
+      emailPayload = { from: FROM(), to: [b.to], subject: `${String(b.title || "Our menu").slice(0, 120)} — ${brand.name}`, html };
     } else {
       throw new Error("Invalid email type");
     }
