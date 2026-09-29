@@ -1,6 +1,7 @@
 // Food Safety Logs alerts: out-of-range readings (per entry), overdue checks and long-open two-step entries (scan).
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
+import { renderBrandedEmail, loadBrand, details, note, p, small, esc, button, heading } from "../_shared/emailLayout.ts";
 import { serviceClient } from "../_shared/auth.ts";
 
 const json = (b: unknown, s = 200) => new Response(JSON.stringify(b), { status: s, headers: { ...corsHeaders, "Content-Type": "application/json" } });
@@ -8,8 +9,10 @@ const json = (b: unknown, s = 200) => new Response(JSON.stringify(b), { status: 
 function sydney() { return new Date(new Date().toLocaleString("en-US", { timeZone: "Australia/Sydney" })); }
 const ymd = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 
-async function send(to: string[], subject: string, html: string) {
+async function send(to: string[], subject: string, inner: string, db: any, businessId: string) {
   const key = Deno.env.get("RESEND_API_KEY"); if (!key || !to.length) return;
+  const brand = await loadBrand(db, { businessId });
+  const html = renderBrandedEmail({ brand, eyebrow: "Food Safety Alert", title: subject, preheader: subject, bodyHtml: inner, footerNote: "Automated food safety alert." });
   const r = await fetch("https://api.resend.com/emails", { method: "POST", headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" }, body: JSON.stringify({ from: "Food Safety <noreply@regalmanagement.com.au>", to, subject, html }) });
   if (!r.ok) console.error("Resend failed", r.status, await r.text());
 }
@@ -38,7 +41,7 @@ serve(async (req) => {
       const rows = Object.entries(e.field_values || {}).filter(([k, v]) => !k.startsWith("__") && typeof v !== "object" && !String(v).startsWith("data:")).map(([k, v]) => `<tr><td style="padding:4px 8px;color:#666">${(cfg.fields || []).find((f: any) => f.key === k)?.label || k}</td><td style="padding:4px 8px">${v}</td></tr>`).join("");
       const sec = (cfg.sections || []).find((s: any) => s.key === e.section_key)?.label || "";
       const title = `Out of range: ${cfg.name || "Food safety"}${sec ? ` — ${sec}` : ""}`;
-      await send(await recipients(db, e.business_id, cfg), title, `<h2>${title}</h2><p>Recorded by ${e.staff_name} on ${e.entry_date}.</p><table>${rows}</table>`);
+      await send(await recipients(db, e.business_id, cfg), title, `<p style="font-family:Helvetica,Arial,sans-serif;font-size:15px;color:#2D2C2C;">Recorded by <strong>${e.staff_name}</strong> on ${e.entry_date}.</p><table width="100%" style="border:1px solid #E6DCCF;border-collapse:collapse;font-family:Helvetica,Arial,sans-serif;font-size:14px;">${rows}</table>`, db, e.business_id);
       await notifyAdmins(db, e.business_id, title, `Recorded by ${e.staff_name}`);
       return json({ ok: true });
     }
@@ -67,7 +70,7 @@ serve(async (req) => {
       }
       if (issues.length) {
         const title = `${cfg.name}: ${issues.length} issue${issues.length > 1 ? "s" : ""}`;
-        await send(await recipients(db, f.business_id, cfg), title, `<h2>${title}</h2><ul>${issues.map((i) => `<li>${i}</li>`).join("")}</ul>`);
+        await send(await recipients(db, f.business_id, cfg), title, `<ul style="font-family:Helvetica,Arial,sans-serif;font-size:15px;line-height:1.7;color:#2D2C2C;">${issues.map((i) => `<li>${i}</li>`).join("")}</ul>`, db, f.business_id);
         await notifyAdmins(db, f.business_id, title, issues.join("; ").slice(0, 400));
         sent++;
       }

@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { renderBrandedEmail, loadBrand, details, note, p, small, esc, button, heading } from "../_shared/emailLayout.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
@@ -95,16 +96,13 @@ serve(async (req) => {
       const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
       if (!RESEND_API_KEY) throw new Error("RESEND_API_KEY is not configured");
 
-      const emailHtml = `
-        <div style="font-family:Arial,sans-serif;max-width:480px;margin:0 auto;padding:20px;">
-          <h2 style="color:#1a1a1a;margin-bottom:8px;">Password Reset</h2>
-          <p style="color:#4b5563;">Use the following code to reset your password. This code expires in 10 minutes.</p>
-          <div style="background:#f3f4f6;border-radius:8px;padding:20px;text-align:center;margin:24px 0;">
-            <span style="font-size:32px;font-weight:bold;letter-spacing:8px;color:#1a1a1a;">${otpCode}</span>
-          </div>
-          <p style="color:#9ca3af;font-size:13px;">If you did not request this, please ignore this email.</p>
-        </div>
-      `;
+      const emailHtml = renderBrandedEmail({
+        brand: { name: "Pro Regal Management", website: "https://www.regalmanagement.com.au" },
+        eyebrow: "Account Security", title: "Password reset", preheader: "Your password reset code",
+        bodyHtml: p("Use the following code to reset your password. This code expires in 10 minutes.") +
+          `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:10px 0 24px;"><tr><td align="center" style="background:#F6F1EA;border:1px solid #E6DCCF;padding:22px;font-family:Georgia,serif;font-size:34px;letter-spacing:10px;color:#17191E;">${esc(otpCode)}</td></tr></table>` +
+          small("If you did not request this, please ignore this email."),
+      });
 
       const res = await fetch("https://api.resend.com/emails", {
         method: "POST",

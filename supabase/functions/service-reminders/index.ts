@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { renderBrandedEmail, loadBrand, details, note, p, small, esc, button, heading } from "../_shared/emailLayout.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
@@ -29,7 +30,7 @@ serve(async (req) => {
 
     const { data: tasks, error } = await supabase
       .from("service_maintenance_tasks")
-      .select("*, businesses(name)")
+      .select("*, businesses(name, logo_url, phone, email, address)")
       .eq("active", true)
       .eq("reminder_sent", false)
       .not("reminder_email", "is", null)
@@ -45,47 +46,15 @@ serve(async (req) => {
     for (const task of tasks || []) {
       const businessName = (task as any).businesses?.name || "Pro Regal Management";
 
-      const html = `
-        <div style="font-family:'Segoe UI',Arial,sans-serif;max-width:600px;margin:0 auto;color:#1a1a1a;background:#ffffff;">
-          <div style="text-align:center;padding:30px 20px 16px;background:linear-gradient(135deg,#1a1a1a 0%,#2d2d2d 100%);border-radius:12px 12px 0 0;">
-            <h1 style="color:#ac845d;font-size:24px;margin:0;">Pro Regal Management</h1>
-            <p style="color:#a0a0a0;font-size:11px;margin:6px 0 0;text-transform:uppercase;letter-spacing:2px;">Service Reminder</p>
-          </div>
-          <div style="padding:24px 30px;">
-            <div style="padding:16px;background:#fef9e7;border:1px solid #f5e6b8;border-radius:8px;margin-bottom:16px;">
-              <h2 style="margin:0 0 8px;font-size:18px;color:#92400e;">⚠️ Service Due Soon</h2>
-              <p style="margin:0;font-size:14px;color:#555;line-height:1.6;">
-                The following maintenance task for <strong>${businessName}</strong> is due soon:
-              </p>
-            </div>
-            <table style="width:100%;font-size:14px;border-collapse:collapse;">
-              <tr>
-                <td style="padding:10px 12px;background:#f8f9fa;font-weight:600;color:#555;width:40%;">Task</td>
-                <td style="padding:10px 12px;background:#f8f9fa;font-weight:bold;">${task.name}</td>
-              </tr>
-              ${task.description ? `<tr><td style="padding:10px 12px;font-weight:600;color:#555;">Description</td><td style="padding:10px 12px;">${task.description}</td></tr>` : ""}
-              <tr>
-                <td style="padding:10px 12px;background:#f8f9fa;font-weight:600;color:#555;">Due Date</td>
-                <td style="padding:10px 12px;background:#f8f9fa;font-weight:bold;color:#dc2626;">${task.next_service_date}</td>
-              </tr>
-              <tr>
-                <td style="padding:10px 12px;font-weight:600;color:#555;">Last Service</td>
-                <td style="padding:10px 12px;">${task.last_service_date || "Never"}</td>
-              </tr>
-              <tr>
-                <td style="padding:10px 12px;background:#f8f9fa;font-weight:600;color:#555;">Frequency</td>
-                <td style="padding:10px 12px;background:#f8f9fa;">Every ${task.frequency_days} days</td>
-              </tr>
-            </table>
-            <p style="margin:20px 0 0;font-size:13px;color:#666;line-height:1.6;">
-              Please arrange for this service to be completed before the due date. Once completed, mark it as done in the Service & Maintenance section of your admin panel.
-            </p>
-          </div>
-          <div style="text-align:center;padding:16px 30px;background:#f8f9fa;border-radius:0 0 12px 12px;">
-            <p style="color:#999;font-size:11px;margin:0;">This is an automated reminder from <strong>${businessName}</strong>.</p>
-          </div>
-        </div>
-      `;
+      const bz = (task as any).businesses || {};
+      const brand = { name: businessName, logoUrl: bz.logo_url, phone: bz.phone, email: bz.email, address: bz.address };
+      const html = renderBrandedEmail({
+        brand, eyebrow: "Service Reminder", title: "Service due soon", preheader: `${task.name} is due ${task.next_service_date}`,
+        bodyHtml: p(`The following maintenance task for <strong>${esc(businessName)}</strong> is due soon:`) +
+          details([["Task", task.name, { bold: true }], ["Description", task.description], ["Due date", task.next_service_date, { bold: true, color: "#A1322B" }], ["Last service", task.last_service_date || "Never"], ["Frequency", `Every ${task.frequency_days} days`]]) +
+          p("Please arrange for this service to be completed before the due date. Once completed, mark it as done in the Service &amp; Maintenance section of your admin panel."),
+        footerNote: "Automated service reminder.",
+      });
 
       const res = await fetch("https://api.resend.com/emails", {
         method: "POST",
@@ -96,7 +65,7 @@ serve(async (req) => {
         body: JSON.stringify({
           from: `${businessName} <noreply@regalmanagement.com.au>`,
           to: task.reminder_email.split(",").map((e: string) => e.trim()).filter(Boolean),
-          subject: `🔧 Service Reminder: ${task.name} — Due ${task.next_service_date}`,
+          subject: `Service Reminder: ${task.name} — Due ${task.next_service_date}`,
           html,
         }),
       });
