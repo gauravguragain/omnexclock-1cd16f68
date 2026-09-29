@@ -138,7 +138,7 @@ export function RunsheetDocument({ rs, lead, b, items, selection, businessName, 
           {kidsRows.length > 0 && <div className="pt-2"><p>Kids menu: {kidsRows.reduce((s, k) => s + (Number(k.quantity) || 0), 0)} kids</p></div>}
           {selection?.beverage_package && <div className="pt-3"><h2 className="font-bold">Beverages – {selection.beverage_detail?.name || prettyCrmValue(selection.beverage_package)}</h2>{selection.beverage_detail?.description && <p className="pl-3 italic">{selection.beverage_detail.description}</p>}</div>}
           {(selection?.beverage_detail?.sections || []).filter((sec: any) => sec.name || sec.items.length || sec.notes).map((sec: any, i: number) => <div key={i} className="pt-1"><h3 className="pl-3 font-semibold">{sec.name}{sec.picks ? ` (choose ${sec.picks})` : ""}</h3>{sec.notes && <p className="whitespace-pre-line pl-6">{sec.notes}</p>}{sec.items.map((n: string) => <p key={n} className="pl-6">- {n}</p>)}</div>)}
-          {selection?.corkage_enabled && <div className="pt-1"><p>Corkage: host is bringing their own drinks{selection?.corkage_note ? ` – ${selection.corkage_note}` : ""}.</p></div>}
+          {selection?.corkage_enabled && <div className="pt-1 font-bold"><p>Corkage: Host is bringing their own alcohol{selection?.corkage_note ? ` – ${selection.corkage_note}` : ""}.</p></div>}
           {!items.length && <div className="pt-2"><p className="text-muted-foreground">No menu saved yet.</p></div>}
           <div className="pt-4"><h2 className="font-bold">Setup & Additional Information</h2>{setup.map(s => <p key={s} className="pl-3">• {s}</p>)}</div>
           {rs.setup_notes && <div className="pt-2"><p className="whitespace-pre-line pl-3">{rs.setup_notes}</p></div>}
