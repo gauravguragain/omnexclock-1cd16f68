@@ -39,7 +39,7 @@ export default function PaymentsPage() {
   const shown = rows.filter(r => filter === "all" ? true : filter === "paid" ? r.s.status === "paid" : filter === "overdue" ? r.s.overdue : r.s.balance > 0)
     .filter(r => !needle || [r.b.event_name, r.b.event_type, r.client, r.b.event_order_number].some(v => String(v || "").toLowerCase().includes(needle)));
   const link = (b: any) => b.booking_kind === "catering" ? `/b/${businessCode}/catering/bookings/${b.id}` : `/b/${businessCode}/events/events/${b.id}`;
-  const bookingLabel = (id: string) => { const b = crm.bookings.find(x => x.id === id); return b ? (b.event_name || b.event_type || "Booking") : "Booking"; };
+  const bookingLabel = (id: string) => { const b = crm.bookings.find(x => x.id === id); return b ? (prettyCrmValue(b.event_type) || b.event_name || "Booking") : "Booking"; };
 
   if (!crm.business) return null;
   return <div className="space-y-6">
@@ -62,7 +62,7 @@ export default function PaymentsPage() {
         <thead><tr className="border-b border-border text-left text-xs uppercase tracking-wider text-muted-foreground"><th className="py-2 pr-3">Date</th><th className="pr-3">Booking</th><th className="pr-3">Client</th><th className="pr-3 text-right">Total</th><th className="pr-3 text-right">Received</th><th className="pr-3 text-right">Balance</th><th>Status</th></tr></thead>
         <tbody>{shown.length ? shown.map(({ b, s, client }) => <tr key={b.id} className="border-b border-border/60 last:border-0 hover:bg-muted/40">
           <td className="py-2 pr-3 whitespace-nowrap">{b.event_date ? format(new Date(b.event_date + "T00:00"), "d MMM yyyy") : "—"}</td>
-          <td className="pr-3"><Link to={link(b)} className="font-medium hover:text-primary">{b.event_name || b.event_type || "Booking"}</Link><span className="ml-1 text-xs text-muted-foreground">{b.booking_kind === "catering" ? "Catering" : "Event"}</span></td>
+          <td className="pr-3"><Link to={link(b)} className="font-medium hover:text-primary">{prettyCrmValue(b.event_type) || b.event_name || "Booking"}</Link><span className="ml-1 text-xs text-muted-foreground">{b.booking_kind === "catering" ? "Catering" : "Event"}</span></td>
           <td className="pr-3">{client || "—"}</td>
           <td className="pr-3 text-right">{money(s.total)}</td><td className="pr-3 text-right">{money(s.paid)}</td>
           <td className={cn("pr-3 text-right font-medium", s.overdue && "text-destructive")}>{money(s.balance)}</td>
