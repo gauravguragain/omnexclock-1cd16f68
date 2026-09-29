@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { format, isToday } from "date-fns";
+import { differenceInCalendarDays, format, parseISO } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -10,13 +10,36 @@ import { Plus, Search } from "lucide-react";
 import { useCrmData } from "@/features/sales/useCrmData";
 import { isConfirmedLeadStage, prettyCrmValue } from "@/features/sales/types";
 import { useEventsData, bookingEnd, to12 } from "./useEventsData";
+import { paymentSummary, sydneyToday, usePayments, type CrmPayment } from "./payments";
+
+function eventStatus(b: any, today: string) {
+  if (b.status === "cancelled") return "Cancelled";
+  const days = differenceInCalendarDays(parseISO(b.event_date), parseISO(today));
+  return days === 0 ? "Today" : days > 0 ? `Upcoming in ${days} ${days === 1 ? "day" : "days"}` : "Past";
+}
+
+function paymentStatus(b: any, payments: CrmPayment[], today: string) {
+  const { total, deposit, paid, balance } = paymentSummary(b, payments);
+  if (total > 0 && balance === 0) return ["Full amount confirmed"];
+  const labels: string[] = [];
+  if (deposit > 0 && paid >= deposit) labels.push("Deposit received");
+  else if (paid > 0) labels.push("Part payment received");
+  const due = b.balance_due_date;
+  if (total > 0 && balance > 0 && due) {
+    const days = differenceInCalendarDays(parseISO(due), parseISO(today));
+    labels.push(days < 0 ? "Full amount overdue" : days === 0 ? "Full amount due today" : `Full amount due in ${days} ${days === 1 ? "day" : "days"}`);
+  }
+  if (!labels.length) labels.push(total > 0 ? "Awaiting payment" : "Amount not set");
+  return labels;
+}
 
 export default function EventsList({ kind }: { kind: "event" | "catering" }) {
   const crm = useCrmData(); const ev = useEventsData(); const { businessCode } = useParams(); const nav = useNavigate();
+  const { payments, loading: paymentsLoading } = usePayments(kind === "event" ? crm.business?.id : undefined);
   const listBase = kind === "catering" ? `/b/${businessCode}/catering/bookings` : `/b/${businessCode}/events/events`;
    const [tab, setTab] = useState("upcoming"); const [search, setSearch] = useState("");
   if (!crm.business) return null;
-  const today = format(new Date(), "yyyy-MM-dd");
+  const today = sydneyToday();
   const mine = crm.bookings.filter(b => {
     if ((b.booking_kind || "event") !== kind) return false;
     if (kind === "catering" || !b.lead_id) return true;
@@ -32,9 +55,12 @@ export default function EventsList({ kind }: { kind: "event" | "catering" }) {
       return Math.abs(a.event_date.localeCompare(today) ? a.event_date < today ? today.localeCompare(a.event_date) : a.event_date.localeCompare(today) : 0)
         - Math.abs(b.event_date.localeCompare(today) ? b.event_date < today ? today.localeCompare(b.event_date) : b.event_date.localeCompare(today) : 0);
     });
-  const todays = shown.filter(b => isToday(new Date(`${b.event_date}T00:00:00`)));
-  const rest = shown.filter(b => !todays.includes(b));
+  const todays = shown.filter(b => b.event_date === today);
+  const rest = shown.filter(b => b.event_date !== today);
   const setStatus = async (b: any, status: string) => { const { error } = await supabase.from("crm_bookings").update({ status }).eq("id", b.id); if (error) toast.error(error.message); else crm.refresh(); };
+  const paymentsByBooking = new Map<string, CrmPayment[]>();
+  for (const p of payments) paymentsByBooking.set(p.booking_id, [...(paymentsByBooking.get(p.booking_id) || []), p]);
+  const paymentLabels = (b: any) => paymentsLoading ? ["Loading…"] : paymentStatus(b, paymentsByBooking.get(b.id) || [], today);
 
   const rowsFor = (list: any[]) => list.map(b => <tr key={b.id} className="cursor-pointer border-t border-border hover:bg-muted/30" onClick={e => { if (!(e.target as HTMLElement).closest("button")) nav(`${listBase}/${b.id}`); }}>
     <td className="p-3"><Button variant="link" className="h-auto p-0 text-left font-medium" onClick={() => nav(`${listBase}/${b.id}`)}>{b.event_name || customer(b)}</Button><p className="text-xs text-muted-foreground">{kind === "catering" ? (b.fulfilment_method === "pickup" ? "Pickup" : "Delivery") : prettyCrmValue(b.event_type || "event")}</p></td>
@@ -43,7 +69,8 @@ export default function EventsList({ kind }: { kind: "event" | "catering" }) {
     <td className="p-3">{kind === "event" ? b.venue_space : b.fulfilment_method === "pickup" ? "Pickup from venue" : b.service_location || "—"}</td>
     <td className="p-3">{customer(b)}</td>
     <td className="p-3">{b.adults ?? b.guest_count}<p className="text-xs text-muted-foreground">{b.kids ? `${b.kids} kids` : "No kids"}</p></td>
-    <td className="p-3"><Badge variant={bucket(b) === "cancelled" ? "destructive" : "outline"}>{isToday(new Date(`${b.event_date}T00:00:00`)) && bucket(b) !== "cancelled" ? "Today" : prettyCrmValue(bucket(b))}</Badge></td>
+    <td className="p-3"><Badge variant={bucket(b) === "cancelled" ? "destructive" : "outline"} className="whitespace-nowrap">{kind === "event" ? eventStatus(b, today) : prettyCrmValue(bucket(b))}</Badge></td>
+    {kind === "event" && <td className="p-3"><div className="flex flex-col items-start gap-1">{paymentLabels(b).map(label => <Badge key={label} variant={label === "Full amount overdue" ? "destructive" : "outline"} className="whitespace-nowrap">{label}</Badge>)}</div></td>}
     <td className="p-3 font-mono text-xs">{b.event_order_number || "—"}</td>
     <td className="p-3 text-right">{b.status === "cancelled" ? <Button size="sm" variant="ghost" onClick={() => setStatus(b, "confirmed")}>Restore</Button> : <Button size="sm" variant="ghost" onClick={() => confirm("Cancel this booking?") && setStatus(b, "cancelled")}>Cancel</Button>}</td>
   </tr>);
@@ -55,14 +82,14 @@ export default function EventsList({ kind }: { kind: "event" | "catering" }) {
     </div>
     <div className="flex flex-wrap items-center gap-2">{["upcoming", "past", "cancelled", "all"].map(t => <Button key={t} size="sm" variant={tab === t ? "default" : "outline"} className="capitalize" onClick={() => setTab(t)}>{t} ({t === "all" ? mine.length : mine.filter(b => bucket(b) === t).length})</Button>)}
       <div className="relative ml-auto w-full max-w-xs"><Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" /><Input className="h-9 pl-9" placeholder={kind === "catering" ? "Search name, customer or reference" : "Search name, customer, reference or hall"} value={search} onChange={e => setSearch(e.target.value)} /></div></div>
-    <div className="grid gap-3 md:hidden">{shown.map(b => <section key={b.id} className="min-w-0 rounded-md border border-border p-4">
-      <div className="flex items-start justify-between gap-3"><Button variant="link" className="h-auto min-w-0 justify-start whitespace-normal p-0 text-left text-base font-semibold" onClick={() => nav(`${listBase}/${b.id}`)}>{b.event_name || customer(b)}</Button><Badge variant={bucket(b) === "cancelled" ? "destructive" : "outline"} className="shrink-0">{isToday(new Date(`${b.event_date}T00:00:00`)) && bucket(b) !== "cancelled" ? "Today" : prettyCrmValue(bucket(b))}</Badge></div>
+     <div className="grid gap-3 md:hidden">{shown.map(b => <section key={b.id} className="min-w-0 rounded-md border border-border p-4">
+       <div className="flex flex-wrap items-start justify-between gap-2"><Button variant="link" className="h-auto min-w-0 justify-start whitespace-normal p-0 text-left text-base font-semibold" onClick={() => nav(`${listBase}/${b.id}`)}>{b.event_name || customer(b)}</Button></div>
       <p className="mt-1 text-sm text-muted-foreground">{format(new Date(`${b.event_date}T00:00:00`), "EEE, dd MMM yyyy")} · {to12(String(b.start_time).slice(0, 5))} – {to12(bookingEnd(b))}</p>
-      <dl className="mt-3 grid grid-cols-2 gap-2 text-sm"><div className="min-w-0"><dt className="text-xs text-muted-foreground">{kind === "event" ? "Venue" : "Location"}</dt><dd className="break-words">{kind === "event" ? b.venue_space : b.fulfilment_method === "pickup" ? "Pickup from venue" : b.service_location || "—"}</dd></div><div className="min-w-0"><dt className="text-xs text-muted-foreground">Customer</dt><dd className="break-words">{customer(b)}</dd></div><div><dt className="text-xs text-muted-foreground">Guests</dt><dd>{b.adults ?? b.guest_count}{b.kids ? ` + ${b.kids} kids` : ""}</dd></div><div><dt className="text-xs text-muted-foreground">Order number</dt><dd>{b.event_order_number || "—"}</dd></div></dl>
+       <dl className="mt-3 grid grid-cols-2 gap-2 text-sm"><div className="min-w-0"><dt className="text-xs text-muted-foreground">{kind === "event" ? "Venue" : "Location"}</dt><dd className="break-words">{kind === "event" ? b.venue_space : b.fulfilment_method === "pickup" ? "Pickup from venue" : b.service_location || "—"}</dd></div><div className="min-w-0"><dt className="text-xs text-muted-foreground">Customer</dt><dd className="break-words">{customer(b)}</dd></div><div><dt className="text-xs text-muted-foreground">Guests</dt><dd>{b.adults ?? b.guest_count}{b.kids ? ` + ${b.kids} kids` : ""}</dd></div><div><dt className="text-xs text-muted-foreground">Order number</dt><dd>{b.event_order_number || "—"}</dd></div><div className="col-span-2"><dt className="text-xs text-muted-foreground">{kind === "event" ? "Event status" : "Status"}</dt><dd className="mt-1"><Badge variant={bucket(b) === "cancelled" ? "destructive" : "outline"}>{kind === "event" ? eventStatus(b, today) : prettyCrmValue(bucket(b))}</Badge></dd></div>{kind === "event" && <div className="col-span-2"><dt className="text-xs text-muted-foreground">Payment status</dt><dd className="mt-1 flex flex-wrap gap-1">{paymentLabels(b).map(label => <Badge key={label} variant={label === "Full amount overdue" ? "destructive" : "outline"}>{label}</Badge>)}</dd></div>}</dl>
       <div className="mt-3 flex justify-between border-t border-border pt-2"><Button size="sm" variant="outline" onClick={() => nav(`${listBase}/${b.id}`)}>{kind === "catering" ? "View booking" : "View event"}</Button>{b.status === "cancelled" ? <Button size="sm" variant="ghost" onClick={() => setStatus(b, "confirmed")}>Restore</Button> : <Button size="sm" variant="ghost" onClick={() => confirm("Cancel this booking?") && setStatus(b, "cancelled")}>Cancel</Button>}</div>
     </section>)}{!shown.length && <p className="py-8 text-center text-sm text-muted-foreground">Nothing here.</p>}</div>
-     <div className="hidden overflow-x-auto rounded-md border md:block"><table className="w-full text-left text-sm"><thead className="bg-muted/60"><tr>{[kind === "catering" ? "Catering order" : "Event", "Date", "Time", kind === "event" ? "Venue" : "Location", "Customer", "Guests", "Status", kind === "catering" ? "Order number" : "Event order", ""].map(h => <th key={h} className="p-3">{h}</th>)}</tr></thead>
-      <tbody>{todays.length > 0 && <tr className="bg-primary/5"><td colSpan={9} className="px-3 py-1.5 text-xs font-semibold text-primary">Today · {todays.length}</td></tr>}{rowsFor(todays)}{rowsFor(rest)}
-        {!shown.length && <tr><td colSpan={9} className="p-10 text-center text-muted-foreground">Nothing here.</td></tr>}</tbody></table></div>
+     <div className="hidden overflow-x-auto rounded-md border md:block"><table className="w-full text-left text-sm"><thead className="bg-muted/60"><tr>{[kind === "catering" ? "Catering order" : "Event", "Date", "Time", kind === "event" ? "Venue" : "Location", "Customer", "Guests", kind === "event" ? "Event status" : "Status", ...(kind === "event" ? ["Payment status"] : []), kind === "catering" ? "Order number" : "Event order", ""].map(h => <th key={h} className="p-3">{h}</th>)}</tr></thead>
+       <tbody>{todays.length > 0 && <tr className="bg-primary/5"><td colSpan={kind === "event" ? 10 : 9} className="px-3 py-1.5 text-xs font-semibold text-primary">Today · {todays.length}</td></tr>}{rowsFor(todays)}{rowsFor(rest)}
+         {!shown.length && <tr><td colSpan={kind === "event" ? 10 : 9} className="p-10 text-center text-muted-foreground">Nothing here.</td></tr>}</tbody></table></div>
   </div>;
 }
