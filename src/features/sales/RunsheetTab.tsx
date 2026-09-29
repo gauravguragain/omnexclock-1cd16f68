@@ -115,9 +115,11 @@ export default function RunsheetTab({ lead, booking, options, onSaved }: {
       setFohSchedule(((row.service_schedule_foh || []) as RunsheetScheduleLine[]).map((line, index) => ({ ...line, key: `f${index}` })));
     } else {
       setAccessEnabled(false);
+      const adults = booking?.adults != null && Number(booking.adults) > 0 ? Number(booking.adults) : (Number(booking?.guest_count || 0) - Number(booking?.kids || 0)) || lead.estimated_guest_count || "";
       setForm((prev) => ({
         ...prev,
-        adult_guests: String(booking?.guest_count || lead.estimated_guest_count || ""),
+        adult_guests: String(adults || ""),
+        kids_guests: booking?.kids != null ? String(booking.kids) : "",
         booking_reference: lead.id.slice(0, 10).toUpperCase(),
          client_notes: "",
       }));
@@ -182,7 +184,8 @@ export default function RunsheetTab({ lead, booking, options, onSaved }: {
     if (!booking) { toast.error("Prepare the booking on the Confirmation tab first"); return; }
     setForm((prev) => ({
       ...prev,
-      adult_guests: prev.adult_guests || String(Math.max(0, Number(booking.guest_count || 0) - Number(prev.kids_guests || 0))),
+      adult_guests: prev.adult_guests || String((booking.adults != null && Number(booking.adults) > 0 ? Number(booking.adults) : Math.max(0, Number(booking.guest_count || 0) - Number(booking.kids || 0))) || 0),
+      kids_guests: prev.kids_guests || String(booking.kids != null ? booking.kids : ""),
       booking_reference: prev.booking_reference || lead.id.slice(0, 10).toUpperCase(),
     }));
     if (!schedule.length && !fohSchedule.length) suggestSchedule();
