@@ -470,6 +470,13 @@
       "when": 1790665115072,
       "tag": "0066_issue_event_order_number",
       "breakpoints": true
+    },
+    {
+      "idx": 67,
+      "version": "7",
+      "when": 1790689591323,
+      "tag": "0067_crm_merge_customers_and_leads",
+      "breakpoints": true
     }
   ]
 }
