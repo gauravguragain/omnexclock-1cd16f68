@@ -29,9 +29,43 @@ async function loadBeverageDetail(db: any, businessId: string, packageName?: str
 const UUID = /^[0-9a-f-]{36}$/i;
 const json = (b: unknown, status = 200) => new Response(JSON.stringify(b), { status, headers: { ...corsHeaders, "Content-Type": "application/json" } });
 
+const esc = (v: string) => v.replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]!));
+async function handleSign(req: Request) {
+  const b = await req.json().catch(() => null);
+  const id = String(b?.id || ""), t = String(b?.t || ""), name = String(b?.name || "").trim(), date = String(b?.date || ""), signature = String(b?.signature || "");
+  if (!UUID.test(id) || !UUID.test(t)) return json({ error: "Invalid link" }, 400);
+  if (!name || name.length > 100) return json({ error: "Please enter your name" }, 400);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return json({ error: "Please choose a date" }, 400);
+  if (!signature.startsWith("data:image/png;base64,") || signature.length > 600000) return json({ error: "Please sign again" }, 400);
+  const db = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
+  const { data: rs } = await db.from("crm_runsheets").select("id, business_id, lead_id, internal_share_token, event_order_number, revision, client_signed_at").eq("id", id).eq("share_token", t).maybeSingle();
+  if (!rs) return json({ error: "Run sheet not found" }, 404);
+  if (rs.client_signed_at) return json({ error: "This run sheet has already been signed" }, 409);
+  const patch = { client_sign_name: name, client_sign_date: date, client_signature: signature, client_signed_at: new Date().toISOString() };
+  const { error } = await db.from("crm_runsheets").update(patch).eq("id", id);
+  if (error) { console.error(error); return json({ error: "Could not save signature" }, 500); }
+  const [settings, biz, lead] = await Promise.all([
+    db.from("crm_settings").select("signed_runsheet_email").eq("business_id", rs.business_id).maybeSingle(),
+    db.from("businesses").select("name, email").eq("id", rs.business_id).maybeSingle(),
+    rs.lead_id ? db.from("crm_leads").select("full_name, event_type").eq("id", rs.lead_id).maybeSingle() : { data: null },
+  ]);
+  if (rs.lead_id) await db.from("crm_interactions").insert({ business_id: rs.business_id, lead_id: rs.lead_id, interaction_type: "note", occurred_at: patch.client_signed_at, notes: `Client signed the run sheet online (${name}, ${date}).` });
+  const to = settings.data?.signed_runsheet_email || biz.data?.email;
+  const key = Deno.env.get("RESEND_API_KEY");
+  if (to && key) {
+    const link = `https://regalmanagement.com.au/runsheet/${rs.id}?t=${rs.internal_share_token}`;
+    const client = lead.data?.full_name || name;
+    const html = `<div style="font-family:Arial,sans-serif;max-width:560px;margin:auto;color:#111"><h2>Run sheet signed</h2><p><strong>${esc(client)}</strong> has signed their run sheet${rs.event_order_number ? ` (Event order ${esc(rs.event_order_number)}-${rs.revision || 1})` : ""}.</p><p>Name: <strong>${esc(name)}</strong><br/>Date: <strong>${esc(date)}</strong></p><p><a href="${link}" style="background:#111;color:#fff;padding:10px 18px;border-radius:6px;text-decoration:none">View signed run sheet</a></p><p style="font-size:12px;color:#666">The signed copy, including the client's signature, is saved on the run sheet — you can print or download it as a PDF from the link above.</p></div>`;
+    const r = await fetch("https://api.resend.com/emails", { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${key}` }, body: JSON.stringify({ from: `${biz.data?.name || "Pro Regal Management"} <noreply@regalmanagement.com.au>`, to: [to], subject: `Signed run sheet — ${client}`, html }) });
+    if (!r.ok) console.error("Resend error", r.status, await r.text());
+  }
+  return json({ ok: true, rs: patch });
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   try {
+    if (req.method === "POST") return await handleSign(req);
     const url = new URL(req.url);
     const id = url.searchParams.get("id") || ""; const t = url.searchParams.get("t") || "";
     if (!UUID.test(id) || !UUID.test(t)) return json({ error: "Invalid link" }, 400);

@@ -12,13 +12,26 @@ import { useCrmData } from "@/features/sales/useCrmData";
 import { prettyCrmValue } from "@/features/sales/types";
 import { to12 } from "./useEventsData";
 import { DEFAULT_RUNSHEET_TERMS } from "./defaultTerms";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { SignaturePadDialog } from "@/components/SignaturePad";
 
 export function runsheetTermsFor(settings: any, booking: any): string | null {
   if (booking?.booking_kind === "catering" || settings?.runsheet_terms_enabled === false) return null;
   return (settings?.runsheet_terms ?? "").trim() || DEFAULT_RUNSHEET_TERMS;
 }
 
-function TermsPage({ terms, businessName }: { terms: string; businessName?: string }) {
+const signDateLabel = (d?: string | null) => d ? format(new Date(`${d}T00:00:00`), "dd/MM/yyyy") : "";
+function SignRow({ label, name, date, signature }: { label: string; name?: string | null; date?: string | null; signature?: string | null }) {
+  const blank = (w: string, v?: string) => v ? <span className="font-semibold">{v}</span> : <span className={`inline-block ${w} border-b border-border`} />;
+  return <div className="mt-4 grid grid-cols-3 items-end gap-6 text-xs">
+    <p>{label}: {blank("w-24", name || "")}</p>
+    <p className="flex items-end gap-1">Signature: {signature ? <img src={signature} alt="Signature" className="h-10 w-32 object-contain object-left" /> : <span className="inline-block w-20 border-b border-border" />}</p>
+    <p>Date: {blank("w-20", signDateLabel(date))}</p>
+  </div>;
+}
+
+function TermsPage({ terms, businessName, rs }: { terms: string; businessName?: string; rs?: any }) {
   const blocks = terms.split(/\n\s*\n/).map(b => b.trim()).filter(Boolean);
   return <section data-pdf-break className="mt-10 break-before-page pt-2 text-[10.5px] leading-snug" style={{ breakBefore: "page" }}>
     <header className="flex items-start justify-between gap-6 border-b border-border pb-3">
@@ -28,7 +41,7 @@ function TermsPage({ terms, businessName }: { terms: string; businessName?: stri
     <div className="mt-3 space-y-2">{blocks.map((b, i) => /^\d+\.\s/.test(b) || (b.length < 90 && !/[.:]$/.test(b) && i > 0)
       ? <h2 key={i} className="pt-1 text-xs font-bold">{b}</h2>
       : <p key={i} className="whitespace-pre-line">{b.replace(/^([^:\n]{2,40}):/, "$1:")}</p>)}</div>
-    <div className="mt-6 grid grid-cols-3 gap-6 text-xs"><p>Client name: <span className="inline-block w-20 border-b border-border" /></p><p>Signature: <span className="inline-block w-20 border-b border-border" /></p><p>Date: <span className="inline-block w-20 border-b border-border" /></p></div>
+    <div className="mt-2"><SignRow label="Client name" name={rs?.client_sign_name} date={rs?.client_sign_date} signature={rs?.client_signature} /></div>
   </section>;
 }
 
@@ -152,10 +165,11 @@ export function RunsheetDocument({ rs, lead, b, items, selection, businessName, 
     <footer className="mt-6 text-xs">
       <div className="mt-3 border-t border-dashed border-border pt-6">
         <p className="text-right text-[10px] text-muted-foreground">Printed Date: {format(new Date(), "dd/MM/yyyy")}</p>
-        <div className="mt-4 grid grid-cols-[1fr_1fr_1fr] gap-6"><p>Name: <span className="inline-block w-24 border-b border-border" /></p><p>Signature: <span className="inline-block w-20 border-b border-border" /></p><p>Date: <span className="inline-block w-20 border-b border-border" /></p></div>
+        <SignRow label="Name" name={rs.staff_sign_name} date={rs.staff_sign_date} signature={rs.staff_signature} />
+        {!terms && <SignRow label="Client name" name={rs.client_sign_name} date={rs.client_sign_date} signature={rs.client_signature} />}
       </div>
     </footer>
-    {terms && <TermsPage terms={terms} businessName={businessName} />}
+    {terms && <TermsPage terms={terms} businessName={businessName} rs={rs} />}
   </article>;
 }
 
@@ -233,7 +247,42 @@ export function PublicRunsheetPage() {
         <Button variant="outline" onClick={() => window.print()}><Printer className="mr-2 h-4 w-4" />Print</Button>
         <Button disabled={dl} onClick={async () => { if (!docRef.current) return; setDl(true); try { await downloadRunsheetPdf(docRef.current, `Run sheet - ${runsheetTitle(data.lead, data.booking)}`); } catch { toast.error("Could not create PDF"); } setDl(false); }}><Download className="mr-2 h-4 w-4" />{dl ? "Preparing…" : "Download PDF"}</Button>
       </div>
+         {!data.internal && <ClientSignForm data={data} runsheetId={runsheetId || ""} t={t} onSigned={rs => setData({ ...data, rs: { ...data.rs, ...rs } })} />}
          <A4Preview documentRef={docRef}><RunsheetDocument internal={data.internal === true} rs={data.rs} lead={data.lead} b={data.booking} items={data.items || []} selection={data.selection} businessName={data.businessName} businessPhone={data.businessPhone || ""} businessEmail={data.businessEmail || ""} terms={data.terms} /></A4Preview>
     </div>
+  </div>;
+}
+
+function ClientSignForm({ data, runsheetId, t, onSigned }: { data: any; runsheetId: string; t: string; onSigned: (rs: any) => void }) {
+  const rs = data.rs || {};
+  const [name, setName] = useState(rs.client_sign_name || data.lead?.full_name || "");
+  const [date, setDate] = useState(rs.client_sign_date || format(new Date(), "yyyy-MM-dd"));
+  const [sig, setSig] = useState<string>(""); const [pad, setPad] = useState(false); const [sending, setSending] = useState(false);
+  if (rs.client_signed_at) return <div className="rounded-md border border-border bg-muted/40 p-4 text-sm print:hidden">Thank you — this run sheet was signed by <strong>{rs.client_sign_name}</strong> on {format(new Date(rs.client_signed_at), "dd/MM/yyyy")} and sent to the venue.</div>;
+  const send = async () => {
+    if (!name.trim()) { toast.error("Please enter your name"); return; }
+    if (!sig) { toast.error("Please sign first"); return; }
+    setSending(true);
+    try {
+      const r = await fetch(`https://${import.meta.env.VITE_SUPABASE_PROJECT_ID}.supabase.co/functions/v1/crm-runsheet-public`, { method: "POST", headers: { apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY, "Content-Type": "application/json" }, body: JSON.stringify({ id: runsheetId, t, name: name.trim(), date, signature: sig }) });
+      const j = await r.json();
+      if (!r.ok) throw new Error(j.error || "Could not send");
+      onSigned(j.rs); toast.success("Signed run sheet sent — thank you!");
+    } catch (e: any) { toast.error(e.message || "Could not send"); }
+    setSending(false);
+  };
+  return <div className="space-y-3 rounded-md border border-border p-4 print:hidden">
+    <p className="font-medium">Sign your run sheet</p>
+    <p className="text-sm text-muted-foreground">Please review the run sheet and Terms &amp; Conditions below, then add your name, date and signature and press Send.</p>
+    <div className="grid gap-3 sm:grid-cols-2">
+      <div><Label className="text-xs">Your name</Label><Input value={name} maxLength={100} onChange={e => setName(e.target.value)} /></div>
+      <div><Label className="text-xs">Date</Label><Input type="date" value={date} onChange={e => setDate(e.target.value)} /></div>
+    </div>
+    <div className="flex flex-wrap items-center gap-3">
+      <Button variant="outline" onClick={() => setPad(true)}>{sig ? "Sign again" : "Sign"}</Button>
+      {sig && <img src={sig} alt="Your signature" className="h-14 w-40 rounded border border-border bg-white object-contain" />}
+      <Button disabled={sending || !sig} onClick={send}>{sending ? "Sending…" : "Send signed run sheet"}</Button>
+    </div>
+    <SignaturePadDialog open={pad} onOpenChange={setPad} onDone={setSig} />
   </div>;
 }
