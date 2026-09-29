@@ -9,6 +9,45 @@ import { toast } from "sonner";
 type Pkg = any;
 const sel = "h-9 w-full rounded-md border border-input bg-background px-3 text-sm";
 type Pick = { course: string; courseId: string; dish: any; protein?: string; notes?: string; oneOff?: boolean };
+
+/** Searchable dish picker: type to filter the course's dish list, then choose one. */
+function DishSearchSelect({ course, chosen, vegCount, nonVegCount, onPick }: { course: any; chosen: string[]; vegCount: number; nonVegCount: number; onPick: (id: string) => void }) {
+  const [open, setOpen] = useState(false);
+  const [q, setQ] = useState("");
+  const separate = course.veg_picks != null || course.non_veg_picks != null;
+  const eligible = course.dishes.filter((d: any) => !chosen.includes(d.id) && (!separate || (d.diet === "veg" ? vegCount < (course.veg_picks ?? 0) : nonVegCount < (course.non_veg_picks ?? 0))));
+  const term = q.trim().toLowerCase();
+  const filtered = term ? eligible.filter((d: any) => d.name.toLowerCase().includes(term)) : eligible;
+  const pick = (id: string) => { onPick(id); setOpen(false); setQ(""); };
+  return (
+    <Popover open={open} onOpenChange={o => { setOpen(o); if (o) setQ(""); }}>
+      <PopoverTrigger asChild>
+        <button type="button" aria-label={`Add a ${course.name.toLowerCase()} dish`} className="flex h-9 w-full items-center justify-between gap-2 rounded-md border border-input bg-background px-3 text-sm text-muted-foreground hover:border-primary">
+          <span>{`Add a ${course.name.toLowerCase()} dish…`}</span>
+          <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground" />
+        </button>
+      </PopoverTrigger>
+      <PopoverContent align="start" className="w-[min(calc(100vw-2rem),420px)] space-y-2 p-2">
+        <Input autoFocus placeholder={`Search ${course.name.toLowerCase()} dishes…`} value={q} onChange={e => setQ(e.target.value)} />
+        <ul className="max-h-60 overflow-y-auto rounded-md border border-border">
+          {filtered.map((d: any) => (
+            <li key={d.id}>
+              <button type="button" onClick={() => pick(d.id)} className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-muted">
+                <span className={`inline-block h-2.5 w-2.5 shrink-0 rounded-sm border ${d.diet === "veg" ? "border-success bg-success/30" : "border-destructive bg-destructive/30"}`} />
+                <span className="flex-1 truncate">{d.name}{Number(d.extra_price_per_head) > 0 ? ` · +$${Number(d.extra_price_per_head).toFixed(2)}/person` : ""}{d.protein_options?.length ? " · choose protein" : ""}</span>
+                <span className="shrink-0 text-xs text-muted-foreground">{d.diet === "veg" ? "Veg" : d.diet === "seafood" ? "Seafood" : "Non-veg"}</span>
+              </button>
+            </li>
+          ))}
+          {!filtered.length && <li className="px-3 py-3 text-sm text-muted-foreground">No dishes match “{q}”.</li>}
+          <li className="border-t border-border">
+            <button type="button" onClick={() => pick("__other__")} className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-primary hover:bg-muted"><Plus className="h-3.5 w-3.5" />Other (type your own)…</button>
+          </li>
+        </ul>
+      </PopoverContent>
+    </Popover>
+  );
+}
 type InitialSelection = { bookId: string; pkgId: string; picks: Record<string, string[]>; proteins: Record<string, string>; price: string; notes?: Record<string, string>; oneOffs?: Record<string, { name: string; diet: string }> };
 
 /** Pick a menu book, then a package, then choose dishes per course from that package's setup. */
