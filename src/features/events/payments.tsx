@@ -168,7 +168,9 @@ export function BookingPaymentsCard({ booking, onChanged }: { booking: any; onCh
   return <Card><CardContent className="space-y-4 p-6">
     <div className="flex items-center justify-between gap-2"><p className="flex items-center gap-2 border-l-2 border-primary pl-3 text-lg font-semibold"><Wallet className="h-4 w-4" />Payments</p><PaymentBadge status={s.status} overdue={s.overdue} /></div>
     {edit ? <div className="grid grid-cols-2 gap-3">
-      <div><Label className="text-xs">Booking total</Label><Input type="number" step="0.01" value={amounts.total_amount} onChange={e => setAmounts(a => ({ ...a, total_amount: e.target.value }))} /></div>
+      {selTotal != null
+        ? <div><Label className="text-xs">Booking total</Label><div className="flex h-9 items-center rounded-md border border-input bg-muted/40 px-3 text-sm font-medium">{money(selTotal)}<span className="ml-2 text-xs font-normal text-muted-foreground">from menu selection</span></div></div>
+        : <div><Label className="text-xs">Booking total</Label><Input type="number" step="0.01" value={amounts.total_amount} onChange={e => setAmounts(a => ({ ...a, total_amount: e.target.value }))} /></div>}
       <div><Label className="text-xs">Deposit required</Label><Input type="number" step="0.01" value={amounts.deposit_amount} onChange={e => setAmounts(a => ({ ...a, deposit_amount: e.target.value }))} /></div>
       <div><Label className="text-xs">Deposit due</Label><Input type="date" value={amounts.deposit_due_date} onChange={e => setAmounts(a => ({ ...a, deposit_due_date: e.target.value }))} /></div>
       <div><Label className="text-xs">Balance due</Label><Input type="date" value={amounts.balance_due_date} onChange={e => setAmounts(a => ({ ...a, balance_due_date: e.target.value }))} /></div>
