@@ -97,7 +97,7 @@ export default function OperationsPage() {
 
   const business = ctxBusiness?.business_code === businessCode ? ctxBusiness : urlBusiness;
   const allowed = isMaster || (business ? isOwnerOf(business.id) : false);
-  const canOpenSales = !!business && isApproved && (isAdminOf(business.id) || isSuperAdminOf(business.id) || isSalesManagerOf(business.id));
+  const canOpenSales = !!business && isApproved && (isOwnerOf(business.id) || isAdminOf(business.id) || isSuperAdminOf(business.id) || isSalesManagerOf(business.id));
 
   useEffect(() => {
     if (!business || !allowed || range.from > range.to) return;
@@ -253,7 +253,7 @@ export default function OperationsPage() {
             {/* OVERVIEW */}
             <TabsContent value="overview" className="space-y-4">
               <section aria-label="Sales and events dashboard">
-                <EventsDashboard businessId={business.id} ownerView canOpenSales={canOpenSales} />
+                <EventsDashboard businessId={business.id} ownerView={!canOpenSales} canOpenSales={canOpenSales} />
               </section>
               <section className="space-y-4 border-t border-border pt-6" aria-label="Owner operations dashboard">
               <div>
