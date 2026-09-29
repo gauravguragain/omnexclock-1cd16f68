@@ -484,6 +484,13 @@
       "when": 1790692949076,
       "tag": "0068_sync_lead_event_type_to_bookings",
       "breakpoints": true
+    },
+    {
+      "idx": 69,
+      "version": "7",
+      "when": 1790697232570,
+      "tag": "0069_crm_merge_leads_same_day_events",
+      "breakpoints": true
     }
   ]
 }
