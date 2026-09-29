@@ -139,6 +139,17 @@ export function BookingPaymentsCard({ booking, onChanged }: { booking: any; onCh
   const s = useMemo(() => paymentSummary(booking, payments), [booking, payments]);
   const [edit, setEdit] = useState(false);
   const [amounts, setAmounts] = useState({ total_amount: "", deposit_amount: "", deposit_due_date: "", balance_due_date: "" });
+  const [selTotal, setSelTotal] = useState<number | null>(null);
+  useEffect(() => {
+    let dead = false;
+    setSelTotal(null);
+    if (!booking?.lead_id) return;
+    (async () => {
+      const { data } = await (supabase as any).from("crm_menu_selections").select("total_estimate").eq("lead_id", booking.lead_id).order("updated_at", { ascending: false }).limit(1).maybeSingle();
+      if (!dead && data?.total_estimate != null) setSelTotal(Number(data.total_estimate) || 0);
+    })();
+    return () => { dead = true; };
+  }, [booking?.id, booking?.lead_id]);
   if (!booking) return null;
   const suggested = s.paid < s.deposit ? { type: "deposit", amount: s.deposit - s.paid } : { type: "balance", amount: Math.max(s.balance, 0) };
   const changed = () => { refresh(); onChanged?.(); };
@@ -149,9 +160,9 @@ export function BookingPaymentsCard({ booking, onChanged }: { booking: any; onCh
   };
   const startEdit = () => { setAmounts({ total_amount: String(booking.total_amount ?? ""), deposit_amount: String(booking.deposit_amount ?? ""), deposit_due_date: booking.deposit_due_date || "", balance_due_date: booking.balance_due_date || "" }); setEdit(true); };
   const saveAmounts = async () => {
-    const { error } = await supabase.from("crm_bookings").update({ total_amount: Number(amounts.total_amount) || 0, deposit_amount: Number(amounts.deposit_amount) || 0, deposit_due_date: amounts.deposit_due_date || null, balance_due_date: amounts.balance_due_date || null }).eq("id", booking.id);
+    const { error } = await supabase.from("crm_bookings").update({ total_amount: selTotal != null ? selTotal : Number(amounts.total_amount) || 0, deposit_amount: Number(amounts.deposit_amount) || 0, deposit_due_date: amounts.deposit_due_date || null, balance_due_date: amounts.balance_due_date || null }).eq("id", booking.id);
     if (error) { toast.error(error.message); return; }
-    toast.success("Amounts updated"); setEdit(false); onChanged?.();
+    toast.success(selTotal != null ? "Amounts updated (total comes from the menu selection)" : "Amounts updated"); setEdit(false); onChanged?.();
   };
   const pct = s.total > 0 ? Math.min(100, Math.max(0, (s.paid / s.total) * 100)) : 0;
   return <Card><CardContent className="space-y-4 p-6">
