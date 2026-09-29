@@ -1,3 +1,4 @@
+import { prettyCrmValue } from "@/features/sales/types";
 import { useLiveSync } from "@/hooks/useLiveSync";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { format } from "date-fns";
@@ -211,7 +212,7 @@ export function BookingPaymentsCard({ booking, onChanged }: { booking: any; onCh
 /** Upcoming events (soonest first), then past events (most recent first). */
 /** "3 Oct 2026 · Client — Event name" label used by the booking picker. */
 function bookingLabel(b: any) {
-  return `${b?.event_date ? format(new Date(b.event_date + "T00:00"), "d MMM yyyy") : "No date"} · ${[b?.client_name, b?.event_name || b?.event_type].filter(Boolean).join(" — ") || "Booking"}`;
+  return `${b?.event_date ? format(new Date(b.event_date + "T00:00"), "d MMM yyyy") : "No date"} · ${[b?.client_name, (b?.event_type ? prettyCrmValue(b.event_type) : b?.event_name)].filter(Boolean).join(" — ") || "Booking"}`;
 }
 function sortUpcomingFirst(list: any[]) {
   const today = new Date().toLocaleDateString("en-CA", { timeZone: "Australia/Sydney" });
