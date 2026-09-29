@@ -1,3 +1,4 @@
+import { eventLabel } from "@/lib/eventLabel";
 import { useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -60,7 +61,7 @@ export function CustomersPage() {
         </div>
         <div className="space-y-2">
           <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Event history</p>
-          {openEvents.length ? openEvents.map(b => <Link key={b.id} to={b.booking_kind === "catering" ? `/b/${businessCode}/catering/bookings/${b.id}` : `/b/${businessCode}/events/events/${b.id}`} className="flex justify-between gap-3 border-b border-border pb-2 text-sm hover:bg-muted/40"><span className="min-w-0 truncate">{b.event_name || prettyCrmValue(b.event_type || "Event")} · {b.venue_space}</span><span className="shrink-0 text-muted-foreground">{format(new Date(`${b.event_date}T00:00:00`), "dd MMM yyyy")}</span></Link>) : <p className="text-sm text-muted-foreground">No events yet.</p>}
+          {openEvents.length ? openEvents.map(b => <Link key={b.id} to={b.booking_kind === "catering" ? `/b/${businessCode}/catering/bookings/${b.id}` : `/b/${businessCode}/events/events/${b.id}`} className="flex justify-between gap-3 border-b border-border pb-2 text-sm hover:bg-muted/40"><span className="min-w-0 truncate">{eventLabel(b, (crm as any)?.leads?.find?.((l: any) => l.id === b.lead_id)?.full_name)} · {b.venue_space}</span><span className="shrink-0 text-muted-foreground">{format(new Date(`${b.event_date}T00:00:00`), "dd MMM yyyy")}</span></Link>) : <p className="text-sm text-muted-foreground">No events yet.</p>}
         </div>
       </div>}
     </DialogContent></Dialog>

@@ -1,3 +1,4 @@
+import { eventLabel } from "@/lib/eventLabel";
 import { useLiveSync } from "@/hooks/useLiveSync";
 import { useEffect, useMemo, useState } from "react";
 import { Link, Navigate, useParams } from "react-router-dom";
@@ -320,7 +321,7 @@ export default function OperationsPage() {
               </div>
               {d.revenue.overdueBalances.length > 0 && (
                 <Panel title="Bookings with overdue balance">
-                  <DataTable cols={["Event date", "Event", "Balance due", "Total", "Deposit paid"]} rows={d.revenue.overdueBalances.map((b: any) => [fmtDate(b.event_date), b.event_name || b.event_type || "Event", fmtDate(b.balance_due_date), money(Number(b.total_amount) || 0), b.deposit_paid ? "Yes" : "No"])} />
+                  <DataTable cols={["Event date", "Event", "Balance due", "Total", "Deposit paid"]} rows={d.revenue.overdueBalances.map((b: any) => [fmtDate(b.event_date), b.event_label || eventLabel(b), fmtDate(b.balance_due_date), money(Number(b.total_amount) || 0), b.deposit_paid ? "Yes" : "No"])} />
                 </Panel>
               )}
             </TabsContent>
