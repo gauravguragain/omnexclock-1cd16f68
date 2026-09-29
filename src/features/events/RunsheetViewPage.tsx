@@ -117,6 +117,11 @@ export function RunsheetDocument({ rs, lead, b, items, selection, businessName, 
       </div>
     </div>
 
+    <section className="mt-5">
+      <div className="flex justify-between bg-primary px-3 py-2 text-sm font-semibold text-primary-foreground"><span>Event Summary – {date}</span><span>Day 1 of 1</span></div>
+      <Summary />
+    </section>
+
     <section className="mt-4">
       <div className="flex justify-between bg-primary px-3 py-2 text-sm font-bold text-primary-foreground"><span>Agenda – {date}</span><span>Day 1 of 1</span></div>
       <div className="bg-muted"><Summary bold /></div>
