@@ -52,10 +52,13 @@ export default function SendRunsheetDialog({ open, onOpenChange, rs, lead, booki
         (supabase.from("crm_stakeholders" as any) as any).select("id, full_name, email, stakeholder_type").eq("business_id", lead.business_id).eq("active", true).order("full_name"),
       ]);
       const staff = (st.data || []).filter((s: any) => s.email);
+      const mgrEmails = new Set((mgr.data || []).map((m: any) => String(m.email || "").toLowerCase()).filter(Boolean));
+      const mgrNames = new Set((mgr.data || []).map((m: any) => String(m.full_name || "").trim().toLowerCase()).filter(Boolean));
+      const isMgr = (s: any) => mgrEmails.has(String(s.email).toLowerCase()) || mgrNames.has(String(s.full_name || "").trim().toLowerCase());
       const g: Group[] = [
-        { title: "Event managers", people: (mgr.data || []).map((m: any) => ({ key: `m-${m.user_id}`, name: m.full_name || m.email, email: m.email, kind: "confirmation" as const })) },
+        { title: "Event managers — internal run sheet", people: (mgr.data || []).map((m: any) => ({ key: `m-${m.user_id}`, name: m.full_name || m.email, email: m.email, kind: "runsheet" as const })) },
         { title: "Kitchen — internal run sheet", people: staff.filter((s: any) => s.stakeholder_type === "kitchen").map((s: any) => ({ key: s.id, name: s.full_name, email: s.email, kind: "runsheet" as const })) },
-        { title: "Coordinators — internal run sheet", people: staff.filter((s: any) => s.stakeholder_type === "coordinator").map((s: any) => ({ key: s.id, name: s.full_name, email: s.email, kind: "runsheet" as const })) },
+        { title: "Coordinators — internal run sheet", people: staff.filter((s: any) => s.stakeholder_type === "coordinator" && !isMgr(s)).map((s: any) => ({ key: s.id, name: s.full_name, email: s.email, kind: "runsheet" as const })) },
         { title: "Other stakeholders & vendors — internal run sheet", people: staff.filter((s: any) => !["kitchen", "coordinator"].includes(s.stakeholder_type)).map((s: any) => ({ key: s.id, name: s.full_name, email: s.email, kind: "runsheet" as const })) },
       ];
       setGroups(g);
