@@ -1,3 +1,4 @@
+import { canMoveToStage } from "@/features/sales/depositGuard";
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import MenuBookPicker from "./MenuBookPicker";
 import GuestMenuLinkCard from "./GuestMenuLinkCard";
