@@ -96,7 +96,7 @@ export default function SendRunsheetDialog({ open, onOpenChange, rs, lead, booki
       timeLabel: start ? `${to12(start)}${endMin ? ` – ${to12(endMin)}` : ""}` : "",
        venue: booking?.booking_kind === "catering" ? (booking.fulfilment_method === "pickup" ? "Pickup from venue" : booking.service_location || "Delivery") : prettyCrmValue(booking?.venue_space || lead.venue_space || ""),
       guestsLabel: sheet.adult_guests != null ? `${sheet.adult_guests} adults${sheet.kids_guests ? ` + ${sheet.kids_guests} kids` : ""}` : "",
-      eventOrder: sheet.event_order_number ? `${sheet.event_order_number}-${sheet.revision || 1}` : "",
+      eventOrder: sheet.event_order_number || "",
     };
     const ok: string[] = []; const failed: string[] = [];
     for (const r of recipients) {

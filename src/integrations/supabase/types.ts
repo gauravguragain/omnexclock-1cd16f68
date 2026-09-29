@@ -4584,6 +4584,7 @@ export type Database = {
           clash_venue: string
         }[]
       }
+      crm_issue_event_order: { Args: { _runsheet_id: string }; Returns: string }
       crm_merge_first_name_contacts: {
         Args: { _business_id: string }
         Returns: number

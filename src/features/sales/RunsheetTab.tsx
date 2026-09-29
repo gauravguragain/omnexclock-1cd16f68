@@ -225,7 +225,7 @@ export default function RunsheetTab({ lead, booking, options, onSaved }: {
   const persist = async (extra: Record<string, any> = {}) => {
     const payload: any = {
       business_id: lead.business_id, lead_id: lead.id, booking_id: booking?.id || null,
-      event_order_number: form.event_order_number || null, booking_reference: form.booking_reference || null,
+      booking_reference: form.booking_reference || null,
        sales_person: form.sales_person || null, sales_person_phone: form.sales_person_phone || null,
        event_coordinator: form.event_coordinator || null, event_coordinator_phone: form.event_coordinator_phone || null,
       onsite_contact_name: form.onsite_contact_name || null, onsite_contact_phone: form.onsite_contact_phone || null,
@@ -260,6 +260,9 @@ export default function RunsheetTab({ lead, booking, options, onSaved }: {
     const revision = Number(runsheet?.revision || 1);
     const saved = await persist({ status: "sent", sent_at: new Date().toISOString(), generated_at: new Date().toISOString(), revision });
     if (!saved) { setSaving(false); return null; }
+    const { data: orderNo, error: orderErr } = await supabase.rpc("crm_issue_event_order" as any, { _runsheet_id: saved.id });
+    if (orderErr) { toast.error(orderErr.message); setSaving(false); return null; }
+    saved.event_order_number = orderNo; setRunsheet({ ...saved }); setForm((f) => ({ ...f, event_order_number: String(orderNo || "") }));
 
     const audience = form.distributed_to || "the operations team";
     await supabase.from("crm_interactions").insert({
@@ -348,7 +351,7 @@ export default function RunsheetTab({ lead, booking, options, onSaved }: {
       </div>
 
       <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <div className="space-y-1.5"><Label>Event order number</Label><Input value={form.event_order_number} onChange={set("event_order_number")} placeholder="698-1" /></div>
+        <div className="space-y-1.5"><Label>Event order number</Label><Input value={form.event_order_number} readOnly className="bg-muted" placeholder="Assigned when the run sheet is sent" /></div>
         <div className="space-y-1.5"><Label>Booking reference</Label><Input value={form.booking_reference} onChange={set("booking_reference")} /></div>
         <div className="space-y-1.5"><Label>Sales person</Label>{PersonSelect({ value: form.sales_person, personKey: "sales_person", phoneKey: "sales_person_phone", placeholder: "Select from coordinators" })}</div>
         <div className="space-y-1.5"><Label>Sales person contact number</Label><Input type="tel" value={form.sales_person_phone} onChange={set("sales_person_phone")} /></div>
