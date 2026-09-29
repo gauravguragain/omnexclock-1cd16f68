@@ -12,6 +12,12 @@ import { isConfirmedLeadStage, prettyCrmValue } from "@/features/sales/types";
 import { useEventsData, bookingEnd, to12 } from "./useEventsData";
 import { paymentSummary, sydneyToday, usePayments, type CrmPayment } from "./payments";
 
+function eventStatus(b: any, today: string) {
+  if (b.status === "cancelled") return "Cancelled";
+  const days = differenceInCalendarDays(parseISO(b.event_date), parseISO(today));
+  return days === 0 ? "Today" : days > 0 ? `Upcoming in ${days} ${days === 1 ? "day" : "days"}` : "Past";
+}
+
 function eventWithinWeek(b: any, today: string) {
   if (b.status === "cancelled") return false;
   const days = differenceInCalendarDays(parseISO(b.event_date), parseISO(today));
