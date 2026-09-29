@@ -101,14 +101,29 @@ const MasterSettingsPage = React.lazy(() => import("./pages/master/MasterSetting
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      staleTime: 2 * 60_000,    // Data fresh for 2 min — fewer round trips on navigation
-      gcTime: 10 * 60_000,      // Cache kept for 10 min
-      refetchOnWindowFocus: false, // Don't refetch just because user switched tabs
-      refetchOnReconnect: false, // Skip background refetch on reconnect
-      retry: 1,                 // Faster failure on network issues
+      staleTime: 30_000,        // Keep data fresh — short window so synced changes show quickly
+      gcTime: 10 * 60_000,
+      refetchOnWindowFocus: true, // Returning to the app pulls the latest data
+      refetchOnReconnect: true,
+      retry: 1,
     },
   },
 });
+
+// Remounts the current page (re-running its data loads) whenever an in-app
+// refresh button fires "app:data-refresh" — no full page reload needed.
+const DataRefreshBoundary = ({ children }: { children: React.ReactNode }) => {
+  const [key, setKey] = React.useState(0);
+  React.useEffect(() => {
+    const onRefresh = () => {
+      void queryClient.invalidateQueries();
+      setKey((k) => k + 1);
+    };
+    window.addEventListener("app:data-refresh", onRefresh);
+    return () => window.removeEventListener("app:data-refresh", onRefresh);
+  }, []);
+  return <React.Fragment key={key}>{children}</React.Fragment>;
+};
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
@@ -121,6 +136,7 @@ const App = () => (
               <Sonner />
             <BrowserRouter>
               <Suspense fallback={<PageLoader />}>
+                <DataRefreshBoundary>
                 <Routes>
                   <Route path="/" element={<Index />} />
                   <Route path="/auth" element={<AuthPage />} />
@@ -228,6 +244,7 @@ const App = () => (
 
                   <Route path="*" element={<NotFound />} />
                 </Routes>
+                </DataRefreshBoundary>
               </Suspense>
             </BrowserRouter>
             </ActionLockProvider>
