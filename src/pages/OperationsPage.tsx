@@ -97,7 +97,7 @@ export default function OperationsPage() {
 
   const business = ctxBusiness?.business_code === businessCode ? ctxBusiness : urlBusiness;
   const allowed = isMaster || (business ? isOwnerOf(business.id) : false);
-  const canOpenSales = !!business && isApproved && (isAdminOf(business.id) || isSuperAdminOf(business.id) || isSalesManagerOf(business.id));
+  const canOpenSales = !!business && isApproved && (isOwnerOf(business.id) || isAdminOf(business.id) || isSuperAdminOf(business.id) || isSalesManagerOf(business.id));
 
   useEffect(() => {
     if (!business || !allowed || range.from > range.to) return;
