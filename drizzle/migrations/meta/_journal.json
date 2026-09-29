@@ -477,6 +477,13 @@
       "when": 1790689591323,
       "tag": "0067_crm_merge_customers_and_leads",
       "breakpoints": true
+    },
+    {
+      "idx": 68,
+      "version": "7",
+      "when": 1790692949076,
+      "tag": "0068_sync_lead_event_type_to_bookings",
+      "breakpoints": true
     }
   ]
 }
