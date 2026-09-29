@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { differenceInCalendarDays, format, isToday, parseISO } from "date-fns";
+import { differenceInCalendarDays, format, parseISO } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -55,8 +55,8 @@ export default function EventsList({ kind }: { kind: "event" | "catering" }) {
       return Math.abs(a.event_date.localeCompare(today) ? a.event_date < today ? today.localeCompare(a.event_date) : a.event_date.localeCompare(today) : 0)
         - Math.abs(b.event_date.localeCompare(today) ? b.event_date < today ? today.localeCompare(b.event_date) : b.event_date.localeCompare(today) : 0);
     });
-  const todays = shown.filter(b => isToday(new Date(`${b.event_date}T00:00:00`)));
-  const rest = shown.filter(b => !todays.includes(b));
+  const todays = shown.filter(b => b.event_date === today);
+  const rest = shown.filter(b => b.event_date !== today);
   const setStatus = async (b: any, status: string) => { const { error } = await supabase.from("crm_bookings").update({ status }).eq("id", b.id); if (error) toast.error(error.message); else crm.refresh(); };
   const paymentsByBooking = new Map<string, CrmPayment[]>();
   for (const p of payments) paymentsByBooking.set(p.booking_id, [...(paymentsByBooking.get(p.booking_id) || []), p]);
@@ -69,7 +69,7 @@ export default function EventsList({ kind }: { kind: "event" | "catering" }) {
     <td className="p-3">{kind === "event" ? b.venue_space : b.fulfilment_method === "pickup" ? "Pickup from venue" : b.service_location || "—"}</td>
     <td className="p-3">{customer(b)}</td>
     <td className="p-3">{b.adults ?? b.guest_count}<p className="text-xs text-muted-foreground">{b.kids ? `${b.kids} kids` : "No kids"}</p></td>
-    <td className="p-3"><Badge variant={bucket(b) === "cancelled" ? "destructive" : "outline"} className="whitespace-nowrap">{eventStatus(b, today)}</Badge></td>
+    <td className="p-3"><Badge variant={bucket(b) === "cancelled" ? "destructive" : "outline"} className="whitespace-nowrap">{kind === "event" ? eventStatus(b, today) : prettyCrmValue(bucket(b))}</Badge></td>
     {kind === "event" && <td className="p-3"><div className="flex flex-col items-start gap-1">{paymentLabels(b).map(label => <Badge key={label} variant={label === "Full amount overdue" ? "destructive" : "outline"} className="whitespace-nowrap">{label}</Badge>)}</div></td>}
     <td className="p-3 font-mono text-xs">{b.event_order_number || "—"}</td>
     <td className="p-3 text-right">{b.status === "cancelled" ? <Button size="sm" variant="ghost" onClick={() => setStatus(b, "confirmed")}>Restore</Button> : <Button size="sm" variant="ghost" onClick={() => confirm("Cancel this booking?") && setStatus(b, "cancelled")}>Cancel</Button>}</td>
@@ -85,7 +85,7 @@ export default function EventsList({ kind }: { kind: "event" | "catering" }) {
      <div className="grid gap-3 md:hidden">{shown.map(b => <section key={b.id} className="min-w-0 rounded-md border border-border p-4">
        <div className="flex flex-wrap items-start justify-between gap-2"><Button variant="link" className="h-auto min-w-0 justify-start whitespace-normal p-0 text-left text-base font-semibold" onClick={() => nav(`${listBase}/${b.id}`)}>{b.event_name || customer(b)}</Button></div>
       <p className="mt-1 text-sm text-muted-foreground">{format(new Date(`${b.event_date}T00:00:00`), "EEE, dd MMM yyyy")} · {to12(String(b.start_time).slice(0, 5))} – {to12(bookingEnd(b))}</p>
-       <dl className="mt-3 grid grid-cols-2 gap-2 text-sm"><div className="min-w-0"><dt className="text-xs text-muted-foreground">{kind === "event" ? "Venue" : "Location"}</dt><dd className="break-words">{kind === "event" ? b.venue_space : b.fulfilment_method === "pickup" ? "Pickup from venue" : b.service_location || "—"}</dd></div><div className="min-w-0"><dt className="text-xs text-muted-foreground">Customer</dt><dd className="break-words">{customer(b)}</dd></div><div><dt className="text-xs text-muted-foreground">Guests</dt><dd>{b.adults ?? b.guest_count}{b.kids ? ` + ${b.kids} kids` : ""}</dd></div><div><dt className="text-xs text-muted-foreground">Order number</dt><dd>{b.event_order_number || "—"}</dd></div><div className="col-span-2"><dt className="text-xs text-muted-foreground">{kind === "event" ? "Event status" : "Status"}</dt><dd className="mt-1"><Badge variant={bucket(b) === "cancelled" ? "destructive" : "outline"}>{eventStatus(b, today)}</Badge></dd></div>{kind === "event" && <div className="col-span-2"><dt className="text-xs text-muted-foreground">Payment status</dt><dd className="mt-1 flex flex-wrap gap-1">{paymentLabels(b).map(label => <Badge key={label} variant={label === "Full amount overdue" ? "destructive" : "outline"}>{label}</Badge>)}</dd></div>}</dl>
+       <dl className="mt-3 grid grid-cols-2 gap-2 text-sm"><div className="min-w-0"><dt className="text-xs text-muted-foreground">{kind === "event" ? "Venue" : "Location"}</dt><dd className="break-words">{kind === "event" ? b.venue_space : b.fulfilment_method === "pickup" ? "Pickup from venue" : b.service_location || "—"}</dd></div><div className="min-w-0"><dt className="text-xs text-muted-foreground">Customer</dt><dd className="break-words">{customer(b)}</dd></div><div><dt className="text-xs text-muted-foreground">Guests</dt><dd>{b.adults ?? b.guest_count}{b.kids ? ` + ${b.kids} kids` : ""}</dd></div><div><dt className="text-xs text-muted-foreground">Order number</dt><dd>{b.event_order_number || "—"}</dd></div><div className="col-span-2"><dt className="text-xs text-muted-foreground">{kind === "event" ? "Event status" : "Status"}</dt><dd className="mt-1"><Badge variant={bucket(b) === "cancelled" ? "destructive" : "outline"}>{kind === "event" ? eventStatus(b, today) : prettyCrmValue(bucket(b))}</Badge></dd></div>{kind === "event" && <div className="col-span-2"><dt className="text-xs text-muted-foreground">Payment status</dt><dd className="mt-1 flex flex-wrap gap-1">{paymentLabels(b).map(label => <Badge key={label} variant={label === "Full amount overdue" ? "destructive" : "outline"}>{label}</Badge>)}</dd></div>}</dl>
       <div className="mt-3 flex justify-between border-t border-border pt-2"><Button size="sm" variant="outline" onClick={() => nav(`${listBase}/${b.id}`)}>{kind === "catering" ? "View booking" : "View event"}</Button>{b.status === "cancelled" ? <Button size="sm" variant="ghost" onClick={() => setStatus(b, "confirmed")}>Restore</Button> : <Button size="sm" variant="ghost" onClick={() => confirm("Cancel this booking?") && setStatus(b, "cancelled")}>Cancel</Button>}</div>
     </section>)}{!shown.length && <p className="py-8 text-center text-sm text-muted-foreground">Nothing here.</p>}</div>
      <div className="hidden overflow-x-auto rounded-md border md:block"><table className="w-full text-left text-sm"><thead className="bg-muted/60"><tr>{[kind === "catering" ? "Catering order" : "Event", "Date", "Time", kind === "event" ? "Venue" : "Location", "Customer", "Guests", kind === "event" ? "Event status" : "Status", ...(kind === "event" ? ["Payment status"] : []), kind === "catering" ? "Order number" : "Event order", ""].map(h => <th key={h} className="p-3">{h}</th>)}</tr></thead>
