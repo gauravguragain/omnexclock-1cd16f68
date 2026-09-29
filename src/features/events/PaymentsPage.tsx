@@ -74,7 +74,7 @@ export default function PaymentsPage() {
     </CardContent></Card>
 
     <Card><CardContent className="space-y-3 p-4 sm:p-6"><p className="text-lg font-semibold">Recent payments</p>
-      {payments.length ? <div className="divide-y divide-border">{payments.slice(0, 25).map(p => { const b = crm.bookings.find(x => x.id === p.booking_id); return <div key={p.id} className="flex flex-wrap items-center justify-between gap-2 py-2 text-sm">
+      {payments.length ? <div className="divide-y divide-border">{[...payments].sort((a: any, b: any) => String(b.created_at || "").localeCompare(String(a.created_at || ""))).slice(0, 25).map(p => { const b = crm.bookings.find(x => x.id === p.booking_id); return <div key={p.id} className="flex flex-wrap items-center justify-between gap-2 py-2 text-sm">
         <div><p className="font-medium">{money(p.amount)} · {PAYMENT_TYPES[p.payment_type] || p.payment_type}</p><p className="text-xs text-muted-foreground">{format(new Date(p.paid_on + "T00:00"), "d MMM yyyy")} · {PAYMENT_METHODS[p.method] || p.method}{p.reference ? ` · ${p.reference}` : ""}</p></div>
         {b ? <Link to={link(b)} className="text-xs text-primary hover:underline">{bookingLabel(p.booking_id)}</Link> : <span className="text-xs text-muted-foreground">{bookingLabel(p.booking_id)}</span>}
       </div>; })}</div> : <p className="text-sm text-muted-foreground">No payments recorded yet.</p>}
