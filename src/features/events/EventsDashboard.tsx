@@ -61,7 +61,7 @@ export default function EventsDashboard({ businessId, ownerView = false, canOpen
     {!ownerView && <Link to={to} className="mt-3 flex items-center justify-between border-t border-border pt-3 text-sm hover:text-primary">{link}<ChevronRight className="h-4 w-4" /></Link>}
   </CardContent></Card>;
 
-  return <div className={`space-y-6 ${!canOpenSales ? "[&_a]:hidden" : ""}`}
+  return <div className={`space-y-6 ${!canOpenSales ? "[&_a:not([data-keep])]:hidden" : ""}`}
     onClickCapture={e => { if (!canOpenSales && (e.target as HTMLElement).closest("a")) e.preventDefault(); }}
     onKeyDownCapture={e => { if (!canOpenSales && e.key === "Enter" && (e.target as HTMLElement).closest("a")) e.preventDefault(); }}>
     <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
@@ -88,11 +88,11 @@ export default function EventsDashboard({ businessId, ownerView = false, canOpen
       <Card className="border-primary/40 bg-card lg:row-span-2 lg:h-full"><CardContent className="flex h-full flex-col p-6">
         <p className="text-xl font-semibold">{format(month, "MMMM yyyy")}</p><p className="text-xs text-muted-foreground">{monthCount} events this month</p>
         <div className="mt-3 flex gap-2"><Button size="icon" variant="outline" className="h-8 w-8" onClick={() => setMonth(addMonths(month, -1))}><ChevronLeft className="h-4 w-4" /></Button><Button size="icon" variant="outline" className="h-8 w-8" onClick={() => setMonth(addMonths(month, 1))}><ChevronRight className="h-4 w-4" /></Button><Button size="sm" variant="secondary" onClick={() => setMonth(startOfMonth(new Date()))}>Today</Button></div>
-        <div className="flex flex-1 flex-col justify-center">
+        <div className="flex flex-col lg:flex-1 lg:justify-center">
           <div className="mt-4 grid grid-cols-7 gap-y-1 text-center text-sm">{["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map(x => <span key={x} className="text-[10px] uppercase tracking-wider text-muted-foreground">{x}</span>)}
           {days.map(x => { const k = format(x, "yyyy-MM-dd"); return <span key={k} className={`relative mx-auto flex h-8 w-8 items-center justify-center rounded-full ${k === today ? "bg-primary text-primary-foreground font-semibold" : isSameMonth(x, month) ? "" : "text-muted-foreground/50"}`}>{format(x, "d")}{eventDays.has(k) && <span className="absolute bottom-0.5 h-1 w-1 rounded-full bg-primary ring-1 ring-card" />}</span>; })}</div>
         </div>
-        <div className="mt-3 flex justify-between text-xs"><span className="text-muted-foreground">• Event day</span>{ownerView ? <RouterLink to={`/b/${businessCode}/operations/calendar`} className="text-primary">View full calendar ›</RouterLink> : <Link to={`${base}/calendar`} className="text-primary">View full calendar ›</Link>}</div>
+        <div className="mt-3 flex justify-between text-xs"><span className="text-muted-foreground">• Event day</span>{ownerView ? <RouterLink data-keep to={`/b/${businessCode}/operations/calendar`} className="text-primary">View full calendar ›</RouterLink> : <Link to={`${base}/calendar`} className="text-primary">View full calendar ›</Link>}</div>
       </CardContent></Card>
 
       <Card><CardContent className="p-6">
