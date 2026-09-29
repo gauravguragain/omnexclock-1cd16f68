@@ -150,7 +150,6 @@ export function RunsheetDocument({ rs, lead, b, items, selection, businessName, 
     </section>
 
     <footer className="mt-6 text-xs">
-      <p className="text-center font-medium">END DAY 1 OF 1</p>
       <div className="mt-3 border-t border-dashed border-border pt-6">
         <p className="text-right text-[10px] text-muted-foreground">Printed Date: {format(new Date(), "dd/MM/yyyy")}</p>
         <div className="mt-4 grid grid-cols-[1fr_1fr_1fr] gap-6"><p>Name: <span className="inline-block w-24 border-b border-border" /></p><p>Signature: <span className="inline-block w-20 border-b border-border" /></p><p>Date: <span className="inline-block w-20 border-b border-border" /></p></div>
