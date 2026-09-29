@@ -69,7 +69,7 @@ export function LeadDetailView({ lead, open, initialTab, options, interactions, 
      setHasSelection(false);setSavedEstimate(null);setMenuLoaded(false);setMenuDirty(false);if((window as any).__menuSig)delete (window as any).__menuSig[`menu-draft:${lead.id}`];
     const{data:sel,error:selErr}=await supabase.from("crm_menu_selections").select("*").eq("lead_id",lead.id).maybeSingle();
      if(stale())return;if(selErr){toast.error("Could not load the saved menu — please refresh before editing.");return;}
-     if(!sel){restoreDraft(null);setMenuLoaded(true);return;}const s:any=sel;setHasSelection(true);setSavedEstimate(Number(s.total_estimate||0));
+      if(!sel){setExtras({dietary:"",allergies:"",beverage:""});setExtraEnabled({dietary:false,allergies:false});restoreDraft(null);setMenuLoaded(true);return;}const s:any=sel;setHasSelection(true);setSavedEstimate(Number(s.total_estimate||0));
     if(s.guest_count)setGuestOverride(Number(s.guest_count));
     setCorkage({enabled:!!s.corkage_enabled,perHead:s.corkage_per_head!=null?String(s.corkage_per_head):"",flat:s.corkage_flat!=null?String(s.corkage_flat):""});setCorkageNote(s.corkage_note||"");
      setExtras({dietary:s.dietary_requirements||"",allergies:s.allergies||"",beverage:s.beverage_package||""});setExtraEnabled({dietary:!!s.dietary_requirements,allergies:!!s.allergies});setBeverageChoice(s.beverage_package||"");setBevPrice({perHead:"",flat:""});
