@@ -253,7 +253,7 @@ export default function OperationsPage() {
             {/* OVERVIEW */}
             <TabsContent value="overview" className="space-y-4">
               <section aria-label="Sales and events dashboard">
-                <EventsDashboard businessId={business.id} ownerView canOpenSales={canOpenSales} />
+                <EventsDashboard businessId={business.id} ownerView={!canOpenSales} canOpenSales={canOpenSales} />
               </section>
               <section className="space-y-4 border-t border-border pt-6" aria-label="Owner operations dashboard">
               <div>
