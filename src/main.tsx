@@ -1,6 +1,8 @@
 import { createRoot } from "react-dom/client";
 import App from "./App.tsx";
 import "./index.css";
+import { installDbWriteSignal } from "./lib/dbWriteSignal";
+installDbWriteSignal();
 
 const GLOBAL_SYNC_VERSION = "2026-09-29-force-sync-all-devices";
 const GLOBAL_SYNC_KEY = "omnex_global_sync_version";
