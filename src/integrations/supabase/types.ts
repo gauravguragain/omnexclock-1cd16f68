@@ -4585,8 +4585,16 @@ export type Database = {
         }[]
       }
       crm_issue_event_order: { Args: { _runsheet_id: string }; Returns: string }
+      crm_merge_customers: {
+        Args: { _keep_id: string; _merge_ids: string[] }
+        Returns: number
+      }
       crm_merge_first_name_contacts: {
         Args: { _business_id: string }
+        Returns: number
+      }
+      crm_merge_leads: {
+        Args: { _keep_id: string; _merge_ids: string[] }
         Returns: number
       }
       crm_next_event_order: { Args: { _business_id: string }; Returns: string }

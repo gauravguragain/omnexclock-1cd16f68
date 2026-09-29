@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Mail, MapPin, Phone, Building2, Plus } from "lucide-react";
+import { Mail, MapPin, Phone, Building2, Plus, Merge } from "lucide-react";
+import MergeDuplicatesDialog from "./MergeDuplicatesDialog";
 import DishPhotoCell from "./DishPhotoCell";
 import { signDishPhotos } from "./dishPhotos";
 import { useCrmData } from "@/features/sales/useCrmData";
@@ -21,7 +22,7 @@ const usage = (courseItems: Row[], key: "dish_id" | "drink_id", id: string, cour
 };
 
 export function CustomersPage() {
-  const d = useEventsData(); const crm = useCrmData(); const [open, setOpen] = useState<Row | null>(null);
+  const d = useEventsData(); const crm = useCrmData(); const [open, setOpen] = useState<Row | null>(null); const [mergeOpen, setMergeOpen] = useState(false);
   const { businessCode } = useParams();
   const [menuSends, setMenuSends] = useState<Row[]>([]);
   useEffect(() => { setMenuSends([]); if (!open) return; (sbMenu.from("crm_menu_sends" as any) as any).select("*").eq("customer_id", open.id).order("sent_at", { ascending: false }).then(({ data }: any) => setMenuSends(data || [])); }, [open?.id]);
@@ -32,6 +33,8 @@ export function CustomersPage() {
   const upcoming = openEvents.filter(b => b.event_date >= new Date().toLocaleDateString("en-CA"));
   const Detail = ({ icon: Icon, label, value }: { icon: any; label: string; value?: string }) => <div className="flex items-start gap-2 text-sm"><Icon className="mt-0.5 h-4 w-4 shrink-0 text-primary" /><div className="min-w-0"><p className="text-xs text-muted-foreground">{label}</p><p className="break-words">{value || "—"}</p></div></div>;
   return <>
+    <div className="mb-3 flex justify-end"><Button size="sm" variant="outline" onClick={() => setMergeOpen(true)}><Merge className="mr-1.5 h-4 w-4" />Merge duplicates</Button></div>
+    <MergeDuplicatesDialog open={mergeOpen} onOpenChange={setMergeOpen} customers={d.customers} leads={crm.leads as any} bookings={crm.bookings} onDone={() => { d.refresh(); crm.refresh(true); }} />
     <SimpleList title="Customers" subtitle="Everyone recorded as a customer, whether added here or through a lead or event." table="crm_customers" businessId={d.business.id} rows={d.customers} refresh={d.refresh} nameKey="full_name" onOpen={setOpen}
       fields={[{ key: "full_name", label: "Name", required: true }, { key: "phone", label: "Phone" }, { key: "email", label: "Email", type: "email" }, { key: "address", label: "Address" }, { key: "company", label: "Company" }, { key: "source", label: "Source", type: "select", options: [{ value: "direct", label: "Direct" }, { value: "lead", label: "Lead" }, { value: "event", label: "Event" }] }]}
       columns={[{ label: "Name", render: r => r.full_name }, { label: "Source", render: r => prettyCrmValue(r.source) }, { label: "Phone", render: r => r.phone || "—" }, { label: "Email", render: r => r.email || "—" }, { label: "Address", render: r => r.address || "—" }, { label: "Events", render: r => eventsFor(r).length }]} />
