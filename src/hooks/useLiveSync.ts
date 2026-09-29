@@ -20,10 +20,14 @@ export function useLiveSync(tables: string[], businessId: string | undefined, on
     });
     channel.subscribe();
     const onVis = () => { if (document.visibilityState === "visible") fire(); };
+    const tableSet = new Set(key.split(","));
+    const onWrite = (e: Event) => { const t = (e as CustomEvent).detail?.table; if (t === "*" || tableSet.has(t)) fire(); };
     document.addEventListener("visibilitychange", onVis);
+    window.addEventListener("app:db-write", onWrite);
     return () => {
       clearTimeout(timer);
       document.removeEventListener("visibilitychange", onVis);
+      window.removeEventListener("app:db-write", onWrite);
       supabase.removeChannel(channel);
     };
   }, [key, businessId]);
