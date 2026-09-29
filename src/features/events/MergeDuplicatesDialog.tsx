@@ -59,7 +59,7 @@ export default function MergeDuplicatesDialog({ open, onOpenChange, customers, l
       <Button size="sm" variant={tab === "customer" ? "default" : "outline"} onClick={() => setTab("customer")}>Customers ({custGroups.length})</Button>
       <Button size="sm" variant={tab === "lead" ? "default" : "outline"} onClick={() => setTab("lead")}>Leads ({leadGroups.length})</Button>
     </div>
-    {tab === "lead" && <p className="text-xs text-muted-foreground">Two leads that each already have their own event are separate events and can't be merged — merge their customers instead.</p>}
+    {tab === "lead" && <p className="text-xs text-muted-foreground">Two leads that each have their own event can be merged when the events fall on the same day — the duplicate event is folded into the one you keep and its payments move across. Events on different dates are separate events and can't be merged — merge their customers instead.</p>}
     <div className="space-y-3">{groups.length ? groups.map(([k, g]) => <MergeGroup key={`${tab}-${k}-${g.map(r => r.id).join()}`} name={k} rows={g} kind={tab} describe={tab === "customer" ? custDesc : leadDesc} onDone={onDone} />) : <p className="text-sm text-muted-foreground">No possible duplicates found.</p>}</div>
   </DialogContent></Dialog>;
 }
