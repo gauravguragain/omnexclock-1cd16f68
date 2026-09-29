@@ -325,7 +325,6 @@ export function LeadDetailView({ lead, open, initialTab, options, interactions, 
           <div className="space-y-1.5"><Label>Balance due</Label><DateField name="balance_due" defaultValue={booking?.balance_due_date||""} placeholder="Not set"/></div>
         </div>
         <Button className="h-11 w-full text-base">{booking?"Update booking":"Prepare booking"}</Button>
-        {booking&&<Button type="button" variant="outline" className="w-full" onClick={downloadPdf}><Download className="mr-2 h-4 w-4"/>Download booking PDF</Button>}
         <p className="flex items-start gap-2 text-xs text-muted-foreground"><Info className="mt-0.5 h-3.5 w-3.5 shrink-0"/>Recording the deposit in Payments moves this lead to Deposit received.</p>
       </aside>
     </form>
