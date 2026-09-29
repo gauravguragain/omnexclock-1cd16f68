@@ -42,7 +42,7 @@ function DishPicker({ course, value, onChange, urls, taken, diet }: { course: Co
                     onClick={() => { onChange(d.id); setOpen(false); }}
                     className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-muted disabled:cursor-not-allowed disabled:opacity-40">
                     {img(d) ? <img src={img(d)} alt="" className="h-8 w-8 shrink-0 rounded object-cover sm:hidden" /> : null}
-                    <span className={`inline-block h-2.5 w-2.5 shrink-0 rounded-sm border ${d.diet === "veg" ? "border-primary bg-primary/30" : "border-destructive bg-destructive/30"}`} />
+                    <span className={`inline-block h-2.5 w-2.5 shrink-0 rounded-sm border ${d.diet === "veg" ? "border-success bg-success/30" : "border-destructive bg-destructive/30"}`} />
                      <span className="flex-1">{d.name}{Number(d.extra_price_per_head) > 0 && <span className="ml-2 text-xs font-medium text-primary">+${Number(d.extra_price_per_head).toFixed(2)} per person</span>}</span>
                     {d.id === value && <Check className="h-4 w-4 text-primary" />}
                   </button>
@@ -120,6 +120,7 @@ export default function GuestMenuPage() {
     <div className="min-h-screen bg-background text-foreground">
       <div className="mx-auto max-w-2xl px-4 py-10">
         <div className="mb-8 text-center">
+          {data.business?.logo_url && <img src={data.business.logo_url} alt={`${data.business.name} logo`} className="mx-auto mb-4 max-h-20 w-auto max-w-[240px] object-contain" />}
           <p className="text-xs uppercase tracking-[0.2em] text-primary">{data.business?.name}</p>
           <h1 className="mt-2 font-serif text-3xl font-semibold">Choose your menu</h1>
           <p className="mt-2 text-sm text-muted-foreground">{data.lead?.name ? `For ${data.lead.name} · ` : ""}{data.package?.name}</p>
