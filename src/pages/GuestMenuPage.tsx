@@ -173,12 +173,15 @@ export default function GuestMenuPage() {
               <div className="space-y-1.5"><Label>Dietary requirements</Label><Textarea value={dietary} onChange={(e) => setDietary(e.target.value)} placeholder="e.g. 10 vegan guests" /></div>
               <div className="space-y-1.5"><Label>Allergies</Label><Textarea value={allergies} onChange={(e) => setAllergies(e.target.value)} placeholder="e.g. nut allergy" /></div>
             </section>
+            <p className="text-center text-xs leading-relaxed text-muted-foreground sm:text-sm">
+              <span className="font-medium text-foreground/80">A note on allergens:</span> many of our
+              ingredients are prepared by trusted artisan suppliers, so while every care is taken in our
+              kitchen, dishes may contain traces of common allergens. Please share any dietary needs with
+              your host, and our culinary team will be delighted to assist.
+            </p>
             <Button className="h-12 w-full" onClick={submit} disabled={saving || !courses.length}>{saving ? <Loader2 className="h-4 w-4 animate-spin" /> : "Confirm and send my menu"}</Button>
           </div>
         )}
-        <p className="mt-10 text-center text-xs leading-relaxed text-muted-foreground">
-          <span className="font-medium text-foreground/80">Allergen disclaimer:</span> most ingredients are outsourced, so dishes may contain contamination or traces of allergens.
-        </p>
       </div>
     </div>
   );
