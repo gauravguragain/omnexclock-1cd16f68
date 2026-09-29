@@ -4916,15 +4916,27 @@ export type Database = {
         }
         Returns: boolean
       }
-      submit_guest_menu: {
-        Args: {
-          _allergies: string
-          _dietary: string
-          _picks: Json
-          _token: string
-        }
-        Returns: boolean
-      }
+      submit_guest_menu:
+        | {
+            Args: {
+              _allergies: string
+              _dietary: string
+              _picks: Json
+              _token: string
+            }
+            Returns: boolean
+          }
+        | {
+            Args: {
+              _allergies: string
+              _dietary: string
+              _notes?: Json
+              _picks: Json
+              _proteins?: Json
+              _token: string
+            }
+            Returns: boolean
+          }
       toggle_forum_reaction: {
         Args: {
           _business_code?: string
