@@ -48,11 +48,11 @@ export default function EventsList({ kind }: { kind: "event" | "catering" }) {
    const [tab, setTab] = useState("upcoming"); const [search, setSearch] = useState("");
   if (!crm.business) return null;
   const today = sydneyToday();
+  const paidIds = new Set(payments.filter(p => Number(p.amount) > 0).map(p => p.booking_id));
   const mine = crm.bookings.filter(b => {
     if ((b.booking_kind || "event") !== kind) return false;
-    if (kind === "catering" || !b.lead_id) return true;
-    const lead = crm.leads.find(item => item.id === b.lead_id);
-    return !!lead && isConfirmedLeadStage(lead.status);
+    if (kind === "catering") return true;
+    return paidIds.has(b.id);
   });
   const bucket = (b: any) => b.status === "cancelled" ? "cancelled" : b.event_date < today ? "past" : "upcoming";
   const customer = (b: any) => ev.customers.find(c => c.id === b.customer_id)?.full_name || crm.leads.find(l => l.id === b.lead_id)?.full_name || "—";
