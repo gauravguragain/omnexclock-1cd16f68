@@ -5,3 +5,5 @@ Event menu estimates synchronize into event booking totals in the database, whil
 Event confirmation stores the two child age counts separately while keeping crm_bookings.kids as their sum; other guest-count consumers continue to work unchanged.
 - Menu selections save only through the save_menu_selection RPC (one transaction replaces the selection and all its items), so a save can never half-apply or revert.
 - Venue-clash UI and imports read crm_booking_venue_clashes live; booking notes and lead tags never store clash state, preventing stale import warnings.
+
+- All outgoing emails are wrapped by supabase/functions/_shared/emailLayout.ts (renderBrandedEmail) so every message shares one branded frame.

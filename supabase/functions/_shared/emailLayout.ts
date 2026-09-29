@@ -91,9 +91,8 @@ export function renderBrandedEmail(o: BrandedEmailOptions): string {
   const logo = b.logoUrl
     ? `<img src="${esc(b.logoUrl)}" alt="${esc(b.name)}" height="64" style="display:block;margin:0 auto 12px;max-height:64px;max-width:220px;border:0;" />`
     : "";
-  const contact = [b.address, b.phone, b.email ? `<a href="mailto:${esc(b.email)}" style="color:${C.goldSoft};text-decoration:none;">${esc(b.email)}</a>` : ""]
+  const contact = [b.address ? esc(b.address) : "", b.phone ? esc(b.phone) : "", b.email ? `<a href="mailto:${esc(b.email)}" style="color:${C.goldSoft};text-decoration:none;">${esc(b.email)}</a>` : ""]
     .filter(Boolean)
-    .map((x, i) => (i < 2 && x !== b.email ? esc(x) : x))
     .join(" &nbsp;·&nbsp; ");
   const site = b.website || DEFAULT_WEBSITE;
   return `<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/><meta name="color-scheme" content="light only"/><meta name="supported-color-schemes" content="light"/><title>${esc(o.title)}</title>
