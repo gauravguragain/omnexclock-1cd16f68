@@ -112,6 +112,11 @@ ${o.eyebrow ? `<div style="margin-top:8px;font-family:${SANS};font-size:11px;let
 ${o.bodyHtml}
 ${o.cta ? button(o.cta.label, o.cta.url) : ""}
 </td></tr>
+<tr><td style="padding:0 40px 30px;">
+<div style="border-top:1px solid #E4DCCB;padding-top:18px;font-family:${SANS};font-size:13px;line-height:1.6;color:#5F5A54;">
+<strong style="color:${C.ink};">Please do not reply to this email</strong> — this mailbox is not monitored. For any questions, please contact us${b.email ? ` at <a href="mailto:${esc(b.email)}" style="color:${C.gold};">${esc(b.email)}</a>` : ""}${b.phone ? `${b.email ? " or" : ""} on <a href="tel:${esc(String(b.phone).replace(/\s+/g, ""))}" style="color:${C.gold};">${esc(b.phone)}</a>` : ""}${!b.email && !b.phone ? " directly through the venue" : ""}.
+</div>
+</td></tr>
 <tr><td align="center" style="background:${C.ink};padding:26px 24px;font-family:${SANS};font-size:12px;line-height:1.8;color:#B9B4AD;">
 <div style="font-family:${SERIF};font-size:16px;letter-spacing:2px;color:${C.gold};">${esc(b.name)}</div>
 ${contact ? `<div>${contact}</div>` : ""}
