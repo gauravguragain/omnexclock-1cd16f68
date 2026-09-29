@@ -176,6 +176,9 @@ export default function GuestMenuPage() {
             <Button className="h-12 w-full" onClick={submit} disabled={saving || !courses.length}>{saving ? <Loader2 className="h-4 w-4 animate-spin" /> : "Confirm and send my menu"}</Button>
           </div>
         )}
+        <p className="mt-10 text-center text-xs leading-relaxed text-muted-foreground">
+          <span className="font-medium text-foreground/80">Allergen disclaimer:</span> most ingredients are outsourced, so dishes may contain contamination or traces of allergens.
+        </p>
       </div>
     </div>
   );
