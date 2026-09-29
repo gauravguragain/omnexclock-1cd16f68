@@ -139,6 +139,17 @@ export function BookingPaymentsCard({ booking, onChanged }: { booking: any; onCh
   const s = useMemo(() => paymentSummary(booking, payments), [booking, payments]);
   const [edit, setEdit] = useState(false);
   const [amounts, setAmounts] = useState({ total_amount: "", deposit_amount: "", deposit_due_date: "", balance_due_date: "" });
+  const [selTotal, setSelTotal] = useState<number | null>(null);
+  useEffect(() => {
+    let dead = false;
+    setSelTotal(null);
+    if (!booking?.lead_id) return;
+    (async () => {
+      const { data } = await (supabase as any).from("crm_menu_selections").select("total_estimate").eq("lead_id", booking.lead_id).order("updated_at", { ascending: false }).limit(1).maybeSingle();
+      if (!dead && data?.total_estimate != null) setSelTotal(Number(data.total_estimate) || 0);
+    })();
+    return () => { dead = true; };
+  }, [booking?.id, booking?.lead_id]);
   if (!booking) return null;
   const suggested = s.paid < s.deposit ? { type: "deposit", amount: s.deposit - s.paid } : { type: "balance", amount: Math.max(s.balance, 0) };
   const changed = () => { refresh(); onChanged?.(); };
@@ -149,15 +160,17 @@ export function BookingPaymentsCard({ booking, onChanged }: { booking: any; onCh
   };
   const startEdit = () => { setAmounts({ total_amount: String(booking.total_amount ?? ""), deposit_amount: String(booking.deposit_amount ?? ""), deposit_due_date: booking.deposit_due_date || "", balance_due_date: booking.balance_due_date || "" }); setEdit(true); };
   const saveAmounts = async () => {
-    const { error } = await supabase.from("crm_bookings").update({ total_amount: Number(amounts.total_amount) || 0, deposit_amount: Number(amounts.deposit_amount) || 0, deposit_due_date: amounts.deposit_due_date || null, balance_due_date: amounts.balance_due_date || null }).eq("id", booking.id);
+    const { error } = await supabase.from("crm_bookings").update({ total_amount: selTotal != null ? selTotal : Number(amounts.total_amount) || 0, deposit_amount: Number(amounts.deposit_amount) || 0, deposit_due_date: amounts.deposit_due_date || null, balance_due_date: amounts.balance_due_date || null }).eq("id", booking.id);
     if (error) { toast.error(error.message); return; }
-    toast.success("Amounts updated"); setEdit(false); onChanged?.();
+    toast.success(selTotal != null ? "Amounts updated (total comes from the menu selection)" : "Amounts updated"); setEdit(false); onChanged?.();
   };
   const pct = s.total > 0 ? Math.min(100, Math.max(0, (s.paid / s.total) * 100)) : 0;
   return <Card><CardContent className="space-y-4 p-6">
     <div className="flex items-center justify-between gap-2"><p className="flex items-center gap-2 border-l-2 border-primary pl-3 text-lg font-semibold"><Wallet className="h-4 w-4" />Payments</p><PaymentBadge status={s.status} overdue={s.overdue} /></div>
     {edit ? <div className="grid grid-cols-2 gap-3">
-      <div><Label className="text-xs">Booking total</Label><Input type="number" step="0.01" value={amounts.total_amount} onChange={e => setAmounts(a => ({ ...a, total_amount: e.target.value }))} /></div>
+      {selTotal != null
+        ? <div><Label className="text-xs">Booking total</Label><div className="flex h-9 items-center rounded-md border border-input bg-muted/40 px-3 text-sm font-medium">{money(selTotal)}<span className="ml-2 text-xs font-normal text-muted-foreground">from menu selection</span></div></div>
+        : <div><Label className="text-xs">Booking total</Label><Input type="number" step="0.01" value={amounts.total_amount} onChange={e => setAmounts(a => ({ ...a, total_amount: e.target.value }))} /></div>}
       <div><Label className="text-xs">Deposit required</Label><Input type="number" step="0.01" value={amounts.deposit_amount} onChange={e => setAmounts(a => ({ ...a, deposit_amount: e.target.value }))} /></div>
       <div><Label className="text-xs">Deposit due</Label><Input type="date" value={amounts.deposit_due_date} onChange={e => setAmounts(a => ({ ...a, deposit_due_date: e.target.value }))} /></div>
       <div><Label className="text-xs">Balance due</Label><Input type="date" value={amounts.balance_due_date} onChange={e => setAmounts(a => ({ ...a, balance_due_date: e.target.value }))} /></div>
