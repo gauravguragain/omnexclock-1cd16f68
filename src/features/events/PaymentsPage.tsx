@@ -1,3 +1,4 @@
+import { prettyCrmValue } from "@/features/sales/types";
 import { useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { format } from "date-fns";

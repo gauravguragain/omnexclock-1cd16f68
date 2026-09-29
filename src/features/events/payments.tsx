@@ -1,3 +1,4 @@
+import { prettyCrmValue } from "@/features/sales/types";
 import { useLiveSync } from "@/hooks/useLiveSync";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { format } from "date-fns";
