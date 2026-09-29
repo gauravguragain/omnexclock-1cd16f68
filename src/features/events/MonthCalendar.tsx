@@ -93,7 +93,12 @@ export default function MonthCalendar({ bookings, leads, runsheets, customers, v
     <Dialog open={!!selectedDate} onOpenChange={open => !open && setSelectedDate(null)}>
       <DialogContent className="max-h-[88dvh] w-[calc(100vw-1rem)] max-w-[480px] overflow-y-auto p-0">
         <DialogHeader className="border-b border-border p-5 pr-12 text-left"><div className="flex items-center gap-3"><span className="rounded-md bg-primary/10 p-2 text-primary"><CalendarDays className="h-5 w-5" /></span><div><DialogTitle className="text-base">{selectedDate ? format(new Date(`${selectedDate}T00:00:00`), "EEEE, MMMM d, yyyy") : "Events"}</DialogTitle><p className="mt-1 text-xs text-muted-foreground">{selected.length} {selected.length === 1 ? "event" : "events"}, {groups.length} {groups.length === 1 ? "venue" : "venues"}</p></div></div></DialogHeader>
-        <div className="space-y-4 pb-5">{groups.map(place => <section key={place}>
+        {/* Mobile: swipe sideways through the day's events as cards */}
+        <div className="flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-5 pt-4 sm:hidden" style={{ WebkitOverflowScrolling: "touch" }}>
+          {selected.map(b => <div key={b.id} className="w-[82vw] max-w-[320px] shrink-0 snap-center overflow-hidden rounded-lg border border-border bg-card shadow-sm">{renderEventDetail(b)}</div>)}
+        </div>
+        {/* Desktop: grouped vertical list */}
+        <div className="hidden space-y-4 pb-5 sm:block">{groups.map(place => <section key={place}>
           <h3 className="bg-muted/60 px-5 py-2 text-xs font-semibold uppercase text-muted-foreground">{place}</h3>
           <div className="divide-y divide-border">{selected.filter(b => placeOf(b) === place).map(b => <div key={b.id}>{renderEventDetail(b)}</div>)}</div>
         </section>)}</div>
