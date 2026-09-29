@@ -3,12 +3,51 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Pencil, Plus, X } from "lucide-react";
+import { ChevronDown, Pencil, Plus, X } from "lucide-react";
 import { toast } from "sonner";
 
 type Pkg = any;
 const sel = "h-9 w-full rounded-md border border-input bg-background px-3 text-sm";
 type Pick = { course: string; courseId: string; dish: any; protein?: string; notes?: string; oneOff?: boolean };
+
+/** Searchable dish picker: type to filter the course's dish list, then choose one. */
+function DishSearchSelect({ course, chosen, vegCount, nonVegCount, onPick }: { course: any; chosen: string[]; vegCount: number; nonVegCount: number; onPick: (id: string) => void }) {
+  const [open, setOpen] = useState(false);
+  const [q, setQ] = useState("");
+  const separate = course.veg_picks != null || course.non_veg_picks != null;
+  const eligible = course.dishes.filter((d: any) => !chosen.includes(d.id) && (!separate || (d.diet === "veg" ? vegCount < (course.veg_picks ?? 0) : nonVegCount < (course.non_veg_picks ?? 0))));
+  const term = q.trim().toLowerCase();
+  const filtered = term ? eligible.filter((d: any) => d.name.toLowerCase().includes(term)) : eligible;
+  const pick = (id: string) => { onPick(id); setOpen(false); setQ(""); };
+  return (
+    <Popover open={open} onOpenChange={o => { setOpen(o); if (o) setQ(""); }}>
+      <PopoverTrigger asChild>
+        <button type="button" aria-label={`Add a ${course.name.toLowerCase()} dish`} className="flex h-9 w-full items-center justify-between gap-2 rounded-md border border-input bg-background px-3 text-sm text-muted-foreground hover:border-primary">
+          <span>{`Add a ${course.name.toLowerCase()} dish…`}</span>
+          <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground" />
+        </button>
+      </PopoverTrigger>
+      <PopoverContent align="start" className="w-[min(calc(100vw-2rem),420px)] space-y-2 p-2">
+        <Input autoFocus placeholder={`Search ${course.name.toLowerCase()} dishes…`} value={q} onChange={e => setQ(e.target.value)} />
+        <ul className="max-h-60 overflow-y-auto rounded-md border border-border">
+          {filtered.map((d: any) => (
+            <li key={d.id}>
+              <button type="button" onClick={() => pick(d.id)} className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-muted">
+                <span className={`inline-block h-2.5 w-2.5 shrink-0 rounded-sm border ${d.diet === "veg" ? "border-success bg-success/30" : "border-destructive bg-destructive/30"}`} />
+                <span className="flex-1 truncate">{d.name}{Number(d.extra_price_per_head) > 0 ? ` · +$${Number(d.extra_price_per_head).toFixed(2)}/person` : ""}{d.protein_options?.length ? " · choose protein" : ""}</span>
+                <span className="shrink-0 text-xs text-muted-foreground">{d.diet === "veg" ? "Veg" : d.diet === "seafood" ? "Seafood" : "Non-veg"}</span>
+              </button>
+            </li>
+          ))}
+          {!filtered.length && <li className="px-3 py-3 text-sm text-muted-foreground">No dishes match “{q}”.</li>}
+          <li className="border-t border-border">
+            <button type="button" onClick={() => pick("__other__")} className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-primary hover:bg-muted"><Plus className="h-3.5 w-3.5" />Other (type your own)…</button>
+          </li>
+        </ul>
+      </PopoverContent>
+    </Popover>
+  );
+}
 type InitialSelection = { bookId: string; pkgId: string; picks: Record<string, string[]>; proteins: Record<string, string>; price: string; notes?: Record<string, string>; oneOffs?: Record<string, { name: string; diet: string }> };
 
 /** Pick a menu book, then a package, then choose dishes per course from that package's setup. */
@@ -62,7 +101,7 @@ export default function MenuBookPicker({ packages, onAdd, initial, onCancel }: {
        {pkg.courses.map((c: any) => { const chosen = picks[c.id] || []; const chosenDishes = chosen.map(id => dishFor(c, id)).filter(Boolean); const vegCount = chosenDishes.filter((d: any) => d.diet === "veg").length; const nonVegCount = chosenDishes.length - vegCount; const full = Boolean(c.picks && chosen.length >= c.picks) || (c.veg_picks != null && c.non_veg_picks != null && vegCount >= c.veg_picks && nonVegCount >= c.non_veg_picks); return <div key={c.id} className="space-y-1.5">
         <div className="flex flex-wrap items-center justify-between gap-1 text-sm"><span className="font-medium">{c.name}</span><span className="text-xs text-muted-foreground">{c.veg_picks != null || c.non_veg_picks != null ? `Veg ${vegCount}/${c.veg_picks ?? "∞"} · Non-veg ${nonVegCount}/${c.non_veg_picks ?? "∞"}${c.picks ? ` · Total ${chosen.length}/${c.picks}` : ""}` : c.picks ? `Choose ${c.picks} · ${chosen.length} chosen` : `${chosen.length} chosen`}</span></div>
          <div className="flex flex-wrap gap-1.5">{chosen.map(id => { const d = dishFor(c, id); const noteKey = `${c.id}:${id}`; return <Badge key={id} variant="outline" className="group/dish max-w-full gap-1 py-1"><span className="text-primary">{d?.diet === "veg" ? "V" : d?.diet === "seafood" ? "SF" : "N"}</span><span className="max-w-[12rem] truncate" title={d?.name}>{d?.name}</span>{notes[noteKey]?.trim() && <span className="max-w-[12rem] truncate text-muted-foreground" title={notes[noteKey]}>— {notes[noteKey]}</span>}{Number(d?.extra_price_per_head) > 0 && <span className="text-primary">+${Number(d.extra_price_per_head).toFixed(2)}/person</span>}{d?.protein_options?.length > 0 && <select aria-label="Protein" className={`ml-1 h-6 rounded border bg-background px-1 text-xs ${proteins[noteKey] ? "border-input" : "border-destructive"}`} value={proteins[noteKey] || ""} onChange={e => setProteins(p => ({ ...p, [noteKey]: e.target.value }))}><option value="">Protein…</option>{d.protein_options.map((o: string) => <option key={o} value={o}>{o}</option>)}</select>}<Popover><PopoverTrigger asChild><Button type="button" size="icon" variant="ghost" title={`Customise ${d?.name}`} aria-label={`Customise ${d?.name}`} className={`h-6 w-6 ${notes[noteKey] ? "text-primary" : "opacity-60 sm:opacity-0 sm:group-hover/dish:opacity-100 sm:group-focus-within/dish:opacity-100"}`}><Pencil className="h-3 w-3" /></Button></PopoverTrigger><PopoverContent className="w-72 space-y-2"><label className="text-sm font-medium" htmlFor={`note-${id}`}>Customisations for {d?.name}</label><Input id={`note-${id}`} maxLength={500} placeholder="e.g. no onion, mild spice" value={notes[noteKey] || ""} onChange={e => setNotes(p => ({ ...p, [noteKey]: e.target.value }))} /></PopoverContent></Popover><Button type="button" size="icon" variant="ghost" title={`Remove ${d?.name}`} aria-label={`Remove ${d?.name}`} className="h-6 w-6" onClick={() => setPicks(p => ({ ...p, [c.id]: chosen.filter(x => x !== id) }))}><X className="h-3 w-3" /></Button></Badge>; })}</div>
-         {!full && <select className={sel} value="" onChange={e => { if (e.target.value === "__other__") { setOtherCourse(c.id); setOtherName(""); } else if (e.target.value) setPicks(p => ({ ...p, [c.id]: [...chosen, e.target.value] })); }}><option value="">{`Add a ${c.name.toLowerCase()} dish…`}</option>{c.dishes.filter((d: any) => { const separate = c.veg_picks != null || c.non_veg_picks != null; return !chosen.includes(d.id) && (!separate || (d.diet === "veg" ? vegCount < (c.veg_picks ?? 0) : nonVegCount < (c.non_veg_picks ?? 0))); }).map((d: any) => <option key={d.id} value={d.id}>{d.name} ({d.diet === "veg" ? "Veg" : "Non-veg"}){Number(d.extra_price_per_head) > 0 ? ` · +$${Number(d.extra_price_per_head).toFixed(2)}/person` : ""}{d.protein_options?.length ? " · choose protein" : ""}</option>)}<option value="__other__">Other (type your own)…</option></select>}
+         {!full && <DishSearchSelect course={c} chosen={chosen} vegCount={vegCount} nonVegCount={nonVegCount} onPick={id => { if (id === "__other__") { setOtherCourse(c.id); setOtherName(""); } else setPicks(p => ({ ...p, [c.id]: [...chosen, id] })); }} />}
          {otherCourse === c.id && <div className="flex flex-wrap items-center gap-2"><Input className="min-w-40 flex-1" autoFocus maxLength={120} aria-label={`Other ${c.name} item`} placeholder="One-off menu item" value={otherName} onChange={e => setOtherName(e.target.value)} onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); addOther(c); } }} /><select className="h-9 rounded-md border border-input bg-background px-2 text-sm" aria-label="Diet" value={otherDiet} onChange={e => setOtherDiet(e.target.value)}><option value="veg">Vegetarian</option><option value="nonveg">Non-vegetarian</option><option value="seafood">Seafood</option></select><Button type="button" size="sm" onClick={() => addOther(c)}>Add</Button><Button type="button" size="icon" variant="ghost" aria-label="Cancel other item" onClick={() => setOtherCourse(null)}><X className="h-4 w-4" /></Button></div>}
       </div>; })}
       <div className="flex flex-wrap items-center gap-2">
