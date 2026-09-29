@@ -262,7 +262,7 @@ export default function RunsheetTab({ lead, booking, options, onSaved }: {
     if (!saved) { setSaving(false); return null; }
     const { data: orderNo, error: orderErr } = await supabase.rpc("crm_issue_event_order" as any, { _runsheet_id: saved.id });
     if (orderErr) { toast.error(orderErr.message); setSaving(false); return null; }
-    saved.event_order_number = orderNo; setRunsheet({ ...saved }); setForm((f: any) => ({ ...f, event_order_number: String(orderNo || "") }));
+    saved.event_order_number = orderNo; setRunsheet({ ...saved }); setForm((f) => ({ ...f, event_order_number: String(orderNo || "") }));
 
     const audience = form.distributed_to || "the operations team";
     await supabase.from("crm_interactions").insert({

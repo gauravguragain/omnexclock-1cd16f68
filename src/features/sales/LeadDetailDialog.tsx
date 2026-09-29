@@ -283,7 +283,7 @@ export function LeadDetailView({ lead, open, initialTab, options, interactions, 
   <TabsContent value="booking" className="space-y-5">
     <div className="flex flex-wrap items-center justify-between gap-2">
       <h3 className="font-serif text-2xl italic">Event confirmation</h3>
-      {booking?.event_order_number?<Badge className="gap-1"><Check className="h-3 w-3"/>Order {booking.event_order_number}</Badge>:<Badge variant="outline">Order assigned on save</Badge>}
+      {booking?.event_order_number?<Badge className="gap-1"><Check className="h-3 w-3"/>Order {booking.event_order_number}</Badge>:<Badge variant="outline">Order assigned when run sheet is sent</Badge>}
     </div>
     <form onSubmit={createBooking} className="grid gap-5 lg:grid-cols-[7fr_5fr]">
       <div className="space-y-5">
