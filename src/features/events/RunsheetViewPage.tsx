@@ -139,14 +139,14 @@ export function RunsheetDocument({ rs, lead, b, items, selection, businessName, 
           {selection?.beverage_package && <div className="pt-3"><h2 className="font-bold">Beverages – {selection.beverage_detail?.name || prettyCrmValue(selection.beverage_package)}</h2>{selection.beverage_detail?.description && <p className="pl-3 italic">{selection.beverage_detail.description}</p>}</div>}
           {(selection?.beverage_detail?.sections || []).filter((sec: any) => sec.name || sec.items.length || sec.notes).map((sec: any, i: number) => <div key={i} className="pt-1"><h3 className="pl-3 font-semibold">{sec.name}{sec.picks ? ` (choose ${sec.picks})` : ""}</h3>{sec.notes && <p className="whitespace-pre-line pl-6">{sec.notes}</p>}{sec.items.map((n: string) => <p key={n} className="pl-6">- {n}</p>)}</div>)}
           {selection?.corkage_enabled && <div className="pt-1"><p>Corkage: host is bringing their own drinks{selection?.corkage_note ? ` – ${selection.corkage_note}` : ""}.</p></div>}
-          {selection?.dietary_requirements && <div className="pt-2"><p>Dietary: {selection.dietary_requirements}</p></div>}
-          {selection?.allergies && <div className="pt-1"><p className="font-semibold">ALLERGIES: {selection.allergies}</p></div>}
           {!items.length && <div className="pt-2"><p className="text-muted-foreground">No menu saved yet.</p></div>}
           <div className="pt-4"><h2 className="font-bold">Setup & Additional Information</h2>{setup.map(s => <p key={s} className="pl-3">• {s}</p>)}</div>
           {rs.setup_notes && <div className="pt-2"><p className="whitespace-pre-line pl-3">{rs.setup_notes}</p></div>}
           {rs.access_time && <div className="pt-2"><p>Decor / vendor access: {to12(rs.access_time)}</p></div>}
           {rs.special_requests && <div className="pt-2"><p>Special requests: {rs.special_requests}</p></div>}
           {fohSchedule.some((s: any) => s?.label) && <div className="pt-4"><h2 className="font-bold">FOH service schedule</h2>{fohSchedule.filter((s: any) => s?.label).map((s, i) => <p key={i} className="pl-3">• {slot(s) || "—"} – {s.label}{s.detail ? ` (${s.detail})` : ""}</p>)}</div>}
+           {selection?.dietary_requirements && <div className="pt-3 font-bold"><p>Dietary requirements:</p><p className="whitespace-pre-wrap">{selection.dietary_requirements}</p></div>}
+           {selection?.allergies && <div className="pt-3 font-bold"><p>Allergies:</p><p className="whitespace-pre-wrap">{selection.allergies}</p></div>}
           {rs.client_notes && <div className="pt-4"><h2 className="font-bold">Client notes</h2><p className="whitespace-pre-line pl-3">{rs.client_notes}</p></div>}
           {internal && rs.ops_notes && <div className="pt-4 text-kitchen-note"><h2 className="font-bold">Kitchen team notes</h2><p className="whitespace-pre-line pl-3">{rs.ops_notes}</p></div>}
           {internal && rs.foh_notes && <div className="pt-4 text-foh-note"><h2 className="font-bold">Front of house notes</h2><p className="whitespace-pre-line pl-3">{rs.foh_notes}</p></div>}

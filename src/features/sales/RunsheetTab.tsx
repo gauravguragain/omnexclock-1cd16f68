@@ -120,7 +120,7 @@ export default function RunsheetTab({ lead, booking, options, onSaved }: {
         adult_guests: String(booking?.guest_count || lead.estimated_guest_count || ""),
         booking_reference: lead.id.slice(0, 10).toUpperCase(),
         onsite_contact_name: lead.full_name, onsite_contact_phone: lead.phone || "",
-        client_notes: menu.selection?.dietary_requirements || "",
+         client_notes: "",
       }));
     }
     setLoading(false);
@@ -187,7 +187,6 @@ export default function RunsheetTab({ lead, booking, options, onSaved }: {
       booking_reference: prev.booking_reference || lead.id.slice(0, 10).toUpperCase(),
       onsite_contact_name: prev.onsite_contact_name || lead.full_name,
       onsite_contact_phone: prev.onsite_contact_phone || lead.phone || "",
-      client_notes: prev.client_notes || [menu.selection?.dietary_requirements, menu.selection?.allergies ? `Allergies: ${menu.selection.allergies}` : ""].filter(Boolean).join(" · "),
     }));
     if (!schedule.length && !fohSchedule.length) suggestSchedule();
     toast.success("Runsheet built from the booking and menu");
