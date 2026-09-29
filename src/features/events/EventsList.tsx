@@ -76,7 +76,7 @@ export default function EventsList({ kind }: { kind: "event" | "catering" }) {
     <td className="p-3">{kind === "event" ? b.venue_space : b.fulfilment_method === "pickup" ? "Pickup from venue" : b.service_location || "—"}</td>
     <td className="p-3">{customer(b)}</td>
     <td className="p-3">{b.adults ?? b.guest_count}<p className="text-xs text-muted-foreground">{b.kids ? `${b.kids} kids` : "No kids"}</p></td>
-    <td className="p-3"><Badge variant={bucket(b) === "cancelled" ? "destructive" : kind === "event" && eventWithinWeek(b, today) ? "success" : "outline"} className="whitespace-nowrap">{kind === "event" ? eventStatus(b, today) : prettyCrmValue(bucket(b))}</Badge></td>
+    <td className="p-3"><Badge variant={bucket(b) === "cancelled" ? "destructive" : eventWithinWeek(b, today) ? "success" : "outline"} className="whitespace-nowrap">{kind === "event" ? eventStatus(b, today) : eventStatus(b, today)}</Badge></td>
     {kind === "event" && <td className="p-3"><div className="flex flex-col items-start gap-1">{paymentLabels(b).map(label => <Badge key={label} variant={/overdue/i.test(label) ? "destructive" : "success"} className="whitespace-nowrap">{label}</Badge>)}</div></td>}
     <td className="p-3 font-mono text-xs">{b.event_order_number || "—"}</td>
     <td className="p-3 text-right">{b.status === "cancelled" ? <Button size="sm" variant="ghost" onClick={() => setStatus(b, "confirmed")}>Restore</Button> : <Button size="sm" variant="ghost" onClick={() => confirm("Cancel this booking?") && setStatus(b, "cancelled")}>Cancel</Button>}</td>
