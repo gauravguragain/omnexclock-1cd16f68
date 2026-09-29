@@ -159,7 +159,7 @@ export function BookingPaymentsCard({ booking, onChanged }: { booking: any; onCh
         <p>Deposit {money(s.deposit)}{booking.deposit_due_date ? ` · due ${format(new Date(booking.deposit_due_date + "T00:00"), "d MMM yyyy")}` : ""}</p>
         {booking.balance_due_date && <p>Balance due {format(new Date(booking.balance_due_date + "T00:00"), "d MMM yyyy")}</p>}
       </div>
-      <div className="flex flex-wrap gap-2"><Button size="sm" onClick={() => setOpen(true)}><Plus className="mr-1 h-4 w-4" />Record payment</Button><Button size="sm" variant="outline" onClick={startEdit}>Edit amounts</Button></div>
+      <div className="flex flex-wrap gap-2"><Button size="sm" onClick={() => setOpen(true)}><Plus className="mr-1 h-4 w-4" />Record payment</Button></div>
     </>}
     <div className="space-y-2">{payments.length ? payments.map(p => <div key={p.id} className="flex items-start justify-between gap-2 rounded-md border border-border p-2 text-sm">
       <div className="min-w-0"><p className="font-medium">{money(p.amount)} <span className="font-normal text-muted-foreground">· {PAYMENT_TYPES[p.payment_type] || p.payment_type}</span></p>
