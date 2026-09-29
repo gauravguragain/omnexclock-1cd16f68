@@ -176,9 +176,15 @@ export default function GuestMenuPage() {
             <Button className="h-12 w-full" onClick={submit} disabled={saving || !courses.length}>{saving ? <Loader2 className="h-4 w-4 animate-spin" /> : "Confirm and send my menu"}</Button>
           </div>
         )}
-        <p className="mt-10 text-center text-xs leading-relaxed text-muted-foreground">
-          <span className="font-medium text-foreground/80">Allergen disclaimer:</span> most ingredients are outsourced, so dishes may contain contamination or traces of allergens.
-        </p>
+        <div className="mt-10 text-center">
+          <div className="mx-auto mb-4 h-px w-16 bg-border" />
+          <p className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">Allergen notice</p>
+          <p className="mx-auto mt-2 max-w-md font-serif text-sm italic leading-relaxed text-muted-foreground">
+            Many of our ingredients are prepared by our specialist suppliers. While every care is taken, our dishes may
+            contain traces of common allergens. Should you have any dietary concerns, please speak with our team and we
+            will be delighted to assist.
+          </p>
+        </div>
       </div>
     </div>
   );
