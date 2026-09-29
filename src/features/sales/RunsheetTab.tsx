@@ -125,7 +125,7 @@ export default function RunsheetTab({ lead, booking, options, onSaved }: {
       }));
     }
     setLoading(false);
-  }, [lead.id, lead.business_id, lead.full_name, lead.phone, lead.estimated_guest_count, booking?.guest_count]);
+  }, [lead.id, lead.business_id, lead.full_name, lead.phone, lead.estimated_guest_count, booking?.guest_count, booking?.adults, booking?.kids, booking?.id]);
 
   useEffect(() => { void load(); }, [load]);
 
