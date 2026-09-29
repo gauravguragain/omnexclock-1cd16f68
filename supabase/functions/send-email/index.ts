@@ -501,6 +501,40 @@ serve(async (req) => {
         subject: `${b.kind === "confirmation" ? "Event confirmed" : "Run sheet"} — ${b.eventTitle}${b.dateLabel ? ` (${b.dateLabel})` : ""}`,
         html,
       };
+    } else if ((body as any).type === "deposit_confirmation") {
+      const b = body as any;
+      if (!b.to || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(b.to) || !b.depositAmount) throw new Error("Missing required fields for deposit email");
+      const esc = (s: unknown) => String(s ?? "").slice(0, 300).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]!));
+      const biz = esc(b.businessName || "Pro Regal Management");
+      const row = (k: string, v: unknown, bold = false) => v ? `<tr><td style="padding:7px 0;color:#777;font-size:13px;width:45%;">${k}</td><td style="padding:7px 0;font-size:13px;color:#1a1a1a;${bold ? "font-weight:bold;" : ""}">${esc(v)}</td></tr>` : "";
+      const html = `
+        <div style="font-family:'Segoe UI',Arial,sans-serif;max-width:600px;margin:0 auto;color:#1a1a1a;background:#ffffff;">
+          <div style="text-align:center;padding:28px 20px 16px;background:#1a1a1a;border-radius:12px 12px 0 0;">
+            <h1 style="color:#ac845d;font-size:22px;margin:0;letter-spacing:1px;">${biz}</h1>
+            <p style="color:#a0a0a0;font-size:11px;margin:6px 0 0;text-transform:uppercase;letter-spacing:2px;">Deposit Confirmation</p>
+          </div>
+          <div style="padding:24px 30px;">
+            <p style="font-size:14px;">Dear ${esc(b.recipientName || "Guest")},</p>
+            <p style="font-size:14px;line-height:1.6;color:#444;">Thank you — we are pleased to confirm that we have received your deposit for <strong>${esc(b.eventTitle)}</strong>${b.eventDate ? ` on <strong>${esc(b.eventDate)}</strong>` : ""}. Your date is now secured.</p>
+            <div style="margin:18px 0;padding:14px 18px;border:1px solid #e8dcc8;border-left:4px solid #ac845d;border-radius:6px;background:#fbf8f2;">
+              <table style="width:100%;border-collapse:collapse;">
+                ${row("Deposit received", b.depositAmount, true)}${row("Date received", b.receivedDate)}${row("Payment method", b.method)}${row("Reference", b.reference)}
+                ${row("Total event amount", b.totalAmount)}${row("Balance remaining", b.balanceRemaining, true)}${row("Balance due by", b.balanceDueDate, true)}
+              </table>
+            </div>
+            <p style="font-size:13px;color:#444;line-height:1.6;">${b.balanceDueDate ? `The remaining balance is due by <strong>${esc(b.balanceDueDate)}</strong>. ` : ""}If you have any questions about your payment or event, simply reply to this email and our team will be happy to help.</p>
+            <p style="font-size:13px;color:#444;">Warm regards,<br/>${biz}</p>
+          </div>
+          <div style="text-align:center;padding:14px 30px;background:#f8f9fa;border-radius:0 0 12px 12px;">
+            <p style="color:#999;font-size:11px;margin:0;">Sent by ${biz}. Please keep this email for your records.</p>
+          </div>
+        </div>`;
+      emailPayload = {
+        from: `${b.businessName || "Pro Regal Management"} <noreply@regalmanagement.com.au>`,
+        to: [b.to],
+        subject: `Deposit received — ${String(b.eventTitle || "your event").slice(0, 120)}`,
+        html,
+      };
     } else if ((body as any).type === "menu") {
       const b = body as any;
       if (!b.to || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(b.to) || !Array.isArray(b.sections)) throw new Error("Missing required fields for menu email");

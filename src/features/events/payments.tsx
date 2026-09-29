@@ -76,18 +76,51 @@ export function RecordPaymentDialog({ open, onOpenChange, booking, bookings, sug
     return sortedBookings.filter(b => bookingLabel(b).toLowerCase().includes(q));
   }, [sortedBookings, search]);
   const target = booking || bookings?.find(b => b.id === form.booking_id);
-  const save = async () => {
+  const [guest, setGuest] = useState<{ name: string; email: string }>({ name: "", email: "" });
+  const [bizName, setBizName] = useState("");
+  useEffect(() => {
+    if (!open || !target) return;
+    let off = false;
+    (async () => {
+      let name = target.client_name || "", email = "";
+      if (target.customer_id) { const { data } = await (supabase as any).from("crm_customers").select("full_name,email").eq("id", target.customer_id).maybeSingle(); if (data) { name = name || data.full_name; email = data.email || ""; } }
+      if (!email && target.lead_id) { const { data } = await (supabase as any).from("crm_leads").select("full_name,email").eq("id", target.lead_id).maybeSingle(); if (data) { name = name || data.full_name; email = data.email || ""; } }
+      const { data: biz } = await (supabase as any).from("businesses").select("name").eq("id", target.business_id).maybeSingle();
+      if (!off) { setGuest({ name, email }); setBizName(biz?.name || ""); }
+    })();
+    return () => { off = true; };
+  }, [open, target?.id]);
+  const save = async (sendConfirmation = false) => {
     const amt = Number(form.amount);
     if (!target) { toast.error("Choose a booking."); return; }
     if (!amt || amt <= 0) { toast.error("Enter an amount above $0."); return; }
+    if (sendConfirmation && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(guest.email.trim())) { toast.error("Enter the guest's email address."); return; }
     setSaving(true);
     const { error } = await (supabase as any).from("crm_payments").insert({
       business_id: target.business_id, booking_id: target.id, amount: form.payment_type === "refund" ? -amt : amt,
       paid_on: form.paid_on, payment_type: form.payment_type, method: form.method, reference: form.reference.trim() || null, notes: form.notes.trim() || null,
     });
-    setSaving(false);
-    if (error) { toast.error(error.message); return; }
-    toast.success(form.payment_type === "refund" ? "Refund recorded" : "Payment recorded");
+    if (error) { setSaving(false); toast.error(error.message); return; }
+    if (sendConfirmation) {
+      const fmt = (d?: string | null) => d ? format(new Date(d + "T00:00"), "d MMMM yyyy") : "";
+      const total = Number(target.total_amount) || 0;
+      const { data: pays } = await (supabase as any).from("crm_payments").select("amount").eq("booking_id", target.id);
+      const paid = (pays || []).reduce((s: number, p: any) => s + Number(p.amount || 0), 0);
+      const { error: e2 } = await supabase.functions.invoke("send-email", { body: {
+        type: "deposit_confirmation", to: guest.email.trim(), recipientName: guest.name, businessName: bizName,
+        eventTitle: target.event_name || target.event_type || "your event", eventDate: fmt(target.event_date),
+        depositAmount: money(amt), receivedDate: fmt(form.paid_on), method: PAYMENT_METHODS[form.method] || form.method,
+        reference: form.reference.trim() || undefined,
+        totalAmount: total > 0 ? money(total) : undefined, balanceRemaining: total > 0 ? money(Math.max(0, total - paid)) : undefined,
+        balanceDueDate: fmt(target.balance_due_date) || undefined,
+      } });
+      setSaving(false);
+      if (e2) toast.error("Payment saved, but the deposit confirmation email failed to send.");
+      else toast.success(`Deposit recorded and confirmation sent to ${guest.email.trim()}`);
+    } else {
+      setSaving(false);
+      toast.success(form.payment_type === "refund" ? "Refund recorded" : "Payment recorded");
+    }
     onOpenChange(false); onSaved();
   };
   const set = (k: string, v: string) => setForm(f => ({ ...f, [k]: v }));
@@ -127,8 +160,12 @@ export function RecordPaymentDialog({ open, onOpenChange, booking, bookings, sug
       <div><Label>Reference (e.g. Xero invoice no.)</Label><Input value={form.reference} onChange={e => set("reference", e.target.value)} placeholder="INV-0001" /></div>
       <div><Label>Notes</Label><Textarea rows={2} value={form.notes} onChange={e => set("notes", e.target.value)} /></div>
       {target && <p className="text-xs text-muted-foreground">Booking total {money(target.total_amount)} · deposit {money(target.deposit_amount)}</p>}
+      {form.payment_type === "deposit" && target && <div><Label>Guest email (for deposit confirmation)</Label><Input type="email" value={guest.email} onChange={e => setGuest(g => ({ ...g, email: e.target.value }))} placeholder="guest@example.com" /></div>}
     </div>
-    <DialogFooter><Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button><Button onClick={save} disabled={saving}>{saving ? "Saving…" : "Save payment"}</Button></DialogFooter>
+    <DialogFooter className="gap-2"><Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
+      <Button variant={form.payment_type === "deposit" ? "outline" : "default"} onClick={() => save(false)} disabled={saving}>{saving ? "Saving…" : "Save payment"}</Button>
+      {form.payment_type === "deposit" && <Button onClick={() => save(true)} disabled={saving}>{saving ? "Sending…" : "Save & send confirmation"}</Button>}
+    </DialogFooter>
   </DialogContent></Dialog>;
 }
 
