@@ -4,12 +4,13 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Check, ChevronDown, ImageOff, Loader2, UtensilsCrossed, X } from "lucide-react";
 import { toast } from "sonner";
 import { signDishPhotos } from "@/features/events/dishPhotos";
 
-type Dish = { id: string; name: string; diet: string; photo_path: string | null; extra_price_per_head: number | null };
+type Dish = { id: string; name: string; diet: string; photo_path: string | null; extra_price_per_head: number | null; protein_options: string[] | null };
 type Course = { id: string; name: string; picks: number | null; veg_picks: number | null; non_veg_picks: number | null; dishes: Dish[] };
 
 function DishPicker({ course, value, onChange, urls, taken, diet }: { course: Course; value: string; onChange: (id: string) => void; urls: Record<string, string>; taken: string[]; diet?: "veg" | "nonveg" }) {
@@ -69,6 +70,8 @@ export default function GuestMenuPage() {
   const [loading, setLoading] = useState(true);
   const [urls, setUrls] = useState<Record<string, string>>({});
   const [picks, setPicks] = useState<Record<string, string[]>>({});
+  const [proteins, setProteins] = useState<Record<string, string>>({});
+  const [notes, setNotes] = useState<Record<string, string>>({});
   const [dietary, setDietary] = useState("");
   const [allergies, setAllergies] = useState("");
   const [saving, setSaving] = useState(false);
@@ -96,9 +99,16 @@ export default function GuestMenuPage() {
   const submit = async () => {
     const missing = courses.find((c) => (picks[c.id] || []).some((v) => !v.replace(/^(veg|nonveg):/, "")));
     if (missing && !confirm(`You haven't chosen every dish for ${missing.name}. Submit anyway?`)) return;
+    const missingProtein = courses.some((c) => (picks[c.id] || []).some((v) => {
+      const id = v.replace(/^(veg|nonveg):/, "");
+      const d = c.dishes.find((x) => x.id === id);
+      return d?.protein_options?.length && !proteins[`${c.id}:${id}`];
+    }));
+    if (missingProtein) { toast.error("Choose a protein for each dish that needs one"); return; }
     setSaving(true);
     const clean = Object.fromEntries(Object.entries(picks).map(([k, v]) => [k, v.map(x => x.replace(/^(veg|nonveg):/, "")).filter(Boolean)]));
-    const { error } = await (supabase.rpc as any)("submit_guest_menu", { _token: token, _picks: clean, _dietary: dietary, _allergies: allergies });
+    const cleanNotes = Object.fromEntries(Object.entries(notes).map(([k, v]) => [k, v.trim()]).filter(([, v]) => v));
+    const { error } = await (supabase.rpc as any)("submit_guest_menu", { _token: token, _picks: clean, _dietary: dietary, _allergies: allergies, _proteins: proteins, _notes: cleanNotes });
     setSaving(false);
     if (error) toast.error(error.message); else setDone(true);
   };
@@ -134,10 +144,25 @@ export default function GuestMenuPage() {
                   {coursePicks.map((v, i) => {
                     const diet = v.startsWith("veg:") ? "veg" : v.startsWith("nonveg:") ? "nonveg" : undefined;
                     const value = v.replace(/^(veg|nonveg):/, "");
+                    const dish = c.dishes.find((x) => x.id === value);
+                    const key = `${c.id}:${value}`;
                     return <div key={i} className="space-y-1">
                       {diet && <p className="text-xs font-medium text-muted-foreground">{diet === "veg" ? "Vegetarian choice" : "Non-vegetarian choice"}</p>}
                       <DishPicker course={c} value={value} urls={urls} taken={coursePicks.map(x => x.replace(/^(veg|nonveg):/, ""))} diet={diet}
                         onChange={(id) => setPicks((p) => ({ ...p, [c.id]: p[c.id].map((x, j) => (j === i ? `${diet ? `${diet}:` : ""}${id}` : x)) }))} />
+                      {dish?.protein_options?.length ? (
+                        <select aria-label={`Protein for ${dish.name}`} value={proteins[key] || ""}
+                          onChange={(e) => setProteins((p) => ({ ...p, [key]: e.target.value }))}
+                          className={`h-9 w-full rounded-md border bg-background px-3 text-sm ${proteins[key] ? "border-input" : "border-destructive"}`}>
+                          <option value="">Choose a protein for {dish.name}…</option>
+                          {dish.protein_options.map((o) => <option key={o} value={o}>{o}</option>)}
+                        </select>
+                      ) : null}
+                      {dish ? (
+                        <Input aria-label={`Customisations for ${dish.name}`} maxLength={500}
+                          placeholder={`Customise ${dish.name} (e.g. no onion, mild spice)`}
+                          value={notes[key] || ""} onChange={(e) => setNotes((p) => ({ ...p, [key]: e.target.value }))} />
+                      ) : null}
                     </div>;
                   })}
                 </div>

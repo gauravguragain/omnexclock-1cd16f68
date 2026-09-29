@@ -449,6 +449,13 @@
       "when": 1790621006181,
       "tag": "0063_drop_broad_storage_policies",
       "breakpoints": true
+    },
+    {
+      "idx": 64,
+      "version": "7",
+      "when": 1790662065330,
+      "tag": "0064_guest_menu_protein_notes",
+      "breakpoints": true
     }
   ]
 }
