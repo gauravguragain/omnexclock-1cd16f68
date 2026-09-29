@@ -83,7 +83,7 @@ export default function MonthCalendar({ bookings, leads, runsheets, customers, v
           const key = format(d, "yyyy-MM-dd"); const list = eventsOn(key);
           return <Button key={key} variant="ghost" aria-label={`${format(d, "EEE, MMM d, yyyy")}, ${list.length} ${list.length === 1 ? "event" : "events"}`} onClick={() => list.length && setSelectedDate(key)} disabled={!list.length} className={cn("h-auto min-h-[76px] min-w-0 flex-col items-stretch justify-start gap-0 overflow-hidden rounded-md border border-border p-1 text-left hover:border-primary/60 hover:bg-primary/5 sm:min-h-[168px] sm:p-2 xl:min-h-[205px]", !isSameMonth(d, month) && "bg-muted/25 text-muted-foreground", isToday(d) && "border-primary bg-primary/5", !list.length && "cursor-default opacity-75 disabled:opacity-75")}>
             <span className={cn("mb-1 self-start text-xs font-semibold sm:mb-2 sm:text-sm", isToday(d) && "text-primary")}>{format(d, "d")}{isToday(d) && <span className="hidden text-[10px] sm:ml-1 sm:inline">(today)</span>}</span>
-            {list.slice(0, 3).map(b => <span key={b.id} role="button" tabIndex={-1} aria-label={`View ${nameOf(b)}`} onClick={e => { e.stopPropagation(); setSelectedBooking(b); }} onKeyDown={e => { if (e.key === "Enter") { e.stopPropagation(); setSelectedBooking(b); } }} className="mb-1 flex w-full cursor-pointer items-center gap-1 overflow-hidden rounded text-[11px] font-normal hover:bg-primary/10"><span className={cn("h-1.5 w-1.5 shrink-0 rounded-full", kindDot(b))} /><span className="hidden shrink-0 text-muted-foreground sm:inline">{String(b.start_time || "").slice(0, 5)}</span><span className={cn("hidden min-w-0 truncate rounded px-1 font-medium sm:inline", kindChip(b))}>{nameOf(b)}</span></span>)}
+            {list.slice(0, 3).map(b => <span key={b.id} role="button" tabIndex={-1} aria-label={`View ${nameOf(b)}`} onClick={e => { e.stopPropagation(); setSelectedBooking(b); }} onKeyDown={e => { if (e.key === "Enter") { e.stopPropagation(); setSelectedBooking(b); } }} className="pointer-events-none mb-1 flex w-full cursor-pointer items-center gap-1 overflow-hidden rounded text-[11px] font-normal hover:bg-primary/10 sm:pointer-events-auto"><span className={cn("h-1.5 w-1.5 shrink-0 rounded-full", kindDot(b))} /><span className="hidden shrink-0 text-muted-foreground sm:inline">{String(b.start_time || "").slice(0, 5)}</span><span className={cn("hidden min-w-0 truncate rounded px-1 font-medium sm:inline", kindChip(b))}>{nameOf(b)}</span></span>)}
             {list.length > 3 && <span className="text-[10px] font-semibold text-primary">+{list.length - 3}</span>}
           </Button>;
         })}</div>
@@ -93,7 +93,12 @@ export default function MonthCalendar({ bookings, leads, runsheets, customers, v
     <Dialog open={!!selectedDate} onOpenChange={open => !open && setSelectedDate(null)}>
       <DialogContent className="max-h-[88dvh] w-[calc(100vw-1rem)] max-w-[480px] overflow-y-auto p-0">
         <DialogHeader className="border-b border-border p-5 pr-12 text-left"><div className="flex items-center gap-3"><span className="rounded-md bg-primary/10 p-2 text-primary"><CalendarDays className="h-5 w-5" /></span><div><DialogTitle className="text-base">{selectedDate ? format(new Date(`${selectedDate}T00:00:00`), "EEEE, MMMM d, yyyy") : "Events"}</DialogTitle><p className="mt-1 text-xs text-muted-foreground">{selected.length} {selected.length === 1 ? "event" : "events"}, {groups.length} {groups.length === 1 ? "venue" : "venues"}</p></div></div></DialogHeader>
-        <div className="space-y-4 pb-5">{groups.map(place => <section key={place}>
+        {/* Mobile: swipe sideways through the day's events as cards */}
+        <div className="flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-5 pt-4 sm:hidden" style={{ WebkitOverflowScrolling: "touch" }}>
+          {selected.map(b => <div key={b.id} className="w-[82vw] max-w-[320px] shrink-0 snap-center overflow-hidden rounded-lg border border-border bg-card shadow-sm">{renderEventDetail(b)}</div>)}
+        </div>
+        {/* Desktop: grouped vertical list */}
+        <div className="hidden space-y-4 pb-5 sm:block">{groups.map(place => <section key={place}>
           <h3 className="bg-muted/60 px-5 py-2 text-xs font-semibold uppercase text-muted-foreground">{place}</h3>
           <div className="divide-y divide-border">{selected.filter(b => placeOf(b) === place).map(b => <div key={b.id}>{renderEventDetail(b)}</div>)}</div>
         </section>)}</div>
