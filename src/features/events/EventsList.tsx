@@ -12,10 +12,10 @@ import { isConfirmedLeadStage, prettyCrmValue } from "@/features/sales/types";
 import { useEventsData, bookingEnd, to12 } from "./useEventsData";
 import { paymentSummary, sydneyToday, usePayments, type CrmPayment } from "./payments";
 
-function eventStatus(b: any, today: string) {
-  if (b.status === "cancelled") return "Cancelled";
+function eventWithinWeek(b: any, today: string) {
+  if (b.status === "cancelled") return false;
   const days = differenceInCalendarDays(parseISO(b.event_date), parseISO(today));
-  return days === 0 ? "Today" : days > 0 ? `Upcoming in ${days} ${days === 1 ? "day" : "days"}` : "Past";
+  return days >= 0 && days <= 7;
 }
 
 function paymentStatus(b: any, payments: CrmPayment[], today: string) {
@@ -24,6 +24,7 @@ function paymentStatus(b: any, payments: CrmPayment[], today: string) {
   const labels: string[] = [];
   if (deposit > 0 && paid >= deposit) labels.push("Deposit received");
   else if (paid > 0) labels.push("Part payment received");
+  if (deposit > 0 && paid < deposit && b.deposit_due_date && b.deposit_due_date < today) labels.push("Deposit overdue");
   const due = b.balance_due_date;
   if (total > 0 && balance > 0 && due) {
     const days = differenceInCalendarDays(parseISO(due), parseISO(today));
