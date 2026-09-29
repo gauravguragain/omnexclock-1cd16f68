@@ -1,3 +1,4 @@
+import { eventLabel } from "@/lib/eventLabel";
 import { useState } from "react";
 import { addMonths, eachDayOfInterval, endOfMonth, endOfWeek, format, isSameMonth, isToday, startOfMonth, startOfWeek } from "date-fns";
 import { CalendarDays, ChevronLeft, ChevronRight, Clock3, Mail, MapPin, Pencil, Tag, UserRound, Users } from "lucide-react";
@@ -37,7 +38,7 @@ export default function MonthCalendar({ bookings, leads, runsheets, customers, v
   });
   const leadOf = (b: Booking) => leads.find(l => l.id === b.lead_id);
   const customerOf = (b: Booking) => customers.find(c => c.id === b.customer_id) || leadOf(b);
-  const nameOf = (b: Booking) => b.event_name || leadOf(b)?.full_name || "Event";
+  const nameOf = (b: Booking) => eventLabel(b, leadOf(b)?.full_name, leadOf(b)?.event_type);
   const typeOf = (b: Booking) => b.event_type || leadOf(b)?.event_type || "no_type";
   const placeOf = (b: Booking) => venues.find(v => v.id === b.venue_space_id || v.name === b.venue_space || v.name.toLowerCase().replace(/\s+/g, "_") === b.venue_space)?.name || (b.booking_kind === "catering" ? b.service_location : null) || (b.venue_space ? prettyCrmValue(b.venue_space) : null) || "No venue selected";
   const isCatering = (b: Booking) => b.booking_kind === "catering";

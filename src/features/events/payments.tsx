@@ -1,3 +1,4 @@
+import { eventLabel } from "@/lib/eventLabel";
 import { prettyCrmValue } from "@/features/sales/types";
 import { useLiveSync } from "@/hooks/useLiveSync";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -109,7 +110,7 @@ export function RecordPaymentDialog({ open, onOpenChange, booking, bookings, sug
       const paid = (pays || []).reduce((s: number, p: any) => s + Number(p.amount || 0), 0);
       const { error: e2 } = await supabase.functions.invoke("send-email", { body: {
         type: "deposit_confirmation", to: guest.email.trim(), recipientName: guest.name, businessName: bizName,
-        eventTitle: target.event_name || target.event_type || "your event", eventDate: fmt(target.event_date),
+        eventTitle: eventLabel(target, guest.name), eventDate: fmt(target.event_date),
         depositAmount: money(amt), receivedDate: fmt(form.paid_on), method: PAYMENT_METHODS[form.method] || form.method,
         reference: form.reference.trim() || undefined,
         totalAmount: total > 0 ? money(total) : undefined, balanceRemaining: total > 0 ? money(Math.max(0, total - paid)) : undefined,
@@ -212,7 +213,7 @@ export function BookingPaymentsCard({ booking, onChanged }: { booking: any; onCh
 /** Upcoming events (soonest first), then past events (most recent first). */
 /** "3 Oct 2026 · Client — Event name" label used by the booking picker. */
 function bookingLabel(b: any) {
-  return `${b?.event_date ? format(new Date(b.event_date + "T00:00"), "d MMM yyyy") : "No date"} · ${[b?.client_name, (b?.event_type ? prettyCrmValue(b.event_type) : b?.event_name)].filter(Boolean).join(" — ") || "Booking"}`;
+  return `${b?.event_date ? format(new Date(b.event_date + "T00:00"), "d MMM yyyy") : "No date"} · ${eventLabel(b)}`;
 }
 function sortUpcomingFirst(list: any[]) {
   const today = new Date().toLocaleDateString("en-CA", { timeZone: "Australia/Sydney" });

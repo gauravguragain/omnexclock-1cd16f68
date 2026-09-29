@@ -187,10 +187,9 @@ export async function loadOperations(bid: string, r: Range) {
   const typeOf = (b: any) => b.event_type || (b.lead_id ? leadById[b.lead_id]?.event_type : "") || "";
   const eventTypes = tally(events, b => pretty(typeOf(b)));
   const nameOf = (b: any) => {
-    if (b.event_name?.trim()) return b.event_name;
     const lead = b.lead_id ? leadById[b.lead_id] : null;
     const t = pretty(typeOf(b));
-    return lead?.full_name ? (t ? `${t} – ${lead.full_name}` : lead.full_name) : "";
+    return lead?.full_name ? (t ? `${t} – ${lead.full_name}` : lead.full_name) : (b.event_name || "");
   };
   const upcoming = live.filter((b: any) => b.event_date >= today && b.event_date <= addDays(today, 30)).sort((a: any, b: any) => a.event_date.localeCompare(b.event_date)).map((b: any) => {
     const lead = b.lead_id ? leadById[b.lead_id] : null;

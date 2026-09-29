@@ -1,3 +1,4 @@
+import { eventLabel } from "@/lib/eventLabel";
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -55,7 +56,7 @@ export default function CalendarTab({ businessId, businessName, leads, inspectio
     });
     bookings.filter((b: any) => b.status !== "cancelled").forEach((b: any) => {
       const start = new Date(`${b.event_date}T${String(b.start_time || "17:30").slice(0, 5)}`);
-      list.push({ id: `b-${b.id}`, kind: "event", start, end: new Date(start.getTime() + Number(b.duration_minutes || 300) * 60000), title: `${b.booking_kind === "catering" ? "Catering" : "Event"} — ${b.event_name || nameOf(b.lead_id)}`, detail: `${b.guest_count || 0} guests`, place: b.venue_space?prettyCrmValue(b.venue_space):businessName });
+      list.push({ id: `b-${b.id}`, kind: "event", start, end: new Date(start.getTime() + Number(b.duration_minutes || 300) * 60000), title: `${b.booking_kind === "catering" ? "Catering" : "Event"} — ${eventLabel(b, nameOf(b.lead_id))}`, detail: `${b.guest_count || 0} guests`, place: b.venue_space?prettyCrmValue(b.venue_space):businessName });
     });
     tasks.filter((t) => t.status === "open").forEach((t) => {
       const start = sydneyWallDate(t.due_at);

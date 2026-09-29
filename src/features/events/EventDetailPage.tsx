@@ -1,3 +1,4 @@
+import { eventLabel } from "@/lib/eventLabel";
 import { useEffect, useState } from "react";
 import { Link, Navigate, useNavigate, useParams } from "react-router-dom";
 import { format, isToday } from "date-fns";
@@ -71,7 +72,7 @@ export default function EventDetailPage({ kind }: { kind: "event" | "catering" }
     if (error) return toast.error(error.message);
     toast.success("Event details updated"); setEditOpen(false); crm.refresh?.(true as any);
   };
-  const title = b.event_name || lead?.full_name || "Event";
+  const title = eventLabel(b, lead?.full_name || customer?.full_name, lead?.event_type);
   const PKG = ["package", "kids_package", "manual"];
   const pkgs = items.filter(i => PKG.includes(i.course)); const stalls = items.filter(i => i.course === "live_stall");
   const kidsRow = items.find(i => i.course === "kids_package");
