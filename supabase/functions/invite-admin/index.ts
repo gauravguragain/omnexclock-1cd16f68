@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { renderBrandedEmail, loadBrand, details, note, p, small, esc, button, heading } from "../_shared/emailLayout.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
@@ -71,7 +72,7 @@ serve(async (req) => {
     // Get business info
     const { data: business } = await adminClient
       .from("businesses")
-      .select("name, business_code")
+      .select("name, business_code, logo_url, phone, email, address")
       .eq("id", businessId)
       .single();
 
@@ -126,55 +127,18 @@ serve(async (req) => {
     const portalUrl = `${publishedUrl}/portal`;
 
     // Send invitation email
-    const html = `
-      <div style="font-family:'Segoe UI',Arial,sans-serif;max-width:600px;margin:0 auto;color:#1a1a1a;">
-        <div style="text-align:center;padding:30px 0 20px;">
-          <h1 style="color:#ac845d;font-size:24px;margin:0;">Pro Regal Management</h1>
-          <p style="color:#666;font-size:13px;margin:4px 0 0;">Workforce and Sales Management</p>
-        </div>
-        
-        <div style="background:#f8f9fa;border-radius:12px;padding:30px;margin:16px 0;">
-          <h2 style="margin:0 0 8px;font-size:20px;color:#1a1a1a;">You've Been Invited!</h2>
-          <p style="color:#555;line-height:1.6;">
-            You have been invited to join <strong>${business.name}</strong> as a <strong>${roleLabel}</strong> on Pro Regal Management.
-          </p>
-          ${departments && departments.length > 0 ? `
-            <p style="color:#555;font-size:13px;">Assigned departments: <strong>${departments.join(", ")}</strong></p>
-          ` : ""}
-          
-          <div style="text-align:center;margin:24px 0;">
-            <a href="${signupUrl}" style="display:inline-block;background:#ac845d;color:#000;text-decoration:none;padding:14px 32px;border-radius:8px;font-weight:bold;font-size:14px;">
-              Create Your Account
-            </a>
-          </div>
-          
-          <p style="color:#888;font-size:12px;text-align:center;">
-            This invitation expires in 7 days.
-          </p>
-        </div>
-        
-        <div style="background:#fef9e7;border:1px solid #f5e6b8;border-radius:8px;padding:20px;margin:16px 0;">
-          <h3 style="margin:0 0 8px;font-size:14px;color:#92400e;">📖 Your ${roleLabel} Induction Guide</h3>
-          <p style="color:#555;font-size:13px;line-height:1.5;margin:0 0 12px;">
-            We've prepared a comprehensive guide to help you get started with your ${roleLabel} responsibilities.
-          </p>
-          <a href="${guideUrl}" style="color:#ac845d;font-weight:600;font-size:13px;text-decoration:underline;">
-            View Your Induction Guide →
-          </a>
-        </div>
-        
-        <div style="background:#f0f4f8;border-radius:8px;padding:16px;margin:16px 0;text-align:center;">
-          <p style="color:#555;font-size:13px;margin:0 0 8px;">Looking for the <strong>Employee Portal</strong>?</p>
-          <a href="${portalUrl}" style="color:#ac845d;font-weight:600;font-size:13px;text-decoration:underline;">
-            Access Employee Portal →
-          </a>
-        </div>
-        
-        <p style="color:#999;font-size:11px;text-align:center;margin-top:24px;">
-          If you did not expect this invitation, please ignore this email.
-        </p>
-      </div>
-    `;
+    const html = renderBrandedEmail({
+      brand: { name: business.name, logoUrl: (business as any).logo_url, phone: (business as any).phone, email: (business as any).email, address: (business as any).address },
+      eyebrow: "Team Invitation", title: "You've been invited", preheader: `Join ${business.name} as ${roleLabel}`,
+      bodyHtml: p(`You have been invited to join <strong>${esc(business.name)}</strong> as a <strong>${esc(roleLabel)}</strong> on Pro Regal Management.`) +
+        (departments && departments.length > 0 ? p(`Assigned departments: <strong>${esc(departments.join(", "))}</strong>`) : "") +
+        button("Create your account", signupUrl) +
+        small("This invitation expires in 7 days.") +
+        heading(`Your ${esc(roleLabel)} induction guide`) +
+        p(`We've prepared a guide to help you get started with your ${esc(roleLabel)} responsibilities. <a href="${esc(guideUrl)}" style="color:#916942;">View your induction guide</a>.`) +
+        note(`Looking for the <strong>Employee Portal</strong>? <a href="${esc(portalUrl)}" style="color:#916942;">Access it here</a>.`),
+      footerNote: "If you did not expect this invitation, please ignore this email.",
+    });
 
     const res = await fetch("https://api.resend.com/emails", {
       method: "POST",
@@ -183,7 +147,7 @@ serve(async (req) => {
         Authorization: `Bearer ${RESEND_API_KEY}`,
       },
       body: JSON.stringify({
-        from: "Pro Regal Management <noreply@regalmanagement.com.au>",
+        from: `${business.name} <noreply@regalmanagement.com.au>`,
         to: [email],
         subject: `You're invited to ${business.name} as ${roleLabel}`,
         html,
