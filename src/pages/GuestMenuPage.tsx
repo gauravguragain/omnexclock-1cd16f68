@@ -72,8 +72,6 @@ export default function GuestMenuPage() {
   const [picks, setPicks] = useState<Record<string, string[]>>({});
   const [proteins, setProteins] = useState<Record<string, string>>({});
   const [notes, setNotes] = useState<Record<string, string>>({});
-  const [dietary, setDietary] = useState("");
-  const [allergies, setAllergies] = useState("");
   const [saving, setSaving] = useState(false);
   const [done, setDone] = useState(false);
 
@@ -108,7 +106,7 @@ export default function GuestMenuPage() {
     setSaving(true);
     const clean = Object.fromEntries(Object.entries(picks).map(([k, v]) => [k, v.map(x => x.replace(/^(veg|nonveg):/, "")).filter(Boolean)]));
     const cleanNotes = Object.fromEntries(Object.entries(notes).map(([k, v]) => [k, v.trim()]).filter(([, v]) => v));
-    const { error } = await (supabase.rpc as any)("submit_guest_menu", { _token: token, _picks: clean, _dietary: dietary, _allergies: allergies, _proteins: proteins, _notes: cleanNotes });
+    const { error } = await (supabase.rpc as any)("submit_guest_menu", { _token: token, _picks: clean, _dietary: "", _allergies: "", _proteins: proteins, _notes: cleanNotes });
     setSaving(false);
     if (error) toast.error(error.message); else setDone(true);
   };
@@ -169,16 +167,6 @@ export default function GuestMenuPage() {
                 </div>
               </section>
             ); })}
-            <section className="space-y-4 rounded-lg border border-border bg-card p-5">
-              <div className="space-y-1.5"><Label>Dietary requirements</Label><Textarea value={dietary} onChange={(e) => setDietary(e.target.value)} placeholder="e.g. 10 vegan guests" /></div>
-              <div className="space-y-1.5"><Label>Allergies</Label><Textarea value={allergies} onChange={(e) => setAllergies(e.target.value)} placeholder="e.g. nut allergy" /></div>
-            </section>
-            <p className="text-center text-xs leading-relaxed text-muted-foreground sm:text-sm">
-              <span className="font-medium text-foreground/80">A note on allergens:</span> many of our
-              ingredients are prepared by trusted artisan suppliers, so while every care is taken in our
-              kitchen, dishes may contain traces of common allergens. Please share any dietary needs with
-              your host, and our culinary team will be delighted to assist.
-            </p>
             <Button className="h-12 w-full" onClick={submit} disabled={saving || !courses.length}>{saving ? <Loader2 className="h-4 w-4 animate-spin" /> : "Confirm and send my menu"}</Button>
           </div>
         )}
