@@ -8,3 +8,5 @@
 - [ ] Publish pending changes to Live (blocked until user requests publish).
 - [ ] Remove legacy warning text from Live booking notes after publishing (blocked until Live schema is available).
 - [x] Catering list: green event status within 7 days; no payment status column (prepaid).
+
+- [ ] Catering delivery: address autocomplete dropdown + auto distance on select
