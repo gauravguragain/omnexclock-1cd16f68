@@ -7,13 +7,38 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Download, Loader2, Upload } from "lucide-react";
 import type { Row } from "./useEventsData";
 
-const MENU_HEADERS = ["Menu book", "Package", "Type (food/beverage)", "Menu title", "Style line", "Subtitle", "Price per person", "Price shown on menu", "Min guests", "Package description", "Course", "Course total picks", "Veg picks", "Non-veg picks", "Seafood picks", "Course breakdown note", "Item", "Diet or kind (veg/nonveg/seafood or soft/hard)", "Protein choices (comma separated)", "Extra $ per person"];
-const MENU_SAMPLE = [
-  ["Western Menu", "Tier 1", "food", "Western Menu", "Shared · Buffet · Style", "Tier 1 Buffet Selection", 75, "", 30, "", "Entrée", 3, 2, 1, "", "", "Mushroom & mozzarella arancini, truffle mayo", "veg", "", ""],
-  ["Western Menu", "Tier 1", "food", "", "", "", "", "", "", "", "Entrée", "", "", "", "", "", "Chicken satay, peanut sauce", "nonveg", "", ""],
-  ["Western Menu", "Tier 1", "food", "", "", "", "", "", "", "", "Sides", 2, "", "", "", "Any 2 sides", "Roasted potato, garlic & rosemary", "veg", "", ""],
-  ["Western Menu", "Tier 2", "food", "Western Menu", "Shared · Buffet · Style", "Tier 2 Buffet Selection", 90, "$90–100", 30, "", "Mains", 3, 1, 1, 1, "", "Grilled barramundi, lemon butter", "seafood", "", ""],
-  ["Beverages", "Drinks Package", "beverage", "", "", "", 35, "", "", "4 hour package", "Drinks", 3, "", "", "", "", "Coke", "soft", "", ""],
+// Simple two-sheet template: "1. Packages" (one row per package) + "2. Dishes" (one row per dish/drink).
+const PKG_HEADERS = ["Menu book", "Menu group (event/catering)", "Package", "Food or drinks", "Price per person", "Min guests", "Menu title (optional)", "Subtitle (optional)", "Description (optional)"];
+const PKG_SAMPLE = [
+  ["Western Menu", "event", "Tier 1", "food", 75, 30, "Western Menu", "Tier 1 Buffet Selection", ""],
+  ["Catering Menu", "catering", "Party Pack", "food", 35, 20, "", "", "Drop-off catering"],
+  ["Beverages", "event", "Drinks Package", "drinks", 35, "", "", "", "4 hour package"],
+];
+const DISH_HEADERS = ["Package", "Course", "Guests pick (how many)", "Dish or drink", "Veg / Non-veg / Seafood (or Soft / Hard for drinks)", "Protein choices (optional, comma separated)", "Extra $ per person (optional)"];
+const DISH_SAMPLE = [
+  ["Tier 1", "Entrée", 2, "Mushroom arancini, truffle mayo", "veg", "", ""],
+  ["Tier 1", "Entrée", "", "Chicken satay, peanut sauce", "nonveg", "", ""],
+  ["Tier 1", "Mains", 2, "Curry of the day", "nonveg", "Chicken, Lamb, Goat", ""],
+  ["Tier 1", "Mains", "", "Grilled barramundi, lemon butter", "seafood", "", 5],
+  ["Party Pack", "Menu", 3, "Vegetable samosa", "veg", "", ""],
+  ["Drinks Package", "Drinks", "", "Coke", "soft", "", ""],
+];
+const MENU_NOTES = [
+  "HOW TO FILL — 2 simple steps",
+  "",
+  "Step 1 — sheet '1. Packages': one row per package.",
+  "  • Menu book: the book the package belongs to (created if new).",
+  "  • Menu group: event or catering.",
+  "  • Food or drinks: food or drinks.",
+  "  • Price per person: a number, e.g. 75.",
+  "",
+  "Step 2 — sheet '2. Dishes': one row per dish or drink.",
+  "  • Package: must match a package name from sheet 1.",
+  "  • Course: e.g. Entrée, Mains, Dessert. Same course name = same course.",
+  "  • Guests pick: how many dishes guests choose in that course — fill on the first row of the course only.",
+  "  • Veg / Non-veg / Seafood: veg, nonveg or seafood (soft or hard for drinks).",
+  "",
+  "Delete the example rows, keep the header rows, then upload.",
 ];
 const DRINK_HEADERS = ["Drink name", "Kind", "Price"];
 const DRINK_SAMPLE = [["Coke", "Soft drink", 4.5], ["House Red Wine (glass)", "Wine", 12]];
@@ -39,6 +64,43 @@ async function readRows(file: File): Promise<Record<string, unknown>[]> {
 const col = (r: Record<string, unknown>, starts: string) => { const k = Object.keys(r).find(k => k.trim().toLowerCase().replace(/\s+/g, " ").startsWith(starts)); return k ? r[k] : ""; };
 const drinkKind = (r: Record<string, unknown>) => { const k = Object.keys(r).find(k => /\b(kind|category|type)\b/i.test(k.trim())); return k ? norm(r[k]) : ""; };
 
+function downloadMenuTemplate() {
+  const wb = XLSX.utils.book_new();
+  const sheet = (h: string[], rows: unknown[][]) => { const ws = XLSX.utils.aoa_to_sheet([h, ...rows]); ws["!cols"] = h.map(x => ({ wch: Math.max(16, Math.min(x.length + 2, 40)) })); return ws; };
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(MENU_NOTES.map(n => [n])), "How to fill");
+  XLSX.utils.book_append_sheet(wb, sheet(PKG_HEADERS, PKG_SAMPLE), "1. Packages");
+  XLSX.utils.book_append_sheet(wb, sheet(DISH_HEADERS, DISH_SAMPLE), "2. Dishes");
+  wb.Sheets["How to fill"]["!cols"] = [{ wch: 100 }];
+  XLSX.writeFile(wb, "menu-books-template.xlsx");
+}
+
+type MenuRow = { book: string; group: "event" | "catering"; pkg: string; type: "food" | "beverage"; desc: string; course: string; picks: number | null; veg: number | null; nonveg: number | null; seafood: number | null; cnote: string; item: string; diet: string; dietRaw: string; proteins: string; extra: number; menuTitle: string; style: string; subtitle: string; price: number | null; priceLabel: string; minGuests: number | null };
+const groupOf = (v: unknown): "event" | "catering" => key(v).startsWith("cat") ? "catering" : "event";
+const typeOf = (v: unknown): "food" | "beverage" => /^(bev|drink)/.test(key(v)) ? "beverage" : "food";
+
+async function readMenuRows(file: File): Promise<MenuRow[]> {
+  const wb = XLSX.read(await file.arrayBuffer());
+  const find = (re: RegExp) => wb.SheetNames.find(n => re.test(n.toLowerCase()));
+  const pkgName = find(/packages?$/), dishName = find(/dish/);
+  if (pkgName && dishName) {
+    const pkgs = XLSX.utils.sheet_to_json<Record<string, unknown>>(wb.Sheets[pkgName], { defval: "" });
+    const byName = new Map<string, Record<string, unknown>>();
+    pkgs.forEach(p => { const n = key(col(p, "package")); if (n && !byName.has(n)) byName.set(n, p); });
+    const out: MenuRow[] = [];
+    for (const r of XLSX.utils.sheet_to_json<Record<string, unknown>>(wb.Sheets[dishName], { defval: "" })) {
+      const item = norm(col(r, "dish")), pn = norm(col(r, "package"));
+      if (!item || !pn) continue;
+      const p = byName.get(key(pn));
+      if (!p) throw new Error(`Dish "${item}" uses package "${pn}", which is not on the Packages sheet.`);
+      const diet = key(col(r, "veg"));
+      out.push({ book: norm(col(p, "menu book")) || "Menu", group: groupOf(col(p, "menu group")), pkg: norm(col(p, "package")), type: typeOf(col(p, "food or")), desc: norm(col(p, "description")), course: norm(col(r, "course")) || "Menu", picks: num(col(r, "guests pick")), veg: null, nonveg: null, seafood: null, cnote: "", item, diet, dietRaw: norm(col(r, "veg")), proteins: norm(col(r, "protein")), extra: num(col(r, "extra")) ?? 0, menuTitle: norm(col(p, "menu title")), style: "", subtitle: norm(col(p, "subtitle")), price: num(col(p, "price per")), priceLabel: "", minGuests: num(col(p, "min guest")) });
+    }
+    return out;
+  }
+  // Older single-sheet template stays supported.
+  return (await readRows(file)).map(r => ({ book: norm(col(r, "menu book")), group: groupOf(col(r, "menu group")), pkg: norm(r[Object.keys(r).find(k => key(k) === "package") || "Package"]), type: typeOf(col(r, "type")), desc: norm(col(r, "package description")), course: norm(col(r, "course")) || "Menu", picks: num(col(r, "course total")) ?? num(col(r, "course picks")), veg: num(col(r, "veg picks")), nonveg: num(col(r, "non-veg picks")), item: norm(col(r, "item")), diet: key(col(r, "diet")), dietRaw: norm(col(r, "diet")), proteins: norm(col(r, "protein")), extra: num(col(r, "extra")) ?? 0, menuTitle: norm(col(r, "menu title")), style: norm(col(r, "style")), subtitle: norm(col(r, "subtitle")), price: num(col(r, "price per")), priceLabel: norm(col(r, "price shown")), minGuests: num(col(r, "min guest")), seafood: num(col(r, "seafood")), cnote: norm(col(r, "course breakdown")) })).filter(r => r.book && r.pkg && r.item);
+}
+
 type Data = { business: { id: string } | null; books: Row[]; packages: Row[]; dishes: Row[]; drinks: Row[]; refresh: () => void };
 
 function ImportShell({ title, desc, onTemplate, onFile, busy, result }: { title: string; desc: string; onTemplate: () => void; onFile: (f: File) => void; busy: boolean; result: string[] }) {
@@ -56,8 +118,8 @@ export function MenuImportButton({ data: d }: { data: Data }) {
   const run = async (file: File) => {
     if (!d.business) return; const bid = d.business.id; setBusy(true); const log: string[] = [];
     try {
-      const rows = (await readRows(file)).map(r => ({ book: norm(col(r, "menu book")), pkg: norm(r[Object.keys(r).find(k => key(k) === "package") || "Package"]), type: key(col(r, "type")) === "beverage" ? "beverage" : "food", desc: norm(col(r, "package description")), course: norm(col(r, "course")) || "Menu", picks: num(col(r, "course total")) ?? num(col(r, "course picks")), veg: num(col(r, "veg picks")), nonveg: num(col(r, "non-veg picks")), item: norm(col(r, "item")), diet: key(col(r, "diet")), dietRaw: norm(col(r, "diet")), proteins: norm(col(r, "protein")), extra: num(col(r, "extra")) ?? 0, menuTitle: norm(col(r, "menu title")), style: norm(col(r, "style")), subtitle: norm(col(r, "subtitle")), price: num(col(r, "price per")), priceLabel: norm(col(r, "price shown")), minGuests: num(col(r, "min guest")), seafood: num(col(r, "seafood")), cnote: norm(col(r, "course breakdown")) })).filter(r => r.book && r.pkg && r.item);
-      if (!rows.length) throw new Error("No rows found. Make sure Menu book, Package and Item are filled.");
+      const rows = await readMenuRows(file);
+      if (!rows.length) throw new Error("No rows found. Fill the Packages sheet and the Dishes sheet (Package, Course, Dish).");
       const books = new Map(d.books.map(b => [key(b.name), b.id as string]));
       const dishes = new Map(d.dishes.map(x => [key(x.name), x.id as string]));
       const drinks = new Map(d.drinks.map(x => [key(x.name), x.id as string]));
@@ -67,7 +129,7 @@ export function MenuImportButton({ data: d }: { data: Data }) {
       for (const g of groups.values()) {
         const first = g[0];
         let bookId = books.get(key(first.book));
-        if (!bookId) { const r = await (supabase.from("crm_menu_books" as any) as any).insert({ business_id: bid, name: first.book, sort_order: books.size }).select().single(); if (r.error) throw r.error; bookId = r.data.id as string; books.set(key(first.book), bookId); log.push(`Created menu book "${first.book}"`); }
+        if (!bookId) { const r = await (supabase.from("crm_menu_books" as any) as any).insert({ business_id: bid, name: first.book, sort_order: books.size, menu_category: first.group }).select().single(); if (r.error) throw r.error; bookId = r.data.id as string; books.set(key(first.book), bookId); log.push(`Created menu book "${first.book}"`); }
         if (d.packages.some(p => p.book_id === bookId && key(p.name) === key(first.pkg))) { log.push(`Skipped "${first.pkg}" — already exists in ${first.book}`); continue; }
         const bev = first.type === "beverage";
         const pr = await (supabase.from("crm_packages" as any) as any).insert({ business_id: bid, book_id: bookId, name: first.pkg, package_type: first.type, description: g.find(r => r.desc)?.desc || null, menu_title: g.find(r => r.menuTitle)?.menuTitle || null, style_label: g.find(r => r.style)?.style || null, subtitle: g.find(r => r.subtitle)?.subtitle || null, price_label: g.find(r => r.priceLabel)?.priceLabel || null, price_per_head: g.find(r => r.price != null)?.price ?? 0, min_guests: g.find(r => r.minGuests != null)?.minGuests ?? 1 }).select().single(); if (pr.error) throw pr.error;
@@ -93,8 +155,8 @@ export function MenuImportButton({ data: d }: { data: Data }) {
   };
   return <Dialog open={open} onOpenChange={o => { setOpen(o); if (!o) setResult([]); }}>
     <Button variant="outline" onClick={() => setOpen(true)}><Upload className="mr-2 h-4 w-4" />Import</Button>
-    <ImportShell title="Import menu books & packages" desc="New menu books, dishes and drinks are created automatically. Packages that already exist in the same menu book are skipped." busy={busy} result={result} onFile={run}
-      onTemplate={() => downloadTemplate("menu-packages-template.xlsx", MENU_HEADERS, MENU_SAMPLE, ["One row per dish or drink.", "Rows with the same Menu book + Package build one package; rows with the same Course are grouped into that course.", "Type: food or beverage.", "Package details (Menu title, Style line, Subtitle, prices, Min guests, description) only need filling on the first row of each package.", "Menu title = the large script heading (e.g. Western Menu). Style line = small top line (e.g. Shared · Buffet · Style). Subtitle = e.g. Tier 1 Buffet Selection.", "Price per person = number (75). Price shown on menu = optional text for ranges (e.g. $90–100).", "Course picks only need filling on the first row of a course: Course total picks, then how many Veg / Non-veg / Seafood items guests choose.", "Course breakdown note is optional (e.g. Any 2 sides); left blank it is built from the picks.", "Diet or kind: veg / nonveg / seafood for food, soft / hard for drinks. Items are grouped under Vegetarian, Non-vegetarian and Seafood on the menu.", "Extra $ per person is optional (surcharge for that item).", "Delete the example rows before uploading."])} />
+    <ImportShell title="Import menu books & packages" desc="Sheet 1: one row per package. Sheet 2: one row per dish. New menu books, dishes and drinks are created automatically. Packages that already exist in the same menu book are skipped." busy={busy} result={result} onFile={run}
+      onTemplate={downloadMenuTemplate} />
   </Dialog>;
 }
 
