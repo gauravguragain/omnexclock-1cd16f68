@@ -38,7 +38,8 @@ export default function PaymentsPage() {
   const totals = {
     outstanding: rows.reduce((s, r) => s + Math.max(r.s.balance, 0), 0),
     overdue: rows.filter(r => r.s.overdue).reduce((s, r) => s + r.s.balance, 0),
-    thisMonth: payments.filter(p => paidDay(p.paid_on).startsWith(month)).reduce((s, p) => s + Number(p.amount), 0),
+    // Only money actually received so far: future-dated payments (e.g. imported deposits dated on the event day) are excluded.
+    thisMonth: payments.filter(p => { const d = paidDay(p.paid_on); return d.startsWith(month) && d <= sydneyToday(); }).reduce((s, p) => s + Number(p.amount), 0),
     awaitingDeposit: rows.filter(r => r.s.paid < r.s.deposit).length,
   };
   const counts: Record<Filter, number> = { outstanding: rows.filter(r => r.s.status !== "paid").length, overdue: rows.filter(r => r.s.overdue).length, paid: rows.filter(r => r.s.status === "paid").length, all: rows.length };
