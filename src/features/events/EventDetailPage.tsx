@@ -1,3 +1,4 @@
+import { issueCateringRunsheet } from "./issueCateringRunsheet";
 import { eventLabel } from "@/lib/eventLabel";
 import { useEffect, useState } from "react";
 import { Link, Navigate, useNavigate, useParams } from "react-router-dom";
@@ -53,7 +54,7 @@ export default function EventDetailPage({ kind }: { kind: "event" | "catering" }
     if (error) return toast.error(error.message);
     await crm.refresh(); nav(`/b/${businessCode}/events/runsheet/${data.id}`);
   };
-  const issueCatering = async () => { const { data, error } = await supabase.from("crm_runsheets").update({ status: "sent", sent_at: new Date().toISOString(), generated_at: new Date().toISOString() } as any).eq("id", rs.id).select().single(); if (error) { toast.error(error.message); return null; } await crm.refresh(); return data; };
+  const issueCatering = async () => { const data = await issueCateringRunsheet(rs, b.lead_id); if (!data) return null; await crm.refresh(); return data; };
   const start = String(b.start_time).slice(0, 5); const end = bookingEnd(b); const hrs = minutesBetween(start, end) / 60;
   const adults = rs?.adult_guests ?? b.adults ?? selection?.guest_count ?? b.guest_count; const kidsN = rs?.kids_guests ?? b.kids ?? items.find(i => i.course === "kids_package")?.quantity ?? 0;
   const guests = Number(adults || 0) + Number(kidsN || 0);
