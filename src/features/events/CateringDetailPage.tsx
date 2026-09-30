@@ -35,7 +35,7 @@ export default function CateringDetailPage({ view }: { view: "lead" | "booking" 
   const ev = useEventsData();
   const [editOpen, setEditOpen] = useState(false);
   const [editBkOpen, setEditBkOpen] = useState(false);
-  const [bkTab, setBkTab] = useState<"details" | "delivery" | "menu" | "chafing" | "team" | "customer">("details");
+  const [bkTab, setBkTab] = useState<"details" | "delivery" | "menu" | "team" | "customer">("details");
   const [bk, setBk] = useState({ event_name: "", event_date: "", start_time: "18:00", end_time: "23:00", fulfilment_method: "delivery", service_location: "", adults: "", kids: "", notes: "" });
   const [pkgs, setPkgs] = useState<CPkg[]>([]);
   const [team, setTeam] = useState({ coordinator: "", coordinator_phone: "", onsite_name: "", onsite_phone: "", client_notes: "" });
@@ -165,8 +165,7 @@ export default function CateringDetailPage({ view }: { view: "lead" | "booking" 
     {booking && rs && <SendRunsheetDialog mode={rs.sent_at ? "resend" : "issue"} onIssue={issue} open={sendOpen} onOpenChange={setSendOpen} rs={rs} lead={lead} booking={booking} businessName={crm.business.name} />}
     <Dialog open={editBkOpen} onOpenChange={setEditBkOpen}><DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto"><DialogHeader><DialogTitle>Edit catering booking</DialogTitle></DialogHeader>
       <div className="flex flex-wrap gap-2 border-b border-border pb-3">{([["details", "Details"], ...(bk.fulfilment_method !== "pickup" ? [["delivery", "Delivery"]] : []), ["menu", "Menu selection"], ["chafing", "Chafing & total"], ["team", "Team"], ["customer", "Customer"]] as [typeof bkTab, string][]).map(([k, l]) => <Button key={k} size="sm" variant={bkTab === k ? "default" : "outline"} onClick={() => setBkTab(k)}>{l}</Button>)}</div>
-      {bkTab === "delivery" && booking && <div><DeliveryCard key={booking.id} booking={booking} onChanged={crm.refresh} /><p className="text-xs text-muted-foreground">Press Save delivery above to keep delivery changes.</p></div>}
-      {bkTab === "chafing" && booking && <div><ChafingCard key={`chafe-${booking.id}`} booking={booking} menuTotal={cateringItemsTotal(items, (booking.adults ?? 0) + (booking.kids ?? 0))} onChanged={crm.refresh} /></div>}
+      {bkTab === "menu" && booking && <div><CateringMenuEditor pkgs={pkgs} setPkgs={setPkgs} bookPackages={bookPackages} /><p className="text-right text-sm">Menu total: <strong>${cateringMenuTotal(pkgs, (Number(bk.adults) || 0) + (Number(bk.kids) || 0)).toFixed(2)}</strong> <span className="text-muted-foreground">for {(Number(bk.adults) || 0) + (Number(bk.kids) || 0)} guests</span></p><ChafingCard key={`chafe-${booking.id}`} booking={booking} menuTotal={cateringItemsTotal(items, (booking.adults ?? 0) + (booking.kids ?? 0))} onChanged={crm.refresh} /><p className="text-xs text-muted-foreground">Press Save &amp; update total to keep chafing and total changes.</p></div>}
       {bkTab === "customer" && <div className="space-y-3 text-sm"><p>{lead.full_name} · {lead.phone || "no phone"} · {lead.email || "no email"}{lead.company ? ` · ${lead.company}` : ""}</p><Button variant="outline" onClick={() => setEditOpen(true)}><Pencil className="mr-2 h-4 w-4" />Edit customer details</Button></div>}
       {bkTab === "details" && <div className="space-y-4">
         <div><Label>Booking name</Label><Input value={bk.event_name} onChange={e => setBk(p => ({ ...p, event_name: e.target.value }))} /></div>
