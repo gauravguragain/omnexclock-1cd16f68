@@ -38,7 +38,7 @@ export default function CateringDetailPage({ view }: { view: "lead" | "booking" 
   const [bkTab, setBkTab] = useState<"details" | "delivery" | "menu" | "team" | "customer">("details");
   const [bk, setBk] = useState({ event_name: "", event_date: "", start_time: "18:00", end_time: "23:00", fulfilment_method: "delivery", service_location: "", adults: "", kids: "", notes: "" });
   const [pkgs, setPkgs] = useState<CPkg[]>([]);
-  const [team, setTeam] = useState({ coordinator: "", coordinator_phone: "", onsite_name: "", onsite_phone: "", client_notes: "" });
+  const [team, setTeam] = useState({ sales_person: "", sales_person_phone: "", coordinator: "", coordinator_phone: "", onsite_name: "", onsite_phone: "", client_notes: "" });
   const [bkSaving, setBkSaving] = useState(false);
   const [sendOpen, setSendOpen] = useState(false);
   const [selection, setSelection] = useState<any>(null);
