@@ -145,6 +145,7 @@ export default function CateringDetailPage({ view }: { view: "lead" | "booking" 
     </header>
     <div className="grid gap-x-10 lg:grid-cols-[1.4fr_1fr]">
       <div>
+        <Section title="Customer"><dl className="grid gap-4 sm:grid-cols-2 lg:grid-cols-1"><Field label="Name" value={lead.full_name} /><Field label="Phone" value={lead.phone} /><Field label="Email" value={lead.email} /><Field label="Company" value={lead.company} /></dl></Section>
         <Section title={booking ? "Catering order" : "Enquiry details"}><dl className="grid gap-4 sm:grid-cols-2">
           <Field label="Date" value={booking?.event_date ? format(new Date(`${booking.event_date}T00:00:00`), "dd/MM/yyyy") : lead.preferred_dates?.[0] ? format(new Date(`${lead.preferred_dates[0]}T00:00:00`), "dd/MM/yyyy") : "—"} />
           {booking && <><Field label={`${method} window`} value={`${to12(String(booking.start_time).slice(0, 5))} – ${to12(bookingEnd(booking))}`} /><Field label="Service" value={method} /><Field label={pickup ? "Pickup" : "Delivery address"} value={pickup ? crm.business.name : booking.service_location || lead.service_location} /><Field label="Guests" value={`${booking.adults ?? booking.guest_count ?? 0} adults · ${booking.kids ?? 0} kids`} /></>}
@@ -157,7 +158,6 @@ export default function CateringDetailPage({ view }: { view: "lead" | "booking" 
       </div>
       <div>
         {booking && <div className="mb-6"><BookingPaymentsCard booking={booking} onChanged={crm.refresh} /></div>}
-        <Section title="Customer"><dl className="grid gap-4 sm:grid-cols-2 lg:grid-cols-1"><Field label="Name" value={lead.full_name} /><Field label="Phone" value={lead.phone} /><Field label="Email" value={lead.email} /><Field label="Company" value={lead.company} /></dl></Section>
         {booking && <Section title="Catering team"><dl className="grid gap-4"><Field label="Coordinator" value={rs?.event_coordinator && `${rs.event_coordinator}${rs.event_coordinator_phone ? ` · ${rs.event_coordinator_phone}` : ""}`} /><Field label="Delivery / pickup contact" value={rs?.onsite_contact_name && `${rs.onsite_contact_name}${rs.onsite_contact_phone ? ` · ${rs.onsite_contact_phone}` : ""}`} /><Field label="Run sheet" value={rs ? `Revision ${rs.revision || 1} · ${rs.sent_at ? "sent" : "draft"}` : "Not yet created"} /></dl></Section>}
       </div>
     </div>
