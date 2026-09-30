@@ -129,7 +129,7 @@ export function RunsheetDocument({ rs, lead, b, items, selection, businessName, 
       </div>
       <div className="flex flex-col justify-center gap-2 border-l border-border pl-5 text-right">
         <p>Event Order: <strong>{rs.event_order_number || "—"}</strong></p>
-        <p>Booking Reference: <strong>{rs.booking_reference || "—"}</strong></p>
+        <p>Booking Reference: <strong>{rs.booking_reference || (rs.lead_id ? String(rs.lead_id).slice(0, 10).toUpperCase() : "—")}</strong></p>
         <p>Revision: {rs.revision || 1}</p>
       </div>
     </div>
