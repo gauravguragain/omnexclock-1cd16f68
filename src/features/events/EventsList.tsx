@@ -26,8 +26,8 @@ function eventWithinWeek(b: any, today: string) {
 }
 
 function paymentStatus(b: any, payments: CrmPayment[], today: string) {
-  const { total, deposit, paid, balance } = paymentSummary(b, payments);
-  if (total > 0 && balance === 0) return ["Full amount confirmed"];
+  const { total, deposit, paid, balance, status } = paymentSummary(b, payments);
+  if ((total > 0 && balance === 0) || isSettledImport(b)) return ["Full amount confirmed"];
   const labels: string[] = [];
   if (b.booking_kind === "catering") {
     const due = b.balance_due_date;
