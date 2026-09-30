@@ -48,21 +48,21 @@ function DishSearchSelect({ course, chosen, vegCount, nonVegCount, onPick }: { c
     </Popover>
   );
 }
-type InitialSelection = { bookId: string; pkgId: string; picks: Record<string, string[]>; proteins: Record<string, string>; price: string; notes?: Record<string, string>; oneOffs?: Record<string, { name: string; diet: string }> };
+type InitialSelection = { bookId: string; pkgId: string; picks: Record<string, string[]>; proteins: Record<string, string>; price: string; flat?: string; notes?: Record<string, string>; oneOffs?: Record<string, { name: string; diet: string }> };
 
 /** Pick a menu book, then a package, then choose dishes per course from that package's setup. */
-export default function MenuBookPicker({ packages, onAdd, initial, onCancel }: { packages: Pkg[]; onAdd: (pkg: Pkg, picks: Pick[], pricePerHead: number) => void; initial?: InitialSelection; onCancel?: () => void }) {
+export default function MenuBookPicker({ packages, onAdd, initial, onCancel }: { packages: Pkg[]; onAdd: (pkg: Pkg, picks: Pick[], pricePerHead: number, flatPrice: number) => void; initial?: InitialSelection; onCancel?: () => void }) {
   const books = useMemo(() => { const m = new Map<string, string>(); packages.forEach(p => m.set(p.book_id, p.book)); return [...m].map(([id, name]) => ({ id, name })); }, [packages]);
   const [bookId, setBookId] = useState(initial?.bookId || ""); const [pkgId, setPkgId] = useState(initial?.pkgId || "");
   const [picks, setPicks] = useState<Record<string, string[]>>(initial?.picks || {});
-  const [price, setPrice] = useState(initial?.price || ""); const [proteins, setProteins] = useState<Record<string, string>>(initial?.proteins || {});
+  const [price, setPrice] = useState(initial?.price || ""); const [flat, setFlat] = useState(initial?.flat || ""); const [proteins, setProteins] = useState<Record<string, string>>(initial?.proteins || {});
   const [notes, setNotes] = useState<Record<string, string>>(initial?.notes || {});
   const [oneOffs, setOneOffs] = useState<Record<string, { name: string; diet: string }>>(initial?.oneOffs || {});
   const [otherCourse, setOtherCourse] = useState<string | null>(null);
   const [otherName, setOtherName] = useState(""); const [otherDiet, setOtherDiet] = useState("veg");
   const pkg = packages.find(p => p.id === pkgId);
   const editing = Boolean(initial);
-  const reset = () => { setPkgId(""); setPicks({}); setPrice(""); setProteins({}); setNotes({}); setOneOffs({}); setOtherCourse(null); setOtherName(""); };
+  const reset = () => { setPkgId(""); setPicks({}); setPrice(""); setFlat(""); setProteins({}); setNotes({}); setOneOffs({}); setOtherCourse(null); setOtherName(""); };
   const dishFor = (course: any, id: string) => id.startsWith("other:") ? { id, ...oneOffs[id] } : course.dishes.find((d: any) => d.id === id);
   const addOther = (course: any) => {
     const name = otherName.trim(); if (!name) { toast.error("Enter a menu item name"); return; }
@@ -87,7 +87,7 @@ export default function MenuBookPicker({ packages, onAdd, initial, onCancel }: {
      const missing = pkg.courses.some((c: any) => (picks[c.id] || []).some(id => { const d = dishFor(c, id); return d?.protein_options?.length && !proteins[`${c.id}:${id}`]; }));
     if (missing) { toast.error("Choose a protein for each dish that needs one"); return; }
      const chosen = pkg.courses.flatMap((c: any) => (picks[c.id] || []).map(id => { const d = dishFor(c, id); return { course: c.name, courseId: c.id, dish: d, protein: proteins[`${c.id}:${id}`], notes: notes[`${c.id}:${id}`]?.trim(), oneOff: id.startsWith("other:") }; }).filter((x: Pick) => x.dish));
-    onAdd(pkg, chosen, Number(price) || 0); if (!editing) reset();
+    onAdd(pkg, chosen, Number(price) || 0, Number(flat) || 0); if (!editing) reset();
   };
 
   return <div className="mt-2 space-y-3 rounded-md border border-border bg-muted/30 p-3">
@@ -105,7 +105,8 @@ export default function MenuBookPicker({ packages, onAdd, initial, onCancel }: {
          {otherCourse === c.id && <div className="flex flex-wrap items-center gap-2"><Input className="min-w-40 flex-1" autoFocus maxLength={120} aria-label={`Other ${c.name} item`} placeholder="One-off menu item" value={otherName} onChange={e => setOtherName(e.target.value)} onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); addOther(c); } }} /><select className="h-9 rounded-md border border-input bg-background px-2 text-sm" aria-label="Diet" value={otherDiet} onChange={e => setOtherDiet(e.target.value)}><option value="veg">Vegetarian</option><option value="nonveg">Non-vegetarian</option><option value="seafood">Seafood</option></select><Button type="button" size="sm" onClick={() => addOther(c)}>Add</Button><Button type="button" size="icon" variant="ghost" aria-label="Cancel other item" onClick={() => setOtherCourse(null)}><X className="h-4 w-4" /></Button></div>}
       </div>; })}
       <div className="flex flex-wrap items-center gap-2">
-        <div className="flex items-center gap-1.5"><span className="text-xs text-muted-foreground">$</span><input type="number" min="0" step="0.01" value={price} onChange={e => setPrice(e.target.value)} placeholder="Price per guest" className="h-9 w-32 rounded-md border border-input bg-background px-3 text-sm" /></div>
+        <div className="flex items-center gap-1.5"><span className="text-xs text-muted-foreground">$</span><input type="number" min="0" step="0.01" value={price} onChange={e => setPrice(e.target.value)} placeholder="Price per guest" aria-label="Price per guest" className="h-9 w-32 rounded-md border border-input bg-background px-3 text-sm" /></div>
+        <div className="flex items-center gap-1.5"><span className="text-xs text-muted-foreground">or flat $</span><input type="number" min="0" step="0.01" value={flat} onChange={e => setFlat(e.target.value)} placeholder="Flat rate" aria-label="Flat rate" className="h-9 w-28 rounded-md border border-input bg-background px-3 text-sm" /></div>
         <Button type="button" size="sm" onClick={add}><Plus className="mr-1 h-4 w-4" />{editing ? "Update package" : "Add package to menu"}</Button>
         <Button type="button" size="sm" variant="ghost" onClick={() => setPicks(Object.fromEntries(pkg.courses.map((c: any) => { const veg = c.dishes.filter((d: any) => d.diet === "veg").slice(0, c.veg_picks ?? c.dishes.length); const nonVeg = c.dishes.filter((d: any) => d.diet !== "veg").slice(0, c.non_veg_picks ?? c.dishes.length); return [c.id, [...veg, ...nonVeg].slice(0, c.picks || undefined).map((d: any) => d.id)]; })))}>Fill with defaults</Button>
       </div>

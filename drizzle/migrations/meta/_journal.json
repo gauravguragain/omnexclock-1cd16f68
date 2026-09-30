@@ -512,6 +512,13 @@
       "when": 1790770708008,
       "tag": "0072_catering_delivery_pricing",
       "breakpoints": true
+    },
+    {
+      "idx": 73,
+      "version": "7",
+      "when": 1790772291579,
+      "tag": "0073_catering_chafing_and_terms",
+      "breakpoints": true
     }
   ]
 }

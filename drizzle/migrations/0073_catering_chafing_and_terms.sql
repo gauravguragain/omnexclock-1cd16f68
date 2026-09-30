@@ -1,0 +1,2 @@
+ALTER TABLE public.crm_bookings ADD COLUMN IF NOT EXISTS chafing_dishes integer NOT NULL DEFAULT 0, ADD COLUMN IF NOT EXISTS chafing_dish_price numeric NOT NULL DEFAULT 15;
+ALTER TABLE public.crm_settings ADD COLUMN IF NOT EXISTS catering_terms text, ADD COLUMN IF NOT EXISTS catering_terms_enabled boolean NOT NULL DEFAULT true;
