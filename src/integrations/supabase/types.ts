@@ -506,6 +506,10 @@ export type Database = {
           created_at: string
           created_by: string | null
           customer_id: string | null
+          delivery_distance_km: number | null
+          delivery_fee: number | null
+          delivery_fee_manual: boolean
+          delivery_rate_per_km: number | null
           deposit_amount: number
           deposit_due_date: string | null
           deposit_paid: boolean
@@ -545,6 +549,10 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           customer_id?: string | null
+          delivery_distance_km?: number | null
+          delivery_fee?: number | null
+          delivery_fee_manual?: boolean
+          delivery_rate_per_km?: number | null
           deposit_amount?: number
           deposit_due_date?: string | null
           deposit_paid?: boolean
@@ -584,6 +592,10 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           customer_id?: string | null
+          delivery_distance_km?: number | null
+          delivery_fee?: number | null
+          delivery_fee_manual?: boolean
+          delivery_rate_per_km?: number | null
           deposit_amount?: number
           deposit_due_date?: string | null
           deposit_paid?: boolean
