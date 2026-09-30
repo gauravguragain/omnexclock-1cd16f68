@@ -24,11 +24,12 @@ export default function MenuBooksPage() {
   if (!d.business) return null;
   const bid = d.business.id;
   const books = d.books.filter(b => status === "all" || (status === "active" ? b.active : !b.active));
+  const groups = [["event", "Event menu"], ["catering", "Catering menu"]] as const;
   const coursesOf = (p: Row) => d.courses.filter(c => c.package_id === p.id);
   const dishCount = (p: Row) => d.courseItems.filter(ci => coursesOf(p).some(c => c.id === ci.course_id)).length;
   const toggle = async (table: string, r: Row) => { await (supabase.from(table as any) as any).update({ active: !r.active }).eq("id", r.id); d.refresh(); };
   const saveBook = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault(); const f = new FormData(e.currentTarget); const v = { name: String(f.get("name")), description: String(f.get("description") || "") || null };
+    e.preventDefault(); const f = new FormData(e.currentTarget); const v = { name: String(f.get("name")), description: String(f.get("description") || "") || null, menu_category: String(f.get("menu_category") || "event") };
     const t = supabase.from("crm_menu_books" as any) as any;
     const r = bookOpen && bookOpen !== "new" ? await t.update(v).eq("id", bookOpen.id) : await t.insert({ ...v, business_id: bid, sort_order: d.books.length });
     if (r.error) toast.error(r.error.message); else { setBookOpen(null); d.refresh(); }
@@ -41,16 +42,16 @@ export default function MenuBooksPage() {
     </div>
     <div className="flex gap-2">{["active", "archived", "all"].map(s => <Button key={s} size="sm" variant={status === s ? "default" : "outline"} className="capitalize" onClick={() => setStatus(s)}>{s} ({d.books.filter(b => s === "all" || (s === "active" ? b.active : !b.active)).length})</Button>)}</div>
     {!d.books.length && <p className="text-sm text-muted-foreground">Create a menu book first (for example "Nepali Express" or "Indian Catering Packages").</p>}
-    <div className="grid gap-5 lg:grid-cols-2">{books.map(b => { const pk = d.packages.filter(p => p.book_id === b.id); return <Card key={b.id}>
+    {groups.map(([cat, label]) => { const gb = books.filter(b => (b.menu_category || "event") === cat); return <section key={cat} className="space-y-3"><h2 className="font-serif text-2xl font-semibold">{label} <span className="text-sm font-normal text-muted-foreground">({gb.length})</span></h2>{!gb.length && <p className="text-sm text-muted-foreground">No menu books in {label.toLowerCase()} yet.</p>}<div className="grid gap-5 lg:grid-cols-2">{gb.map(b => { const pk = d.packages.filter(p => p.book_id === b.id); return <Card key={b.id}>
       <CardHeader className="flex-row items-start justify-between space-y-0"><div><CardTitle className="font-serif text-2xl">{b.name}</CardTitle><p className="text-sm text-muted-foreground">{pk.length} packages{b.description ? ` · ${b.description}` : ""}</p></div>
          <div className="flex items-center gap-1">{!b.active && <Badge variant="outline">Archived</Badge>}<Button size="sm" variant="ghost" title="Edit menu book" onClick={() => setBookOpen(b)}><Pencil className="mr-1 h-4 w-4" />Edit book</Button><Button size="icon" variant="ghost" title={b.active ? "Archive" : "Restore"} onClick={() => toggle("crm_menu_books", b)}>{b.active ? <Archive className="h-4 w-4" /> : <ArchiveRestore className="h-4 w-4" />}</Button></div></CardHeader>
       <CardContent className="space-y-2">{pk.map(p => <div key={p.id} className="flex items-center justify-between gap-2 rounded-md border p-3">
          <Button variant="ghost" className="h-auto min-w-0 flex-1 justify-start px-1 text-left" onClick={() => { setPkg(p); setPkgOpen(true); }}><span><span className="font-medium">{p.name} {!p.active && <Badge variant="outline" className="ml-1 text-[10px]">Archived</Badge>}</span><span className="block text-xs text-muted-foreground">{p.package_type === "beverage" ? "Beverage" : "Food"} · {coursesOf(p).length} courses · {dishCount(p)} items · Edit package</span></span></Button>
         <Button size="icon" variant="ghost" title={p.active ? "Archive" : "Restore"} onClick={() => toggle("crm_packages", p)}>{p.active ? <Archive className="h-4 w-4" /> : <ArchiveRestore className="h-4 w-4" />}</Button>
-      </div>)}{!pk.length && <p className="text-sm text-muted-foreground">No packages yet.</p>}</CardContent></Card>; })}</div>
+      </div>)}{!pk.length && <p className="text-sm text-muted-foreground">No packages yet.</p>}</CardContent></Card>; })}</div></section>; })}
 
     <Dialog open={!!bookOpen} onOpenChange={o => !o && setBookOpen(null)}><DialogContent><DialogHeader><DialogTitle>{bookOpen === "new" ? "New menu book" : "Edit menu book"}</DialogTitle></DialogHeader>
-      <form key={bookOpen === "new" ? "n" : (bookOpen as Row)?.id} onSubmit={saveBook} className="space-y-3"><div className="space-y-1.5"><Label>Name *</Label><Input name="name" required defaultValue={bookOpen && bookOpen !== "new" ? bookOpen.name : ""} /></div><div className="space-y-1.5"><Label>Description</Label><Input name="description" defaultValue={bookOpen && bookOpen !== "new" ? bookOpen.description || "" : ""} /></div><DialogFooter><Button>Save</Button></DialogFooter></form></DialogContent></Dialog>
+      <form key={bookOpen === "new" ? "n" : (bookOpen as Row)?.id} onSubmit={saveBook} className="space-y-3"><div className="space-y-1.5"><Label>Name *</Label><Input name="name" required defaultValue={bookOpen && bookOpen !== "new" ? bookOpen.name : ""} /></div><div className="space-y-1.5"><Label>Menu group</Label><select name="menu_category" defaultValue={bookOpen && bookOpen !== "new" ? bookOpen.menu_category || "event" : "event"} className="flex h-10 w-full rounded-md border border-input bg-background px-3 text-sm"><option value="event">Event menu</option><option value="catering">Catering menu</option></select></div><div className="space-y-1.5"><Label>Description</Label><Input name="description" defaultValue={bookOpen && bookOpen !== "new" ? bookOpen.description || "" : ""} /></div><DialogFooter><Button>Save</Button></DialogFooter></form></DialogContent></Dialog>
     {share && <MenuShareDialog open={share} onOpenChange={setShare} data={d as any} source="menu_books" />}
     {pkgOpen && <PackageEditor open={pkgOpen} onClose={() => setPkgOpen(false)} pkg={pkg} data={d} />}
   </div>;
