@@ -501,6 +501,8 @@ export type Database = {
           balance_due_date: string | null
           booking_kind: string
           business_id: string
+          chafing_dish_price: number
+          chafing_dishes: number
           confirmation_sent_at: string | null
           confirmed_at: string | null
           created_at: string
@@ -544,6 +546,8 @@ export type Database = {
           balance_due_date?: string | null
           booking_kind?: string
           business_id: string
+          chafing_dish_price?: number
+          chafing_dishes?: number
           confirmation_sent_at?: string | null
           confirmed_at?: string | null
           created_at?: string
@@ -587,6 +591,8 @@ export type Database = {
           balance_due_date?: string | null
           booking_kind?: string
           business_id?: string
+          chafing_dish_price?: number
+          chafing_dishes?: number
           confirmation_sent_at?: string | null
           confirmed_at?: string | null
           created_at?: string
@@ -2498,6 +2504,8 @@ export type Database = {
           business_id: string
           calendar_token: string | null
           calendly_enabled: boolean
+          catering_terms: string | null
+          catering_terms_enabled: boolean
           confirmation_terms: string | null
           created_at: string
           created_by: string | null
@@ -2522,6 +2530,8 @@ export type Database = {
           business_id: string
           calendar_token?: string | null
           calendly_enabled?: boolean
+          catering_terms?: string | null
+          catering_terms_enabled?: boolean
           confirmation_terms?: string | null
           created_at?: string
           created_by?: string | null
@@ -2546,6 +2556,8 @@ export type Database = {
           business_id?: string
           calendar_token?: string | null
           calendly_enabled?: boolean
+          catering_terms?: string | null
+          catering_terms_enabled?: boolean
           confirmation_terms?: string | null
           created_at?: string
           created_by?: string | null
