@@ -17,7 +17,9 @@ import DateField from "@/features/sales/DateField";
 import { TimeDropdownPicker } from "@/components/TimeDropdownPicker";
 import { useCrmData } from "@/features/sales/useCrmData";
 import { useEventsData, bookingEnd, minutesBetween, to12 } from "./useEventsData";
-import { AlertTriangle, CheckCircle2, Loader2 } from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandList, CommandItem } from "@/components/ui/command";
+import { AlertTriangle, CheckCircle2, ChevronsUpDown, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const toMin = (t: string) => { const [h, m] = t.split(":").map(Number); return h * 60 + m; };
@@ -35,7 +37,7 @@ export default function CreateEventWizard({ kind }: { kind: "event" | "catering"
   const [f, setF] = useState({ event_name: "", event_type: "", date: "", start: "18:00", end: "23:00", adults: "", kids: "", venue: "", location: "", notes: "", method: "delivery" as "delivery" | "pickup" });
   const [saving, setSaving] = useState(false);
   const [delivery, setDelivery] = useState<DeliveryValue>(emptyDelivery());
-  const [coordId, setCoordId] = useState("");
+  const [coordId, setCoordId] = useState(""); const [coordOpen, setCoordOpen] = useState(false); const [custOpen, setCustOpen] = useState(false);
   const [pkgs, setPkgs] = useState<CPkg[]>([]); const bookPackages = useBookPackages(ev);
   const [chafOn, setChafOn] = useState(false); const [chafQty, setChafQty] = useState("1"); const [chafPrice, setChafPrice] = useState(String(DEFAULT_CHAFING_PRICE));
   const itemName = (ci: any) => ci.dish_id ? ev.dishes.find(x => x.id === ci.dish_id)?.name : ev.drinks.find(x => x.id === ci.drink_id)?.name;
@@ -66,7 +68,7 @@ export default function CreateEventWizard({ kind }: { kind: "event" | "catering"
     ev.venues.forEach(v => { out[v.id] = crm.bookings.filter(bk => bk.event_date === f.date && bk.status !== "cancelled" && (bk.venue_space_id === v.id || bk.venue_space === v.name) && (() => { const [c, d] = range(String(bk.start_time).slice(0, 5), bookingEnd(bk)); return a < d && c < b; })()); });
     return out;
   }, [f.date, f.start, f.end, crm.bookings, ev.venues, kind]);
-  const customers = ev.customers.filter(c => `${c.full_name} ${c.phone || ""} ${c.email || ""}`.toLowerCase().includes(cSearch.toLowerCase())).slice(0, 8);
+  const customers = ev.customers.filter(c => `${c.full_name} ${c.phone || ""} ${c.email || ""}`.toLowerCase().includes(cSearch.toLowerCase())).slice(0, 50);
   const custOk = mode === "existing" ? !!customerId : !!(cust.full_name && cust.phone && cust.email);
   const cateringOk = kind === "event" || pkgs.length > 0;
   const ready = cateringOk && custOk && f.event_name && f.date && Number(f.adults) > 0 && (kind === "event" ? !!f.venue : (f.method === "pickup" || !!f.location));
@@ -104,7 +106,7 @@ export default function CreateEventWizard({ kind }: { kind: "event" | "catering"
     <div><h1 className="font-serif text-3xl font-semibold">{kind === "event" ? "Create event" : "New catering booking"}</h1><p className="text-sm text-muted-foreground">Record a confirmed {kind === "event" ? "event" : "catering job"}. The customer, schedule and {kind === "event" ? "hall" : "service location"} are required; everything else can follow.</p></div>
     <Step n="01" title="Customer" sub="Search for an existing client, or add a new one. Name, phone and email are required.">
       <div className="mb-3 flex gap-2">{(["existing", "new"] as const).map(m => <Button key={m} size="sm" variant={mode === m ? "default" : "outline"} onClick={() => setMode(m)}>{m === "existing" ? "Existing customer" : "New customer"}</Button>)}</div>
-      {mode === "existing" ? <div className="space-y-2"><Input placeholder="Find a customer" value={cSearch} onChange={e => setCSearch(e.target.value)} /><div className="grid gap-2 sm:grid-cols-2">{customers.map(c => <button key={c.id} onClick={() => setCustomerId(c.id)} className={cn("rounded-md border p-3 text-left text-sm", customerId === c.id ? "border-primary bg-primary/5" : "border-border hover:bg-muted/40")}><p className="font-medium">{c.full_name}</p><p className="text-xs text-muted-foreground">{c.phone || c.email || "—"}</p></button>)}</div></div>
+      {mode === "existing" ? <Popover open={custOpen} onOpenChange={o => { setCustOpen(o); if (o) setCSearch(""); }}><PopoverTrigger asChild><Button type="button" variant="outline" role="combobox" aria-expanded={custOpen} className="w-full justify-between font-normal"><span className="truncate">{ev.customers.find(x => x.id === customerId)?.full_name || "Choose a customer"}</span><ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" /></Button></PopoverTrigger><PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start"><Command shouldFilter={false}><CommandInput placeholder="Search by name, phone or email…" value={cSearch} onValueChange={setCSearch} /><CommandList>{customers.length === 0 ? <CommandEmpty>No customers match “{cSearch}”.</CommandEmpty> : <CommandGroup>{customers.map(c => <CommandItem key={c.id} value={c.id} onSelect={() => { setCustomerId(c.id); setCustOpen(false); }}><span className="truncate">{c.full_name}</span><span className="ml-auto shrink-0 pl-2 text-xs text-muted-foreground">{c.phone || c.email || "—"}</span></CommandItem>)}</CommandGroup>}</CommandList></Command></PopoverContent></Popover>
         : <div className="grid gap-3 sm:grid-cols-2">{(["full_name", "phone", "email"] as const).map(k => <div key={k} className="space-y-1.5"><Label>{k === "full_name" ? "Name *" : `${k[0].toUpperCase()}${k.slice(1)} *`}</Label><Input value={cust[k]} onChange={e => setCust(p => ({ ...p, [k]: e.target.value }))} /></div>)}</div>}
     </Step>
     <Step n="02" title={kind === "catering" ? "Order & timing" : "Event & schedule"} sub={kind === "catering" ? "The order, the delivery or pickup window, and how many it feeds." : "What is being held, when, and how many are coming."}>
@@ -129,7 +131,7 @@ export default function CreateEventWizard({ kind }: { kind: "event" | "catering"
       {f.method === "delivery" ? <DeliveryFields addressLabel="Delivery address *" address={f.location} onAddress={v => set("location", v)} value={delivery} onChange={setDelivery} /> : <p className="text-sm text-muted-foreground">The client collects from the venue during the pickup window.</p>}
     </Step>
     <Step n="04" title="Coordinator" sub="Optional. Printed on the event order as the event's coordinator, and their number as the onsite contact.">
-       <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">{staff.map(s => <button key={s.id} type="button" onClick={() => setCoordId(coordId === s.id ? "" : s.id)} className={cn("rounded-md border p-3 text-left text-sm", coordId === s.id ? "border-primary bg-primary/5" : "border-border hover:bg-muted/40")}><p className="font-medium">{s.name}</p><p className="text-xs text-muted-foreground">{s.job_title || "Coordinator"}{s.phone ? ` · ${s.phone}` : ""}</p></button>)}{!staff.length && <p className="text-sm text-muted-foreground">No coordinators yet. Add them under People → <Link to={`/b/${businessCode}/catering/coordinators`} className="text-primary underline">Coordinators</Link>.</p>}</div>
+       <div className="grid gap-2"><Popover open={coordOpen} onOpenChange={o => { setCoordOpen(o); }}><PopoverTrigger asChild><Button type="button" variant="outline" role="combobox" aria-expanded={coordOpen} className="w-full justify-between font-normal"><span className="truncate">{coord ? coord.name : "Choose a coordinator"}</span><ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" /></Button></PopoverTrigger><PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start"><Command shouldFilter={false}><CommandInput placeholder="Search coordinators…" /><CommandList>{!staff.length ? <CommandEmpty>No coordinators yet — add them under People → <Link to={`/b/${businessCode}/catering/coordinators`} className="text-primary underline">Coordinators</Link>.</CommandEmpty> : <CommandGroup>{coord && <CommandItem value="__none" onSelect={() => { setCoordId(""); setCoordOpen(false); }}>None — clear selection</CommandItem>}{staff.map(s => <CommandItem key={s.id} value={s.id} onSelect={() => { setCoordId(s.id); setCoordOpen(false); }}><span className="truncate">{s.name}</span><span className="ml-auto shrink-0 pl-2 text-xs text-muted-foreground">{s.job_title || "Coordinator"}{s.phone ? ` · ${s.phone}` : ""}</span></CommandItem>)}</CommandGroup>}</CommandList></Command></PopoverContent></Popover></div>
     </Step>
     <Step n="05" title="Catering" sub="The packages the client ordered, and the dishes they chose. Prints on the run sheet.">
       <CateringMenuEditor pkgs={pkgs} setPkgs={setPkgs} bookPackages={bookPackages} />
@@ -149,7 +151,6 @@ export default function CreateEventWizard({ kind }: { kind: "event" | "catering"
       </div>
     </Step></>}
     <Step n={kind === "event" ? "04" : "06"} title="Notes" sub="Notes for the client and the team — all optional."><Textarea value={f.notes} onChange={e => set("notes", e.target.value)} /></Step>
-    <div className="flex justify-end gap-2"><Button variant="outline" onClick={() => nav(-1)}>Cancel</Button><Button disabled={!ready || saving} onClick={save}>{saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}{kind === "event" ? "Save event" : "Create booking"}</Button></div>
   </div>
   <aside className="space-y-4 lg:sticky lg:top-4 lg:self-start"><Card><CardContent className="space-y-3 p-5">
      <div className="flex items-center justify-between"><p className="font-serif text-xl">{kind === "catering" ? "Catering summary" : "Event summary"}</p><span className="text-xs text-primary">Live</span></div>
@@ -160,5 +161,6 @@ export default function CreateEventWizard({ kind }: { kind: "event" | "catering"
   </CardContent></Card>
   <Card><CardContent className="space-y-2 p-5"><div className="flex justify-between"><p className="font-medium">Before you create</p><span className="text-xs text-muted-foreground">{checks.filter(c => c[1]).length} of {checks.length}</span></div>
     {checks.map(([l, ok]) => <p key={l} className="flex justify-between text-sm"><span>{l}</span><span className={ok ? "text-primary" : "text-muted-foreground"}>{ok ? "done" : "not yet"}</span></p>)}</CardContent></Card></aside>
+  <div className="flex justify-end gap-2 lg:col-span-2"><Button variant="outline" onClick={() => nav(-1)}>Cancel</Button><Button disabled={!ready || saving} onClick={save}>{saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}{kind === "event" ? "Save event" : "Create booking"}</Button></div>
   </div>;
 }
