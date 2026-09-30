@@ -1531,6 +1531,7 @@ export type Database = {
           created_at: string
           description: string | null
           id: string
+          menu_category: string
           name: string
           sort_order: number
           updated_at: string
@@ -1541,6 +1542,7 @@ export type Database = {
           created_at?: string
           description?: string | null
           id?: string
+          menu_category?: string
           name: string
           sort_order?: number
           updated_at?: string
@@ -1551,6 +1553,7 @@ export type Database = {
           created_at?: string
           description?: string | null
           id?: string
+          menu_category?: string
           name?: string
           sort_order?: number
           updated_at?: string
