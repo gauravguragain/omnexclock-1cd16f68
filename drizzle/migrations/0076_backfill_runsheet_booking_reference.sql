@@ -1,0 +1,1 @@
+UPDATE public.crm_runsheets SET booking_reference = upper(left(lead_id::text, 10)) WHERE (booking_reference IS NULL OR booking_reference = '') AND lead_id IS NOT NULL;
