@@ -59,6 +59,20 @@ function A4Preview({ children, documentRef }: { children: React.ReactNode; docum
     const document = documentRef.current;
     if (!frame || !document) return;
     const measure = () => {
+      const flow = document.querySelector<HTMLElement>("[data-runsheet-flow]");
+      const sheet = document.querySelector<HTMLElement>(".runsheet-monochrome");
+      const footer = sheet?.querySelector<HTMLElement>(":scope > footer");
+      if (flow && sheet && footer) {
+        const factor = document.offsetWidth / document.getBoundingClientRect().width;
+        const pageHeight = sheet.offsetWidth * 297 / 210;
+        const top = (flow.getBoundingClientRect().top - sheet.getBoundingClientRect().top) * factor;
+        // Reserve the signature footer on page one. A short menu uses only the left
+        // column; the right column starts only when the left reaches the page edge.
+        const room = Math.max(100, pageHeight - top - footer.offsetHeight - 24 - 38 - 16);
+        const content = Array.from(flow.children).reduce((sum, child) => sum + (child as HTMLElement).getBoundingClientRect().height * factor, 0);
+        const nextHeight = `${Math.ceil(Math.min(room, content + 4) + 32)}px`;
+        if (flow.style.height !== nextHeight) flow.style.height = nextHeight;
+      }
       const nextScale = Math.min(1, frame.clientWidth / document.offsetWidth);
       setScale(nextScale);
       setHeight(document.scrollHeight * nextScale);
@@ -140,7 +154,7 @@ export function RunsheetDocument({ rs, lead, b, items, selection, businessName, 
       <div className="flex justify-between bg-primary px-3 py-2 text-sm font-bold text-primary-foreground"><span>Agenda – {date}</span><span>Day 1 of 1</span></div>
       <div className="bg-muted"><Summary bold /></div>
       {/* Newspaper-style flow: content fills the left column, then the right, before a new page. */}
-      <div data-runsheet-flow className="runsheet-flow columns-2 gap-8 border-x border-b border-border p-4 text-xs leading-relaxed [column-rule:1px_solid_hsl(var(--border))] [&>*]:break-inside-avoid">
+      <div data-runsheet-flow className="runsheet-flow columns-2 [column-fill:auto] gap-8 border-x border-b border-border p-4 text-xs leading-relaxed [column-rule:1px_solid_hsl(var(--border))] [&>*]:break-inside-avoid">
           {stalls.length > 0 && <div className="pb-3"><h2 className="font-bold">Live Stalls{stalls[0].service_start_time ? ` — ${to12(stalls[0].service_start_time)}${stalls[0].service_end_time ? ` to ${to12(stalls[0].service_end_time)}` : ""}` : ""}</h2>{stalls.map(s => <p key={s.id} className="pl-3">• {String(s.item_name || "").replace(/_/g, " ").replace(/\b\p{L}/gu, letter => letter.toLocaleUpperCase())}</p>)}</div>}
           <div><h2 className="font-bold">Menu selection{pkgs.length ? ` – ${pkgs.map(p => p.item_name).join(" · ")}` : ""}</h2></div>
           {Object.entries(courses as Record<string, any[]>).map(([course, dishes]) => { const sch = schedule.find((s: any) => s?.label && String(s.label).trim().toLowerCase() === course.trim().toLowerCase()); return <div key={course} className="pt-2"><h3 className="pl-3 font-semibold">{course}{sch ? ` — ${slot(sch) || "—"}` : ""}</h3>{dishes.map(d => <p key={d.id} className="pl-6">- {d.item_name}{d.notes && !String(d.notes).startsWith("pkg:") ? <span className="font-semibold"> — {d.notes}</span> : null}</p>)}</div>; })}
