@@ -106,7 +106,7 @@ export default function CateringDetailPage({ view }: { view: "lead" | "booking" 
       });
       return { key, pkgId: pk?.id || "", bookId: pk?.book_id, name: row.item_name, pricePerHead: Number(row.price_per_head || 0), flatPrice: Number(row.flat_price || 0), dishes };
     }));
-    setTeam({ coordinator: rs?.event_coordinator || "", coordinator_phone: rs?.event_coordinator_phone || "", onsite_name: rs?.onsite_contact_name || "", onsite_phone: rs?.onsite_contact_phone || "", client_notes: rs?.client_notes || booking.notes || "" });
+    setTeam({ sales_person: rs?.sales_person || "", sales_person_phone: rs?.sales_person_phone || "", coordinator: rs?.event_coordinator || "", coordinator_phone: rs?.event_coordinator_phone || "", onsite_name: rs?.onsite_contact_name || "", onsite_phone: rs?.onsite_contact_phone || "", client_notes: rs?.client_notes || booking.notes || "" });
     setEditBkOpen(true);
   };
   const saveBk = async () => {
@@ -124,7 +124,7 @@ export default function CateringDetailPage({ view }: { view: "lead" | "booking" 
     const rows = cateringMenuRows(chosen, bid, sel.id);
     if (rows.length) { const { error: ie } = await supabase.from("crm_menu_selection_items").insert(rows as any); if (ie) { setBkSaving(false); toast.error(ie.message); return; } }
     if (rs) {
-      const { error: re } = await supabase.from("crm_runsheets").update({ event_coordinator: team.coordinator || null, event_coordinator_phone: team.coordinator_phone || null, onsite_contact_name: team.onsite_name || null, onsite_contact_phone: team.onsite_phone || null, client_notes: team.client_notes || null } as any).eq("id", rs.id);
+      const { error: re } = await supabase.from("crm_runsheets").update({ sales_person: team.sales_person || null, sales_person_phone: team.sales_person_phone || null, event_coordinator: team.coordinator || null, event_coordinator_phone: team.coordinator_phone || null, onsite_contact_name: team.onsite_name || null, onsite_contact_phone: team.onsite_phone || null, client_notes: team.client_notes || null } as any).eq("id", rs.id);
       if (re) { setBkSaving(false); toast.error(re.message); return; }
     }
     const newTotal = cateringMenuTotal(chosen, total) + (bk.fulfilment_method === "pickup" ? 0 : Number(booking.delivery_fee || 0)) + Number(booking.chafing_dishes || 0) * Number(booking.chafing_dish_price ?? 15);
@@ -158,7 +158,7 @@ export default function CateringDetailPage({ view }: { view: "lead" | "booking" 
       </div>
       <div>
         {booking && <div className="mb-6"><BookingPaymentsCard booking={booking} onChanged={crm.refresh} /></div>}
-        {booking && <Section title="Catering team"><dl className="grid gap-4"><Field label="Coordinator" value={rs?.event_coordinator && `${rs.event_coordinator}${rs.event_coordinator_phone ? ` · ${rs.event_coordinator_phone}` : ""}`} /><Field label="Delivery / pickup contact" value={rs?.onsite_contact_name && `${rs.onsite_contact_name}${rs.onsite_contact_phone ? ` · ${rs.onsite_contact_phone}` : ""}`} /><Field label="Run sheet" value={rs ? `Revision ${rs.revision || 1} · ${rs.sent_at ? "sent" : "draft"}` : "Not yet created"} /></dl></Section>}
+        {booking && <Section title="Catering team"><dl className="grid gap-4"><Field label="Sales person" value={rs?.sales_person && `${rs.sales_person}${rs.sales_person_phone ? ` · ${rs.sales_person_phone}` : ""}`} /><Field label="Coordinator" value={rs?.event_coordinator && `${rs.event_coordinator}${rs.event_coordinator_phone ? ` · ${rs.event_coordinator_phone}` : ""}`} /><Field label="Delivery / pickup contact" value={rs?.onsite_contact_name && `${rs.onsite_contact_name}${rs.onsite_contact_phone ? ` · ${rs.onsite_contact_phone}` : ""}`} /><Field label="Run sheet" value={rs ? `Revision ${rs.revision || 1} · ${rs.sent_at ? "sent" : "draft"}` : "Not yet created"} /></dl></Section>}
       </div>
     </div>
     <LeadFormDialog open={editOpen} onOpenChange={setEditOpen} businessId={crm.business.id} options={crm.options} lead={lead} leads={crm.leads} onSaved={crm.refresh} defaultKind="catering" lockedKind="catering" />
@@ -182,10 +182,12 @@ export default function CateringDetailPage({ view }: { view: "lead" | "booking" 
       </div>}
       {bkTab === "team" && <div className="space-y-4">
         <div className="grid gap-4 sm:grid-cols-2">
+          <div><Label>Sales person</Label><Select value={team.sales_person || "none"} onValueChange={v => { const s = ev.stakeholders.find(x => x.full_name === v); setTeam(p => ({ ...p, sales_person: v === "none" ? "" : v, sales_person_phone: v === "none" ? "" : (s?.phone || p.sales_person_phone) })); }}><SelectTrigger><SelectValue placeholder="Choose sales person" /></SelectTrigger><SelectContent><SelectItem value="none">None</SelectItem>{ev.stakeholders.filter(s => s.stakeholder_type === "coordinator" && s.active !== false).map(s => <SelectItem key={s.id} value={s.full_name}>{s.full_name}</SelectItem>)}</SelectContent></Select></div>
+          <div><Label>Sales person phone</Label><Input value={team.sales_person_phone} onChange={e => setTeam(p => ({ ...p, sales_person_phone: e.target.value }))} /></div>
           <div><Label>Coordinator</Label><Select value={team.coordinator || "none"} onValueChange={v => { const s = ev.stakeholders.find(x => x.full_name === v); setTeam(p => ({ ...p, coordinator: v === "none" ? "" : v, coordinator_phone: v === "none" ? "" : (s?.phone || p.coordinator_phone) })); }}><SelectTrigger><SelectValue placeholder="Choose coordinator" /></SelectTrigger><SelectContent><SelectItem value="none">None</SelectItem>{ev.stakeholders.filter(s => s.stakeholder_type === "coordinator" && s.active !== false).map(s => <SelectItem key={s.id} value={s.full_name}>{s.full_name}</SelectItem>)}</SelectContent></Select></div>
           <div><Label>Coordinator phone</Label><Input value={team.coordinator_phone} onChange={e => setTeam(p => ({ ...p, coordinator_phone: e.target.value }))} /></div>
-          <div><Label>Delivery / pickup contact</Label><Input value={team.onsite_name} onChange={e => setTeam(p => ({ ...p, onsite_name: e.target.value }))} /></div>
-          <div><Label>Contact phone</Label><Input value={team.onsite_phone} onChange={e => setTeam(p => ({ ...p, onsite_phone: e.target.value }))} /></div>
+          <div><Label>Delivery / pickup contact</Label><Input placeholder="Defaults to client" value={team.onsite_name} onChange={e => setTeam(p => ({ ...p, onsite_name: e.target.value }))} /></div>
+          <div><Label>Contact phone</Label><Input placeholder="Defaults to client phone" value={team.onsite_phone} onChange={e => setTeam(p => ({ ...p, onsite_phone: e.target.value }))} /></div>
         </div>
         <div><Label>Client notes (shown on run sheet)</Label><Textarea rows={3} value={team.client_notes} onChange={e => setTeam(p => ({ ...p, client_notes: e.target.value }))} /></div>
         {!rs && <p className="text-xs text-muted-foreground">Team details save once a run sheet exists — preview the run sheet first.</p>}
