@@ -45,6 +45,7 @@ export default function CalendarTab({ businessId, businessName, leads, inspectio
   const feedUrl = token
     ? `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/crm-calendar-feed?b=${businessId}&t=${token}`
     : "";
+  const shareUrl = token ? `https://www.regalmanagement.com.au/calendar/${businessId}/${token}` : "";
   const googleUrl = `https://calendar.google.com/calendar/r?cid=${encodeURIComponent(feedUrl)}`;
   const nameOf = (id: string | null) => leads.find((lead) => lead.id === id)?.full_name || "Client";
 
@@ -99,6 +100,17 @@ export default function CalendarTab({ businessId, businessName, leads, inspectio
             <Button variant="outline" onClick={copyLink}><Copy className="mr-2 h-4 w-4" />Copy</Button>
             <Button variant="outline" onClick={downloadIcs}><Download className="mr-2 h-4 w-4" />.ics file</Button>
             <Button asChild><a href={googleUrl} target="_blank" rel="noreferrer">Add to Google</a></Button>
+          </div>
+        </div>
+        <div className="space-y-2 border-t border-border pt-3">
+          <p className="text-sm font-medium">Shareable view-only calendar</p>
+          <p className="text-sm text-muted-foreground">Anyone with this link can view events and catering (no editing). It updates live, just like your calendar.</p>
+          <div className="flex flex-col gap-2 sm:flex-row">
+            <Input readOnly value={shareUrl} onFocus={(e) => e.currentTarget.select()} className="font-mono text-xs" />
+            <div className="flex gap-2">
+              <Button variant="outline" onClick={async () => { try { await navigator.clipboard.writeText(shareUrl); toast.success("Share link copied"); } catch { toast.error("Copy failed — select the link and copy it manually"); } }}><Copy className="mr-2 h-4 w-4" />Copy</Button>
+              <Button asChild><a href={shareUrl} target="_blank" rel="noreferrer">Open</a></Button>
+            </div>
           </div>
         </div>
       </CardContent>
