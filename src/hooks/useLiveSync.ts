@@ -7,7 +7,12 @@ const VISIBLE_POLL_MS = 20_000;
  * Live sync: re-runs `onChange` (debounced) whenever any of the given tables
  * change for this business, plus when the tab regains focus.
  */
-export function useLiveSync(tables: string[], businessId: string | undefined, onChange: () => void) {
+export function useLiveSync(
+  tables: string[],
+  businessId: string | undefined,
+  onChange: () => void,
+  unfilteredTables: string[] = [],
+) {
   const cb = useRef(onChange);
   cb.current = onChange;
   const key = tables.join(",");
@@ -20,7 +25,10 @@ export function useLiveSync(tables: string[], businessId: string | undefined, on
     const fire = (delay = 400) => { clearTimeout(timer); timer = setTimeout(() => cb.current(), delay); };
     const channel = supabase.channel(`live-${key}-${businessId}-${Math.random().toString(36).slice(2, 8)}`);
     key.split(",").forEach(table => {
-      channel.on("postgres_changes" as any, { event: "*", schema: "public", table, filter: `business_id=eq.${businessId}` }, fire);
+      const config = unfilteredTables.includes(table)
+        ? { event: "*", schema: "public", table }
+        : { event: "*", schema: "public", table, filter: `business_id=eq.${businessId}` };
+      channel.on("postgres_changes" as any, config, fire);
     });
     channel.subscribe((status) => {
       if (status === "SUBSCRIBED") {
@@ -52,5 +60,5 @@ export function useLiveSync(tables: string[], businessId: string | undefined, on
       window.removeEventListener("app:data-refresh", onRefresh);
       supabase.removeChannel(channel);
     };
-  }, [key, businessId]);
+  }, [key, businessId, unfilteredTables.join(",")]);
 }

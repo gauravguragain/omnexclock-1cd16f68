@@ -15,6 +15,7 @@ import { Check, X, CalendarOff, Clock, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 import { logAudit } from "@/lib/auditLog";
 import { notifyEmployees } from "@/lib/notifications";
+import { useLiveSync } from "@/hooks/useLiveSync";
 
 interface EmployeeRequest {
   id: string;
@@ -82,6 +83,7 @@ export default function RequestsPage() {
   };
 
   useEffect(() => { if (business) { fetchRequests(); fetchPendingCount(); } }, [filter, business]);
+  useLiveSync(["employee_requests"], business?.id, () => { void fetchRequests(); void fetchPendingCount(); }, ["employee_requests"]);
 
   const openReview = (req: EmployeeRequest) => {
     setReviewReq(req);
