@@ -28,7 +28,7 @@ export function useLiveSync(
       const config = unfilteredTables.includes(table)
         ? { event: "*", schema: "public", table }
         : { event: "*", schema: "public", table, filter: `business_id=eq.${businessId}` };
-      channel.on("postgres_changes" as any, config, fire);
+      channel.on("postgres_changes" as any, config, () => fire());
     });
     channel.subscribe((status) => {
       if (status === "SUBSCRIBED") {
