@@ -20,14 +20,15 @@ export default function PaymentsPage() {
   const [q, setQ] = useState(""); const [open, setOpen] = useState(false);
   const leadName = (id?: string) => crm.leads.find(l => l.id === id)?.full_name;
 
-  const rows = useMemo(() => crm.bookings.filter(b => b.status !== "cancelled").map(b => {
+  const payable = useMemo(() => crm.bookings.filter(b => b.status !== "cancelled" && (b.booking_kind === "catering" || Number(b.deposit_amount) > 0 || payments.some(p => p.booking_id === b.id))), [crm.bookings, payments]);
+  const rows = useMemo(() => payable.map(b => {
     const s = paymentSummary(b, payments.filter(p => p.booking_id === b.id));
     return { b, s, client: leadName(b.lead_id) || "" };
   }).sort((a, z) => {
     const today = sydneyToday();
     const dist = (d?: string) => Math.abs(new Date(String(d || today) + "T00:00:00").getTime() - new Date(today + "T00:00:00").getTime());
     return dist(a.b.event_date) - dist(z.b.event_date);
-  }), [crm.bookings, crm.leads, payments]);
+  }), [payable, crm.leads, payments]);
 
   const month = sydneyToday().slice(0, 7);
   const totals = {
@@ -80,6 +81,6 @@ export default function PaymentsPage() {
       </div>; })}</div> : <p className="text-sm text-muted-foreground">No payments recorded yet.</p>}
     </CardContent></Card>
 
-    <RecordPaymentDialog open={open} onOpenChange={setOpen} bookings={crm.bookings.filter(b => b.status !== "cancelled").map(b => ({ ...b, client_name: crm.leads.find(l => l.id === b.lead_id)?.full_name }))} onSaved={() => { refresh(); crm.refresh(); }} />
+    <RecordPaymentDialog open={open} onOpenChange={setOpen} bookings={payable.map(b => ({ ...b, client_name: crm.leads.find(l => l.id === b.lead_id)?.full_name }))} onSaved={() => { refresh(); crm.refresh(); }} />
   </div>;
 }
