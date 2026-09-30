@@ -53,6 +53,11 @@ Deno.serve(async (req) => {
         await sendMail(`${brand.name} <noreply@regalmanagement.com.au>`, String(body.to).trim(), `Deposit payment details — Sample Event (test email)`, html);
         return json({ success: true, id: row.id });
       }
+    }
+
+    if (action === "send" || action === "proof_url") {
+      const caller = await getCaller(req, db);
+      if (!caller) return json({ error: "Unauthorized" }, 401);
       if (action === "proof_url") {
         if (!UUID.test(body.id || "")) return json({ error: "Invalid request" }, 400);
         const { data: r } = await db.from("crm_deposit_requests").select("business_id, proof_path").eq("id", body.id).maybeSingle();
