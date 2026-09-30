@@ -117,7 +117,7 @@ export default function EventDetailPage({ kind }: { kind: "event" | "catering" }
           : <Empty title="No floor timings yet" text="Arrivals, speeches, cake cutting — the running order prints on the run sheet. Add it in the Run sheet step." />}</Section>
 
         <Section icon={ClipboardList} title="Setup & additional information">{rs?.setup_items?.length || rs?.setup_notes ? <div className="space-y-2">{rs.setup_items?.length > 0 && <div className="flex flex-wrap gap-1.5">{rs.setup_items.map((s: string) => <Badge key={s} variant="outline">{s}</Badge>)}</div>}{rs.setup_notes && <p className="whitespace-pre-wrap text-sm">{rs.setup_notes}</p>}{rs.access_time && <p className="text-xs text-muted-foreground">Decor / vendor access {to12(String(rs.access_time).slice(0, 5))}</p>}</div>
-          : <Empty title="No setup information recorded" text="Prints on the Event Order in the right-hand column." />}</Section>
+          : <Empty title="No setup information recorded" text="Shows here when recorded." />}</Section>
 
         <Section icon={FileText} title="Notes"><div className="space-y-4">
           <div><p className="text-xs font-medium">From the client</p>{rs?.client_notes || rs?.special_requests || lead?.notes ? <p className="whitespace-pre-wrap text-sm">{rs?.client_notes || rs?.special_requests || lead?.notes}</p> : <p className="text-sm text-muted-foreground">No notes from the client</p>}</div>
