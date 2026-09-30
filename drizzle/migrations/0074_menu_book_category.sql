@@ -1,0 +1,2 @@
+ALTER TABLE public.crm_menu_books ADD COLUMN IF NOT EXISTS menu_category text NOT NULL DEFAULT 'event';
+ALTER TABLE public.crm_menu_books ADD CONSTRAINT crm_menu_books_menu_category_check CHECK (menu_category IN ('event','catering'));

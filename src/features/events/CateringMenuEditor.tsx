@@ -9,7 +9,7 @@ export type CPkg = { key: string; pkgId: string; bookId?: string; name: string; 
 
 /** Food packages shaped for MenuBookPicker (same as the event menu selection). */
 export function useBookPackages(ev: any): any[] {
-  return useMemo(() => ev.packages.filter((p: any) => p.active !== false && p.package_type !== "beverage").map((p: any) => ({ ...p, book: ev.books.find((b: any) => b.id === p.book_id)?.name || "Menu",
+  return useMemo(() => ev.packages.filter((p: any) => p.active !== false && p.package_type !== "beverage" && ev.books.find((b: any) => b.id === p.book_id)?.menu_category === "catering").map((p: any) => ({ ...p, book: ev.books.find((b: any) => b.id === p.book_id)?.name || "Menu",
     courses: ev.courses.filter((c: any) => c.package_id === p.id).map((c: any) => ({ ...c, dishes: ev.courseItems.filter((ci: any) => ci.course_id === c.id && ci.dish_id).map((ci: any) => { const d = ev.dishes.find((x: any) => x.id === ci.dish_id); return d ? { ...d, protein_options: ci.protein_options || [], extra_price_per_head: Number(ci.extra_price_per_head || 0) } : null; }).filter(Boolean) })) })), [ev.packages, ev.books, ev.courses, ev.courseItems, ev.dishes]);
 }
 
