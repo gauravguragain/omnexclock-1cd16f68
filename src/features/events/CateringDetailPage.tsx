@@ -35,7 +35,7 @@ export default function CateringDetailPage({ view }: { view: "lead" | "booking" 
   const ev = useEventsData();
   const [editOpen, setEditOpen] = useState(false);
   const [editBkOpen, setEditBkOpen] = useState(false);
-  const [bkTab, setBkTab] = useState<"details" | "menu" | "team">("details");
+  const [bkTab, setBkTab] = useState<"details" | "delivery" | "menu" | "chafing" | "team" | "customer">("details");
   const [bk, setBk] = useState({ event_name: "", event_date: "", start_time: "18:00", end_time: "23:00", fulfilment_method: "delivery", service_location: "", adults: "", kids: "", notes: "" });
   const [pkgs, setPkgs] = useState<CPkg[]>([]);
   const [team, setTeam] = useState({ coordinator: "", coordinator_phone: "", onsite_name: "", onsite_phone: "", client_notes: "" });
@@ -111,11 +111,11 @@ export default function CateringDetailPage({ view }: { view: "lead" | "booking" 
   };
   const saveBk = async () => {
     if (!booking || !crm.business) return;
-    if (!bk.event_name || !bk.event_date || !(Number(bk.adults) > 0) || (bk.fulfilment_method === "delivery" && !bk.service_location)) { toast.error("Name, date, adults and delivery address are required."); return; }
+    if (!bk.event_name || !bk.event_date || !(Number(bk.adults) > 0)) { toast.error("Name, date and adults are required."); return; }
     setBkSaving(true);
     const bid = crm.business.id;
     const total = (Number(bk.adults) || 0) + (Number(bk.kids) || 0);
-    const { error } = await supabase.from("crm_bookings").update({ event_name: bk.event_name, event_date: bk.event_date, start_time: bk.start_time, end_time: bk.end_time, duration_minutes: minutesBetween(bk.start_time, bk.end_time), fulfilment_method: bk.fulfilment_method, service_location: bk.fulfilment_method === "pickup" ? null : bk.service_location || null, adults: Number(bk.adults) || 0, kids: Number(bk.kids) || 0, guest_count: total, notes: bk.notes || null } as any).eq("id", booking.id);
+    const { error } = await supabase.from("crm_bookings").update({ event_name: bk.event_name, event_date: bk.event_date, start_time: bk.start_time, end_time: bk.end_time, duration_minutes: minutesBetween(bk.start_time, bk.end_time), fulfilment_method: bk.fulfilment_method, service_location: bk.fulfilment_method === "pickup" ? null : booking.service_location || bk.service_location || null, adults: Number(bk.adults) || 0, kids: Number(bk.kids) || 0, guest_count: total, notes: bk.notes || null } as any).eq("id", booking.id);
     if (error) { setBkSaving(false); toast.error(error.message); return; }
     const chosen = pkgs;
     const { data: sel, error: se } = await supabase.from("crm_menu_selections").upsert({ business_id: bid, lead_id: lead.id, guest_count: Number(bk.adults) || total, package_name: chosen[0]?.name || null, updated_by: null } as any, { onConflict: "lead_id" }).select("id").single();
@@ -150,9 +150,9 @@ export default function CateringDetailPage({ view }: { view: "lead" | "booking" 
           {booking && <><Field label={`${method} window`} value={`${to12(String(booking.start_time).slice(0, 5))} – ${to12(bookingEnd(booking))}`} /><Field label="Service" value={method} /><Field label={pickup ? "Pickup" : "Delivery address"} value={pickup ? crm.business.name : booking.service_location || lead.service_location} /><Field label="Guests" value={`${booking.adults ?? booking.guest_count ?? 0} adults · ${booking.kids ?? 0} kids`} /></>}
           {!booking && <><Field label="Estimated guests" value={lead.estimated_guest_count} /><Field label="Source" value={prettyCrmValue(lead.source)} /></>}
         </dl></Section>
-        {booking && !pickup && <DeliveryCard key={booking.id} booking={booking} onChanged={crm.refresh} />}
+        {booking && !pickup && <Section title="Delivery"><dl className="grid gap-4 sm:grid-cols-2"><Field label="Address" value={booking.service_location ? <a className="text-primary underline" target="_blank" rel="noreferrer" href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(booking.service_location)}`}>{booking.service_location}</a> : null} /><Field label="Distance from Wentworthville" value={booking.delivery_distance_km != null ? `${Number(booking.delivery_distance_km).toFixed(2)} km` : null} /><Field label="Delivery fee" value={booking.delivery_fee != null ? `$${Number(booking.delivery_fee).toFixed(2)}${booking.delivery_fee_manual ? " (manual)" : ""}` : null} /></dl></Section>}
         {booking && <><Section title="Menu selection"><div className="space-y-3 text-sm">{packages.length ? <p><strong>Packages:</strong> {packages.map(i => i.course === "kids_package" ? `Kids menu (${i.quantity || booking.kids || 0})` : i.item_name).join(" · ")}</p> : <p className="text-muted-foreground">No packages selected.</p>}{Object.entries(courses).map(([course, dishes]) => <div key={course}><p className="font-semibold">{course}</p><p>{dishes.map(i => `${i.item_name}${i.package_group_key && i.notes ? ` — ${i.notes}` : ""}`).join(" · ")}</p></div>)}{items.filter(i => i.course === "live_stall").map(i => <p key={i.id}>Live stall: {String(i.item_name || "").replace(/_/g, " ")}</p>)}{selection?.dietary_requirements && <p>Dietary: {selection.dietary_requirements}</p>}{selection?.allergies && <p>Allergies: {selection.allergies}</p>}</div></Section>
-          <ChafingCard key={`chafe-${booking.id}`} booking={booking} menuTotal={cateringItemsTotal(items, (booking.adults ?? 0) + (booking.kids ?? 0))} onChanged={crm.refresh} />
+          {(() => { const menuT = cateringItemsTotal(items, (booking.adults ?? 0) + (booking.kids ?? 0)); const del = pickup ? 0 : Number(booking.delivery_fee || 0); const cq = Number(booking.chafing_dishes || 0); const cp = Number(booking.chafing_dish_price ?? 15); return <Section title="Chafing dishes & total"><dl className="grid gap-4 sm:grid-cols-2"><Field label="Chafing dishes" value={cq > 0 ? `${cq} × $${cp.toFixed(2)} = $${(cq * cp).toFixed(2)}` : "Not required"} /><Field label="Menu" value={`$${menuT.toFixed(2)}`} />{!pickup && <Field label="Delivery" value={`$${del.toFixed(2)}`} />}<Field label="Booking total" value={<strong>${Number(booking.total_amount || 0).toFixed(2)}</strong>} /></dl></Section>; })()}
           <Section title="Notes"><p className="whitespace-pre-wrap text-sm">{rs?.client_notes || booking.notes || "No notes recorded."}</p></Section></>}
       </div>
       <div>
@@ -164,7 +164,10 @@ export default function CateringDetailPage({ view }: { view: "lead" | "booking" 
     <LeadFormDialog open={editOpen} onOpenChange={setEditOpen} businessId={crm.business.id} options={crm.options} lead={lead} leads={crm.leads} onSaved={crm.refresh} defaultKind="catering" lockedKind="catering" />
     {booking && rs && <SendRunsheetDialog mode={rs.sent_at ? "resend" : "issue"} onIssue={issue} open={sendOpen} onOpenChange={setSendOpen} rs={rs} lead={lead} booking={booking} businessName={crm.business.name} />}
     <Dialog open={editBkOpen} onOpenChange={setEditBkOpen}><DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto"><DialogHeader><DialogTitle>Edit catering booking</DialogTitle></DialogHeader>
-      <div className="flex gap-2 border-b border-border pb-3">{([["details", "Details"], ["menu", "Menu selection"], ["team", "Team"]] as const).map(([k, l]) => <Button key={k} size="sm" variant={bkTab === k ? "default" : "outline"} onClick={() => setBkTab(k)}>{l}</Button>)}</div>
+      <div className="flex flex-wrap gap-2 border-b border-border pb-3">{([["details", "Details"], ...(bk.fulfilment_method !== "pickup" ? [["delivery", "Delivery"]] : []), ["menu", "Menu selection"], ["chafing", "Chafing & total"], ["team", "Team"], ["customer", "Customer"]] as [typeof bkTab, string][]).map(([k, l]) => <Button key={k} size="sm" variant={bkTab === k ? "default" : "outline"} onClick={() => setBkTab(k)}>{l}</Button>)}</div>
+      {bkTab === "delivery" && booking && <div><DeliveryCard key={booking.id} booking={booking} onChanged={crm.refresh} /><p className="text-xs text-muted-foreground">Press Save delivery above to keep delivery changes.</p></div>}
+      {bkTab === "chafing" && booking && <div><ChafingCard key={`chafe-${booking.id}`} booking={booking} menuTotal={cateringItemsTotal(items, (booking.adults ?? 0) + (booking.kids ?? 0))} onChanged={crm.refresh} /></div>}
+      {bkTab === "customer" && <div className="space-y-3 text-sm"><p>{lead.full_name} · {lead.phone || "no phone"} · {lead.email || "no email"}{lead.company ? ` · ${lead.company}` : ""}</p><Button variant="outline" onClick={() => setEditOpen(true)}><Pencil className="mr-2 h-4 w-4" />Edit customer details</Button></div>}
       {bkTab === "details" && <div className="space-y-4">
         <div><Label>Booking name</Label><Input value={bk.event_name} onChange={e => setBk(p => ({ ...p, event_name: e.target.value }))} /></div>
         <div className="grid gap-4 sm:grid-cols-2">
@@ -175,7 +178,6 @@ export default function CateringDetailPage({ view }: { view: "lead" | "booking" 
           <div><Label>Adults</Label><Input type="number" min={1} value={bk.adults} onChange={e => setBk(p => ({ ...p, adults: e.target.value }))} /></div>
           <div><Label>Kids</Label><Input type="number" min={0} value={bk.kids} onChange={e => setBk(p => ({ ...p, kids: e.target.value }))} /></div>
         </div>
-        {bk.fulfilment_method === "delivery" && <div><Label>Delivery address</Label><Input value={bk.service_location} onChange={e => setBk(p => ({ ...p, service_location: e.target.value }))} /></div>}
         <div><Label>Notes</Label><Textarea rows={3} value={bk.notes} onChange={e => setBk(p => ({ ...p, notes: e.target.value }))} /></div>
       </div>}
       {bkTab === "menu" && <div className="space-y-3"><CateringMenuEditor pkgs={pkgs} setPkgs={setPkgs} bookPackages={bookPackages} /><p className="text-right text-sm">Menu total: <strong>${cateringMenuTotal(pkgs, (Number(bk.adults) || 0) + (Number(bk.kids) || 0)).toFixed(2)}</strong> <span className="text-muted-foreground">for {(Number(bk.adults) || 0) + (Number(bk.kids) || 0)} guests</span></p></div>}
