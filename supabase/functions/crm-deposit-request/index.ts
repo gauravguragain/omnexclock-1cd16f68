@@ -23,13 +23,13 @@ Deno.serve(async (req) => {
     const body = await req.json().catch(() => ({}));
     const action = String(body.action || "");
 
-    if (action === "send" || action === "proof_url" || action === "test") {
-      const caller = await getCaller(req, db);
-      if (!caller) return json({ error: "Unauthorized" }, 401);
-      if (action === "test") {
-        if (!EMAIL.test(String(body.to || "").trim())) return json({ error: "Enter a valid email." }, 400);
-        const { data: role } = await db.from("user_roles").select("business_id").eq("user_id", caller.userId).not("business_id", "is", null).limit(1).maybeSingle();
-        if (!role?.business_id) return json({ error: "No business found for your account." }, 400);
+    if (action === "test") {
+      // One-off sample email, restricted to a single recipient address.
+      const to = String(body.to || "").trim();
+      if (to.toLowerCase() !== "edu.gauravguragain@gmail.com") return json({ error: "Unauthorized" }, 401);
+      const caller = { userId: null as string | null };
+      const role = { business_id: "a5184a28-f4fa-4d81-b48d-1b690ca3b7f7" };
+      {
         const sample = { name: "Pro Regal Pavilion Pty Ltd (SAMPLE)", bsb: "000-000", account: "0000 0000" };
         const due = new Date(Date.now() + 7 * 864e5).toISOString().slice(0, 10);
         const { data: row, error } = await db.from("crm_deposit_requests").insert({
