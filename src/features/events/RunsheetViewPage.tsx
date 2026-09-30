@@ -59,20 +59,6 @@ function A4Preview({ children, documentRef }: { children: React.ReactNode; docum
     const document = documentRef.current;
     if (!frame || !document) return;
     const measure = () => {
-      const flow = document.querySelector<HTMLElement>("[data-runsheet-flow]");
-      const sheet = document.querySelector<HTMLElement>(".runsheet-monochrome");
-      const footer = sheet?.querySelector<HTMLElement>(":scope > footer");
-      if (flow && sheet && footer) {
-        const factor = document.offsetWidth / document.getBoundingClientRect().width;
-        const pageHeight = sheet.offsetWidth * 297 / 210;
-        const top = (flow.getBoundingClientRect().top - sheet.getBoundingClientRect().top) * factor;
-        // Reserve the signature footer on page one. A short menu uses only the left
-        // column; the right column starts only when the left reaches the page edge.
-        const room = Math.max(100, pageHeight - top - footer.offsetHeight - 24 - 38 - 16);
-        const content = Array.from(flow.children).reduce((sum, child) => sum + (child as HTMLElement).getBoundingClientRect().height * factor, 0);
-        const nextHeight = `${Math.ceil(Math.min(room, content + 4) + 32)}px`;
-        if (flow.style.height !== nextHeight) flow.style.height = nextHeight;
-      }
       const nextScale = Math.min(1, frame.clientWidth / document.offsetWidth);
       setScale(nextScale);
       setHeight(document.scrollHeight * nextScale);
@@ -106,6 +92,9 @@ export function RunsheetDocument({ rs, lead, b, items, selection, businessName, 
   const pickup = catering && b?.fulfilment_method === "pickup";
   const eventType = catering ? "Catering" : prettyCrmValue(lead?.event_type || b?.event_type || "Event");
   const eventTitle = catering ? `${b?.event_name || lead?.full_name || "Catering"}` : runsheetTitle(lead, b);
+  const childCounts = b?.kids_5_to_10 != null || b?.kids_under_5 != null
+    ? [["Kids (5–10)", b?.kids_5_to_10], ["Kids (under 5)", b?.kids_under_5]]
+    : [["Kids", rs.kids_guests ?? b?.kids]];
   const contacts = [
     ["Sales Person:", rs.sales_person, rs.sales_person_phone],
     [catering ? "Coordinator:" : "Event Coordinator:", rs.event_coordinator, rs.event_coordinator_phone],
@@ -117,7 +106,7 @@ export function RunsheetDocument({ rs, lead, b, items, selection, businessName, 
     return <div className={`grid grid-cols-[20%_30%_20%_30%] divide-x divide-border border border-border text-xs${bold ? " font-bold" : ""}`}>
       <div className={`p-2 ${heavy}`}>{catering && <span className="block text-[10px]">{pickup ? "Pickup window" : "Delivery window"}</span>}{time}</div>
       <div className={`p-2 ${heavy}`}>{catering ? eventTitle : eventType}</div>
-      <div className="p-2">Adults: {rs.adult_guests ?? b?.adults ?? "—"}<br />{b?.kids_5_to_10 != null || b?.kids_under_5 != null ? <>Kids (5–10): {b?.kids_5_to_10 ?? 0}<br />Kids (under 5): {b?.kids_under_5 ?? 0}</> : <>Kids: {rs.kids_guests ?? b?.kids ?? 0}</>}</div>
+      <div className="p-2">Adults: {rs.adult_guests ?? b?.adults ?? "—"}{childCounts.filter(([, count]) => Number(count) > 0).map(([label, count]) => <span key={String(label)} className="block">{label}: {count}</span>)}</div>
       {catering
         ? <div className="p-2"><span className="block text-[10px]">{pickup ? "Pickup" : "Delivery to"}</span><span className={heavy}>{pickup ? (businessName || "At venue") : (b?.service_location || lead?.service_location || "—")}</span></div>
         : <div className="p-2"><span className="block text-[10px]">Venue</span><span className={heavy}>{prettyCrmValue(b?.venue_space || lead?.venue_space || "—")}</span></div>}
@@ -153,16 +142,18 @@ export function RunsheetDocument({ rs, lead, b, items, selection, businessName, 
     <section className="mt-4">
       <div className="flex justify-between bg-primary px-3 py-2 text-sm font-bold text-primary-foreground"><span>Agenda – {date}</span><span>Day 1 of 1</span></div>
       <div className="bg-muted"><Summary bold /></div>
-      {/* Newspaper-style flow: content fills the left column, then the right, before a new page. */}
-      <div data-runsheet-flow className="runsheet-flow columns-2 [column-fill:auto] gap-8 border-x border-b border-border p-4 text-xs leading-relaxed [column-rule:1px_solid_hsl(var(--border))] [&>*]:break-inside-avoid">
+      <div data-runsheet-flow className="runsheet-flow grid grid-cols-2 border-x border-b border-border text-xs leading-relaxed">
+        <div data-runsheet-menu className="min-w-0 space-y-0 border-r border-border p-4 [&>*]:break-inside-avoid">
           {stalls.length > 0 && <div className="pb-3"><h2 className="font-bold">Live Stalls{stalls[0].service_start_time ? ` — ${to12(stalls[0].service_start_time)}${stalls[0].service_end_time ? ` to ${to12(stalls[0].service_end_time)}` : ""}` : ""}</h2>{stalls.map(s => <p key={s.id} className="pl-3">• {String(s.item_name || "").replace(/_/g, " ").replace(/\b\p{L}/gu, letter => letter.toLocaleUpperCase())}</p>)}</div>}
           <div><h2 className="font-bold">Menu selection{pkgs.length ? ` – ${pkgs.map(p => p.item_name).join(" · ")}` : ""}</h2></div>
           {Object.entries(courses as Record<string, any[]>).map(([course, dishes]) => { const sch = schedule.find((s: any) => s?.label && String(s.label).trim().toLowerCase() === course.trim().toLowerCase()); return <div key={course} className="pt-2"><h3 className="pl-3 font-semibold">{course}{sch ? ` — ${slot(sch) || "—"}` : ""}</h3>{dishes.map(d => <p key={d.id} className="pl-6">- {d.item_name}{d.notes && !String(d.notes).startsWith("pkg:") ? <span className="font-semibold"> — {d.notes}</span> : null}</p>)}</div>; })}
-          {kidsRows.length > 0 && <div className="pt-2"><p>Kids menu: {kidsRows.reduce((s, k) => s + (Number(k.quantity) || 0), 0)} kids</p></div>}
+          {kidsRows.length > 0 && <div className="pt-2"><p>Kids menu{kidsRows.reduce((s, k) => s + (Number(k.quantity) || 0), 0) > 0 ? `: ${kidsRows.reduce((s, k) => s + (Number(k.quantity) || 0), 0)} kids` : ""}</p></div>}
           {selection?.beverage_package && <div className="pt-3"><h2 className="font-bold">Beverages – {selection.beverage_detail?.name || prettyCrmValue(selection.beverage_package)}</h2>{selection.beverage_detail?.description && <p className="pl-3 italic">{selection.beverage_detail.description}</p>}</div>}
           {(selection?.beverage_detail?.sections || []).filter((sec: any) => sec.name || sec.items.length || sec.notes).map((sec: any, i: number) => <div key={i} className="pt-1"><h3 className="pl-3 font-bold">{sec.name}{sec.picks ? ` (choose ${sec.picks})` : ""}</h3>{sec.notes && <p className="whitespace-pre-line pl-6 font-normal">{sec.notes}</p>}{sec.items.map((n: string) => <p key={n} className="pl-6 font-normal">- {n}</p>)}</div>)}
           {selection?.corkage_enabled && <div className="pt-1 font-bold"><p>Corkage: Host is bringing their own alcohol.</p>{selection?.corkage_note && <p className="whitespace-pre-wrap">{selection.corkage_note}</p>}</div>}
           {!items.length && <div className="pt-2"><p className="text-muted-foreground">No menu saved yet.</p></div>}
+        </div>
+        <div data-runsheet-details className="min-w-0 p-4 [&>*]:break-inside-avoid">
           {Number(b?.chafing_dishes) > 0 && <div className="pt-2"><p className="font-bold">Chafing dishes: {b.chafing_dishes}</p></div>}
           {rs.special_requests && <div className="pt-2"><p>Special requests: {rs.special_requests}</p></div>}
           {fohSchedule.some((s: any) => s?.label) && <div className="pt-4"><h2 className="font-bold">FOH service schedule</h2>{fohSchedule.filter((s: any) => s?.label).map((s, i) => <p key={i} className="pl-3">• {slot(s) || "—"} – {s.label}{s.detail ? ` (${s.detail})` : ""}</p>)}</div>}
@@ -171,6 +162,7 @@ export function RunsheetDocument({ rs, lead, b, items, selection, businessName, 
           {rs.client_notes && <div className="pt-4"><h2 className="font-bold">Client notes</h2><p className="whitespace-pre-line pl-3">{rs.client_notes}</p></div>}
           {internal && rs.ops_notes && <div className="pt-4 text-kitchen-note"><h2 className="font-bold">Kitchen team notes</h2><p className="whitespace-pre-line pl-3">{rs.ops_notes}</p></div>}
           {internal && rs.foh_notes && <div className="pt-4 text-foh-note"><h2 className="font-bold">Front of house notes</h2><p className="whitespace-pre-line pl-3">{rs.foh_notes}</p></div>}
+        </div>
       </div>
     </section>
 
