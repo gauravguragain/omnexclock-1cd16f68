@@ -154,14 +154,14 @@ export function RecordPaymentDialog({ open, onOpenChange, booking, bookings, sug
         </Popover>
       </div>}
       <div className="grid grid-cols-2 gap-3">
-        <div><Label>Type</Label><Select value={form.payment_type} onValueChange={v => set("payment_type", v)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{Object.entries(PAYMENT_TYPES).map(([k, v]) => <SelectItem key={k} value={k}>{v}</SelectItem>)}</SelectContent></Select></div>
+        <div><Label>Type</Label><Select value={form.payment_type} onValueChange={v => set("payment_type", v)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{Object.entries(PAYMENT_TYPES).filter(([k]) => !(k === "deposit" && target?.booking_kind === "catering")).map(([k, v]) => <SelectItem key={k} value={k}>{v}</SelectItem>)}</SelectContent></Select></div>
         <div><Label>Amount (AUD)</Label><Input type="number" inputMode="decimal" min="0" step="0.01" value={form.amount} onChange={e => set("amount", e.target.value)} /></div>
         <div><Label>Date received</Label><Input type="date" value={form.paid_on} onChange={e => set("paid_on", e.target.value)} /></div>
         <div><Label>Method</Label><Select value={form.method} onValueChange={v => set("method", v)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{Object.entries(PAYMENT_METHODS).map(([k, v]) => <SelectItem key={k} value={k}>{v}</SelectItem>)}</SelectContent></Select></div>
       </div>
       <div><Label>Reference (e.g. Xero invoice no.)</Label><Input value={form.reference} onChange={e => set("reference", e.target.value)} placeholder="INV-0001" /></div>
       <div><Label>Notes</Label><Textarea rows={2} value={form.notes} onChange={e => set("notes", e.target.value)} /></div>
-      {target && <p className="text-xs text-muted-foreground">Booking total {money(target.total_amount)} · deposit {money(target.deposit_amount)}</p>}
+      {target && <p className="text-xs text-muted-foreground">Booking total {money(target.total_amount)}{target.booking_kind === "catering" ? " · full payment only" : ` · deposit ${money(target.deposit_amount)}`}</p>}
       {form.payment_type === "deposit" && target && <div><Label>Guest email (for deposit confirmation)</Label><Input type="email" value={guest.email} onChange={e => setGuest(g => ({ ...g, email: e.target.value }))} placeholder="guest@example.com" /></div>}
     </div>
     <DialogFooter className="gap-2"><Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
@@ -177,7 +177,8 @@ export function BookingPaymentsCard({ booking, onChanged }: { booking: any; onCh
   const [open, setOpen] = useState(false);
   const s = useMemo(() => paymentSummary(booking, payments), [booking, payments]);
   if (!booking) return null;
-  const suggested = s.paid < s.deposit ? { type: "deposit", amount: s.deposit - s.paid } : { type: "balance", amount: Math.max(s.balance, 0) };
+  const isCatering = booking.booking_kind === "catering";
+  const suggested = !isCatering && s.paid < s.deposit ? { type: "deposit", amount: s.deposit - s.paid } : { type: "balance", amount: Math.max(s.balance, 0) };
   const changed = () => { refresh(); onChanged?.(); };
   const remove = async (p: CrmPayment) => {
     if (!confirm(`Delete this ${money(p.amount)} payment record?`)) return;
@@ -195,7 +196,7 @@ export function BookingPaymentsCard({ booking, onChanged }: { booking: any; onCh
       </div>
       <div className="h-1.5 overflow-hidden rounded-full bg-muted"><div className="h-full bg-primary transition-all" style={{ width: `${pct}%` }} /></div>
       <div className="space-y-1 text-xs text-muted-foreground">
-        <p>Deposit {money(s.deposit)}{booking.deposit_due_date ? ` · due ${format(new Date(booking.deposit_due_date + "T00:00"), "d MMM yyyy")}` : ""}</p>
+        {!isCatering && <p>Deposit {money(s.deposit)}{booking.deposit_due_date ? ` · due ${format(new Date(booking.deposit_due_date + "T00:00"), "d MMM yyyy")}` : ""}</p>}
         {booking.balance_due_date && <p>Balance due {format(new Date(booking.balance_due_date + "T00:00"), "d MMM yyyy")}</p>}
       </div>
       <div className="flex flex-wrap gap-2"><Button size="sm" onClick={() => setOpen(true)}><Plus className="mr-1 h-4 w-4" />Record payment</Button></div>
