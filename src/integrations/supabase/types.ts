@@ -892,6 +892,93 @@ export type Database = {
           },
         ]
       }
+      crm_deposit_requests: {
+        Row: {
+          amount: number | null
+          booking_id: string | null
+          business_id: string
+          created_at: string
+          created_by: string | null
+          due_date: string | null
+          event_title: string | null
+          id: string
+          lead_id: string | null
+          proof_path: string | null
+          proof_uploaded_at: string | null
+          recipient_email: string
+          recipient_name: string | null
+          token: string
+        }
+        Insert: {
+          amount?: number | null
+          booking_id?: string | null
+          business_id: string
+          created_at?: string
+          created_by?: string | null
+          due_date?: string | null
+          event_title?: string | null
+          id?: string
+          lead_id?: string | null
+          proof_path?: string | null
+          proof_uploaded_at?: string | null
+          recipient_email: string
+          recipient_name?: string | null
+          token?: string
+        }
+        Update: {
+          amount?: number | null
+          booking_id?: string | null
+          business_id?: string
+          created_at?: string
+          created_by?: string | null
+          due_date?: string | null
+          event_title?: string | null
+          id?: string
+          lead_id?: string | null
+          proof_path?: string | null
+          proof_uploaded_at?: string | null
+          recipient_email?: string
+          recipient_name?: string | null
+          token?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_deposit_requests_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "crm_booking_venue_clashes"
+            referencedColumns: ["booking_id"]
+          },
+          {
+            foreignKeyName: "crm_deposit_requests_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "crm_bookings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_deposit_requests_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_deposit_requests_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses_public"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_deposit_requests_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "crm_leads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       crm_dishes: {
         Row: {
           active: boolean
@@ -2402,6 +2489,11 @@ export type Database = {
           confirmation_terms: string | null
           created_at: string
           created_by: string | null
+          deposit_account_name: string | null
+          deposit_account_number: string | null
+          deposit_bsb: string | null
+          deposit_payment_note: string | null
+          deposit_proof_email: string | null
           fixed_assignee_id: string | null
           id: string
           inspection_day_end: string
@@ -2421,6 +2513,11 @@ export type Database = {
           confirmation_terms?: string | null
           created_at?: string
           created_by?: string | null
+          deposit_account_name?: string | null
+          deposit_account_number?: string | null
+          deposit_bsb?: string | null
+          deposit_payment_note?: string | null
+          deposit_proof_email?: string | null
           fixed_assignee_id?: string | null
           id?: string
           inspection_day_end?: string
@@ -2440,6 +2537,11 @@ export type Database = {
           confirmation_terms?: string | null
           created_at?: string
           created_by?: string | null
+          deposit_account_name?: string | null
+          deposit_account_number?: string | null
+          deposit_bsb?: string | null
+          deposit_payment_note?: string | null
+          deposit_proof_email?: string | null
           fixed_assignee_id?: string | null
           id?: string
           inspection_day_end?: string
