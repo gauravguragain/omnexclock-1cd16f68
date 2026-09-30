@@ -146,7 +146,7 @@ export async function loadOperations(bid: string, r: Range) {
   const paidByBooking: Record<string, number> = {};
   (payments as any[]).forEach(p => { if (p.booking_id) paidByBooking[p.booking_id] = (paidByBooking[p.booking_id] || 0) + (Number(p.amount) || 0); });
   const depositsCollected = sum(inRange, (b: any) => Math.min(Math.max(0, paidByBooking[b.id] || 0), Math.max(0, Number(b.deposit_amount || 0))));
-  const balanceOf = (b: any) => Math.max(0, Number(b.total_amount || 0) - (paidByBooking[b.id] || 0));
+  const balanceOf = (b: any) => { if (b.external_ref && b.event_date && b.created_at && b.event_date < new Date(b.created_at).toLocaleDateString("en-CA", { timeZone: "Australia/Sydney" })) return 0; return Math.max(0, Number(b.total_amount || 0) - (paidByBooking[b.id] || 0)); };
   const upcomingBookings = live.filter((b: any) => b.event_date >= today);
   const outstandingBalance = sum(upcomingBookings, balanceOf);
   const overdueBalances = live.filter((b: any) => b.balance_due_date && b.balance_due_date < today && b.event_date >= addDays(today, -60) && b.status !== "completed" && b.status !== "paid" && balanceOf(b) > 0);
