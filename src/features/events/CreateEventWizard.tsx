@@ -1,5 +1,7 @@
 import CateringMenuEditor, { cateringMenuRows, cateringMenuTotal, useBookPackages, type CPkg } from "./CateringMenuEditor";
 import { DeliveryFields, emptyDelivery, feeOf, type DeliveryValue } from "./DeliveryCard";
+import { DEFAULT_CHAFING_PRICE } from "./ChafingCard";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -35,6 +37,7 @@ export default function CreateEventWizard({ kind }: { kind: "event" | "catering"
   const [delivery, setDelivery] = useState<DeliveryValue>(emptyDelivery());
   const [coordId, setCoordId] = useState("");
   const [pkgs, setPkgs] = useState<CPkg[]>([]); const bookPackages = useBookPackages(ev);
+  const [chafOn, setChafOn] = useState(false); const [chafQty, setChafQty] = useState("1"); const [chafPrice, setChafPrice] = useState(String(DEFAULT_CHAFING_PRICE));
   const itemName = (ci: any) => ci.dish_id ? ev.dishes.find(x => x.id === ci.dish_id)?.name : ev.drinks.find(x => x.id === ci.drink_id)?.name;
   const courseOpts = (courseId: string) => ev.courseItems.filter(ci => ci.course_id === courseId).map(ci => ({ id: ci.id, name: itemName(ci) as string })).filter(o => o.name);
   const activePkgs = ev.packages.filter(p => p.active);
