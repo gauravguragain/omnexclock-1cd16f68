@@ -50,7 +50,7 @@ export default function CateringDetailPage({ view }: { view: "lead" | "booking" 
   const lead = crm.leads.find(l => l.id === (view === "lead" ? id : booking?.lead_id) && (l.lead_kind === "catering" || booking?.booking_kind === "catering" || l.event_type === "catering"));
   const rs: any = crm.runsheets.filter((r: any) => booking && (r.booking_id === booking.id || r.lead_id === booking.lead_id)).sort((a: any, b: any) => (b.revision || 0) - (a.revision || 0))[0];
   const base = `/b/${businessCode}/catering`;
-  const bookPackages = useMemo(() => ev.packages.filter(p => p.active !== false && p.package_type !== "beverage").map(p => ({ ...p, book: ev.books.find(b => b.id === p.book_id)?.name || "Menu",
+  const bookPackages: any[] = useMemo(() => ev.packages.filter(p => p.active !== false && p.package_type !== "beverage").map(p => ({ ...p, book: ev.books.find(b => b.id === p.book_id)?.name || "Menu",
     courses: ev.courses.filter(c => c.package_id === p.id).map(c => ({ ...c, dishes: ev.courseItems.filter(ci => ci.course_id === c.id && ci.dish_id).map(ci => { const d = ev.dishes.find(x => x.id === ci.dish_id); return d ? { ...d, protein_options: ci.protein_options || [], extra_price_per_head: Number(ci.extra_price_per_head || 0) } : null; }).filter(Boolean) })) })), [ev.packages, ev.books, ev.courses, ev.courseItems, ev.dishes]);
   const editInitial = useMemo(() => {
     const p = pkgs.find(x => x.key === editingPkgKey); if (!p?.pkgId || !p.bookId) return undefined;
