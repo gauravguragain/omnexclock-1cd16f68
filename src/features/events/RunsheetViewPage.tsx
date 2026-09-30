@@ -95,7 +95,7 @@ export function RunsheetDocument({ rs, lead, b, items, selection, businessName, 
     ["Sales Person:", rs.sales_person, rs.sales_person_phone],
     [catering ? "Coordinator:" : "Event Coordinator:", rs.event_coordinator, rs.event_coordinator_phone],
     ["Client:", lead?.full_name, lead?.phone],
-    [catering ? (pickup ? "Pickup Contact:" : "Delivery Contact:") : "Onsite Contact:", rs.onsite_contact_name, rs.onsite_contact_phone],
+    [catering ? (pickup ? "Pickup Contact:" : "Delivery Contact:") : "Onsite Contact:", catering && !rs.onsite_contact_name ? lead?.full_name : rs.onsite_contact_name, catering && !rs.onsite_contact_name ? lead?.phone : rs.onsite_contact_phone],
   ];
   const Summary = ({ bold = false }: { bold?: boolean }) => {
     const heavy = bold ? "font-bold" : "font-medium";
