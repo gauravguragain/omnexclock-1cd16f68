@@ -91,7 +91,7 @@ export default function CreateEventWizard({ kind }: { kind: "event" | "catering"
         const rows = cateringMenuRows(chosen, bid, sel.id);
         if (rows.length) await supabase.from("crm_menu_selection_items").insert(rows);
       }
-      if (kind === "catering" || coord || f.notes) await supabase.from("crm_runsheets").insert({ business_id: bid, lead_id: lid!, booking_id: bk?.id, event_order_number: order as any, adult_guests: Number(f.adults) || 0, kids_guests: Number(f.kids) || 0, event_coordinator: coord?.name || null, event_coordinator_phone: coord?.phone || null, onsite_contact_name: coord?.name || null, onsite_contact_phone: coord?.phone || null, client_notes: f.notes || null, status: "draft", created_by: user?.id } as any);
+      if (kind === "catering" || coord || f.notes) await supabase.from("crm_runsheets").insert({ business_id: bid, lead_id: lid!, booking_id: bk?.id, event_order_number: order as any, booking_reference: String(lid).slice(0, 10).toUpperCase(), adult_guests: Number(f.adults) || 0, kids_guests: Number(f.kids) || 0, event_coordinator: coord?.name || null, event_coordinator_phone: coord?.phone || null, onsite_contact_name: coord?.name || null, onsite_contact_phone: coord?.phone || null, client_notes: f.notes || null, status: "draft", created_by: user?.id } as any);
       toast.success(kind === "event" ? "Event created" : "Catering booking created");
        nav(kind === "catering" ? `/b/${businessCode}/catering/bookings` : `/b/${businessCode}/events/events`);
     } catch (e: any) { toast.error(e.message); } finally { setSaving(false); }

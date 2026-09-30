@@ -1,3 +1,4 @@
+import { issueCateringRunsheet } from "./issueCateringRunsheet";
 import { loadBeverageDetail } from "@/lib/beverageDetail";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { downloadRunsheetPdf } from "@/lib/runsheetDownload";
@@ -209,7 +210,7 @@ export default function RunsheetViewPage() {
   const backTo = isCatering
     ? b ? `/b/${businessCode}/catering/bookings/${b.id}` : `/b/${businessCode}/catering/leads`
     : b ? `/b/${businessCode}/events/events/${b.id}` : back;
-  const issueCatering = async () => { const { data, error } = await supabase.from("crm_runsheets").update({ status: "sent", sent_at: new Date().toISOString(), generated_at: new Date().toISOString() } as any).eq("id", rs.id).select().single(); if (error) { toast.error(error.message); return null; } setRs(data); crm.refresh(); return data; };
+  const issueCatering = async () => { const data = await issueCateringRunsheet(rs, lead?.id); if (!data) return null; setRs(data); crm.refresh(); return data; };
    const copyLink = async (internal: boolean) => { await navigator.clipboard.writeText(runsheetPublicUrl(rs, internal)); toast.success(internal ? "Internal link copied" : "Client link copied"); };
 
   return <div className="mx-auto w-full max-w-[210mm] space-y-6">

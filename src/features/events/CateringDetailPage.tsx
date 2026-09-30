@@ -1,3 +1,4 @@
+import { issueCateringRunsheet } from "./issueCateringRunsheet";
 import { eventLabel } from "@/lib/eventLabel";
 import { useEffect, useMemo, useState } from "react";
 import CateringMenuEditor, { cateringItemsTotal, cateringMenuRows, cateringMenuTotal, useBookPackages, type CPkg, type CDish } from "./CateringMenuEditor";
@@ -75,15 +76,15 @@ export default function CateringDetailPage({ view }: { view: "lead" | "booking" 
   const preview = async () => {
     if (!booking) return;
     if (rs) { nav(`${base}/bookings/${booking.id}/runsheet/${rs.id}`); return; }
-    const { data, error } = await supabase.from("crm_runsheets").insert({ business_id: booking.business_id, lead_id: lead.id, booking_id: booking.id, event_order_number: booking.event_order_number, adult_guests: booking.adults || 0, kids_guests: booking.kids || 0, status: "draft" } as any).select("id").single();
+    const { data, error } = await supabase.from("crm_runsheets").insert({ business_id: booking.business_id, lead_id: lead.id, booking_id: booking.id, event_order_number: booking.event_order_number, booking_reference: lead.id.slice(0, 10).toUpperCase(), adult_guests: booking.adults || 0, kids_guests: booking.kids || 0, status: "draft" } as any).select("id").single();
     if (error) { toast.error(error.message); return; }
     await crm.refresh();
     nav(`${base}/bookings/${booking.id}/runsheet/${data.id}`);
   };
   const issue = async () => {
     if (!rs) return null;
-    const { data, error } = await supabase.from("crm_runsheets").update({ status: "sent", sent_at: new Date().toISOString(), generated_at: new Date().toISOString() } as any).eq("id", rs.id).select().single();
-    if (error) { toast.error(error.message); return null; }
+    const data = await issueCateringRunsheet(rs, lead.id);
+    if (!data) return null;
     await crm.refresh();
     return data;
   };
