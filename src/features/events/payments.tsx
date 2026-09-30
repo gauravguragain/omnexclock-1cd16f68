@@ -27,10 +27,19 @@ export const PAYMENT_METHODS: Record<string, string> = { bank_transfer: "Bank tr
 export const money = (n: number) => new Intl.NumberFormat("en-AU", { style: "currency", currency: "AUD" }).format(Number(n) || 0);
 export const sydneyToday = () => new Date().toLocaleDateString("en-CA", { timeZone: "Australia/Sydney" });
 
+// iVvy-imported events that had already happened when imported are treated as fully settled.
+export function isSettledImport(booking: any) {
+  if (!booking?.external_ref || !booking?.event_date || !booking?.created_at) return false;
+  const importedOn = new Date(booking.created_at).toLocaleDateString("en-CA", { timeZone: "Australia/Sydney" });
+  return booking.event_date < importedOn;
+}
+
 export function paymentSummary(booking: any, payments: CrmPayment[]) {
   const total = Number(booking?.total_amount) || 0;
   const deposit = Number(booking?.deposit_amount) || 0;
-  const paid = Math.round(payments.reduce((s, p) => s + Number(p.amount || 0), 0) * 100) / 100;
+  const recorded = Math.round(payments.reduce((s, p) => s + Number(p.amount || 0), 0) * 100) / 100;
+  if (isSettledImport(booking)) return { total, deposit, paid: Math.max(recorded, total), balance: 0, status: "paid", overdue: false };
+  const paid = recorded;
   const balance = total > 0 ? Math.max(0, Math.round((total - paid) * 100) / 100) : 0;
   const today = sydneyToday();
   const status = total > 0 && paid >= total ? "paid" : paid <= 0 ? "unpaid" : paid >= deposit && deposit > 0 ? "deposit" : "part";
