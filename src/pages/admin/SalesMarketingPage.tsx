@@ -6,7 +6,7 @@ import { AlertTriangle, X, CalendarDays, Check, ChevronRight, ClipboardList, Dow
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client"; import { toast } from "sonner"; import { format, isAfter, startOfDay, subDays } from "date-fns";
 import CalendarTab from "@/features/sales/CalendarTab"; import { useCrmData } from "@/features/sales/useCrmData"; import LeadFormDialog from "@/features/sales/LeadFormDialog"; import type { CrmLead } from "@/features/sales/types"; import { CRM_LEAD_STATUSES, CRM_COLD_STATUS, leadStageUpdate, prettyCrmValue } from "@/features/sales/types";
-import InspectionActions from "@/features/sales/InspectionActions"; import TaskFormDialog from "@/features/sales/TaskFormDialog"; import IvvyImportDialog from "@/features/sales/IvvyImportDialog"; import { Textarea } from "@/components/ui/textarea"; import { DEFAULT_RUNSHEET_TERMS } from "@/features/events/defaultTerms"; import { SignatureLibrary } from "@/features/events/SignatureLibrary";
+import InspectionActions from "@/features/sales/InspectionActions"; import TaskFormDialog from "@/features/sales/TaskFormDialog"; import IvvyImportDialog from "@/features/sales/IvvyImportDialog"; import { Textarea } from "@/components/ui/textarea"; import { DEFAULT_RUNSHEET_TERMS, DEFAULT_CATERING_TERMS } from "@/features/events/defaultTerms"; import { SignatureLibrary } from "@/features/events/SignatureLibrary";
 
 const money=(n:number)=>new Intl.NumberFormat("en-AU",{style:"currency",currency:"AUD",maximumFractionDigits:0}).format(n);
 export default function SalesMarketingPage({view}:{view?:string}={}){
@@ -79,15 +79,17 @@ function SettingsPanel({businessId,businessCode,options,settings,menuItems,canCo
         <div className="space-y-1.5"><Label>Email for payment screenshots</Label><p className="text-sm text-muted-foreground">When a client uploads a payment screenshot, it's emailed here. Leave blank to use the signed run sheet email.</p><Input type="email" className="max-w-md" defaultValue={settings?.deposit_proof_email||""} placeholder="accounts@yourvenue.com" disabled={!canConfigure} onBlur={e=>{const v=e.target.value.trim();if(v&&!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v)){toast.error("Enter a valid email");return;}if(v!==(settings?.deposit_proof_email||""))saveSettings({deposit_proof_email:v||null});}}/></div>
       </CardContent></Card>
       <TermsCard settings={settings} canConfigure={canConfigure} save={saveSettings}/>
+      <TermsCard catering settings={settings} canConfigure={canConfigure} save={saveSettings}/>
   </div>;
 }
-function TermsCard({settings,canConfigure,save}:{settings:any;canConfigure:boolean;save:(v:any)=>Promise<void>}){
-  const [text,setText]=useState<string>(settings?.runsheet_terms||DEFAULT_RUNSHEET_TERMS);
-  const enabled=settings?.runsheet_terms_enabled!==false;
-  return <Card className="min-w-0 xl:col-span-2"><CardHeader><CardTitle>Terms &amp; Conditions</CardTitle></CardHeader><CardContent className="space-y-4">
-    <div className="flex items-center justify-between gap-3"><div className="min-w-0"><p className="font-medium">Attach to event run sheets</p><p className="text-sm text-muted-foreground">Printed as a separate page after the run sheet the client receives (web link, print and PDF). Not added to catering run sheets.</p></div><Switch checked={enabled} disabled={!canConfigure} onCheckedChange={v=>save({runsheet_terms_enabled:v})}/></div>
+function TermsCard({settings,canConfigure,save,catering=false}:{settings:any;canConfigure:boolean;save:(v:any)=>Promise<void>;catering?:boolean}){
+  const tk=catering?"catering_terms":"runsheet_terms"; const ek=catering?"catering_terms_enabled":"runsheet_terms_enabled"; const DEF=catering?DEFAULT_CATERING_TERMS:DEFAULT_RUNSHEET_TERMS;
+  const [text,setText]=useState<string>(settings?.[tk]||DEF);
+  const enabled=settings?.[ek]!==false;
+  return <Card className="min-w-0 xl:col-span-2"><CardHeader><CardTitle>{catering?"Catering Terms & Conditions":"Terms & Conditions"}</CardTitle></CardHeader><CardContent className="space-y-4">
+    <div className="flex items-center justify-between gap-3"><div className="min-w-0"><p className="font-medium">{catering?"Attach to catering run sheets":"Attach to event run sheets"}</p><p className="text-sm text-muted-foreground">Printed as a separate page after the run sheet the client receives (web link, print and PDF), with the client signature section.</p></div><Switch checked={enabled} disabled={!canConfigure} onCheckedChange={v=>save({[ek]:v})}/></div>
     <p className="text-xs text-muted-foreground">Leave a blank line between paragraphs. Lines starting with a number (e.g. "1. Booking") print as headings.</p>
     <Textarea value={text} onChange={e=>setText(e.target.value)} disabled={!canConfigure} className="min-h-[24rem] font-mono text-xs"/>
-    <div className="flex flex-wrap gap-2"><Button disabled={!canConfigure} onClick={()=>save({runsheet_terms:text.trim()||null})}>Save terms</Button><Button variant="outline" disabled={!canConfigure} onClick={()=>{setText(DEFAULT_RUNSHEET_TERMS);save({runsheet_terms:null});}}>Reset to default</Button></div>
+    <div className="flex flex-wrap gap-2"><Button disabled={!canConfigure} onClick={()=>save({[tk]:text.trim()||null})}>Save terms</Button><Button variant="outline" disabled={!canConfigure} onClick={()=>{setText(DEF);save({[tk]:null});}}>Reset to default</Button></div>
   </CardContent></Card>;
 }
