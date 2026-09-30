@@ -205,7 +205,7 @@ export function BookingPaymentsCard({ booking, onChanged }: { booking: any; onCh
         <p className="text-xs text-muted-foreground">{format(new Date(p.paid_on + "T00:00"), "d MMM yyyy")} · {PAYMENT_METHODS[p.method] || p.method}{p.reference ? ` · ${p.reference}` : ""}</p>
         {p.notes && <p className="whitespace-pre-wrap text-xs">{p.notes}</p>}</div>
       <Button size="icon" variant="ghost" className="h-7 w-7 shrink-0" aria-label="Delete payment" onClick={() => remove(p)}><Trash2 className="h-3.5 w-3.5" /></Button>
-    </div>) : <p className="text-sm text-muted-foreground">No payments recorded yet. Recording the deposit moves the lead to Deposit received; full payment moves it to Full payment received.</p>}</div>
+    </div>) : null}</div>
     <RecordPaymentDialog open={open} onOpenChange={setOpen} booking={booking} suggested={suggested} onSaved={changed} />
   </CardContent></Card>;
 }
