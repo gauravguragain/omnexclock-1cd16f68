@@ -28,17 +28,33 @@ export function DeliveryFields({ address, onAddress, value, onChange, addressLab
   const set = (p: Partial<DeliveryValue>) => onChange({ ...value, ...p });
   const fee = feeOf(value);
   const q = encodeURIComponent(mapQ);
-  const calc = async () => {
-    if (!address.trim()) { toast.error("Enter the delivery address first"); return; }
+  const [sugs, setSugs] = useState<{ placeId: string; text: string }[]>([]);
+  const [open, setOpen] = useState(false);
+  const [token, setToken] = useState(() => crypto.randomUUID());
+  const [typed, setTyped] = useState(false);
+  useEffect(() => {
+    if (!typed || address.trim().length < 3) { setSugs([]); return; }
+    let stale = false;
+    const t = setTimeout(async () => {
+      const { data } = await supabase.functions.invoke("delivery-distance", { body: { action: "autocomplete", input: address, sessionToken: token } });
+      if (!stale) { setSugs(data?.suggestions || []); setOpen(true); }
+    }, 300);
+    return () => { stale = true; clearTimeout(t); };
+  }, [address, typed, token]);
+  const pickSug = (sg: { placeId: string; text: string }) => { setTyped(false); setOpen(false); setSugs([]); onAddress(sg.text); void calc(sg.text, sg.placeId); setToken(crypto.randomUUID()); };
+  const calc = async (addr = address, placeId?: string) => {
+    if (!addr.trim()) { toast.error("Enter the delivery address first"); return; }
     setBusy(true);
-    const { data, error } = await supabase.functions.invoke("delivery-distance", { body: { address } });
+    const { data, error } = await supabase.functions.invoke("delivery-distance", { body: { address: addr, placeId } });
     setBusy(false);
     if (error || data?.error) { toast.error(data?.error || "Could not calculate distance — enter it manually"); return; }
     set({ km: String(data.km) }); toast.success(`${data.km} km from Wentworthville (about ${data.minutes} min drive)`);
   };
   return <div className="space-y-3">
     <Label>{addressLabel}</Label>
-    <div className="flex gap-2"><Input placeholder="Full address" value={address} onChange={e => onAddress(e.target.value)} /><Button type="button" variant="outline" onClick={calc} disabled={busy}>{busy ? <Loader2 className="h-4 w-4 animate-spin" /> : "Get distance"}</Button></div>
+    <div className="flex gap-2"><div className="relative flex-1"><Input placeholder="Start typing an address…" autoComplete="off" value={address} onChange={e => { setTyped(true); onAddress(e.target.value); }} onFocus={() => sugs.length && setOpen(true)} onBlur={() => setTimeout(() => setOpen(false), 150)} />
+      {open && sugs.length > 0 && <ul className="absolute z-50 mt-1 w-full overflow-hidden rounded-md border border-border bg-popover text-popover-foreground shadow-lg">{sugs.map(sg => <li key={sg.placeId}><button type="button" onMouseDown={e => e.preventDefault()} onClick={() => pickSug(sg)} className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-muted"><MapPin className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />{sg.text}</button></li>)}</ul>}</div>
+      <Button type="button" variant="outline" onClick={() => calc()} disabled={busy}>{busy ? <Loader2 className="h-4 w-4 animate-spin" /> : "Recalculate"}</Button></div>
     {mapQ && <>
       <iframe title="Delivery address map" className="h-56 w-full rounded-lg border border-border" loading="lazy" src={`https://maps.google.com/maps?q=${q}&z=14&output=embed`} />
       <Button type="button" size="sm" variant="outline" asChild><a href={`https://www.google.com/maps/search/?api=1&query=${q}`} target="_blank" rel="noreferrer"><ExternalLink className="mr-1 h-3.5 w-3.5" />View on map</a></Button>
