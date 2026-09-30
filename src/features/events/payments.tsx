@@ -177,7 +177,8 @@ export function BookingPaymentsCard({ booking, onChanged }: { booking: any; onCh
   const [open, setOpen] = useState(false);
   const s = useMemo(() => paymentSummary(booking, payments), [booking, payments]);
   if (!booking) return null;
-  const suggested = s.paid < s.deposit ? { type: "deposit", amount: s.deposit - s.paid } : { type: "balance", amount: Math.max(s.balance, 0) };
+  const isCatering = booking.booking_kind === "catering";
+  const suggested = !isCatering && s.paid < s.deposit ? { type: "deposit", amount: s.deposit - s.paid } : { type: "balance", amount: Math.max(s.balance, 0) };
   const changed = () => { refresh(); onChanged?.(); };
   const remove = async (p: CrmPayment) => {
     if (!confirm(`Delete this ${money(p.amount)} payment record?`)) return;
@@ -195,7 +196,7 @@ export function BookingPaymentsCard({ booking, onChanged }: { booking: any; onCh
       </div>
       <div className="h-1.5 overflow-hidden rounded-full bg-muted"><div className="h-full bg-primary transition-all" style={{ width: `${pct}%` }} /></div>
       <div className="space-y-1 text-xs text-muted-foreground">
-        <p>Deposit {money(s.deposit)}{booking.deposit_due_date ? ` · due ${format(new Date(booking.deposit_due_date + "T00:00"), "d MMM yyyy")}` : ""}</p>
+        {!isCatering && <p>Deposit {money(s.deposit)}{booking.deposit_due_date ? ` · due ${format(new Date(booking.deposit_due_date + "T00:00"), "d MMM yyyy")}` : ""}</p>}
         {booking.balance_due_date && <p>Balance due {format(new Date(booking.balance_due_date + "T00:00"), "d MMM yyyy")}</p>}
       </div>
       <div className="flex flex-wrap gap-2"><Button size="sm" onClick={() => setOpen(true)}><Plus className="mr-1 h-4 w-4" />Record payment</Button></div>
