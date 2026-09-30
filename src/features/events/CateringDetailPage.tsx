@@ -180,7 +180,6 @@ export default function CateringDetailPage({ view }: { view: "lead" | "booking" 
         </div>
         <div><Label>Notes</Label><Textarea rows={3} value={bk.notes} onChange={e => setBk(p => ({ ...p, notes: e.target.value }))} /></div>
       </div>}
-      {bkTab === "menu" && <div className="space-y-3"><CateringMenuEditor pkgs={pkgs} setPkgs={setPkgs} bookPackages={bookPackages} /><p className="text-right text-sm">Menu total: <strong>${cateringMenuTotal(pkgs, (Number(bk.adults) || 0) + (Number(bk.kids) || 0)).toFixed(2)}</strong> <span className="text-muted-foreground">for {(Number(bk.adults) || 0) + (Number(bk.kids) || 0)} guests</span></p></div>}
       {bkTab === "team" && <div className="space-y-4">
         <div className="grid gap-4 sm:grid-cols-2">
           <div><Label>Coordinator</Label><Select value={team.coordinator || "none"} onValueChange={v => { const s = ev.stakeholders.find(x => x.full_name === v); setTeam(p => ({ ...p, coordinator: v === "none" ? "" : v, coordinator_phone: v === "none" ? "" : (s?.phone || p.coordinator_phone) })); }}><SelectTrigger><SelectValue placeholder="Choose coordinator" /></SelectTrigger><SelectContent><SelectItem value="none">None</SelectItem>{ev.stakeholders.filter(s => s.stakeholder_type === "coordinator" && s.active !== false).map(s => <SelectItem key={s.id} value={s.full_name}>{s.full_name}</SelectItem>)}</SelectContent></Select></div>
