@@ -1,3 +1,4 @@
+import { fetchAllRows } from "@/lib/fetchAllRows";
 import { useCallback, useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useBusiness } from "@/contexts/BusinessContext";
@@ -15,16 +16,16 @@ export function useCrmData(businessId?: string) {
   const refresh = useCallback(async (silent = false) => {
     if (!id) return; if (!silent) setLoading(true);
     const [leadRes, optionRes, inspectionRes, taskRes, interactionRes, settingRes, bookingRes, clashRes, menuRes, runsheetRes, spaceRes] = await Promise.all([
-      supabase.from("crm_leads").select("*").eq("business_id", id).order("created_at", { ascending: false }),
+      fetchAllRows(() => supabase.from("crm_leads").select("*").eq("business_id", id).order("created_at", { ascending: false }).order("id")),
       supabase.from("crm_options").select("*").eq("business_id", id).order("sort_order"),
       supabase.from("crm_inspections").select("*").eq("business_id", id).order("starts_at"),
       supabase.from("crm_tasks").select("*").eq("business_id", id).order("due_at"),
-      supabase.from("crm_interactions").select("*").eq("business_id", id).order("occurred_at", { ascending: false }),
+      fetchAllRows(() => supabase.from("crm_interactions").select("*").eq("business_id", id).order("occurred_at", { ascending: false }).order("id")),
       supabase.from("crm_settings").select("*").eq("business_id", id).maybeSingle(),
-      supabase.from("crm_bookings").select("*").eq("business_id", id).order("event_date"),
+      fetchAllRows(() => supabase.from("crm_bookings").select("*").eq("business_id", id).order("event_date").order("id")),
       supabase.from("crm_booking_venue_clashes").select("*").eq("business_id", id),
       supabase.from("crm_menu_items").select("*").eq("business_id", id).order("sort_order"),
-      supabase.from("crm_runsheets").select("*").eq("business_id", id),
+      fetchAllRows(() => supabase.from("crm_runsheets").select("*").eq("business_id", id).order("id")),
       (supabase.from("crm_venue_spaces" as any) as any).select("*").eq("business_id", id).eq("active", true).order("sort_order"),
     ]);
     setLeads((leadRes.data || []) as CrmLead[]); const spaces = (spaceRes.data || []) as any[]; const baseOpts = (optionRes.data || []) as CrmOption[]; setOptions(spaces.length ? [...baseOpts.filter(o => o.option_type !== "venue_space"), ...spaces.map((v, i) => ({ id: v.id, option_type: "venue_space", label: v.name, value: v.name, description: v.capacity ? `Holds ${v.capacity}` : null, image_url: null, sort_order: i, active: true, price_per_head: null, flat_price: null }))] : baseOpts);
