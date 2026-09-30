@@ -83,7 +83,6 @@ export function RunsheetDocument({ rs, lead, b, items, selection, businessName, 
   const schedule: any[] = rs.service_schedule || [];
   const fohSchedule: any[] = rs.service_schedule_foh || [];
   const slot = (s: any) => s?.time ? `${to12(s.time)}${s.end && s.end !== s.time ? ` – ${to12(s.end)}` : ""}` : "";
-  const setup: string[] = rs.setup_items || [];
   const date = b?.event_date ? format(new Date(`${b.event_date}T00:00:00`), "EEEE, d MMMM yyyy") : "Date to be confirmed";
   const start = b?.start_time ? String(b.start_time).slice(0, 5) : "";
   const end = start && b?.duration_minutes ? (() => { const [h, m] = start.split(":").map(Number); const total = (h * 60 + m + b.duration_minutes) % 1440; return `${String(Math.floor(total / 60)).padStart(2, "0")}:${String(total % 60).padStart(2, "0")}`; })() : "";
@@ -150,9 +149,6 @@ export function RunsheetDocument({ rs, lead, b, items, selection, businessName, 
           {selection?.corkage_enabled && <div className="pt-1 font-bold"><p>Corkage: Host is bringing their own alcohol.</p>{selection?.corkage_note && <p className="whitespace-pre-wrap">{selection.corkage_note}</p>}</div>}
           {!items.length && <div className="pt-2"><p className="text-muted-foreground">No menu saved yet.</p></div>}
           {Number(b?.chafing_dishes) > 0 && <div className="pt-2"><p className="font-bold">Chafing dishes: {b.chafing_dishes}</p></div>}
-          <div className="pt-4"><h2 className="font-bold">Setup & Additional Information</h2>{setup.map(s => <p key={s} className="pl-3">• {s}</p>)}</div>
-          {rs.setup_notes && <div className="pt-2"><p className="whitespace-pre-line pl-3">{rs.setup_notes}</p></div>}
-          {rs.access_time && <div className="pt-2"><p>Decor / vendor access: {to12(rs.access_time)}</p></div>}
           {rs.special_requests && <div className="pt-2"><p>Special requests: {rs.special_requests}</p></div>}
           {fohSchedule.some((s: any) => s?.label) && <div className="pt-4"><h2 className="font-bold">FOH service schedule</h2>{fohSchedule.filter((s: any) => s?.label).map((s, i) => <p key={i} className="pl-3">• {slot(s) || "—"} – {s.label}{s.detail ? ` (${s.detail})` : ""}</p>)}</div>}
           {selection?.dietary_requirements && <div className="pt-3 text-kitchen-note print:text-kitchen-note"><p className="font-bold">Dietary requirements:</p><p className="whitespace-pre-wrap">{selection.dietary_requirements}</p></div>}
