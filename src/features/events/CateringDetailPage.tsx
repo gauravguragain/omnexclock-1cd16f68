@@ -35,7 +35,7 @@ export default function CateringDetailPage({ view }: { view: "lead" | "booking" 
   const ev = useEventsData();
   const [editOpen, setEditOpen] = useState(false);
   const [editBkOpen, setEditBkOpen] = useState(false);
-  const [bkTab, setBkTab] = useState<"details" | "menu" | "team">("details");
+  const [bkTab, setBkTab] = useState<"details" | "delivery" | "menu" | "chafing" | "team" | "customer">("details");
   const [bk, setBk] = useState({ event_name: "", event_date: "", start_time: "18:00", end_time: "23:00", fulfilment_method: "delivery", service_location: "", adults: "", kids: "", notes: "" });
   const [pkgs, setPkgs] = useState<CPkg[]>([]);
   const [team, setTeam] = useState({ coordinator: "", coordinator_phone: "", onsite_name: "", onsite_phone: "", client_notes: "" });
@@ -111,11 +111,11 @@ export default function CateringDetailPage({ view }: { view: "lead" | "booking" 
   };
   const saveBk = async () => {
     if (!booking || !crm.business) return;
-    if (!bk.event_name || !bk.event_date || !(Number(bk.adults) > 0) || (bk.fulfilment_method === "delivery" && !bk.service_location)) { toast.error("Name, date, adults and delivery address are required."); return; }
+    if (!bk.event_name || !bk.event_date || !(Number(bk.adults) > 0)) { toast.error("Name, date and adults are required."); return; }
     setBkSaving(true);
     const bid = crm.business.id;
     const total = (Number(bk.adults) || 0) + (Number(bk.kids) || 0);
-    const { error } = await supabase.from("crm_bookings").update({ event_name: bk.event_name, event_date: bk.event_date, start_time: bk.start_time, end_time: bk.end_time, duration_minutes: minutesBetween(bk.start_time, bk.end_time), fulfilment_method: bk.fulfilment_method, service_location: bk.fulfilment_method === "pickup" ? null : bk.service_location || null, adults: Number(bk.adults) || 0, kids: Number(bk.kids) || 0, guest_count: total, notes: bk.notes || null } as any).eq("id", booking.id);
+    const { error } = await supabase.from("crm_bookings").update({ event_name: bk.event_name, event_date: bk.event_date, start_time: bk.start_time, end_time: bk.end_time, duration_minutes: minutesBetween(bk.start_time, bk.end_time), fulfilment_method: bk.fulfilment_method, service_location: bk.fulfilment_method === "pickup" ? null : booking.service_location || bk.service_location || null, adults: Number(bk.adults) || 0, kids: Number(bk.kids) || 0, guest_count: total, notes: bk.notes || null } as any).eq("id", booking.id);
     if (error) { setBkSaving(false); toast.error(error.message); return; }
     const chosen = pkgs;
     const { data: sel, error: se } = await supabase.from("crm_menu_selections").upsert({ business_id: bid, lead_id: lead.id, guest_count: Number(bk.adults) || total, package_name: chosen[0]?.name || null, updated_by: null } as any, { onConflict: "lead_id" }).select("id").single();
@@ -178,7 +178,6 @@ export default function CateringDetailPage({ view }: { view: "lead" | "booking" 
           <div><Label>Adults</Label><Input type="number" min={1} value={bk.adults} onChange={e => setBk(p => ({ ...p, adults: e.target.value }))} /></div>
           <div><Label>Kids</Label><Input type="number" min={0} value={bk.kids} onChange={e => setBk(p => ({ ...p, kids: e.target.value }))} /></div>
         </div>
-        {bk.fulfilment_method === "delivery" && <div><Label>Delivery address</Label><Input value={bk.service_location} onChange={e => setBk(p => ({ ...p, service_location: e.target.value }))} /></div>}
         <div><Label>Notes</Label><Textarea rows={3} value={bk.notes} onChange={e => setBk(p => ({ ...p, notes: e.target.value }))} /></div>
       </div>}
       {bkTab === "menu" && <div className="space-y-3"><CateringMenuEditor pkgs={pkgs} setPkgs={setPkgs} bookPackages={bookPackages} /><p className="text-right text-sm">Menu total: <strong>${cateringMenuTotal(pkgs, (Number(bk.adults) || 0) + (Number(bk.kids) || 0)).toFixed(2)}</strong> <span className="text-muted-foreground">for {(Number(bk.adults) || 0) + (Number(bk.kids) || 0)} guests</span></p></div>}
