@@ -54,6 +54,11 @@ export default function CreateEventWizard({ kind }: { kind: "event" | "catering"
   }, [leadId, crm.leads.length, ev.venues.length]);
 
   const total = (Number(f.adults) || 0) + (Number(f.kids) || 0);
+  const chafCount = chafOn ? Math.max(0, Math.floor(Number(chafQty) || 0)) : 0;
+  const chafUnit = Math.max(0, Number(chafPrice) || 0);
+  const chafTotal = chafCount * chafUnit;
+  const menuTotal = cateringMenuTotal(pkgs, total);
+  const grandTotal = Math.round((menuTotal + (kind === "catering" && f.method === "delivery" ? (feeOf(delivery) ?? 0) : 0) + (kind === "catering" ? chafTotal : 0)) * 100) / 100;
   const venue = ev.venues.find(v => v.id === f.venue);
   const clashes = useMemo(() => {
     if (!f.date || kind === "catering") return {} as Record<string, any[]>;
@@ -76,7 +81,7 @@ export default function CreateEventWizard({ kind }: { kind: "event" | "catering"
       if (lid) { const { error } = await supabase.from("crm_leads").update({ customer_id: cid, lead_outcome: "confirmed", lead_kind: kind, service_location: f.location || null } as any).eq("id", lid); if (error) throw error; }
       else { const { data, error } = await supabase.from("crm_leads").insert({ business_id: bid, full_name: c.full_name, phone: c.phone || null, email: c.email || null, source: "direct", event_type: kind === "catering" ? "catering" : (f.event_type || "other"), preferred_dates: [f.date], estimated_guest_count: total, venue_space: venue?.name || null, status: "menu_selected", lead_kind: kind, service_location: f.location || null, customer_id: cid, lead_outcome: "confirmed", created_by: user?.id } as any).select().single(); if (error) throw error; lid = data.id; }
       const order = null; // assigned when the run sheet is first sent
-      const { data: bk, error } = await supabase.from("crm_bookings").insert({ business_id: bid, lead_id: lid, customer_id: cid, booking_kind: kind, event_name: f.event_name, event_type: kind === "catering" ? "catering" : (f.event_type || null), fulfilment_method: kind === "catering" ? f.method : "delivery", event_date: f.date, start_time: f.start, end_time: f.end, duration_minutes: minutesBetween(f.start, f.end), guest_count: total, adults: Number(f.adults) || 0, kids: Number(f.kids) || 0, venue_space: kind === "event" ? venue!.name : "Off-site catering", venue_space_id: kind === "event" ? venue!.id : null, service_location: kind === "catering" && f.method === "pickup" ? null : (f.location || null), ...(kind === "catering" && f.method === "delivery" ? { delivery_distance_km: delivery.km === "" ? null : Number(delivery.km), delivery_rate_per_km: Number(delivery.rate) || 0, delivery_fee_manual: delivery.manual, delivery_fee: feeOf(delivery), total_amount: (feeOf(delivery) ?? 0) + cateringMenuTotal(pkgs, total) } : {}), ...(kind === "catering" && f.method !== "delivery" ? { total_amount: cateringMenuTotal(pkgs, total) } : {}), notes: f.notes || null, status: "confirmed", event_order_number: order as any, created_by: user?.id } as any).select("id").single();
+      const { data: bk, error } = await supabase.from("crm_bookings").insert({ business_id: bid, lead_id: lid, customer_id: cid, booking_kind: kind, event_name: f.event_name, event_type: kind === "catering" ? "catering" : (f.event_type || null), fulfilment_method: kind === "catering" ? f.method : "delivery", event_date: f.date, start_time: f.start, end_time: f.end, duration_minutes: minutesBetween(f.start, f.end), guest_count: total, adults: Number(f.adults) || 0, kids: Number(f.kids) || 0, venue_space: kind === "event" ? venue!.name : "Off-site catering", venue_space_id: kind === "event" ? venue!.id : null, service_location: kind === "catering" && f.method === "pickup" ? null : (f.location || null), ...(kind === "catering" ? { chafing_dishes: chafCount, chafing_dish_price: chafUnit, total_amount: grandTotal } : {}), ...(kind === "catering" && f.method === "delivery" ? { delivery_distance_km: delivery.km === "" ? null : Number(delivery.km), delivery_rate_per_km: Number(delivery.rate) || 0, delivery_fee_manual: delivery.manual, delivery_fee: feeOf(delivery) } : {}), notes: f.notes || null, status: "confirmed", event_order_number: order as any, created_by: user?.id } as any).select("id").single();
       if (error) throw error;
       const chosen = pkgs;
       if (chosen.length) {
@@ -128,6 +133,20 @@ export default function CreateEventWizard({ kind }: { kind: "event" | "catering"
     </Step>
     <Step n="05" title="Catering" sub="The packages the client ordered, and the dishes they chose. Prints on the run sheet.">
       <CateringMenuEditor pkgs={pkgs} setPkgs={setPkgs} bookPackages={bookPackages} />
+      <div className="mt-4 space-y-3 border-t border-border pt-4">
+        <label className="flex cursor-pointer items-center gap-2 text-sm"><Checkbox checked={chafOn} onCheckedChange={v => setChafOn(!!v)} />Chafing dishes required</label>
+        {chafOn && <div className="grid gap-3 sm:grid-cols-3">
+          <div className="space-y-1.5"><Label className="text-xs">Number of chafing dishes</Label><Input type="number" min={0} step={1} value={chafQty} onChange={e => setChafQty(e.target.value)} /></div>
+          <div className="space-y-1.5"><Label className="text-xs">Price per chafing dish ($)</Label><Input type="number" min={0} step="0.01" value={chafPrice} onChange={e => setChafPrice(e.target.value)} /></div>
+          <div className="flex flex-col justify-end"><p className="rounded-md bg-muted px-3 py-2 text-sm">Chafing total <strong className="float-right">${chafTotal.toFixed(2)}</strong></p></div>
+        </div>}
+        <dl className="space-y-1 rounded-lg bg-muted/60 p-3 text-sm">
+          <div className="flex justify-between"><dt>Menu</dt><dd>${menuTotal.toFixed(2)}</dd></div>
+          {f.method === "delivery" && <div className="flex justify-between"><dt>Delivery</dt><dd>${(feeOf(delivery) ?? 0).toFixed(2)}</dd></div>}
+          <div className="flex justify-between"><dt>Chafing dishes{chafCount ? ` (${chafCount} × $${chafUnit.toFixed(2)})` : ""}</dt><dd>${chafTotal.toFixed(2)}</dd></div>
+          <div className="flex justify-between border-t border-border pt-1 text-base font-semibold"><dt>Total</dt><dd>${grandTotal.toFixed(2)}</dd></div>
+        </dl>
+      </div>
     </Step></>}
     <Step n={kind === "event" ? "04" : "06"} title="Notes" sub="Notes for the client and the team — all optional."><Textarea value={f.notes} onChange={e => set("notes", e.target.value)} /></Step>
     <div className="flex justify-end gap-2"><Button variant="outline" onClick={() => nav(-1)}>Cancel</Button><Button disabled={!ready || saving} onClick={save}>{saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}{kind === "event" ? "Save event" : "Create booking"}</Button></div>
