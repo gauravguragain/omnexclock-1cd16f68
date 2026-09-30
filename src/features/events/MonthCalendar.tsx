@@ -20,17 +20,18 @@ type CalendarProps = {
   onView: (booking: Booking) => void;
   onEdit: (booking: Booking) => void;
   readOnly?: boolean;
+  paidBookingIds?: string[];
 };
 
 
-export default function MonthCalendar({ bookings, leads, runsheets, customers, venues, onView, onEdit, readOnly = false }: CalendarProps) {
+export default function MonthCalendar({ bookings, leads, runsheets, customers, venues, onView, onEdit, readOnly = false, paidBookingIds }: CalendarProps) {
   const [month, setMonth] = useState(startOfMonth(new Date()));
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
   // Events only show once a payment (deposit or more) is recorded in Payments;
   // catering bookings always show.
-  const { payments } = usePayments(bookings[0]?.business_id);
-  const paidIds = new Set(payments.filter(p => Number(p.amount) > 0).map(p => p.booking_id));
+  const { payments } = usePayments(paidBookingIds ? undefined : bookings[0]?.business_id);
+  const paidIds = new Set(paidBookingIds ?? payments.filter(p => Number(p.amount) > 0).map(p => p.booking_id));
   const active = bookings.filter(b => {
     if (b.status === "cancelled" || !b.event_date) return false;
     if ((b.booking_kind || "event") === "catering") return true;
