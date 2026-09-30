@@ -30,11 +30,15 @@ export default function PaymentsPage() {
     return dist(a.b.event_date) - dist(z.b.event_date);
   }), [payable, crm.leads, payments]);
 
+  const [, setTick] = useState(0);
+  useEffect(() => { const t = setInterval(() => setTick(n => n + 1), 60000); return () => clearInterval(t); }, []);
   const month = sydneyToday().slice(0, 7);
+  const monthLabel = format(new Date(month + "-01T00:00:00"), "MMMM yyyy");
+  const paidDay = (v?: string) => !v ? "" : v.length > 10 ? new Date(v).toLocaleDateString("en-CA", { timeZone: "Australia/Sydney" }) : v;
   const totals = {
     outstanding: rows.reduce((s, r) => s + Math.max(r.s.balance, 0), 0),
     overdue: rows.filter(r => r.s.overdue).reduce((s, r) => s + r.s.balance, 0),
-    thisMonth: payments.filter(p => p.paid_on.startsWith(month)).reduce((s, p) => s + Number(p.amount), 0),
+    thisMonth: payments.filter(p => paidDay(p.paid_on).startsWith(month)).reduce((s, p) => s + Number(p.amount), 0),
     awaitingDeposit: rows.filter(r => r.s.paid < r.s.deposit).length,
   };
   const counts: Record<Filter, number> = { outstanding: rows.filter(r => r.s.status !== "paid").length, overdue: rows.filter(r => r.s.overdue).length, paid: rows.filter(r => r.s.status === "paid").length, all: rows.length };
