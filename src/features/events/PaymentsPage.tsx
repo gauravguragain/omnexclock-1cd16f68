@@ -36,7 +36,7 @@ export default function PaymentsPage() {
     thisMonth: payments.filter(p => p.paid_on.startsWith(month)).reduce((s, p) => s + Number(p.amount), 0),
     awaitingDeposit: rows.filter(r => r.s.paid < r.s.deposit).length,
   };
-  const counts: Record<Filter, number> = { outstanding: rows.filter(r => r.s.balance > 0).length, overdue: rows.filter(r => r.s.overdue).length, paid: rows.filter(r => r.s.status === "paid").length, all: rows.length };
+  const counts: Record<Filter, number> = { outstanding: rows.filter(r => r.s.status !== "paid").length, overdue: rows.filter(r => r.s.overdue).length, paid: rows.filter(r => r.s.status === "paid").length, all: rows.length };
   const needle = q.trim().toLowerCase();
   const shown = rows.filter(r => filter === "all" ? true : filter === "paid" ? r.s.status === "paid" : filter === "overdue" ? r.s.overdue : r.s.balance > 0)
     .filter(r => !needle || [r.b.event_name, r.b.event_type, r.client, r.b.event_order_number].some(v => String(v || "").toLowerCase().includes(needle)));
