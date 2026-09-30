@@ -28,20 +28,25 @@ export default function ChafingCard({ booking, menuTotal, onChanged }: { booking
     if (error) { toast.error(error.message); return; }
     toast.success("Saved and booking total updated"); onChanged();
   };
-  return <section className="space-y-3 border-t border-border py-5">
-    <h2 className="text-lg font-semibold">Chafing dishes & total</h2>
-    <label className="flex cursor-pointer items-center gap-2 text-sm"><Checkbox checked={on} onCheckedChange={v => setOn(!!v)} />Chafing dishes required</label>
-    {on && <div className="grid gap-3 sm:grid-cols-3">
-      <div><Label className="text-xs">Number of chafing dishes</Label><Input type="number" min={0} step={1} value={qty} onChange={e => setQty(e.target.value)} /></div>
-      <div><Label className="text-xs">Price per chafing dish ($)</Label><Input type="number" min={0} step="0.01" value={price} onChange={e => setPrice(e.target.value)} /></div>
-      <div className="flex flex-col justify-end"><p className="rounded-md bg-muted px-3 py-2 text-sm">Chafing total <strong className="float-right">{money(chafing)}</strong></p></div>
-    </div>}
-    <dl className="space-y-1 rounded-lg bg-muted/60 p-3 text-sm">
-      <div className="flex justify-between"><dt>Menu</dt><dd>{money(menuTotal)}</dd></div>
-      {booking.fulfilment_method !== "pickup" && <div className="flex justify-between"><dt>Delivery</dt><dd>{money(delivery)}</dd></div>}
-      <div className="flex justify-between"><dt>Chafing dishes{count ? ` (${count} × ${money(unit)})` : ""}</dt><dd>{money(chafing)}</dd></div>
-      <div className="flex justify-between border-t border-border pt-1 text-base font-semibold"><dt>Total</dt><dd>{money(grand)}</dd></div>
-    </dl>
-    <Button type="button" onClick={save} disabled={saving}>{saving ? <Loader2 className="h-4 w-4 animate-spin" /> : "Save & update total"}</Button>
-  </section>;
+  return <>
+    <section className="space-y-3 border-t border-border py-5">
+      <h2 className="text-lg font-semibold">Chafing dishes</h2>
+      <label className="flex cursor-pointer items-center gap-2 text-sm"><Checkbox checked={on} onCheckedChange={v => setOn(!!v)} />Chafing dishes required</label>
+      {on && <div className="grid gap-3 sm:grid-cols-3">
+        <div><Label className="text-xs">Number of chafing dishes</Label><Input type="number" min={0} step={1} value={qty} onChange={e => setQty(e.target.value)} /></div>
+        <div><Label className="text-xs">Price per chafing dish ($)</Label><Input type="number" min={0} step="0.01" value={price} onChange={e => setPrice(e.target.value)} /></div>
+        <div className="flex flex-col justify-end"><p className="rounded-md bg-muted px-3 py-2 text-sm">Chafing total <strong className="float-right">{money(chafing)}</strong></p></div>
+      </div>}
+    </section>
+    <section className="space-y-3 border-t border-border py-5">
+      <h2 className="text-lg font-semibold">Total</h2>
+      <dl className="space-y-1 rounded-lg bg-muted/60 p-3 text-sm">
+        <div className="flex justify-between"><dt>Menu</dt><dd>{money(menuTotal)}</dd></div>
+        {booking.fulfilment_method !== "pickup" && <div className="flex justify-between"><dt>Delivery</dt><dd>{money(delivery)}</dd></div>}
+        <div className="flex justify-between"><dt>Chafing dishes{count ? ` (${count} × ${money(unit)})` : ""}</dt><dd>{money(chafing)}</dd></div>
+        <div className="flex justify-between border-t border-border pt-1 text-base font-semibold"><dt>Total</dt><dd>{money(grand)}</dd></div>
+      </dl>
+      <Button type="button" onClick={save} disabled={saving}>{saving ? <Loader2 className="h-4 w-4 animate-spin" /> : "Save & update total"}</Button>
+    </section>
+  </>;
 }
