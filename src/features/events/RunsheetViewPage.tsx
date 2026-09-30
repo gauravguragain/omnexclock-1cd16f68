@@ -11,13 +11,14 @@ import SendRunsheetDialog, { runsheetPublicUrl } from "./SendRunsheetDialog";
 import { useCrmData } from "@/features/sales/useCrmData";
 import { prettyCrmValue } from "@/features/sales/types";
 import { to12 } from "./useEventsData";
-import { DEFAULT_RUNSHEET_TERMS } from "./defaultTerms";
+import { DEFAULT_CATERING_TERMS, DEFAULT_RUNSHEET_TERMS } from "./defaultTerms";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { SignaturePadDialog } from "@/components/SignaturePad";
 
 export function runsheetTermsFor(settings: any, booking: any): string | null {
-  if (booking?.booking_kind === "catering" || settings?.runsheet_terms_enabled === false) return null;
+  if (booking?.booking_kind === "catering") return settings?.catering_terms_enabled === false ? null : ((settings?.catering_terms ?? "").trim() || DEFAULT_CATERING_TERMS);
+  if (settings?.runsheet_terms_enabled === false) return null;
   return (settings?.runsheet_terms ?? "").trim() || DEFAULT_RUNSHEET_TERMS;
 }
 
@@ -148,6 +149,7 @@ export function RunsheetDocument({ rs, lead, b, items, selection, businessName, 
           {(selection?.beverage_detail?.sections || []).filter((sec: any) => sec.name || sec.items.length || sec.notes).map((sec: any, i: number) => <div key={i} className="pt-1"><h3 className="pl-3 font-bold">{sec.name}{sec.picks ? ` (choose ${sec.picks})` : ""}</h3>{sec.notes && <p className="whitespace-pre-line pl-6 font-normal">{sec.notes}</p>}{sec.items.map((n: string) => <p key={n} className="pl-6 font-normal">- {n}</p>)}</div>)}
           {selection?.corkage_enabled && <div className="pt-1 font-bold"><p>Corkage: Host is bringing their own alcohol.</p>{selection?.corkage_note && <p className="whitespace-pre-wrap">{selection.corkage_note}</p>}</div>}
           {!items.length && <div className="pt-2"><p className="text-muted-foreground">No menu saved yet.</p></div>}
+          {Number(b?.chafing_dishes) > 0 && <div className="pt-2"><p className="font-bold">Chafing dishes: {b.chafing_dishes}</p></div>}
           <div className="pt-4"><h2 className="font-bold">Setup & Additional Information</h2>{setup.map(s => <p key={s} className="pl-3">• {s}</p>)}</div>
           {rs.setup_notes && <div className="pt-2"><p className="whitespace-pre-line pl-3">{rs.setup_notes}</p></div>}
           {rs.access_time && <div className="pt-2"><p>Decor / vendor access: {to12(rs.access_time)}</p></div>}
