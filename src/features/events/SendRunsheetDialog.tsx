@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { format } from "date-fns";
 import { toast } from "sonner";
-import { Mail, RotateCcw, Send, Check, PenLine } from "lucide-react";
+import { Mail, RotateCcw, Check, PenLine } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -128,12 +128,10 @@ export default function SendRunsheetDialog({ open, onOpenChange, rs, lead, booki
   return <Dialog open={open} onOpenChange={onOpenChange}>
     <DialogContent className="max-h-[90vh] max-w-lg overflow-y-auto">
       <DialogHeader><DialogTitle>{issuing ? (rs?.sent_at ? "Re-issue this booking?" : "Confirm and send this booking") : "Send this booking again?"}</DialogTitle></DialogHeader>
-      {issuing
-        ? <p className="flex gap-2 text-sm text-muted-foreground"><Send className="mt-0.5 h-4 w-4 shrink-0" />Locks in run sheet v{rs?.revision || 1}, moves the lead to "Run sheet sent" and creates the follow-up tasks. The client and event managers get the booking confirmation; kitchen and coordinators get the run sheet.</p>
-        : <>
-          <p className="flex gap-2 text-sm text-muted-foreground"><RotateCcw className="mt-0.5 h-4 w-4 shrink-0" />Nothing about the event changes. It sends the confirmation and the run sheet exactly as they stand.</p>
-          {already.size > 0 && <p className="flex gap-2 rounded-xl border border-border bg-muted/40 p-3 text-xs text-muted-foreground"><Mail className="mt-0.5 h-3.5 w-3.5 shrink-0" />Everyone marked "Emailed" has already been emailed once. Sending again puts a second, identical copy in their inbox — worth doing if the first didn't arrive, otherwise close this.</p>}
-        </>}
+      {!issuing && <>
+        <p className="flex gap-2 text-sm text-muted-foreground"><RotateCcw className="mt-0.5 h-4 w-4 shrink-0" />Nothing about the event changes. It sends the confirmation and the run sheet exactly as they stand.</p>
+        {already.size > 0 && <p className="flex gap-2 rounded-xl border border-border bg-muted/40 p-3 text-xs text-muted-foreground"><Mail className="mt-0.5 h-3.5 w-3.5 shrink-0" />Everyone marked "Emailed" has already been emailed once. Sending again puts a second, identical copy in their inbox — worth doing if the first didn't arrive, otherwise close this.</p>}
+      </>}
       <div>
         <p className="mb-2 text-sm font-medium">Who gets an email</p>
         <div className="overflow-hidden rounded-xl border border-border">
