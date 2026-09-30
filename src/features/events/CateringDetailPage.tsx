@@ -132,7 +132,6 @@ export default function CateringDetailPage({ view }: { view: "lead" | "booking" 
     await supabase.from("crm_bookings").update({ total_amount: Math.round(newTotal * 100) / 100 } as any).eq("id", booking.id);
     setBkSaving(false);
     toast.success("Catering booking updated.");
-    setEditBkOpen(false);
     await crm.refresh();
   };
 
