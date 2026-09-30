@@ -92,6 +92,7 @@ const PublicEnquiryPage = React.lazy(() => import("./pages/PublicEnquiryPage"));
 const GuestMenuPage = React.lazy(() => import("./pages/GuestMenuPage"));
 const MenuSharePage = React.lazy(() => import("./pages/MenuSharePage"));
 const BookingConfirmationPage = React.lazy(() => import("./pages/BookingConfirmationPage"));
+const DepositPaymentPage = React.lazy(() => import("./pages/DepositPaymentPage"));
 const MasterDashboardPage = React.lazy(() => import("./pages/master/MasterDashboardPage"));
 const MasterBusinessesPage = React.lazy(() => import("./pages/master/MasterBusinessesPage"));
 const MasterUsersPage = React.lazy(() => import("./pages/master/MasterUsersPage"));
@@ -157,6 +158,7 @@ const App = () => (
                  <Route path="/b/:businessCode/portal" element={<PortalPage />} />
                   <Route path="/b/:businessCode/enquire" element={<PublicEnquiryPage />} />
                    <Route path="/booking/confirm/:token" element={<BookingConfirmationPage />} />
+                   <Route path="/deposit/:token" element={<DepositPaymentPage />} />
 <Route path="/b/:businessCode/operations" element={<OperationsPage />} />
                    <Route path="/b/:businessCode/operations/calendar" element={<OperationsCalendarPage />} />
                   <Route path="/b/:businessCode/admin" element={<AdminLayout />}>

@@ -498,6 +498,13 @@
       "when": 1790740039894,
       "tag": "0070_enable_reliable_realtime_sync",
       "breakpoints": true
+    },
+    {
+      "idx": 71,
+      "version": "7",
+      "when": 1790748712705,
+      "tag": "0071_deposit_payment_requests",
+      "breakpoints": true
     }
   ]
 }

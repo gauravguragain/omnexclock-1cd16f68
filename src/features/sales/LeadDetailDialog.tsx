@@ -14,7 +14,7 @@ import { usePayments, paymentSummary, money } from "@/features/events/payments";
 const INTERACTION_TYPES=[{value:"phone_call",label:"Phone call"},{value:"email",label:"Email"},{value:"in_person",label:"In person"},{value:"message",label:"Message"}];
 export const COURSE_CATEGORY:Record<string,string>={"Entrees (Veg)":"entrees_veg","Entrees (Non-veg)":"entrees_nonveg","Veg Mains":"veg_mains","Non-veg Mains":"nonveg_mains","Sides":"sides","Dessert":"dessert","Kids Menu":"kids_menu"};
 export const DISH_COURSES=["Entrees (Veg)","Entrees (Non-veg)","Veg Mains","Non-veg Mains","Sides","Dessert","Kids Menu"];
-import type { CrmInspection, CrmInteraction, CrmLead, CrmOption, CrmTask } from "./types"; import { CRM_LEAD_STATUSES, CRM_STAGE_VALUES, leadStageUpdate, prettyCrmValue } from "./types"; import RunsheetTab from "./RunsheetTab"; import LeadStakeholdersTab from "./LeadStakeholdersTab";
+import type { CrmInspection, CrmInteraction, CrmLead, CrmOption, CrmTask } from "./types"; import { CRM_LEAD_STATUSES, CRM_STAGE_VALUES, leadStageUpdate, prettyCrmValue } from "./types"; import RunsheetTab from "./RunsheetTab"; import LeadStakeholdersTab from "./LeadStakeholdersTab"; import DepositRequestCard from "./DepositRequestCard";
 
 /** Journey order shown in the stepper — mirrors the real sales process. */
 const LEAD_STEPS=[{value:"timeline",label:"Timeline"},{value:"inspection",label:"Inspection"},{value:"booking",label:"Confirmation"},{value:"tasting",label:"Menu tasting"},{value:"menu",label:"Menu"},{value:"stakeholders",label:"Stakeholders"},{value:"runsheet",label:"Runsheet"}];
@@ -325,6 +325,7 @@ export function LeadDetailView({ lead, open, initialTab, options, interactions, 
         </div>
         <Button className="h-11 w-full text-base">{booking?"Update booking":"Prepare booking"}</Button>
         <p className="flex items-start gap-2 text-xs text-muted-foreground"><Info className="mt-0.5 h-3.5 w-3.5 shrink-0"/>Recording the deposit in Payments moves this lead to Deposit received.</p>
+        <DepositRequestCard lead={lead} booking={booking} amount={bookDeposit} eventTitle={[prettyCrmValue(lead.event_type||"")||"Event",lead.full_name].filter(Boolean).join(" – ")}/>
       </aside>
     </form>
     {leadTasks.length>0&&<div className="space-y-2 rounded-xl border border-border p-4"><p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Follow-up tasks</p>{leadTasks.map(t=><p key={t.id} className="text-sm text-muted-foreground">• {t.title}</p>)}</div>}

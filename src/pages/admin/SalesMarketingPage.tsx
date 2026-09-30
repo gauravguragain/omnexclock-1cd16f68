@@ -70,6 +70,14 @@ function SettingsPanel({businessId,businessCode,options,settings,menuItems,canCo
         <div><Label>Email for signed run sheets</Label><p className="text-sm text-muted-foreground">When a client signs their run sheet online and presses Send, the signed copy is emailed here.</p><Input type="email" className="mt-2 max-w-md" defaultValue={settings?.signed_runsheet_email||""} placeholder="events@yourvenue.com" disabled={!canConfigure} onBlur={e=>{const v=e.target.value.trim();if(v&&!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v)){toast.error("Enter a valid email");return;}if(v!==(settings?.signed_runsheet_email||""))saveSettings({signed_runsheet_email:v||null});}}/></div>
         <div><Label>Saved signatures</Label><p className="mb-2 text-sm text-muted-foreground">Pick one of these when sending a run sheet to sign it on the venue's behalf.</p><SignatureLibrary businessId={businessId}/></div>
       </CardContent></Card>
+      <Card className="min-w-0 xl:col-span-2"><CardHeader><CardTitle>Deposit payment details</CardTitle></CardHeader><CardContent className="space-y-4">
+        <p className="text-sm text-muted-foreground">These bank details are emailed to clients from the Confirmation step when you press Send deposit details.</p>
+        <div className="grid gap-4 sm:grid-cols-3">
+          {([["deposit_account_name","Account name","Pro Regal Pavilion Pty Ltd"],["deposit_bsb","BSB","062-000"],["deposit_account_number","Account number","12345678"]] as const).map(([k,l,ph])=><div key={k} className="space-y-1.5"><Label>{l}</Label><Input defaultValue={settings?.[k]||""} placeholder={ph} disabled={!canConfigure} onBlur={e=>{const v=e.target.value.trim();if(v!==(settings?.[k]||""))saveSettings({[k]:v||null});}}/></div>)}
+        </div>
+        <div className="space-y-1.5"><Label>Extra payment instructions (optional)</Label><Textarea defaultValue={settings?.deposit_payment_note||""} placeholder="e.g. Please use your name and event date as the payment reference." disabled={!canConfigure} onBlur={e=>{const v=e.target.value;if(v!==(settings?.deposit_payment_note||""))saveSettings({deposit_payment_note:v.trim()?v:null});}}/></div>
+        <div className="space-y-1.5"><Label>Email for payment screenshots</Label><p className="text-sm text-muted-foreground">When a client uploads a payment screenshot, it's emailed here. Leave blank to use the signed run sheet email.</p><Input type="email" className="max-w-md" defaultValue={settings?.deposit_proof_email||""} placeholder="accounts@yourvenue.com" disabled={!canConfigure} onBlur={e=>{const v=e.target.value.trim();if(v&&!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v)){toast.error("Enter a valid email");return;}if(v!==(settings?.deposit_proof_email||""))saveSettings({deposit_proof_email:v||null});}}/></div>
+      </CardContent></Card>
       <TermsCard settings={settings} canConfigure={canConfigure} save={saveSettings}/>
   </div>;
 }
