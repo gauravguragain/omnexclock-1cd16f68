@@ -56,7 +56,7 @@ export default function PaymentsPage() {
     </div>
 
     <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-      {[["Outstanding", money(totals.outstanding)], ["Overdue", money(totals.overdue)], ["Received this month", money(totals.thisMonth)], ["Awaiting deposit", String(totals.awaitingDeposit)]].map(([k, v], i) =>
+      {[["Outstanding", money(totals.outstanding)], ["Overdue", money(totals.overdue)], [`Received in ${monthLabel}`, money(totals.thisMonth)], ["Awaiting deposit", String(totals.awaitingDeposit)]].map(([k, v], i) =>
         <Card key={k}><CardContent className="p-4"><p className="text-[10px] uppercase tracking-wider text-muted-foreground">{k}</p><p className={cn("mt-1 text-xl font-semibold", i === 1 && totals.overdue > 0 && "text-destructive")}>{v}</p></CardContent></Card>)}
     </div>
 
