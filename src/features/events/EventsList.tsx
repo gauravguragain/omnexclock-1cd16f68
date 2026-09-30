@@ -11,7 +11,7 @@ import { Plus, Search } from "lucide-react";
 import { useCrmData } from "@/features/sales/useCrmData";
 import { isConfirmedLeadStage, prettyCrmValue } from "@/features/sales/types";
 import { useEventsData, bookingEnd, to12 } from "./useEventsData";
-import { paymentSummary, sydneyToday, usePayments, type CrmPayment } from "./payments";
+import { paymentSummary, isSettledImport, sydneyToday, usePayments, type CrmPayment } from "./payments";
 
 function eventStatus(b: any, today: string) {
   if (b.status === "cancelled") return "Cancelled";
