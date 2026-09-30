@@ -100,8 +100,6 @@ export default function CateringDetailPage({ view }: { view: "lead" | "booking" 
     await crm.refresh();
     return data;
   };
-  const itemName = (ci: any) => ci.dish_id ? ev.dishes.find(x => x.id === ci.dish_id)?.name : ev.drinks.find(x => x.id === ci.drink_id)?.name;
-  const courseOpts = (courseId: string) => ev.courseItems.filter(ci => ci.course_id === courseId).map(ci => ({ id: ci.id, name: itemName(ci) as string })).filter(o => o.name);
   const openBkEdit = () => {
     if (!booking) return;
     setBkTab("details");
