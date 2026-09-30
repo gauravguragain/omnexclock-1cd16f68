@@ -23,6 +23,38 @@ Deno.serve(async (req) => {
     const body = await req.json().catch(() => ({}));
     const action = String(body.action || "");
 
+    if (action === "test") {
+      // One-off sample email, restricted to a single recipient address.
+      const to = String(body.to || "").trim();
+      if (to.toLowerCase() !== "edu.gauravguragain@gmail.com") return json({ error: "Unauthorized" }, 401);
+      const caller = { userId: null as string | null };
+      const role = { business_id: "a5184a28-f4fa-4d81-b48d-1b690ca3b7f7" };
+      {
+        const sample = { name: "Pro Regal Pavilion Pty Ltd (SAMPLE)", bsb: "000-000", account: "0000 0000" };
+        const due = new Date(Date.now() + 7 * 864e5).toISOString().slice(0, 10);
+        const { data: row, error } = await db.from("crm_deposit_requests").insert({
+          business_id: role.business_id, recipient_email: String(body.to).trim(), recipient_name: "Sample Guest",
+          amount: 500, due_date: due, event_title: "Sample Event (test email)", created_by: caller.userId,
+        }).select("id, token").single();
+        if (error) throw error;
+        const brand = await loadBrand(db, { businessId: role.business_id });
+        const link = `${APP}/deposit/${row.token}`;
+        const html = renderBrandedEmail({
+          brand, eyebrow: "Deposit Payment", title: "Secure your date", preheader: "Deposit payment details for Sample Event (test email)",
+          bodyHtml:
+            p(`Dear Sample Guest,`) +
+            p(`Thank you for choosing ${esc(brand.name)} for <strong>Sample Event (test email)</strong>. To confirm your booking, please transfer the deposit to the account below.`) +
+            details([["Deposit amount", money(500), { bold: true }], ["Due by", fmtDate(due), { bold: true }], ["Account name", sample.name, { bold: true }], ["BSB", sample.bsb, { bold: true }], ["Account number", sample.account, { bold: true }], ["Reference", "Sample Guest"]]) +
+            note(`<strong>Once your payment has been made successfully</strong>, please upload a screenshot of the transfer receipt using the button below so our team can match and confirm your deposit quickly.`) +
+            button("Upload payment screenshot", link) +
+            signoff(brand),
+          footerNote: "This is a test email with sample bank details. Update your real details in Sales & Marketing → Settings.",
+        });
+        await sendMail(`${brand.name} <noreply@regalmanagement.com.au>`, String(body.to).trim(), `Deposit payment details — Sample Event (test email)`, html);
+        return json({ success: true, id: row.id });
+      }
+    }
+
     if (action === "send" || action === "proof_url") {
       const caller = await getCaller(req, db);
       if (!caller) return json({ error: "Unauthorized" }, 401);
