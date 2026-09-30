@@ -1,6 +1,7 @@
 import { eventLabel } from "@/lib/eventLabel";
 import { prettyCrmValue } from "@/features/sales/types";
 import { useLiveSync } from "@/hooks/useLiveSync";
+import { fetchAllRows } from "@/lib/fetchAllRows";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { format } from "date-fns";
 import { toast } from "sonner";
@@ -50,9 +51,11 @@ export function usePayments(businessId?: string, bookingId?: string | null) {
   const refresh = useCallback(async () => {
     if (!businessId) return;
     if (bookingId === null) { setPayments([]); setLoading(false); return; }
-    let q = (supabase as any).from("crm_payments").select("*").eq("business_id", businessId).order("paid_on", { ascending: false }).order("created_at", { ascending: false });
-    if (bookingId) q = q.eq("booking_id", bookingId);
-    const { data, error } = await q;
+    const { data, error } = await fetchAllRows(() => {
+      let q = (supabase as any).from("crm_payments").select("*").eq("business_id", businessId).order("paid_on", { ascending: false }).order("created_at", { ascending: false }).order("id");
+      if (bookingId) q = q.eq("booking_id", bookingId);
+      return q;
+    });
     if (error) toast.error(error.message); else setPayments(data || []);
     setLoading(false);
   }, [businessId, bookingId]);
