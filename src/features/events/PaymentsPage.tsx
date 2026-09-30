@@ -1,6 +1,6 @@
 import { eventLabel } from "@/lib/eventLabel";
 import { prettyCrmValue } from "@/features/sales/types";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { format } from "date-fns";
 import { Plus, Search, Wallet } from "lucide-react";
@@ -30,11 +30,15 @@ export default function PaymentsPage() {
     return dist(a.b.event_date) - dist(z.b.event_date);
   }), [payable, crm.leads, payments]);
 
+  const [, setTick] = useState(0);
+  useEffect(() => { const t = setInterval(() => setTick(n => n + 1), 60000); return () => clearInterval(t); }, []);
   const month = sydneyToday().slice(0, 7);
+  const monthLabel = format(new Date(month + "-01T00:00:00"), "MMMM yyyy");
+  const paidDay = (v?: string) => !v ? "" : v.length > 10 ? new Date(v).toLocaleDateString("en-CA", { timeZone: "Australia/Sydney" }) : v;
   const totals = {
     outstanding: rows.reduce((s, r) => s + Math.max(r.s.balance, 0), 0),
     overdue: rows.filter(r => r.s.overdue).reduce((s, r) => s + r.s.balance, 0),
-    thisMonth: payments.filter(p => p.paid_on.startsWith(month)).reduce((s, p) => s + Number(p.amount), 0),
+    thisMonth: payments.filter(p => paidDay(p.paid_on).startsWith(month)).reduce((s, p) => s + Number(p.amount), 0),
     awaitingDeposit: rows.filter(r => r.s.paid < r.s.deposit).length,
   };
   const counts: Record<Filter, number> = { outstanding: rows.filter(r => r.s.status !== "paid").length, overdue: rows.filter(r => r.s.overdue).length, paid: rows.filter(r => r.s.status === "paid").length, all: rows.length };
@@ -52,7 +56,7 @@ export default function PaymentsPage() {
     </div>
 
     <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-      {[["Outstanding", money(totals.outstanding)], ["Overdue", money(totals.overdue)], ["Received this month", money(totals.thisMonth)], ["Awaiting deposit", String(totals.awaitingDeposit)]].map(([k, v], i) =>
+      {[["Outstanding", money(totals.outstanding)], ["Overdue", money(totals.overdue)], [`Received in ${monthLabel}`, money(totals.thisMonth)], ["Awaiting deposit", String(totals.awaitingDeposit)]].map(([k, v], i) =>
         <Card key={k}><CardContent className="p-4"><p className="text-[10px] uppercase tracking-wider text-muted-foreground">{k}</p><p className={cn("mt-1 text-xl font-semibold", i === 1 && totals.overdue > 0 && "text-destructive")}>{v}</p></CardContent></Card>)}
     </div>
 
