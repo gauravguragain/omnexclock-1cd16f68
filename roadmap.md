@@ -1,4 +1,5 @@
 ## Open tasks
+- [x] Make live data sync reliable across active devices with backend broadcasts, reconnect catch-up, and visible-page polling.
 - [x] Rename Events list status to Event status and show days until the event.
 - [x] Show separate payment status from recorded payments and the confirmed balance due date.
 - [x] Show selected dietary requirements and allergies below the run-sheet schedules in bold, preserving entered line breaks.

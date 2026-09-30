@@ -7,3 +7,4 @@ Event confirmation stores the two child age counts separately while keeping crm_
 - Venue-clash UI and imports read crm_booking_venue_clashes live; booking notes and lead tags never store clash state, preventing stale import warnings.
 
 - All outgoing emails are wrapped by supabase/functions/_shared/emailLayout.ts (renderBrandedEmail) so every message shares one branded frame.
+- Shared live data screens use useLiveSync with backend change broadcasts plus focus, reconnect, and visible-page polling fallbacks so mobile sleep cannot leave records stale.

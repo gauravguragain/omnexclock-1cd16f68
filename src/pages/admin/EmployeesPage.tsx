@@ -16,6 +16,7 @@ import { Plus, Pencil, UserX, UserCheck, Search, ChevronRight, ChevronLeft, Chec
 import type { Tables } from "@/integrations/supabase/types";
 import { logAudit } from "@/lib/auditLog";
 import { getAppOrigin } from "@/lib/appOrigin";
+import { useLiveSync } from "@/hooks/useLiveSync";
 
 import EmployeeDocumentsPanel from "@/components/EmployeeDocumentsPanel";
 
@@ -84,6 +85,7 @@ export default function EmployeesPage() {
   };
 
   useEffect(() => { fetchEmployees(); }, [business]);
+  useLiveSync(["employees"], business?.id, () => void fetchEmployees());
 
   const validateStep = (s: number): boolean => {
     if (s === 0) {

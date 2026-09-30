@@ -14,6 +14,7 @@ import { MessageSquare, Plus, Trash2, ThumbsUp, Heart, Smile } from "lucide-reac
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { logAudit } from "@/lib/auditLog";
+import { useLiveSync } from "@/hooks/useLiveSync";
 
 interface ForumPost {
   id: string;
@@ -78,6 +79,7 @@ export default function ForumPage() {
   };
 
   useEffect(() => { if (business) fetchPosts(); }, [business]);
+  useLiveSync(["forum_posts", "forum_comments", "forum_reactions"], business?.id, () => void fetchPosts(), ["forum_comments", "forum_reactions"]);
 
   const handleCreate = async () => {
     if (!title.trim() || !content.trim()) {

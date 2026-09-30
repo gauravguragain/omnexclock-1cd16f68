@@ -28,7 +28,7 @@ export function useEventsData(businessId?: string) {
     setLoading(false);
   }, [businessKey]);
   useEffect(() => { void refresh(); }, [refresh]);
-  useLiveSync(["crm_venue_spaces","crm_customers","crm_stakeholders","crm_menu_books","crm_packages","crm_package_courses","crm_package_course_items","crm_dishes","crm_drinks"], businessKey, () => void refresh());
+  useLiveSync(["crm_venue_spaces","crm_customers","crm_stakeholders","crm_menu_books","crm_packages","crm_package_courses","crm_package_course_items","crm_dishes","crm_drinks","crm_menu_selections","crm_menu_selection_items"], businessKey, () => void refresh());
   return { business, ...data, loading, refresh };
 }
 

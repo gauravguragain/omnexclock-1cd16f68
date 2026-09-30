@@ -27,6 +27,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { buildExportFilename, formatDepartmentScope } from "@/lib/exportNaming";
 import { getPublicHolidayName } from "@/lib/publicHolidays";
 import { getTimesheetEventWindow } from "@/lib/timesheetUtils";
+import { useLiveSync } from "@/hooks/useLiveSync";
 
 interface TimesheetEntry {
   employee_id: string;
@@ -193,6 +194,7 @@ export default function TimesheetsPage() {
   useEffect(() => {
     if (business) fetchTimesheets();
   }, [selectedEmployee, dateFrom, dateTo, business]);
+  useLiveSync(["employees", "clock_events", "timesheet_approvals"], business?.id, () => void fetchTimesheets(), ["clock_events", "timesheet_approvals"]);
 
   const fetchTimesheets = async () => {
     const from = format(dateFrom, "yyyy-MM-dd");

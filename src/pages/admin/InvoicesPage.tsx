@@ -24,6 +24,7 @@ import jsPDF from "jspdf";
 import { buildInvoicePdf, buildCombinedInvoicesPdf, InvoiceData } from "@/lib/invoicePdf";
 import { buildExportFilename } from "@/lib/exportNaming";
 import { logAudit, getDeviceInfo } from "@/lib/auditLog";
+import { useLiveSync } from "@/hooks/useLiveSync";
 
 const HOURLY_RATE = 30;
 
@@ -90,6 +91,7 @@ export default function InvoicesPage() {
   const canAccess = business && isSuperAdminOf(currentBusinessId);
 
   useEffect(() => { if (business) fetchWeek(); }, [business, weekStart]);
+  useLiveSync(["employees", "clock_events", "timesheet_approvals", "invoices"], business?.id, () => void fetchWeek(), ["clock_events", "timesheet_approvals"]);
 
   const fetchWeek = async () => {
     if (!business) return;

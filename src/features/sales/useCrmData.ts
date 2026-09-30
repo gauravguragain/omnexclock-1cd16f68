@@ -34,6 +34,6 @@ export function useCrmData(businessId?: string) {
   }, [id]);
 
   useEffect(() => { void refresh(); }, [refresh]);
-  useLiveSync(["crm_leads", "crm_options", "crm_inspections", "crm_tasks", "crm_interactions", "crm_settings", "crm_bookings", "crm_menu_items", "crm_runsheets", "crm_venue_spaces"], id, () => void refresh(true));
+  useLiveSync(["crm_leads", "crm_customers", "crm_options", "crm_inspections", "crm_tasks", "crm_interactions", "crm_settings", "crm_bookings", "crm_payments", "crm_menu_items", "crm_menu_selections", "crm_menu_selection_items", "crm_runsheets", "crm_stakeholders", "crm_timeline_events", "crm_venue_spaces"], id, () => void refresh(true));
   return { business, leads, options, inspections, tasks, interactions, settings, bookings, venueClashes, menuItems, runsheets, loading, refresh };
 }
