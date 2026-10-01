@@ -247,6 +247,7 @@ function ResendDepositDialog({ open, onOpenChange, booking, payment }: { open: b
 export function BookingPaymentsCard({ booking, onChanged }: { booking: any; onChanged?: () => void }) {
   const { payments, refresh } = usePayments(booking?.business_id, booking?.id ?? null);
   const [open, setOpen] = useState(false);
+  const [resendPayment, setResendPayment] = useState<CrmPayment | null>(null);
   const s = useMemo(() => paymentSummary(booking, payments), [booking, payments]);
   if (!booking) return null;
   const isCatering = booking.booking_kind === "catering";
