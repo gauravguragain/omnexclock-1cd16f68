@@ -124,6 +124,18 @@ export default function CalendarTab({ businessId, businessName, leads, inspectio
               <Button asChild><a href={shareUrl} target="_blank" rel="noreferrer">Open</a></Button>
             </div>
           </div>
+          {qrData && (
+            <div className="flex items-center gap-4 rounded-lg border border-border p-3">
+              <img src={qrData} alt="QR code for the shareable view-only calendar" className="h-28 w-28 shrink-0 rounded bg-background p-1" />
+              <div className="space-y-1">
+                <p className="flex items-center gap-2 text-sm font-medium"><QrCode className="h-4 w-4 text-primary" />Scan to open the calendar</p>
+                <p className="text-sm text-muted-foreground">Guests, staff or anyone with the link can point their phone camera here to open the view-only calendar.</p>
+                <Button variant="outline" size="sm" onClick={() => { const a = document.createElement("a"); a.href = qrData; a.download = `${businessName}-calendar-qr.png`; a.click(); }}>
+                  <Download className="mr-2 h-4 w-4" />Download QR image
+                </Button>
+              </div>
+            </div>
+          )}
         </div>
       </CardContent>
     </Card>
