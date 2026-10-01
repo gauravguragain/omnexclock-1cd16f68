@@ -540,6 +540,13 @@
       "when": 1790779705600,
       "tag": "0076_backfill_runsheet_booking_reference",
       "breakpoints": true
+    },
+    {
+      "idx": 77,
+      "version": "7",
+      "when": 1790826209454,
+      "tag": "0077_drop_legacy_unbound_storage_policies",
+      "breakpoints": true
     }
   ]
 }
