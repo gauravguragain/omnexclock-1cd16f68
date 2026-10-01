@@ -99,6 +99,12 @@ export function RecordPaymentDialog({ open, onOpenChange, booking, bookings, sug
       let name = target.client_name || "", email = "";
       if (target.customer_id) { const { data } = await (supabase as any).from("crm_customers").select("full_name,email").eq("id", target.customer_id).maybeSingle(); if (data) { name = name || data.full_name; email = data.email || ""; } }
       if (!email && target.lead_id) { const { data } = await (supabase as any).from("crm_leads").select("full_name,email").eq("id", target.lead_id).maybeSingle(); if (data) { name = name || data.full_name; email = data.email || ""; } }
+      if (!email && target.lead_id) {
+        // Fall back to the first stakeholder on the lead who has an email.
+        const { data: links } = await (supabase as any).from("crm_lead_stakeholders").select("stakeholder_id").eq("lead_id", target.lead_id);
+        const ids = (links || []).map((l: any) => l.stakeholder_id).filter(Boolean);
+        if (ids.length) { const { data: people } = await (supabase as any).from("crm_stakeholders").select("email").in("id", ids); email = (people || []).find((x: any) => x.email)?.email || ""; }
+      }
       const { data: biz } = await (supabase as any).from("businesses").select("name").eq("id", target.business_id).maybeSingle();
       if (!off) { setGuest({ name, email }); setBizName(biz?.name || ""); }
     })();
