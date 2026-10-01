@@ -40,7 +40,10 @@ export default function EventsDashboard({ businessId, ownerView = false, canOpen
   const eventDays = new Set(active.map(b => b.event_date));
   const monthCount = active.filter(b => isSameMonth(d(b.event_date), month)).length;
   const days: Date[] = []; for (let x = startOfWeek(month, { weekStartsOn: 1 }); x <= endOfWeek(endOfMonth(month), { weekStartsOn: 1 }); x = addDays(x, 1)) days.push(x);
-  const util = venues.length ? Math.round((usedSpaces.size / venues.length) * 100) : 0;
+  // Utilisation = share of days in the current month that have at least one event booked.
+  const daysInMonth = endOfMonth(new Date()).getDate();
+  const bookedDaysThisMonth = new Set(active.filter(b => isSameMonth(d(b.event_date), new Date())).map(b => b.event_date)).size;
+  const util = Math.round((bookedDaysThisMonth / daysInMonth) * 100);
   const ring = [{ n: todays.length, c: "hsl(var(--foreground))" }, { n: week.length, c: "hsl(var(--primary))" }, { n: later.length, c: "hsl(var(--destructive))" }];
   let off = 0; const C = 2 * Math.PI * 40;
   const first = todays[0];
@@ -132,7 +135,7 @@ export default function EventsDashboard({ businessId, ownerView = false, canOpen
         <p className="font-semibold">Venue at a glance</p><p className="text-xs text-muted-foreground">Standing figures</p>
         <p className="mt-4 text-sm">Utilisation rate</p><p className="text-4xl font-semibold">{util}%</p>
         <div className="mt-2 h-2 rounded-full bg-muted"><div className="h-full rounded-full bg-primary" style={{ width: `${util}%` }} /></div>
-        <div className="mt-2 flex justify-between text-sm text-muted-foreground"><span>In use <b className="text-foreground">{usedSpaces.size}</b></span><span>Active spaces <b className="text-foreground">{venues.length}</b></span></div>
+        <div className="mt-2 flex justify-between text-sm text-muted-foreground"><span>Days booked <b className="text-foreground">{bookedDaysThisMonth}</b></span><span>Days in {format(new Date(), "MMMM")} <b className="text-foreground">{daysInMonth}</b></span></div>
          <div className="mt-5 grid grid-cols-3 divide-x divide-border">{[[active.length, "Total events", "All time"], [thisMonth, "This month", format(new Date(), "MMMM yyyy")], [ev.venues.length, "Total spaces", `${venues.length} active`]].map(([n, l, s]: any) => <div key={l} className="min-w-0 px-2 first:pl-0 sm:px-3"><p className="text-2xl font-semibold sm:text-3xl">{n}</p><p className="text-xs sm:text-sm">{l}</p><p className="break-words text-xs text-muted-foreground">{s}</p></div>)}</div>
       </CardContent></Card>
        {!ownerView && <Card><CardContent className="p-6">
