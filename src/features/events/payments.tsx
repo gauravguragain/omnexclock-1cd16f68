@@ -189,6 +189,60 @@ export function RecordPaymentDialog({ open, onOpenChange, booking, bookings, sug
   </DialogContent></Dialog>;
 }
 
+/** Resend the deposit confirmation email for an already-recorded deposit payment. */
+function ResendDepositDialog({ open, onOpenChange, booking, payment }: { open: boolean; onOpenChange: (o: boolean) => void; booking: any; payment: CrmPayment | null }) {
+  const [guest, setGuest] = useState<{ name: string; email: string }>({ name: "", email: "" });
+  const [bizName, setBizName] = useState("");
+  const [sending, setSending] = useState(false);
+  useEffect(() => {
+    if (!open || !booking || !payment) return;
+    let off = false;
+    (async () => {
+      let name = booking.client_name || "", email = "";
+      if (booking.customer_id) { const { data } = await (supabase as any).from("crm_customers").select("full_name,email").eq("id", booking.customer_id).maybeSingle(); if (data) { name = name || data.full_name; email = data.email || ""; } }
+      if (!email && booking.lead_id) { const { data } = await (supabase as any).from("crm_leads").select("full_name,email").eq("id", booking.lead_id).maybeSingle(); if (data) { name = name || data.full_name; email = data.email || ""; } }
+      if (!email && booking.lead_id) {
+        const { data: links } = await (supabase as any).from("crm_lead_stakeholders").select("stakeholder_id").eq("lead_id", booking.lead_id);
+        const ids = (links || []).map((l: any) => l.stakeholder_id).filter(Boolean);
+        if (ids.length) { const { data: people } = await (supabase as any).from("crm_stakeholders").select("email").in("id", ids); email = (people || []).find((x: any) => x.email)?.email || ""; }
+      }
+      const { data: biz } = await (supabase as any).from("businesses").select("name").eq("id", booking.business_id).maybeSingle();
+      if (!off) { setGuest({ name, email }); setBizName(biz?.name || ""); }
+    })();
+    return () => { off = true; };
+  }, [open, booking?.id, payment?.id]);
+  const resend = async () => {
+    if (!booking || !payment) return;
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(guest.email.trim())) { toast.error("Enter the guest's email address."); return; }
+    setSending(true);
+    const fmt = (d?: string | null) => d ? format(new Date(d + "T00:00"), "d MMMM yyyy") : "";
+    const total = Number(booking.total_amount) || 0;
+    const { data: pays } = await (supabase as any).from("crm_payments").select("amount").eq("booking_id", booking.id);
+    const paid = (pays || []).reduce((s: number, p: any) => s + Number(p.amount || 0), 0);
+    const { error } = await supabase.functions.invoke("send-email", { body: {
+      type: "deposit_confirmation", to: guest.email.trim(), recipientName: guest.name, businessName: bizName,
+      eventTitle: eventLabel(booking, guest.name), eventDate: fmt(booking.event_date),
+      depositAmount: money(payment.amount), receivedDate: fmt(payment.paid_on), method: PAYMENT_METHODS[payment.method] || payment.method,
+      reference: payment.reference || undefined,
+      totalAmount: total > 0 ? money(total) : undefined, balanceRemaining: total > 0 ? money(Math.max(0, total - paid)) : undefined,
+      balanceDueDate: fmt(booking.balance_due_date) || undefined,
+    } });
+    setSending(false);
+    if (error) toast.error("The deposit confirmation email failed to send.");
+    else { toast.success(`Deposit confirmation resent to ${guest.email.trim()}`); onOpenChange(false); }
+  };
+  return <Dialog open={open} onOpenChange={onOpenChange}><DialogContent className="max-w-md"><DialogHeader><DialogTitle>Resend deposit confirmation</DialogTitle></DialogHeader>
+    <div className="space-y-3">
+      {payment && <p className="text-xs text-muted-foreground">{money(payment.amount)} · {format(new Date(payment.paid_on + "T00:00"), "d MMM yyyy")} · {PAYMENT_METHODS[payment.method] || payment.method}</p>}
+      <div><Label>Guest name</Label><Input value={guest.name} onChange={e => setGuest(g => ({ ...g, name: e.target.value }))} /></div>
+      <div><Label>Guest email</Label><Input type="email" value={guest.email} onChange={e => setGuest(g => ({ ...g, email: e.target.value }))} placeholder="guest@example.com" /></div>
+    </div>
+    <DialogFooter className="gap-2"><Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
+      <Button onClick={resend} disabled={sending}>{sending ? "Sending…" : "Resend confirmation"}</Button>
+    </DialogFooter>
+  </DialogContent></Dialog>;
+}
+
 /** Payment tracking card shown on an event or catering booking page. */
 export function BookingPaymentsCard({ booking, onChanged }: { booking: any; onChanged?: () => void }) {
   const { payments, refresh } = usePayments(booking?.business_id, booking?.id ?? null);
