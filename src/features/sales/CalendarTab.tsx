@@ -5,7 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { CalendarDays, ClipboardList, Copy, Download, MapPin, PartyPopper } from "lucide-react";
+import { CalendarDays, ClipboardList, Copy, Download, MapPin, PartyPopper, QrCode } from "lucide-react";
+import QRCode from "qrcode";
 import { format, isSameDay, startOfDay } from "date-fns";
 import { toast } from "sonner";
 import { prettyCrmValue } from "./types";
@@ -30,6 +31,7 @@ export default function CalendarTab({ businessId, businessName, leads, inspectio
 }) {
   const [filter, setFilter] = useState<"all" | AgendaEntry["kind"]>("all");
   const [token, setToken] = useState("");
+  const [qrData, setQrData] = useState("");
 
   // The private calendar key is only readable by staff with sales access.
   useEffect(() => {
@@ -47,6 +49,16 @@ export default function CalendarTab({ businessId, businessName, leads, inspectio
     : "";
   const shareUrl = token ? `https://www.regalmanagement.com.au/calendar/${businessId}/${token}` : "";
   const googleUrl = `https://calendar.google.com/calendar/r?cid=${encodeURIComponent(feedUrl)}`;
+
+  // Scan-to-open QR for the shareable calendar — always encodes the live-site link.
+  useEffect(() => {
+    let active = true;
+    if (!token) { setQrData(""); return; }
+    QRCode.toDataURL(shareUrl, { width: 512, margin: 2, color: { dark: "#1a1a1aff", light: "#ffffffff" } })
+      .then((url) => { if (active) setQrData(url); })
+      .catch(() => { if (active) setQrData(""); });
+    return () => { active = false; };
+  }, [token, shareUrl]);
   const nameOf = (id: string | null) => leads.find((lead) => lead.id === id)?.full_name || "Client";
 
   const entries = useMemo<AgendaEntry[]>(() => {
@@ -112,6 +124,18 @@ export default function CalendarTab({ businessId, businessName, leads, inspectio
               <Button asChild><a href={shareUrl} target="_blank" rel="noreferrer">Open</a></Button>
             </div>
           </div>
+          {qrData && (
+            <div className="flex items-center gap-4 rounded-lg border border-border p-3">
+              <img src={qrData} alt="QR code for the shareable view-only calendar" className="h-28 w-28 shrink-0 rounded bg-background p-1" />
+              <div className="space-y-1">
+                <p className="flex items-center gap-2 text-sm font-medium"><QrCode className="h-4 w-4 text-primary" />Scan to open the calendar</p>
+                <p className="text-sm text-muted-foreground">Guests, staff or anyone with the link can point their phone camera here to open the view-only calendar.</p>
+                <Button variant="outline" size="sm" onClick={() => { const a = document.createElement("a"); a.href = qrData; a.download = `${businessName}-calendar-qr.png`; a.click(); }}>
+                  <Download className="mr-2 h-4 w-4" />Download QR image
+                </Button>
+              </div>
+            </div>
+          )}
         </div>
       </CardContent>
     </Card>
