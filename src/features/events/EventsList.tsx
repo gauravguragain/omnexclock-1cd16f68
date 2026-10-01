@@ -35,7 +35,12 @@ function paymentStatus(b: any, payments: CrmPayment[], today: string) {
       const days = differenceInCalendarDays(parseISO(due), parseISO(today));
       labels.push(days < 0 ? "Full amount overdue" : days === 0 ? "Full amount due today" : `Full amount due in ${days} ${days === 1 ? "day" : "days"}`);
     }
-    if (!labels.length) labels.push(total > 0 ? "Awaiting full payment" : "Amount not set");
+    if (!labels.length) {
+      // Catering is prepaid in full: treat an unpaid booking less than 7 days before the event as overdue.
+      const daysToEvent = b.event_date ? differenceInCalendarDays(parseISO(b.event_date), parseISO(today)) : null;
+      if (total > 0 && daysToEvent !== null && daysToEvent < 7) labels.push("Full amount overdue");
+      else labels.push(total > 0 ? "Awaiting full payment" : "Amount not set");
+    }
     return labels;
   }
   if (deposit > 0 && paid >= deposit) labels.push("Deposit received");
