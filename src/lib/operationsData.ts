@@ -126,7 +126,7 @@ export async function loadOperations(bid: string, r: Range) {
   };
   const pretty = (s: string) => (s || "").replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase());
   const leadSources = tally(leadsInRange, l => pretty(l.source));
-  const leadStages = tally(leadsAll.filter((l: any) => !LOST_STAGES.includes(l.status) || true), l => pretty(l.status));
+  const leadStages = tally(leadsInRange, l => pretty(l.status));
   const lostReasons = tally(lostInRange, l => l.decline_reason || l.lost_reason || "Not recorded");
 
   // ---------- Bookings / revenue ----------
