@@ -44,6 +44,12 @@ export default function CalendarTab({ businessId, businessName, leads, inspectio
     return () => { active = false; };
   }, [businessId]);
 
+  const feedUrl = token
+    ? `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/crm-calendar-feed?b=${businessId}&t=${token}`
+    : "";
+  const shareUrl = token ? `https://www.regalmanagement.com.au/calendar/${businessId}/${token}` : "";
+  const googleUrl = `https://calendar.google.com/calendar/r?cid=${encodeURIComponent(feedUrl)}`;
+
   // Scan-to-open QR for the shareable calendar — always encodes the live-site link.
   useEffect(() => {
     let active = true;
@@ -53,12 +59,6 @@ export default function CalendarTab({ businessId, businessName, leads, inspectio
       .catch(() => { if (active) setQrData(""); });
     return () => { active = false; };
   }, [token, shareUrl]);
-
-  const feedUrl = token
-    ? `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/crm-calendar-feed?b=${businessId}&t=${token}`
-    : "";
-  const shareUrl = token ? `https://www.regalmanagement.com.au/calendar/${businessId}/${token}` : "";
-  const googleUrl = `https://calendar.google.com/calendar/r?cid=${encodeURIComponent(feedUrl)}`;
   const nameOf = (id: string | null) => leads.find((lead) => lead.id === id)?.full_name || "Client";
 
   const entries = useMemo<AgendaEntry[]>(() => {
