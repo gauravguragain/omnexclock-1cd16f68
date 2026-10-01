@@ -43,7 +43,7 @@ export default function ChafingCard({ booking, menuTotal, onChanged }: { booking
       <dl className="space-y-1 rounded-lg bg-muted/60 p-3 text-sm">
         <div className="flex justify-between"><dt>Menu</dt><dd>{money(menuTotal)}</dd></div>
         {booking.fulfilment_method !== "pickup" && <div className="flex justify-between"><dt>Delivery</dt><dd>{money(delivery)}</dd></div>}
-        <div className="flex justify-between"><dt>Chafing dishes{count ? ` (${count} × ${money(unit)})` : ""}</dt><dd>{money(chafing)}</dd></div>
+        <div className="flex items-start justify-between gap-3"><dt className="min-w-0">Chafing dishes{count ? ` (${count} × ${money(unit)})` : ""}</dt><dd className="shrink-0 whitespace-nowrap">{money(chafing)}</dd></div>
         <div className="flex justify-between border-t border-border pt-1 text-base font-semibold"><dt>Total</dt><dd>{money(grand)}</dd></div>
       </dl>
       <Button type="button" onClick={save} disabled={saving}>{saving ? <Loader2 className="h-4 w-4 animate-spin" /> : "Save & update total"}</Button>
