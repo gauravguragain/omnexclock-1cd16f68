@@ -278,9 +278,13 @@ export function BookingPaymentsCard({ booking, onChanged }: { booking: any; onCh
       <div className="min-w-0"><p className="font-medium">{money(p.amount)} <span className="font-normal text-muted-foreground">· {PAYMENT_TYPES[p.payment_type] || p.payment_type}</span></p>
         <p className="text-xs text-muted-foreground">{format(new Date(p.paid_on + "T00:00"), "d MMM yyyy")} · {PAYMENT_METHODS[p.method] || p.method}{p.reference ? ` · ${p.reference}` : ""}</p>
         {p.notes && <p className="whitespace-pre-wrap text-xs">{p.notes}</p>}</div>
-      <Button size="icon" variant="ghost" className="h-7 w-7 shrink-0" aria-label="Delete payment" onClick={() => remove(p)}><Trash2 className="h-3.5 w-3.5" /></Button>
+      <div className="flex shrink-0 items-center gap-1">
+        {p.payment_type === "deposit" && <Button size="icon" variant="ghost" className="h-7 w-7" aria-label="Resend deposit confirmation" onClick={() => setResendPayment(p)}><Mail className="h-3.5 w-3.5" /></Button>}
+        <Button size="icon" variant="ghost" className="h-7 w-7" aria-label="Delete payment" onClick={() => remove(p)}><Trash2 className="h-3.5 w-3.5" /></Button>
+      </div>
     </div>) : null}</div>
     <RecordPaymentDialog open={open} onOpenChange={setOpen} booking={booking} suggested={suggested} onSaved={changed} />
+    <ResendDepositDialog open={!!resendPayment} onOpenChange={o => { if (!o) setResendPayment(null); }} booking={booking} payment={resendPayment} />
   </CardContent></Card>;
 }
 
