@@ -44,6 +44,16 @@ export default function CalendarTab({ businessId, businessName, leads, inspectio
     return () => { active = false; };
   }, [businessId]);
 
+  // Scan-to-open QR for the shareable calendar — always encodes the live-site link.
+  useEffect(() => {
+    let active = true;
+    if (!token) { setQrData(""); return; }
+    QRCode.toDataURL(shareUrl, { width: 512, margin: 2, color: { dark: "#1a1a1aff", light: "#ffffffff" } })
+      .then((url) => { if (active) setQrData(url); })
+      .catch(() => { if (active) setQrData(""); });
+    return () => { active = false; };
+  }, [token, shareUrl]);
+
   const feedUrl = token
     ? `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/crm-calendar-feed?b=${businessId}&t=${token}`
     : "";
