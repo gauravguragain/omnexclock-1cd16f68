@@ -311,7 +311,7 @@ export default function OperationsPage() {
                 <Panel title="Lead sources">
                   {d.sales.leadSources.length ? <div className="h-56"><ResponsiveContainer><PieChart><Pie data={d.sales.leadSources} dataKey="value" nameKey="name" innerRadius={45} outerRadius={80}>{d.sales.leadSources.map((_, i) => <Cell key={i} fill={PIE[i % PIE.length]} />)}</Pie><Tooltip {...tip} /><Legend wrapperStyle={{ fontSize: 11 }} /></PieChart></ResponsiveContainer></div> : <Empty />}
                 </Panel>
-                <Panel title="Pipeline by stage (all leads)">
+                <Panel title="Pipeline by stage">
                   <div className="h-56"><ResponsiveContainer><BarChart data={d.sales.leadStages} layout="vertical"><XAxis type="number" allowDecimals={false} tick={{ fontSize: 10, fill: MUTED }} /><YAxis type="category" dataKey="name" width={110} tick={{ fontSize: 10, fill: MUTED }} /><Tooltip {...tip} /><Bar dataKey="value" name="Leads" fill={P} radius={[0, 4, 4, 0]} /></BarChart></ResponsiveContainer></div>
                 </Panel>
                 <Panel title={`Inspections (${d.sales.inspections})`}>
