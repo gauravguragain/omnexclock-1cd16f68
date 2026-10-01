@@ -88,7 +88,7 @@ export default function FoodSafetyStaffPage() {
 
   const login = async () => {
     const { data, error } = await supabase.rpc("fsl_staff_login" as any, { _code: pin, _business_code: bc });
-    if (error || !data) { toast.error(error && isNetErr(error) ? "You're offline — connect to sign in" : "PIN not recognised"); setPin(""); return; }
+    if (error || !data) { toast.error(error && isNetErr(error) ? "You're offline — connect to sign in" : "PIN not recognised — food safety logs are for active BOH staff only"); setPin(""); return; }
     sessionStorage.setItem("fsl_pin", pin); sessionStorage.setItem("fsl_staff", JSON.stringify(data));
     setCode(pin); setStaff(data as any); setPin("");
   };
