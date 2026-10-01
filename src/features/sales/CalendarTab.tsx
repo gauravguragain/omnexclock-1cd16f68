@@ -31,6 +31,7 @@ export default function CalendarTab({ businessId, businessName, leads, inspectio
 }) {
   const [filter, setFilter] = useState<"all" | AgendaEntry["kind"]>("all");
   const [token, setToken] = useState("");
+  const [qrData, setQrData] = useState("");
 
   // The private calendar key is only readable by staff with sales access.
   useEffect(() => {
