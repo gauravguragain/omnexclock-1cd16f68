@@ -156,6 +156,7 @@ export function RunsheetDocument({ rs, lead, b, items, selection, businessName, 
         <div data-runsheet-details className="min-w-0 p-4 [&>*]:break-inside-avoid">
           {Number(b?.chafing_dishes) > 0 && <div className="pt-2"><p className="font-bold">Chafing dishes: {b.chafing_dishes}</p></div>}
           {rs.special_requests && <div className="pt-2"><p>Special requests: {rs.special_requests}</p></div>}
+          {((rs.setup_items?.length ?? 0) > 0 || rs.setup_notes) && <div className="pt-4"><h2 className="font-bold">Setup & styling</h2>{(rs.setup_items || []).map((s: string) => <p key={s} className="pl-3">• {s}</p>)}{rs.setup_notes && <p className="whitespace-pre-line pl-3">{rs.setup_notes}</p>}</div>}
           {fohSchedule.some((s: any) => s?.label) && <div className="pt-4"><h2 className="font-bold">FOH service schedule</h2>{fohSchedule.filter((s: any) => s?.label).map((s, i) => <p key={i} className="pl-3">• {slot(s) || "—"} – {s.label}{s.detail ? ` (${s.detail})` : ""}</p>)}</div>}
           {selection?.dietary_requirements && <div className="pt-3 text-kitchen-note print:text-kitchen-note"><p className="font-bold">Dietary requirements:</p><p className="whitespace-pre-wrap">{selection.dietary_requirements}</p></div>}
           {selection?.allergies && <div className="pt-3 text-kitchen-note print:text-kitchen-note"><p className="font-bold">Allergies:</p><p className="whitespace-pre-wrap">{selection.allergies}</p></div>}
