@@ -71,7 +71,7 @@ function SheetGrid({ grid, cfg, selected, onSelect }: { grid: Grid; cfg: FormCon
 
 // ---------------- Editor ----------------
 export function FormEditor({ form, onClose, onSaved }: { form: FslForm; onClose: () => void; onSaved: () => void }) {
-  const [cfg, setCfg] = useState<FormConfig>(() => JSON.parse(JSON.stringify(form.config)));
+  const [cfg, setCfg] = useState<FormConfig>(() => { const c = JSON.parse(JSON.stringify(form.config || {})); c.fields = c.fields || []; c.headers = c.headers || []; if (c.exception) c.exception.neverFor = c.exception.neverFor || []; return c; });
   const [active, setActive] = useState(form.active);
   const [wb, setWb] = useState<ExcelJS.Workbook | null>(null);
   const [sheetName, setSheetName] = useState<string | undefined>(form.config.excel?.sheet);
