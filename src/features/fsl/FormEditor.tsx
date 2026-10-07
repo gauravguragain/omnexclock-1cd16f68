@@ -71,7 +71,7 @@ function SheetGrid({ grid, cfg, selected, onSelect }: { grid: Grid; cfg: FormCon
 
 // ---------------- Editor ----------------
 export function FormEditor({ form, onClose, onSaved }: { form: FslForm; onClose: () => void; onSaved: () => void }) {
-  const [cfg, setCfg] = useState<FormConfig>(() => JSON.parse(JSON.stringify(form.config)));
+  const [cfg, setCfg] = useState<FormConfig>(() => { const c = JSON.parse(JSON.stringify(form.config || {})); c.fields = c.fields || []; c.headers = c.headers || []; if (c.exception) c.exception.neverFor = c.exception.neverFor || []; return c; });
   const [active, setActive] = useState(form.active);
   const [wb, setWb] = useState<ExcelJS.Workbook | null>(null);
   const [sheetName, setSheetName] = useState<string | undefined>(form.config.excel?.sheet);
@@ -300,7 +300,7 @@ export function FormEditor({ form, onClose, onSaved }: { form: FslForm; onClose:
             <div><label className="text-xs">Applies to field</label><Select value={cfg.exception.appliesTo} onValueChange={(v) => set({ exception: { ...cfg.exception!, appliesTo: v } })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{cfg.fields.map((f) => <SelectItem key={f.key} value={f.key}>{f.label}</SelectItem>)}</SelectContent></Select></div>
             <div><label className="text-xs">Required note label</label><Input value={cfg.exception.noteLabel} onChange={(e) => set({ exception: { ...cfg.exception!, noteLabel: e.target.value } })} /></div>
             <div><label className="text-xs">Check items in field</label><Select value={cfg.exception.neverForField || ""} onValueChange={(v) => set({ exception: { ...cfg.exception!, neverForField: v } })}><SelectTrigger><SelectValue placeholder="Field" /></SelectTrigger><SelectContent>{cfg.fields.map((f) => <SelectItem key={f.key} value={f.key}>{f.label}</SelectItem>)}</SelectContent></Select></div>
-            <div><label className="text-xs">Never allowed for (comma)</label><Input value={cfg.exception.neverFor.join(", ")} onChange={(e) => set({ exception: { ...cfg.exception!, neverFor: e.target.value.split(",").map((s) => s.trim()).filter(Boolean) } })} /></div>
+            <div><label className="text-xs">Never allowed for (comma)</label><Input value={(cfg.exception.neverFor || []).join(", ")} onChange={(e) => set({ exception: { ...cfg.exception!, neverFor: e.target.value.split(",").map((s) => s.trim()).filter(Boolean) } })} /></div>
           </div>}
         </div>
       </TabsContent>
