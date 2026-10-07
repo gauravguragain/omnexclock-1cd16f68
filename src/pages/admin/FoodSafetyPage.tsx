@@ -210,6 +210,60 @@ export default function FoodSafetyPage() {
     }
     toast.success(n ? `Attached the template to ${n} form${n > 1 ? "s" : ""}. Open each form to link cells.` : "No sheet names matched your forms."); setAttach(null); load();
   };
+  const pickSheet = (wb: any, f: FslForm) => wb.worksheets.find((w: any) => [f.config.name, f.config.excel?.sheet || ""].some((n) => n && w.name.trim().toLowerCase() === n.trim().toLowerCase())) || wb.worksheets[0];
+
+  // Replace a form's layout with an updated Excel version (old entries keep their version number)
+  const [updating, setUpdating] = useState<{ form: FslForm; file: File; cfg: FormConfig | null; status: string; path?: string } | null>(null);
+  const startUpdate = async (f: FslForm, file: File) => {
+    setUpdating({ form: f, file, cfg: null, status: "Reading with AI…" });
+    const wb = await loadWorkbook(await file.arrayBuffer()); const ws = pickSheet(wb, f);
+    const path = await uploadTemplate(bid!, file.name, await file.arrayBuffer());
+    const { data, error } = await supabase.functions.invoke("fsl-ai-parse", { body: { businessId: bid, sheetName: ws.name, gridText: gridToText(sheetGrid(ws, 120, 30)) } });
+    if (error || (data as any)?.error) return setUpdating((u) => u && { ...u, status: `Couldn't read: ${(data as any)?.error || error?.message}` });
+    const c = normalize(data as any, ws.name);
+    setUpdating((u) => u && { ...u, path, status: "Ready", cfg: { ...c, name: f.config.name, alerts: f.config.alerts || c.alerts, alertEmails: f.config.alertEmails } });
+  };
+  const saveUpdate = async () => {
+    if (!updating?.cfg) return; const { form: f, cfg, path, file } = updating;
+    const { error } = await supabase.from("fsl_forms").update({ config: cfg as any, form_type: cfg.form_type, template_path: path, version: f.version + 1 }).eq("id", f.id);
+    if (error) return toast.error(error.message);
+    await supabase.from("fsl_form_versions").insert({ form_id: f.id, business_id: bid!, version: f.version + 1, config: cfg as any, template_path: path, note: `Updated from ${file.name}` });
+    toast.success(`${f.config.name} updated to v${f.version + 1}`); setUpdating(null); load();
+  };
+
+  // Import already-filled paper/Excel logs into History
+  const [importing, setImporting] = useState<{ form: FslForm; file: File; rows: any[]; skipped: number; status: string } | null>(null);
+  const startImport = async (f: FslForm, file: File) => {
+    setImporting({ form: f, file, rows: [], skipped: 0, status: "Reading filled entries with AI… this can take a minute" });
+    const wb = await loadWorkbook(await file.arrayBuffer());
+    const sheets = wb.worksheets.length > 1 && wb.worksheets.some((w: any) => w.name.trim().toLowerCase() === f.config.name.trim().toLowerCase()) ? [pickSheet(wb, f)] : wb.worksheets;
+    const all: any[] = []; let fail = "";
+    for (const ws of sheets) {
+      const { data, error } = await supabase.functions.invoke("fsl-ai-parse", { body: { businessId: bid, sheetName: ws.name, gridText: gridToText(sheetGrid(ws, 400, 40)), mode: "entries", formConfig: f.config } });
+      if (error || (data as any)?.error) { fail = (data as any)?.error || error?.message; continue; }
+      const hv = (data as any)?.header_values || {};
+      for (const e of (data as any)?.entries || []) if (/^\d{4}-\d{2}-\d{2}$/.test(e.entry_date || "")) all.push({ ...e, header_values: hv });
+    }
+    const { data: existing } = await supabase.from("fsl_entries").select("entry_date,section_key,check_key,field_values").eq("form_id", f.id);
+    const sig = (e: any) => `${e.entry_date}|${e.section_key || ""}|${e.check_key || ""}|${f.form_type === "event_log" || f.form_type === "two_step" ? JSON.stringify(e.field_values || {}) : ""}`;
+    const seen = new Set((existing || []).map(sig)); const rows: any[] = []; let skipped = 0;
+    for (const e of all) { const s = sig(e); if (seen.has(s)) { skipped++; continue; } seen.add(s); rows.push(e); }
+    setImporting((u) => u && { ...u, rows, skipped, status: rows.length ? "Ready" : fail ? `Couldn't read: ${fail}` : "No new entries found" });
+  };
+  const saveImport = async () => {
+    if (!importing) return; const { form: f, rows, file } = importing;
+    const { evaluate } = await import("@/features/fsl/engine");
+    const ins = rows.map((e) => {
+      const section = f.config.sections.find((s) => s.key === e.section_key) || null;
+      return { business_id: bid!, form_id: f.id, form_version: f.version, entry_date: e.entry_date, period_key: periodKey(f.config, e.entry_date), section_key: e.section_key || null, check_key: e.check_key || null,
+        header_values: e.header_values || {}, field_values: e.field_values || {}, status: "complete", out_of_range: evaluate(f.config, e.field_values || {}, { section }).outOfRange,
+        backfilled: true, alert_sent: true, staff_name: `${e.staff_name || "Paper record"} (imported)`, admin_user_id: user?.id, client_id: crypto.randomUUID() };
+    });
+    for (let i = 0; i < ins.length; i += 500) { const { error } = await supabase.from("fsl_entries").insert(ins.slice(i, i + 500) as any); if (error) return toast.error(error.message); }
+    toast.success(`Imported ${ins.length} entr${ins.length === 1 ? "y" : "ies"} from ${file.name}`);
+    const first = ins.map((x) => x.entry_date).sort()[0]; if (first && first < from) setFrom(first);
+    setImporting(null); load();
+  };
 
   const formsTab = (
     <div className="space-y-3">
@@ -224,6 +278,8 @@ export default function FoodSafetyPage() {
             <div className="flex-1 min-w-0"><p className="font-medium">{f.config.name} {f.config.code && <span className="text-xs text-muted-foreground">{f.config.code}</span>}</p><p className="text-xs text-muted-foreground truncate">{typeLabel[f.form_type]} · {f.config.title} · v{f.version}{f.template_path ? " · Excel linked" : ""}</p></div>
             <Switch checked={f.active} onCheckedChange={async (v) => { await supabase.from("fsl_forms").update({ active: v }).eq("id", f.id); load(); }} />
             <Button size="sm" variant="outline" onClick={() => setEditForm(f)}><Pencil className="h-4 w-4 mr-1" />Edit</Button>
+            <label title="Replace this form with an updated Excel version"><input type="file" accept=".xlsx" className="hidden" onChange={(e) => { const x = e.target.files?.[0]; e.target.value = ""; if (x) startUpdate(f, x); }} /><span className="inline-flex items-center h-9 px-3 rounded-md border border-input text-sm cursor-pointer"><Upload className="h-4 w-4 mr-1" />Update form</span></label>
+            <label title="Import already-filled records into History"><input type="file" accept=".xlsx" className="hidden" onChange={(e) => { const x = e.target.files?.[0]; e.target.value = ""; if (x) startImport(f, x); }} /><span className="inline-flex items-center h-9 px-3 rounded-md border border-input text-sm cursor-pointer"><FileSpreadsheet className="h-4 w-4 mr-1" />Import filled logs</span></label>
             <Button size="sm" variant="destructive" onClick={async () => {
               if (!window.confirm(`Delete "${f.config.name}"? All its saved entries and history will be permanently deleted. This cannot be undone.`)) return;
               const { error } = await supabase.from("fsl_forms").delete().eq("id", f.id);
@@ -358,6 +414,23 @@ export default function FoodSafetyPage() {
         </DialogContent>
       </Dialog>
       {attach && null}
+      <Dialog open={!!updating} onOpenChange={(o) => !o && setUpdating(null)}>
+        <DialogContent className="max-w-lg"><DialogHeader><DialogTitle>Update {updating?.form.config.name}</DialogTitle></DialogHeader>
+          <p className="text-sm text-muted-foreground">{updating?.status}</p>
+          {updating?.cfg && <p className="text-sm">New layout: {updating.cfg.sections.length} sections · {updating.cfg.checks.length} checks · {updating.cfg.fields.length} fields: {updating.cfg.fields.map((x) => x.label).join(", ")}</p>}
+          <p className="text-xs text-muted-foreground">Existing entries stay in History. You can fine-tune the new version in Edit afterwards.</p>
+          <DialogFooter><Button variant="ghost" onClick={() => setUpdating(null)}>Cancel</Button><Button disabled={!updating?.cfg} onClick={saveUpdate}>Replace form</Button></DialogFooter>
+        </DialogContent>
+      </Dialog>
+      <Dialog open={!!importing} onOpenChange={(o) => !o && setImporting(null)}>
+        <DialogContent className="max-w-2xl max-h-[90dvh] overflow-y-auto"><DialogHeader><DialogTitle>Import filled logs — {importing?.form.config.name}</DialogTitle></DialogHeader>
+          <p className="text-sm text-muted-foreground">{importing?.status}{importing?.skipped ? ` · ${importing.skipped} already in History (skipped)` : ""}</p>
+          {!!importing?.rows.length && <div className="rounded border border-border overflow-auto max-h-80"><table className="w-full text-xs"><thead className="bg-muted/50"><tr><th className="p-1.5 text-left">Date</th><th className="p-1.5 text-left">Item</th><th className="p-1.5 text-left">Values</th><th className="p-1.5 text-left">Staff</th></tr></thead>
+            <tbody>{importing.rows.map((e, i) => <tr key={i} className="border-t border-border"><td className="p-1.5 whitespace-nowrap">{e.entry_date}</td><td className="p-1.5">{[e.section_key, e.check_key].filter(Boolean).join(" · ")}</td><td className="p-1.5">{Object.entries(e.field_values || {}).map(([k, v]) => `${importing.form.config.fields.find((x) => x.key === k)?.label || k}: ${v}`).join(", ")}</td><td className="p-1.5">{e.staff_name}</td></tr>)}</tbody></table></div>}
+          <p className="text-xs text-muted-foreground">Imported entries are marked backfilled and won't send alerts.</p>
+          <DialogFooter><Button variant="ghost" onClick={() => setImporting(null)}>Cancel</Button><Button disabled={!importing?.rows.length} onClick={saveImport}>Import {importing?.rows.length || ""} entries</Button></DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

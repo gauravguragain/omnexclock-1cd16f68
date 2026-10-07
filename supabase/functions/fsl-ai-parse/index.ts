@@ -21,15 +21,20 @@ Use snake_case keys. Temperature limits in °C. Never invent fields that are not
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   try {
-    const { businessId, sheetName, gridText } = await req.json();
+    const { businessId, sheetName, gridText, mode, formConfig } = await req.json();
     if (!businessId || !gridText) return json({ error: "businessId and gridText are required" }, 400);
     const caller = await getCaller(req, serviceClient());
     if (!caller || !hasBusinessRole(caller, businessId, ["admin", "super_admin"])) return json({ error: "Not authorized" }, 403);
     const key = Deno.env.get("GEMINI_API_KEY"); if (!key) return json({ error: "AI service is not configured" }, 500);
-    const prompt = `You convert a paper food-safety (HACCP) log sheet from Excel into a form configuration.\n${SCHEMA}\n\nSheet name: ${sheetName}\nCells (address=value):\n${String(gridText).slice(0, 15000)}`;
+    const prompt = mode === "entries"
+      ? `You read a FILLED paper food-safety (HACCP) log sheet exported to Excel and extract every recorded entry for this form configuration:\n${JSON.stringify(formConfig).slice(0, 12000)}\n
+Return ONLY JSON: {"header_values":{headerKey:value},"entries":[{"entry_date":"YYYY-MM-DD","section_key":string|null,"check_key":string|null,"staff_name":string|null,"field_values":{fieldKey:value}}]}
+Rules: use the config's section/check/field keys exactly. daily_grid: one entry per filled section+check per day (check_key from checks). weekly_checklist: one entry per ticked/initialled item per day (section_key = item key, check_key = "MON".."SUN"). event_log/two_step: one entry per filled row, section_key and check_key null.
+Infer full dates from the month/year headers. Temperatures as numbers. Times as "HH:MM" 24h. Dates "YYYY-MM-DD". yesno as "yes"/"no". staff_name = initials/name/signature written on that row if any. Skip empty rows. Never invent values.\n\nSheet name: ${sheetName}\nCells (address=value):\n${String(gridText).slice(0, 30000)}`
+      : `You convert a paper food-safety (HACCP) log sheet from Excel into a form configuration.\n${SCHEMA}\n\nSheet name: ${sheetName}\nCells (address=value):\n${String(gridText).slice(0, 15000)}`;
     const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${key}`, {
       method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }], generationConfig: { temperature: 0.1, responseMimeType: "application/json", maxOutputTokens: 8192 } }),
+      body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }], generationConfig: { temperature: 0.1, responseMimeType: "application/json", maxOutputTokens: mode === "entries" ? 32768 : 8192 } }),
     });
     if (!r.ok) { const t = await r.text(); console.error("AI failed", r.status, t); return json({ error: `AI service failed (${r.status})` }, 502); }
     const body = await r.json();
