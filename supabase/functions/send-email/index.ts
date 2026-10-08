@@ -214,6 +214,8 @@ serve(async (req) => {
           if (v) b.venue = v.replace(/[_-]+/g, " ").replace(/\b\w/g, (c: string) => c.toUpperCase());
         }
       }
+      // Still nothing (no venue chosen when the deposit was received)? Keep the Venue row visible as "Not selected".
+      if (!(typeof b.venue === "string" && b.venue.trim())) b.venue = "Not selected";
       const html = renderBrandedEmail({
         brand, eyebrow: "Deposit Confirmation", title: "Deposit received with thanks", preheader: `We've received your deposit for ${s(b.eventTitle)}`,
         bodyHtml:
