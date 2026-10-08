@@ -45,9 +45,9 @@ function VenueSpaceSelect({ businessId, value, onChange }: { businessId?: string
   }, [spaces, value]);
   return (
     <Select value={value || "__none"} onValueChange={v => onChange(v === "__none" ? "" : v)}>
-      <SelectTrigger><SelectValue placeholder="Select a venue space" /></SelectTrigger>
+      <SelectTrigger><SelectValue placeholder="Not selected" /></SelectTrigger>
       <SelectContent>
-        <SelectItem value="__none">No venue space</SelectItem>
+        <SelectItem value="__none">Not selected</SelectItem>
         {options.map(name => <SelectItem key={name} value={name}>{name}</SelectItem>)}
       </SelectContent>
     </Select>
