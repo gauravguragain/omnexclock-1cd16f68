@@ -106,7 +106,9 @@ export function RecordPaymentDialog({ open, onOpenChange, booking, bookings, sug
         if (ids.length) { const { data: people } = await (supabase as any).from("crm_stakeholders").select("email").in("id", ids); email = (people || []).find((x: any) => x.email)?.email || ""; }
       }
       const { data: biz } = await (supabase as any).from("businesses").select("name").eq("id", target.business_id).maybeSingle();
-      if (!off) { setGuest({ name, email }); setBizName(biz?.name || ""); }
+      let venue = "";
+      if (target.venue_space_id) { const { data: vs } = await (supabase as any).from("crm_venue_spaces").select("name").eq("id", target.venue_space_id).maybeSingle(); venue = vs?.name || ""; }
+      if (!off) { setGuest({ name, email }); setBizName(biz?.name || ""); setVenueName(venue); }
     })();
     return () => { off = true; };
   }, [open, target?.id]);

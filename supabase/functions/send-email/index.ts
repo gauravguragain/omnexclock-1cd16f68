@@ -207,7 +207,7 @@ serve(async (req) => {
         bodyHtml:
           p(`Dear ${esc(s(b.recipientName) || "Guest")},`) +
           p(`Thank you — we are pleased to confirm that we have received your deposit for <strong>${esc(s(b.eventTitle))}</strong>${b.eventDate ? ` on <strong>${esc(s(b.eventDate))}</strong>` : ""}. Your date is now secured.`) +
-          details([["Deposit received", s(b.depositAmount), { bold: true }], ["Date received", s(b.receivedDate)], ["Payment method", s(b.method)], ["Reference", s(b.reference)],
+          details([["Venue", s(b.venue)], ["Deposit received", s(b.depositAmount), { bold: true }], ["Date received", s(b.receivedDate)], ["Payment method", s(b.method)], ["Reference", s(b.reference)],
             ["Total event amount", s(b.totalAmount)], ["Balance remaining", s(b.balanceRemaining), { bold: true }], ["Balance due by", s(b.balanceDueDate), { bold: true }]]) +
           p(`${b.balanceDueDate ? `The remaining balance is due by <strong>${esc(s(b.balanceDueDate))}</strong>. ` : ""}If you have any questions about your payment or event, please contact our team using the details below.`) +
           signoff(brand),
