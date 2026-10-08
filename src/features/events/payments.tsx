@@ -25,6 +25,34 @@ export const PAYMENT_TYPES: Record<string, string> = { deposit: "Deposit", insta
 export const PAYMENT_METHODS: Record<string, string> = { bank_transfer: "Bank transfer", card: "Card (EFTPOS)", cash: "Cash", cheque: "Cheque", other: "Other" };
 
 export const money = (n: number) => new Intl.NumberFormat("en-AU", { style: "currency", currency: "AUD" }).format(Number(n) || 0);
+
+/** Dropdown of the business's venue spaces for the deposit confirmation email. */
+function VenueSpaceSelect({ businessId, value, onChange }: { businessId?: string; value: string; onChange: (v: string) => void }) {
+  const [spaces, setSpaces] = useState<string[]>([]);
+  useEffect(() => {
+    if (!businessId) return;
+    let off = false;
+    (async () => {
+      const { data } = await (supabase as any).from("crm_venue_spaces").select("name").eq("business_id", businessId).order("name");
+      if (!off) setSpaces((data || []).map((s: any) => s.name).filter(Boolean));
+    })();
+    return () => { off = true; };
+  }, [businessId]);
+  const options = useMemo(() => {
+    const list = [...spaces];
+    if (value && !list.includes(value)) list.unshift(value);
+    return list;
+  }, [spaces, value]);
+  return (
+    <Select value={value || "__none"} onValueChange={v => onChange(v === "__none" ? "" : v)}>
+      <SelectTrigger><SelectValue placeholder="Select a venue space" /></SelectTrigger>
+      <SelectContent>
+        <SelectItem value="__none">No venue space</SelectItem>
+        {options.map(name => <SelectItem key={name} value={name}>{name}</SelectItem>)}
+      </SelectContent>
+    </Select>
+  );
+}
 export const sydneyToday = () => new Date().toLocaleDateString("en-CA", { timeZone: "Australia/Sydney" });
 
 // iVvy-imported events that had already happened when imported are treated as fully settled.
