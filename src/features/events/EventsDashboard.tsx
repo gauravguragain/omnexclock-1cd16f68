@@ -19,9 +19,12 @@ export default function EventsDashboard({ businessId, ownerView = false, canOpen
   if (!businessId && !crm.business) return null;
   const base = `/b/${businessCode}/events`;
   const today = format(new Date(), "yyyy-MM-dd"); const in7 = format(addDays(new Date(), 7), "yyyy-MM-dd");
+  // Dashboards only show the current calendar year — anything dated next year or later is hidden.
+  const yearEnd = `${new Date().getFullYear()}-12-31`;
   // Same rule as the Events tab: not cancelled, and the lead is at a confirmed stage (or the booking has no lead).
   const active = crm.bookings.filter(b => {
     if (b.status === "cancelled" || b.booking_kind === "catering") return false;
+    if (b.event_date > yearEnd) return false;
     if (!b.lead_id) return true;
     const lead = crm.leads.find(l => l.id === b.lead_id);
     return !!lead && isConfirmedLeadStage(lead.status);
@@ -48,7 +51,7 @@ export default function EventsDashboard({ businessId, ownerView = false, canOpen
   let off = 0; const C = 2 * Math.PI * 40;
   const first = todays[0];
   const cBase = `/b/${businessCode}/catering`;
-  const cat = crm.bookings.filter(b => ["confirmed", "completed"].includes(b.status) && b.booking_kind === "catering");
+  const cat = crm.bookings.filter(b => ["confirmed", "completed"].includes(b.status) && b.booking_kind === "catering" && b.event_date <= yearEnd);
   const cUp = cat.filter(b => b.event_date >= today).sort((a, b) => (a.event_date + a.start_time).localeCompare(b.event_date + b.start_time));
   const cToday = cUp.filter(b => b.event_date === today);
   const cWeek = cUp.filter(b => b.event_date > today && b.event_date <= in7);

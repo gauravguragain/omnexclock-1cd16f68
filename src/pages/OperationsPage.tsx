@@ -17,7 +17,7 @@ import {
 import * as XLSX from "xlsx";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
-import { loadOperations, presetRange, previousRange, type OpsData, type Range, type RangePreset } from "@/lib/operationsData";
+import { capRangeCurrentYear, loadOperations, presetRange, previousRange, type OpsData, type Range, type RangePreset } from "@/lib/operationsData";
 import EventsDashboard from "@/features/events/EventsDashboard";
 import ReportBuilder from "@/features/operations/ReportBuilder";
 
@@ -83,7 +83,7 @@ export default function OperationsPage() {
   const [urlBusiness, setUrlBusiness] = useState<{ id: string; name: string } | null>(null);
   const [urlBizLoading, setUrlBizLoading] = useState(false);
   const [preset, setPreset] = useState<RangePreset>("month");
-  const [range, setRange] = useState<Range>(presetRange("month"));
+  const [range, setRange] = useState<Range>(capRangeCurrentYear(presetRange("month")));
   const [data, setData] = useState<OpsData | null>(null);
   const [prev, setPrev] = useState<OpsData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -210,7 +210,7 @@ export default function OperationsPage() {
             </div>
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            <Select value={preset} onValueChange={(v: RangePreset) => { setPreset(v); if (v !== "custom") setRange(presetRange(v)); }}>
+            <Select value={preset} onValueChange={(v: RangePreset) => { setPreset(v); if (v !== "custom") setRange(capRangeCurrentYear(presetRange(v))); }}>
               <SelectTrigger className="w-[150px] h-9"><SelectValue /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="week">This week</SelectItem>
@@ -224,7 +224,7 @@ export default function OperationsPage() {
             {preset === "custom" && (
               <>
                 <Input type="date" className="h-9 w-[150px]" value={range.from} onChange={e => e.target.value && setRange(r => ({ ...r, from: e.target.value }))} />
-                <Input type="date" className="h-9 w-[150px]" value={range.to} onChange={e => e.target.value && setRange(r => ({ ...r, to: e.target.value }))} />
+                <Input type="date" className="h-9 w-[150px]" value={range.to} onChange={e => e.target.value && setRange(r => capRangeCurrentYear({ ...r, to: e.target.value }))} />
               </>
             )}
             <Button variant="outline" size="icon" className="h-9 w-9" onClick={() => setTick(t => t + 1)} aria-label="Refresh"><RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} /></Button>

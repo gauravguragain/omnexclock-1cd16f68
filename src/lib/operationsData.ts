@@ -17,6 +17,12 @@ export type Range = { from: string; to: string };
 
 export type RangePreset = "week" | "month" | "quarter" | "year" | "last30" | "custom";
 
+/** Operations dashboards only cover the current calendar year — cap any range end at 31 Dec of this year. */
+export function capRangeCurrentYear(r: Range): Range {
+  const yearEnd = `${todayStr().slice(0, 4)}-12-31`;
+  return r.to > yearEnd ? { ...r, to: yearEnd } : r;
+}
+
 export function presetRange(p: RangePreset): Range {
   const t = todayStr();
   const [y, m] = t.split("-").map(Number);
