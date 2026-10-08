@@ -4744,6 +4744,7 @@ export type Database = {
         }
         Returns: string
       }
+      fsl_reset_forms: { Args: { _business_id: string }; Returns: undefined }
       fsl_resolve_staff: {
         Args: { _business_code: string; _code: string }
         Returns: {
