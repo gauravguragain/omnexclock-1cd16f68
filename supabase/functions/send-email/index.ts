@@ -202,6 +202,18 @@ serve(async (req) => {
       const b = body as any;
       if (!b.to || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(b.to) || !b.depositAmount) throw new Error("Missing required fields for deposit email");
       const s = (v: unknown) => (v == null || v === "" ? v : String(v).slice(0, 300));
+      // Server-side venue fallback: if the app didn't send a venue, read it from the booking (or its lead).
+      if (!(typeof b.venue === "string" && b.venue.trim()) && typeof b.bookingId === "string" && /^[0-9a-f-]{36}$/i.test(b.bookingId)) {
+        const { data: bk } = await admin.from("crm_bookings").select("business_id,booking_kind,venue_space,venue_space_id,lead_id").eq("id", b.bookingId).maybeSingle();
+        const allowed = bk && (caller.isMaster || caller.roles.some((r) => r.business_id === bk.business_id));
+        if (allowed && bk.booking_kind !== "catering") {
+          let v = "";
+          if (bk.venue_space_id) { const { data: vs } = await admin.from("crm_venue_spaces").select("name").eq("id", bk.venue_space_id).maybeSingle(); v = vs?.name || ""; }
+          if (!v) v = bk.venue_space || "";
+          if (!v && bk.lead_id) { const { data: ld } = await admin.from("crm_leads").select("venue_space").eq("id", bk.lead_id).maybeSingle(); v = ld?.venue_space || ""; }
+          if (v) b.venue = v.replace(/[_-]+/g, " ").replace(/\b\w/g, (c: string) => c.toUpperCase());
+        }
+      }
       const html = renderBrandedEmail({
         brand, eyebrow: "Deposit Confirmation", title: "Deposit received with thanks", preheader: `We've received your deposit for ${s(b.eventTitle)}`,
         bodyHtml:

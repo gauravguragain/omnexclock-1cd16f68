@@ -131,7 +131,7 @@ export function RecordPaymentDialog({ open, onOpenChange, booking, bookings, sug
       const paid = (pays || []).reduce((s: number, p: any) => s + Number(p.amount || 0), 0);
       const { error: e2 } = await supabase.functions.invoke("send-email", { body: {
         type: "deposit_confirmation", to: guest.email.trim(), recipientName: guest.name, businessName: bizName,
-        eventTitle: eventLabel(target, guest.name), eventDate: fmt(target.event_date), venue: venueName || undefined,
+        eventTitle: eventLabel(target, guest.name), eventDate: fmt(target.event_date), venue: venueName.trim() || undefined, bookingId: target.id,
         depositAmount: money(amt), receivedDate: fmt(form.paid_on), method: PAYMENT_METHODS[form.method] || form.method,
         reference: form.reference.trim() || undefined,
         totalAmount: total > 0 ? money(total) : undefined, balanceRemaining: total > 0 ? money(Math.max(0, total - paid)) : undefined,
@@ -230,7 +230,7 @@ function ResendDepositDialog({ open, onOpenChange, booking, payment }: { open: b
     const paid = (pays || []).reduce((s: number, p: any) => s + Number(p.amount || 0), 0);
     const { error } = await supabase.functions.invoke("send-email", { body: {
       type: "deposit_confirmation", to: guest.email.trim(), recipientName: guest.name, businessName: bizName,
-      eventTitle: eventLabel(booking, guest.name), eventDate: fmt(booking.event_date), venue: venueName || undefined,
+      eventTitle: eventLabel(booking, guest.name), eventDate: fmt(booking.event_date), venue: venueName.trim() || undefined, bookingId: booking.id,
       depositAmount: money(payment.amount), receivedDate: fmt(payment.paid_on), method: PAYMENT_METHODS[payment.method] || payment.method,
       reference: payment.reference || undefined,
       totalAmount: total > 0 ? money(total) : undefined, balanceRemaining: total > 0 ? money(Math.max(0, total - paid)) : undefined,
