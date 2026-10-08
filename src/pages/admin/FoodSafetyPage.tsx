@@ -48,11 +48,13 @@ export default function FoodSafetyPage() {
     if (!bid) return;
     setLoading(true);
     let { data: fs } = await supabase.from("fsl_forms").select("*").eq("business_id", bid).order("sort_order");
-    if (fs && fs.length === 0) {
-      // First visit: load the starting configurations (fully editable afterwards)
+    const current = (fs || []).some((f: any) => (f.config?.seedVersion || 0) >= SEED_VERSION);
+    if (fs && !current) {
+      // One-time switch to the standard form set: clears old forms and their logs, then loads the new set
+      if (fs.length) { const { error: rErr } = await supabase.rpc("fsl_reset_forms" as any, { _business_id: bid }); if (rErr) { console.error(rErr); } }
       const rows = SEED_FORMS.map((c, i) => ({ business_id: bid, name: c.name, form_type: c.form_type, sort_order: i, config: c as any }));
       const { data: ins, error } = await supabase.from("fsl_forms").insert(rows).select("*");
-      if (!error && ins) { await supabase.from("fsl_form_versions").insert(ins.map((f) => ({ form_id: f.id, business_id: bid, version: 1, config: f.config, note: "Starting configuration" }))); fs = ins; }
+      if (!error && ins) { await supabase.from("fsl_form_versions").insert(ins.map((f) => ({ form_id: f.id, business_id: bid, version: 1, config: f.config, note: "Standard forms" }))); fs = ins; }
     }
     const since = from < ymd(new Date(sydneyNow().getTime() - 40 * 864e5)) ? from : ymd(new Date(sydneyNow().getTime() - 40 * 864e5));
     const { data: es } = await supabase.from("fsl_entries").select("*").eq("business_id", bid).or(`entry_date.gte.${since},status.eq.open`).order("created_at", { ascending: false }).limit(5000);
