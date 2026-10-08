@@ -183,7 +183,10 @@ export function RecordPaymentDialog({ open, onOpenChange, booking, bookings, sug
       <div><Label>Reference (e.g. Xero invoice no.)</Label><Input value={form.reference} onChange={e => set("reference", e.target.value)} placeholder="INV-0001" /></div>
       <div><Label>Notes</Label><Textarea rows={2} value={form.notes} onChange={e => set("notes", e.target.value)} /></div>
       {target && <p className="text-xs text-muted-foreground">Booking total {money(target.total_amount)}{target.booking_kind === "catering" ? " · full payment only" : ` · deposit ${money(target.deposit_amount)}`}</p>}
-      {form.payment_type === "deposit" && target && <div><Label>Guest email (for deposit confirmation)</Label><Input type="email" value={guest.email} onChange={e => setGuest(g => ({ ...g, email: e.target.value }))} placeholder="guest@example.com" /></div>}
+      {form.payment_type === "deposit" && target && <>
+        <div><Label>Guest email (for deposit confirmation)</Label><Input type="email" value={guest.email} onChange={e => setGuest(g => ({ ...g, email: e.target.value }))} placeholder="guest@example.com" /></div>
+        <div><Label>Venue space (shown on the confirmation email)</Label><Input value={venueName} onChange={e => setVenueName(e.target.value)} placeholder="e.g. Grand Ballroom" /></div>
+      </>}
     </div>
     <DialogFooter className="gap-2"><Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
       <Button variant={form.payment_type === "deposit" ? "outline" : "default"} onClick={() => save(false)} disabled={saving}>{saving ? "Saving…" : "Save payment"}</Button>
@@ -242,6 +245,7 @@ function ResendDepositDialog({ open, onOpenChange, booking, payment }: { open: b
       {payment && <p className="text-xs text-muted-foreground">{money(payment.amount)} · {format(new Date(payment.paid_on + "T00:00"), "d MMM yyyy")} · {PAYMENT_METHODS[payment.method] || payment.method}</p>}
       <div><Label>Guest name</Label><Input value={guest.name} onChange={e => setGuest(g => ({ ...g, name: e.target.value }))} /></div>
       <div><Label>Guest email</Label><Input type="email" value={guest.email} onChange={e => setGuest(g => ({ ...g, email: e.target.value }))} placeholder="guest@example.com" /></div>
+      <div><Label>Venue space (shown on the confirmation email)</Label><Input value={venueName} onChange={e => setVenueName(e.target.value)} placeholder="e.g. Grand Ballroom" /></div>
     </div>
     <DialogFooter className="gap-2"><Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
       <Button onClick={resend} disabled={sending}>{sending ? "Sending…" : "Resend confirmation"}</Button>
