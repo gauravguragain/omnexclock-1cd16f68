@@ -34,16 +34,17 @@ serve(async (req) => {
     const { businessId, sheetName, gridText, mode, formConfig } = await req.json();
     if (!businessId || !gridText) return json({ error: "businessId and gridText are required" }, 400);
     const caller = await getCaller(req, serviceClient());
-    if (!caller || !hasBusinessRole(caller, businessId, ["admin", "super_admin"])) return json({ error: "Not authorized" }, 403);
-    const key = Deno.env.get("GEMINI_API_KEY"); if (!key) return json({ error: "AI service is not configured" }, 500);
+    if (!caller || !hasBusinessRole(caller, businessId, ["admin", "super_admin", "food_safety_manager" as any, "owner" as any])) return json({ error: "Not authorized" }, 403);
+    const key = Deno.env.get("LOVABLE_API_KEY"); if (!key) return json({ error: "AI service is not configured" }, 500);
     const ask = async (prompt: string, maxTokens: number) => {
-      const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${key}`, {
-        method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }], generationConfig: { temperature: 0.1, responseMimeType: "application/json", maxOutputTokens: maxTokens, thinkingConfig: { thinkingBudget: 0 } } }),
+      const r = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+        method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${key}` },
+        body: JSON.stringify({ model: "google/gemini-2.5-flash", messages: [{ role: "user", content: prompt }], response_format: { type: "json_object" }, max_tokens: maxTokens, temperature: 0.1 }),
       });
-      if (!r.ok) { const t = await r.text(); console.error("AI failed", r.status, t); throw new Error(`AI service failed (${r.status})`); }
+      if (!r.ok) { const t = await r.text(); console.error("AI failed", r.status, t); throw new Error(r.status === 429 ? "AI is busy — try again in a minute" : r.status === 402 ? "AI credits have run out" : `AI service failed (${r.status})`); }
       const body = await r.json();
-      return parseLoose(body.candidates?.[0]?.content?.parts?.[0]?.text || "{}");
+      const txt = String(body.choices?.[0]?.message?.content || "{}").replace(/^```(?:json)?\s*|\s*```$/g, "");
+      return parseLoose(txt);
     };
     if (mode === "entries") {
       const cfg = JSON.stringify(formConfig).slice(0, 12000);
@@ -60,5 +61,5 @@ Infer full dates from the month/year headers. Temperatures as numbers. Times as 
       return json({ header_values, entries: results.flatMap((x: any) => Array.isArray(x.entries) ? x.entries : []) });
     }
     return json(await ask(`You convert a paper food-safety (HACCP) log sheet from Excel into a form configuration.\n${SCHEMA}\n\nSheet name: ${sheetName}\nCells (address=value):\n${String(gridText).slice(0, 15000)}`, 16384));
-  } catch (e) { return json({ error: e instanceof Error ? e.message : "Unable to read sheet" }, 500); }
+  } catch (e) { return json({ error: e instanceof Error ? e.message : "Unable to read sheet" }, 200); }
 });

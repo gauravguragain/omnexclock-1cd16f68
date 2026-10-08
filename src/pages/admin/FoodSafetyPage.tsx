@@ -20,7 +20,7 @@ import { ShieldCheck, AlertTriangle, Clock, Upload, Pencil, QrCode, Download, Pl
 import { toast } from "sonner";
 import { FormConfig, formatValue, todayStr, periodKey, mondayOf, to12, ymd, sydneyNow } from "@/features/fsl/engine";
 import { formStatus, statusTone, hoursOpen, FslEntry, FslForm } from "@/features/fsl/status";
-import { SEED_FORMS } from "@/features/fsl/seed";
+import { SEED_FORMS, SEED_VERSION } from "@/features/fsl/seed";
 import { FormEditor } from "@/features/fsl/FormEditor";
 import { FormRunner, EditEntryForm, SavePayload } from "@/features/fsl/FormRunner";
 import { exportCsv, exportPdf, exportXlsx, gridToText, loadWorkbook, sheetGrid, uploadTemplate } from "@/features/fsl/excel";
@@ -51,9 +51,10 @@ export default function FoodSafetyPage() {
     const current = (fs || []).some((f: any) => (f.config?.seedVersion || 0) >= SEED_VERSION);
     if (fs && !current) {
       // One-time switch to the standard form set: clears old forms and their logs, then loads the new set
-      if (fs.length) { const { error: rErr } = await supabase.rpc("fsl_reset_forms" as any, { _business_id: bid }); if (rErr) { console.error(rErr); } }
+      const { error: rErr } = fs.length ? await supabase.rpc("fsl_reset_forms" as any, { _business_id: bid }) : { error: null };
+      if (rErr) console.error("Form reset failed", rErr);
       const rows = SEED_FORMS.map((c, i) => ({ business_id: bid, name: c.name, form_type: c.form_type, sort_order: i, config: c as any }));
-      const { data: ins, error } = await supabase.from("fsl_forms").insert(rows).select("*");
+      const { data: ins, error } = rErr ? { data: null, error: rErr } : await supabase.from("fsl_forms").insert(rows).select("*");
       if (!error && ins) { await supabase.from("fsl_form_versions").insert(ins.map((f) => ({ form_id: f.id, business_id: bid, version: 1, config: f.config, note: "Standard forms" }))); fs = ins; }
     }
     const since = from < ymd(new Date(sydneyNow().getTime() - 40 * 864e5)) ? from : ymd(new Date(sydneyNow().getTime() - 40 * 864e5));
