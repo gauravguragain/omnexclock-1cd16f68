@@ -92,6 +92,7 @@ export function RecordPaymentDialog({ open, onOpenChange, booking, bookings, sug
   const target = booking || bookings?.find(b => b.id === form.booking_id);
   const [guest, setGuest] = useState<{ name: string; email: string }>({ name: "", email: "" });
   const [bizName, setBizName] = useState("");
+  const [venueName, setVenueName] = useState("");
   useEffect(() => {
     if (!open || !target) return;
     let off = false;
@@ -106,7 +107,9 @@ export function RecordPaymentDialog({ open, onOpenChange, booking, bookings, sug
         if (ids.length) { const { data: people } = await (supabase as any).from("crm_stakeholders").select("email").in("id", ids); email = (people || []).find((x: any) => x.email)?.email || ""; }
       }
       const { data: biz } = await (supabase as any).from("businesses").select("name").eq("id", target.business_id).maybeSingle();
-      if (!off) { setGuest({ name, email }); setBizName(biz?.name || ""); }
+      let venue = "";
+      if (target.venue_space_id) { const { data: vs } = await (supabase as any).from("crm_venue_spaces").select("name").eq("id", target.venue_space_id).maybeSingle(); venue = vs?.name || ""; }
+      if (!off) { setGuest({ name, email }); setBizName(biz?.name || ""); setVenueName(venue); }
     })();
     return () => { off = true; };
   }, [open, target?.id]);
@@ -128,7 +131,7 @@ export function RecordPaymentDialog({ open, onOpenChange, booking, bookings, sug
       const paid = (pays || []).reduce((s: number, p: any) => s + Number(p.amount || 0), 0);
       const { error: e2 } = await supabase.functions.invoke("send-email", { body: {
         type: "deposit_confirmation", to: guest.email.trim(), recipientName: guest.name, businessName: bizName,
-        eventTitle: eventLabel(target, guest.name), eventDate: fmt(target.event_date),
+        eventTitle: eventLabel(target, guest.name), eventDate: fmt(target.event_date), venue: venueName || undefined,
         depositAmount: money(amt), receivedDate: fmt(form.paid_on), method: PAYMENT_METHODS[form.method] || form.method,
         reference: form.reference.trim() || undefined,
         totalAmount: total > 0 ? money(total) : undefined, balanceRemaining: total > 0 ? money(Math.max(0, total - paid)) : undefined,
@@ -193,6 +196,7 @@ export function RecordPaymentDialog({ open, onOpenChange, booking, bookings, sug
 function ResendDepositDialog({ open, onOpenChange, booking, payment }: { open: boolean; onOpenChange: (o: boolean) => void; booking: any; payment: CrmPayment | null }) {
   const [guest, setGuest] = useState<{ name: string; email: string }>({ name: "", email: "" });
   const [bizName, setBizName] = useState("");
+  const [venueName, setVenueName] = useState("");
   const [sending, setSending] = useState(false);
   useEffect(() => {
     if (!open || !booking || !payment) return;
@@ -207,7 +211,9 @@ function ResendDepositDialog({ open, onOpenChange, booking, payment }: { open: b
         if (ids.length) { const { data: people } = await (supabase as any).from("crm_stakeholders").select("email").in("id", ids); email = (people || []).find((x: any) => x.email)?.email || ""; }
       }
       const { data: biz } = await (supabase as any).from("businesses").select("name").eq("id", booking.business_id).maybeSingle();
-      if (!off) { setGuest({ name, email }); setBizName(biz?.name || ""); }
+      let venue = "";
+      if (booking.venue_space_id) { const { data: vs } = await (supabase as any).from("crm_venue_spaces").select("name").eq("id", booking.venue_space_id).maybeSingle(); venue = vs?.name || ""; }
+      if (!off) { setGuest({ name, email }); setBizName(biz?.name || ""); setVenueName(venue); }
     })();
     return () => { off = true; };
   }, [open, booking?.id, payment?.id]);
@@ -221,7 +227,7 @@ function ResendDepositDialog({ open, onOpenChange, booking, payment }: { open: b
     const paid = (pays || []).reduce((s: number, p: any) => s + Number(p.amount || 0), 0);
     const { error } = await supabase.functions.invoke("send-email", { body: {
       type: "deposit_confirmation", to: guest.email.trim(), recipientName: guest.name, businessName: bizName,
-      eventTitle: eventLabel(booking, guest.name), eventDate: fmt(booking.event_date),
+      eventTitle: eventLabel(booking, guest.name), eventDate: fmt(booking.event_date), venue: venueName || undefined,
       depositAmount: money(payment.amount), receivedDate: fmt(payment.paid_on), method: PAYMENT_METHODS[payment.method] || payment.method,
       reference: payment.reference || undefined,
       totalAmount: total > 0 ? money(total) : undefined, balanceRemaining: total > 0 ? money(Math.max(0, total - paid)) : undefined,
