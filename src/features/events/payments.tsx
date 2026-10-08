@@ -108,7 +108,7 @@ export function RecordPaymentDialog({ open, onOpenChange, booking, bookings, sug
       }
       const { data: biz } = await (supabase as any).from("businesses").select("name").eq("id", target.business_id).maybeSingle();
       let venue = "";
-      if (target.venue_space_id) { const { data: vs } = await (supabase as any).from("crm_venue_spaces").select("name").eq("id", target.venue_space_id).maybeSingle(); venue = vs?.name || ""; }
+      if (target.venue_space_id) { const { data: vs } = await (supabase as any).from("crm_venue_spaces").select("name").eq("id", target.venue_space_id).maybeSingle(); venue = vs?.name || ""; } if (!venue && target.booking_kind !== "catering") { let raw = target.venue_space || ""; if (!raw && target.lead_id) { const { data: ld } = await (supabase as any).from("crm_leads").select("venue_space").eq("id", target.lead_id).maybeSingle(); raw = ld?.venue_space || ""; } venue = raw ? prettyCrmValue(raw) : ""; }
       if (!off) { setGuest({ name, email }); setBizName(biz?.name || ""); setVenueName(venue); }
     })();
     return () => { off = true; };
@@ -212,7 +212,7 @@ function ResendDepositDialog({ open, onOpenChange, booking, payment }: { open: b
       }
       const { data: biz } = await (supabase as any).from("businesses").select("name").eq("id", booking.business_id).maybeSingle();
       let venue = "";
-      if (booking.venue_space_id) { const { data: vs } = await (supabase as any).from("crm_venue_spaces").select("name").eq("id", booking.venue_space_id).maybeSingle(); venue = vs?.name || ""; }
+      if (booking.venue_space_id) { const { data: vs } = await (supabase as any).from("crm_venue_spaces").select("name").eq("id", booking.venue_space_id).maybeSingle(); venue = vs?.name || ""; } if (!venue && booking.booking_kind !== "catering") { let raw = booking.venue_space || ""; if (!raw && booking.lead_id) { const { data: ld } = await (supabase as any).from("crm_leads").select("venue_space").eq("id", booking.lead_id).maybeSingle(); raw = ld?.venue_space || ""; } venue = raw ? prettyCrmValue(raw) : ""; }
       if (!off) { setGuest({ name, email }); setBizName(biz?.name || ""); setVenueName(venue); }
     })();
     return () => { off = true; };
