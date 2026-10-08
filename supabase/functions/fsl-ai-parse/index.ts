@@ -34,8 +34,8 @@ serve(async (req) => {
     const { businessId, sheetName, gridText, mode, formConfig } = await req.json();
     if (!businessId || !gridText) return json({ error: "businessId and gridText are required" }, 400);
     const caller = await getCaller(req, serviceClient());
-    if (!caller || !hasBusinessRole(caller, businessId, ["admin", "super_admin", "food_safety_manager" as any, "owner" as any])) return json({ error: "Not authorized" }, 403);
-    const key = Deno.env.get("LOVABLE_API_KEY"); if (!key) return json({ error: "AI service is not configured" }, 500);
+    if (!caller || !hasBusinessRole(caller, businessId, ["admin", "super_admin", "food_safety_manager" as any, "owner" as any])) return json({ error: "Your account is not allowed to import food safety forms" });
+    const key = Deno.env.get("LOVABLE_API_KEY"); if (!key) return json({ error: "AI service is not configured" });
     const ask = async (prompt: string, maxTokens: number) => {
       const r = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
         method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${key}` },
