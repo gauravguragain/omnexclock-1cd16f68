@@ -25,6 +25,34 @@ export const PAYMENT_TYPES: Record<string, string> = { deposit: "Deposit", insta
 export const PAYMENT_METHODS: Record<string, string> = { bank_transfer: "Bank transfer", card: "Card (EFTPOS)", cash: "Cash", cheque: "Cheque", other: "Other" };
 
 export const money = (n: number) => new Intl.NumberFormat("en-AU", { style: "currency", currency: "AUD" }).format(Number(n) || 0);
+
+/** Dropdown of the business's venue spaces for the deposit confirmation email. */
+function VenueSpaceSelect({ businessId, value, onChange }: { businessId?: string; value: string; onChange: (v: string) => void }) {
+  const [spaces, setSpaces] = useState<string[]>([]);
+  useEffect(() => {
+    if (!businessId) return;
+    let off = false;
+    (async () => {
+      const { data } = await (supabase as any).from("crm_venue_spaces").select("name").eq("business_id", businessId).order("name");
+      if (!off) setSpaces((data || []).map((s: any) => s.name).filter(Boolean));
+    })();
+    return () => { off = true; };
+  }, [businessId]);
+  const options = useMemo(() => {
+    const list = [...spaces];
+    if (value && !list.includes(value)) list.unshift(value);
+    return list;
+  }, [spaces, value]);
+  return (
+    <Select value={value || "__none"} onValueChange={v => onChange(v === "__none" ? "" : v)}>
+      <SelectTrigger><SelectValue placeholder="Select a venue space" /></SelectTrigger>
+      <SelectContent>
+        <SelectItem value="__none">No venue space</SelectItem>
+        {options.map(name => <SelectItem key={name} value={name}>{name}</SelectItem>)}
+      </SelectContent>
+    </Select>
+  );
+}
 export const sydneyToday = () => new Date().toLocaleDateString("en-CA", { timeZone: "Australia/Sydney" });
 
 // iVvy-imported events that had already happened when imported are treated as fully settled.
@@ -185,7 +213,7 @@ export function RecordPaymentDialog({ open, onOpenChange, booking, bookings, sug
       {target && <p className="text-xs text-muted-foreground">Booking total {money(target.total_amount)}{target.booking_kind === "catering" ? " · full payment only" : ` · deposit ${money(target.deposit_amount)}`}</p>}
       {form.payment_type === "deposit" && target && <>
         <div><Label>Guest email (for deposit confirmation)</Label><Input type="email" value={guest.email} onChange={e => setGuest(g => ({ ...g, email: e.target.value }))} placeholder="guest@example.com" /></div>
-        <div><Label>Venue space (shown on the confirmation email)</Label><Input value={venueName} onChange={e => setVenueName(e.target.value)} placeholder="e.g. Grand Ballroom" /></div>
+        <div><Label>Venue space (shown on the confirmation email)</Label><VenueSpaceSelect businessId={target.business_id} value={venueName} onChange={setVenueName} /></div>
       </>}
     </div>
     <DialogFooter className="gap-2"><Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
@@ -245,7 +273,7 @@ function ResendDepositDialog({ open, onOpenChange, booking, payment }: { open: b
       {payment && <p className="text-xs text-muted-foreground">{money(payment.amount)} · {format(new Date(payment.paid_on + "T00:00"), "d MMM yyyy")} · {PAYMENT_METHODS[payment.method] || payment.method}</p>}
       <div><Label>Guest name</Label><Input value={guest.name} onChange={e => setGuest(g => ({ ...g, name: e.target.value }))} /></div>
       <div><Label>Guest email</Label><Input type="email" value={guest.email} onChange={e => setGuest(g => ({ ...g, email: e.target.value }))} placeholder="guest@example.com" /></div>
-      <div><Label>Venue space (shown on the confirmation email)</Label><Input value={venueName} onChange={e => setVenueName(e.target.value)} placeholder="e.g. Grand Ballroom" /></div>
+      <div><Label>Venue space (shown on the confirmation email)</Label><VenueSpaceSelect businessId={booking?.business_id} value={venueName} onChange={setVenueName} /></div>
     </div>
     <DialogFooter className="gap-2"><Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
       <Button onClick={resend} disabled={sending}>{sending ? "Sending…" : "Resend confirmation"}</Button>
