@@ -589,6 +589,13 @@
       "when": 1791771215786,
       "tag": "0083_crm_day_notes",
       "breakpoints": true
+    },
+    {
+      "idx": 84,
+      "version": "7",
+      "when": 1791775734334,
+      "tag": "0084_crm_auto_event_tasks",
+      "breakpoints": true
     }
   ]
 }
