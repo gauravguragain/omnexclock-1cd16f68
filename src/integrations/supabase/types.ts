@@ -910,6 +910,51 @@ export type Database = {
           },
         ]
       }
+      crm_day_notes: {
+        Row: {
+          business_id: string
+          content: string
+          created_at: string
+          id: string
+          note_date: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          business_id: string
+          content?: string
+          created_at?: string
+          id?: string
+          note_date: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          business_id?: string
+          content?: string
+          created_at?: string
+          id?: string
+          note_date?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_day_notes_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_day_notes_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses_public"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       crm_deposit_requests: {
         Row: {
           amount: number | null
