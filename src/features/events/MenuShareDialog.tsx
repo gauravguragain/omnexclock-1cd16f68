@@ -33,7 +33,7 @@ export function printMenu(businessName: string, title: string, sections: MenuSec
   w.document.close();
 }
 
-export default function MenuShareDialog({ open, onOpenChange, data: d, source, lead, defaultPackageIds = [], defaultDrinks = false }: { open: boolean; onOpenChange: (o: boolean) => void; data: Data; source: "menu_books" | "drinks" | "lead_menu"; lead?: MenuShareLead; defaultPackageIds?: string[]; defaultDrinks?: boolean }) {
+export default function MenuShareDialog({ open, onOpenChange, data: d, source, lead, defaultPackageIds = [], defaultDrinks = false, menuCategory }: { menuCategory?: "event" | "catering"; open: boolean; onOpenChange: (o: boolean) => void; data: Data; source: "menu_books" | "drinks" | "lead_menu"; lead?: MenuShareLead; defaultPackageIds?: string[]; defaultDrinks?: boolean }) {
   const { user } = useAuth();
   const [pkgIds, setPkgIds] = useState<string[]>(defaultPackageIds);
   const [drinks, setDrinks] = useState(defaultDrinks);
@@ -46,7 +46,7 @@ export default function MenuShareDialog({ open, onOpenChange, data: d, source, l
   const matches = useMemo(() => { const q = name.trim().toLowerCase(); if (q.length < 2 || customerId) return []; return d.customers.filter(c => String(c.full_name || "").toLowerCase().includes(q) || String(c.email || "").toLowerCase().includes(q)).slice(0, 8); }, [name, customerId, d.customers]);
   const [linkScope, setLinkScope] = useState<"all" | "selected" | "none">("all");
   const bizName = d.business?.name || "Pro Regal";
-  const books = d.books.filter(b => b.active !== false);
+  const books = d.books.filter(b => b.active !== false && (!menuCategory || (b.menu_category || "event") === menuCategory));
   const sections = useMemo(() => buildMenuSections(d, pkgIds, drinks), [d, pkgIds, drinks]);
   const title = pkgIds.length ? (drinks ? "Menu & drinks" : "Menu") : "Drinks list";
   const togglePkg = (id: string, on: boolean) => setPkgIds(ids => on ? [...new Set([...ids, id])] : ids.filter(x => x !== id));
