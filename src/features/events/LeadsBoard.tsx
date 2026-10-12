@@ -13,18 +13,19 @@ import { useCrmData } from "@/features/sales/useCrmData";
 import OptionSelect from "@/features/sales/OptionSelect";
 import LeadFormDialog from "@/features/sales/LeadFormDialog";
 import IvvyImportDialog from "@/features/sales/IvvyImportDialog";
+import { leadMatches } from "@/features/sales/leadSearch";
 import { prettyCrmValue, type CrmLead } from "@/features/sales/types";
 
 export default function LeadsBoard({ kind }: { kind: "event" | "catering" }) {
   const crm = useCrmData(); const nav = useNavigate(); const { businessCode } = useParams();
-  const [tab, setTab] = useState("new"); const [search, setSearch] = useState("");
+  const [tab, setTab] = useState("new"); const [search, setSearch] = useState(""); const [searchDate, setSearchDate] = useState("");
   const [formOpen, setFormOpen] = useState(false); const [editing, setEditing] = useState<CrmLead | null>(null);
   const [params, setParams] = useSearchParams(); const [presetCustomer, setPresetCustomer] = useState<string | null>(null);
   useEffect(() => { if (params.get("new") === "1") { setEditing(null); setPresetCustomer(params.get("customer")); setFormOpen(true); setParams({}, { replace: true }); } }, [params]);
   const [declining, setDeclining] = useState<CrmLead | null>(null); const [reason, setReason] = useState(""); const [importOpen, setImportOpen] = useState(false);
    const mine = useMemo(() => crm.leads.filter(l => (l.lead_kind === "catering" || l.event_type === "catering" ? "catering" : "event") === kind), [crm.leads, kind]);
   const outcome = (l: CrmLead) => l.lead_outcome || "new";
-  const shown = mine.filter(l => (tab === "all" || outcome(l) === tab) && `${l.full_name} ${l.email || ""} ${l.phone || ""} ${l.event_type} ${l.service_location || ""}`.toLowerCase().includes(search.toLowerCase()));
+  const shown = mine.filter(l => (tab === "all" || outcome(l) === tab) && leadMatches(l, search, searchDate || undefined));
   const reasons = crm.options.filter(o => o.option_type === "lost_reason" && o.active);
   if (!crm.business) return null;
   const label = kind === "event" ? "Event leads" : "Catering leads";
@@ -48,7 +49,7 @@ export default function LeadsBoard({ kind }: { kind: "event" | "catering" }) {
       <div className="flex flex-wrap gap-2"><Button variant="outline" onClick={() => setImportOpen(true)}><Upload className="mr-2 h-4 w-4" />Import</Button><Button variant="outline" onClick={exportCsv}><Download className="mr-2 h-4 w-4" />Export</Button><Button onClick={() => { setEditing(null); setFormOpen(true); }}><Plus className="mr-2 h-4 w-4" />New lead</Button></div>
     </div>
     <div className="flex flex-wrap items-center gap-2">{["new", "confirmed", "declined", "all"].map(t => <Button key={t} size="sm" variant={tab === t ? "default" : "outline"} onClick={() => setTab(t)} className="capitalize">{t === "new" ? "Leads" : t} ({t === "all" ? mine.length : mine.filter(l => outcome(l) === t).length})</Button>)}
-      <div className="relative ml-auto w-full max-w-xs"><Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" /><Input className="h-9 pl-9" placeholder="Search leads" value={search} onChange={e => setSearch(e.target.value)} /></div></div>
+      <div className="ml-auto flex w-full flex-wrap gap-2 sm:w-auto"><div className="relative w-full sm:w-72"><Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" /><Input className="h-9 pl-9" placeholder="Search name, email, phone or date" value={search} onChange={e => setSearch(e.target.value)} /></div><Input type="date" aria-label="Filter by event date" className="h-9 w-full sm:w-40" value={searchDate} onChange={e => setSearchDate(e.target.value)} />{searchDate && <Button size="sm" variant="ghost" onClick={() => setSearchDate("")}>Clear date</Button>}</div></div>
     <p className="text-xs text-muted-foreground">{shown.length} leads shown</p>
      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">{shown.map(l => <Card key={l.id} className="min-w-0" onClick={kind === "event" ? () => nav(`/b/${businessCode}/events/lead/${l.id}`) : undefined}><CardContent className="min-w-0 space-y-3 p-5">
       <div className="flex items-start justify-between gap-2"><div><p className="font-serif text-xl">{l.full_name}</p><p className="text-xs text-muted-foreground">{kind === "event" ? `${prettyCrmValue(l.event_type)} · ` : ""}{prettyCrmValue(l.source)}</p></div><Badge variant={outcome(l) === "declined" ? "destructive" : outcome(l) === "confirmed" ? "default" : "outline"} className="capitalize">{outcome(l) === "new" ? "Lead" : outcome(l)}</Badge></div>
