@@ -1,7 +1,7 @@
 import { issueCateringRunsheet } from "./issueCateringRunsheet";
 import { loadBeverageDetail } from "@/lib/beverageDetail";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
-import { downloadRunsheetPdf } from "@/lib/runsheetDownload";
+import { downloadRunsheetPdf, fitRunsheetColumns } from "@/lib/runsheetDownload";
 import { Link, Navigate, useLocation, useParams } from "react-router-dom";
 import { format } from "date-fns";
 import { ChevronRight, ArrowLeft, Printer, Mail, Link as LinkIcon, Download } from "lucide-react";
@@ -75,6 +75,21 @@ function A4Preview({ children, documentRef }: { children: React.ReactNode; docum
 }
 
 export function RunsheetDocument({ rs, lead, b, items, selection, businessName, businessPhone, businessEmail, terms, internal = false }: { rs: any; lead: any; b: any; items: any[]; selection: any; businessName?: string; businessPhone?: string; businessEmail?: string; terms?: string | null; internal?: boolean }) {
+  const rootRef = useRef<HTMLElement>(null);
+  useLayoutEffect(() => {
+    const root = rootRef.current;
+    if (!root) return;
+    const fit = () => fitRunsheetColumns(root);
+    fit();
+    const observer = new ResizeObserver(fit);
+    root.querySelectorAll("[data-runsheet-flow]").forEach(node => observer.observe(node));
+    let active = true;
+    document.fonts.ready.then(() => { if (active) fit(); });
+    root.querySelectorAll("img").forEach(img => img.decode().then(() => { if (active) fit(); }).catch(() => undefined));
+    window.addEventListener("beforeprint", fit);
+    return () => { active = false; observer.disconnect(); window.removeEventListener("beforeprint", fit); };
+  }, [rs, lead, b, items, selection, internal]);
+  const clientTerms = internal ? null : terms;
   const PKG = ["package", "kids_package", "manual"];
   const pkgs = items.filter(i => i.course === "package");
   const stalls = items.filter(i => i.course === "live_stall");
@@ -113,7 +128,8 @@ export function RunsheetDocument({ rs, lead, b, items, selection, businessName, 
     </div>;
   };
 
-  return <article className="runsheet-monochrome bg-background font-sans text-foreground">
+  return <article ref={rootRef} className="runsheet-monochrome bg-background font-sans text-foreground">
+    <div className="runsheet-operational-page">
     <header className="flex items-start justify-between gap-6">
       <div>
         <h1 className="text-2xl font-bold">{catering ? `Catering ${pickup ? "Pickup" : "Delivery"} Order` : `${eventType} Event Order`}</h1>
@@ -139,11 +155,9 @@ export function RunsheetDocument({ rs, lead, b, items, selection, businessName, 
       <Summary />
     </section>
 
-    <section className="mt-4">
-      <div className="flex justify-between bg-primary px-3 py-2 text-sm font-bold text-primary-foreground"><span>Agenda – {date}</span><span>Day 1 of 1</span></div>
-      <div className="bg-muted"><Summary bold /></div>
-      <div data-runsheet-flow className="runsheet-flow border-x border-b border-border p-4 text-xs leading-relaxed">
-        <div data-runsheet-menu className="contents">
+    <section className="runsheet-body">
+      <div data-runsheet-flow className="runsheet-flow border-x border-b border-border">
+        <div data-runsheet-menu><div>
           {stalls.length > 0 && <div className="pb-3"><h2 className="font-bold">Live Stalls{stalls[0].service_start_time ? ` — ${to12(stalls[0].service_start_time)}${stalls[0].service_end_time ? ` to ${to12(stalls[0].service_end_time)}` : ""}` : ""}</h2>{stalls.map(s => <p key={s.id} className="pl-3">• {String(s.item_name || "").replace(/_/g, " ").replace(/\b\p{L}/gu, letter => letter.toLocaleUpperCase())}</p>)}</div>}
           <div><h2 className="font-bold">Menu selection{pkgs.length ? ` – ${pkgs.map(p => p.item_name).join(" · ")}` : ""}</h2></div>
           {Object.entries(courses as Record<string, any[]>).map(([course, dishes]) => { const sch = schedule.find((s: any) => s?.label && String(s.label).trim().toLowerCase() === course.trim().toLowerCase()); return <div key={course} className="pt-2"><h3 className="pl-3 font-semibold">{course}{sch ? ` — ${slot(sch) || "—"}` : ""}</h3>{dishes.map(d => <p key={d.id} className="pl-6">- {d.item_name}{d.notes && !String(d.notes).startsWith("pkg:") ? <span className="font-semibold"> — {d.notes}</span> : null}</p>)}</div>; })}
@@ -152,8 +166,8 @@ export function RunsheetDocument({ rs, lead, b, items, selection, businessName, 
           {(selection?.beverage_detail?.sections || []).filter((sec: any) => sec.name || sec.items.length || sec.notes).map((sec: any, i: number) => <div key={i} className="pt-1"><h3 className="pl-3 font-bold">{sec.name}{sec.picks ? ` (choose ${sec.picks})` : ""}</h3>{sec.notes && <p className="whitespace-pre-line pl-6 font-normal">{sec.notes}</p>}{sec.items.map((n: string) => <p key={n} className="pl-6 font-normal">- {n}</p>)}</div>)}
           {selection?.corkage_enabled && <div className="pt-1 font-bold"><p>Corkage: Host is bringing their own alcohol.</p>{selection?.corkage_note && <p className="whitespace-pre-wrap">{selection.corkage_note}</p>}</div>}
           {!items.length && <div className="pt-2"><p className="text-muted-foreground">No menu saved yet.</p></div>}
-        </div>
-        <div data-runsheet-details className="contents">
+        </div></div>
+        <div data-runsheet-details><div>
           {Number(b?.chafing_dishes) > 0 && <div className="pt-2"><p className="font-bold">Chafing dishes: {b.chafing_dishes}</p></div>}
           {rs.special_requests && <div className="pt-2"><p>Special requests: {rs.special_requests}</p></div>}
           {((rs.setup_items?.length ?? 0) > 0 || rs.setup_notes) && <div className="pt-4"><h2 className="font-bold">Setup & styling</h2>{(rs.setup_items || []).map((s: string) => <p key={s} className="pl-3">• {s}</p>)}{rs.setup_notes && <p className="whitespace-pre-line pl-3">{rs.setup_notes}</p>}</div>}
@@ -163,7 +177,7 @@ export function RunsheetDocument({ rs, lead, b, items, selection, businessName, 
           {rs.client_notes && <div className="pt-4"><h2 className="font-bold">Client notes</h2><p className="whitespace-pre-line pl-3">{rs.client_notes}</p></div>}
           {internal && rs.ops_notes && <div className="pt-4 text-kitchen-note"><h2 className="font-bold">Kitchen team notes</h2><p className="whitespace-pre-line pl-3">{rs.ops_notes}</p></div>}
           {internal && rs.foh_notes && <div className="pt-4 text-foh-note"><h2 className="font-bold">Front of house notes</h2><p className="whitespace-pre-line pl-3">{rs.foh_notes}</p></div>}
-        </div>
+        </div></div>
       </div>
     </section>
 
@@ -171,10 +185,11 @@ export function RunsheetDocument({ rs, lead, b, items, selection, businessName, 
       <div className="mt-3 border-t border-dashed border-border pt-6">
         <p className="text-right text-[10px] text-muted-foreground">Printed Date: {format(new Date(), "dd/MM/yyyy")}</p>
         <SignRow label="Name" name={rs.staff_sign_name} date={rs.staff_sign_date} signature={rs.staff_signature} />
-        {!terms && <SignRow label="Client name" name={rs.client_sign_name} date={rs.client_sign_date} signature={rs.client_signature} />}
+        {!internal && !clientTerms && <SignRow label="Client name" name={rs.client_sign_name} date={rs.client_sign_date} signature={rs.client_signature} />}
       </div>
     </footer>
-    {terms && <TermsPage terms={terms} businessName={businessName} rs={rs} />}
+    </div>
+    {clientTerms && <TermsPage terms={clientTerms} businessName={businessName} rs={rs} />}
   </article>;
 }
 

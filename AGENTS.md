@@ -9,3 +9,4 @@ Event confirmation stores the two child age counts separately while keeping crm_
 - All outgoing emails are wrapped by supabase/functions/_shared/emailLayout.ts (renderBrandedEmail) so every message shares one branded frame.
 - Shared live data screens use useLiveSync with backend change broadcasts plus focus, reconnect, and visible-page polling fallbacks so mobile sleep cannot leave records stale.
 - Shareable calendar (/calendar/:businessId/:token) reuses the Google feed's crm_settings.calendar_token via the crm-calendar-public function and MonthCalendar's paidBookingIds prop, so public and in-app calendars show identical events without exposing contact or payment data.
+- Run-sheet preview, print and PDF use the same fixed A4 operational page with independently measured column typography, so menu and operational sections cannot spill between columns; client terms remain outside that page.

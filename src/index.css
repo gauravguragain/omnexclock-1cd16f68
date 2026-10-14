@@ -683,9 +683,34 @@
 }
 
 .runsheet-page { width: 210mm; transform-origin: top left; }
-/* Magazine flow: sections fill column 1, then column 2, before a new page. */
-.runsheet-flow { column-count: 2; column-gap: 1.5rem; column-rule: 1px solid hsl(var(--border)); column-fill: balance; }
-.runsheet-flow > div > * { break-inside: avoid; page-break-inside: avoid; }
+.runsheet-operational-page { height: 277mm; display: flex; flex-direction: column; }
+.runsheet-operational-page > header, .runsheet-operational-page > footer,
+.runsheet-operational-page > div, .runsheet-operational-page > section:not(.runsheet-body) { flex-shrink: 0; }
+.runsheet-body { flex: 1; min-height: 0; display: flex; }
+.runsheet-flow { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); width: 100%; min-height: 0; padding: 10px; gap: 12px; }
+.runsheet-flow > div { min-width: 0; min-height: 0; font-size: var(--runsheet-column-font, 11px); line-height: 1.25; overflow-wrap: anywhere; }
+.runsheet-flow > div + div { border-left: 1px solid hsl(var(--border)); padding-left: 12px; }
+.runsheet-flow .pt-1 { padding-top: .25em; }
+.runsheet-flow .pt-2 { padding-top: .5em; }
+.runsheet-flow .pt-3 { padding-top: .75em; }
+.runsheet-flow .pt-4 { padding-top: .85em; }
+.runsheet-flow .pb-3 { padding-bottom: .75em; }
+.runsheet-flow .pl-3 { padding-left: .85em; }
+.runsheet-flow .pl-6 { padding-left: 1.5em; }
+.runsheet-monochrome .text-xs { font-size: 11px; line-height: 1.3; }
+.runsheet-monochrome .text-sm { font-size: 13px; line-height: 1.35; }
+.runsheet-monochrome .text-base { font-size: 15px; }
+.runsheet-monochrome .text-xl { font-size: 19px; }
+.runsheet-monochrome .text-2xl { font-size: 23px; }
+.runsheet-monochrome .text-\[10px\] { font-size: 9px; }
+.runsheet-monochrome .text-\[10\.5px\] { font-size: 9.5px; }
+.runsheet-operational-page > .mt-5 { margin-top: 12px; }
+.runsheet-operational-page .p-2 { padding: 6px; }
+.runsheet-operational-page .py-2 { padding-top: 6px; padding-bottom: 6px; }
+.runsheet-operational-page > footer { margin-top: 8px; }
+.runsheet-operational-page > footer > div { margin-top: 0; padding-top: 8px; }
+.runsheet-operational-page > footer .mt-4 { margin-top: 8px; }
+.runsheet-monochrome > [data-pdf-break] { margin-top: 10mm; }
 
 @media print {
   html, body, #root { min-height: 0 !important; height: auto !important; background: hsl(var(--background)); }
@@ -696,4 +721,6 @@
   .runsheet-monochrome header, .runsheet-monochrome footer, .runsheet-monochrome p, .runsheet-monochrome .break-inside-avoid { break-inside: avoid; }
   .runsheet-monochrome h2, .runsheet-monochrome h3 { break-inside: avoid; break-after: avoid; }
   .runsheet-monochrome .grid { break-inside: auto; }
+  .runsheet-operational-page { break-inside: avoid; page-break-inside: avoid; }
+  .runsheet-monochrome > [data-pdf-break] { margin-top: 0; }
 }
