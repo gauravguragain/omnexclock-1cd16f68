@@ -1,5 +1,5 @@
 ## Open tasks
-- [ ] Restore compact fixed run-sheet columns, remove duplicated Agenda, and verify print/PDF fitting.
+- [x] Restore compact fixed run-sheet columns, remove duplicated Agenda, and verify print/PDF fitting.
 - [x] Make live data sync reliable across active devices with backend broadcasts, reconnect catch-up, and visible-page polling.
 - [x] Rename Events list status to Event status and show days until the event.
 - [x] Show separate payment status from recorded payments and the confirmed balance due date.
