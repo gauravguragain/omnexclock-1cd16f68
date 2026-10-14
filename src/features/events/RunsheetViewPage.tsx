@@ -142,8 +142,8 @@ export function RunsheetDocument({ rs, lead, b, items, selection, businessName, 
     <section className="mt-4">
       <div className="flex justify-between bg-primary px-3 py-2 text-sm font-bold text-primary-foreground"><span>Agenda – {date}</span><span>Day 1 of 1</span></div>
       <div className="bg-muted"><Summary bold /></div>
-      <div data-runsheet-flow className="runsheet-flow grid grid-cols-2 border-x border-b border-border text-xs leading-relaxed">
-        <div data-runsheet-menu className="min-w-0 space-y-0 border-r border-border p-4 [&>*]:break-inside-avoid">
+      <div data-runsheet-flow className="runsheet-flow border-x border-b border-border p-4 text-xs leading-relaxed">
+        <div data-runsheet-menu className="contents">
           {stalls.length > 0 && <div className="pb-3"><h2 className="font-bold">Live Stalls{stalls[0].service_start_time ? ` — ${to12(stalls[0].service_start_time)}${stalls[0].service_end_time ? ` to ${to12(stalls[0].service_end_time)}` : ""}` : ""}</h2>{stalls.map(s => <p key={s.id} className="pl-3">• {String(s.item_name || "").replace(/_/g, " ").replace(/\b\p{L}/gu, letter => letter.toLocaleUpperCase())}</p>)}</div>}
           <div><h2 className="font-bold">Menu selection{pkgs.length ? ` – ${pkgs.map(p => p.item_name).join(" · ")}` : ""}</h2></div>
           {Object.entries(courses as Record<string, any[]>).map(([course, dishes]) => { const sch = schedule.find((s: any) => s?.label && String(s.label).trim().toLowerCase() === course.trim().toLowerCase()); return <div key={course} className="pt-2"><h3 className="pl-3 font-semibold">{course}{sch ? ` — ${slot(sch) || "—"}` : ""}</h3>{dishes.map(d => <p key={d.id} className="pl-6">- {d.item_name}{d.notes && !String(d.notes).startsWith("pkg:") ? <span className="font-semibold"> — {d.notes}</span> : null}</p>)}</div>; })}
@@ -153,7 +153,7 @@ export function RunsheetDocument({ rs, lead, b, items, selection, businessName, 
           {selection?.corkage_enabled && <div className="pt-1 font-bold"><p>Corkage: Host is bringing their own alcohol.</p>{selection?.corkage_note && <p className="whitespace-pre-wrap">{selection.corkage_note}</p>}</div>}
           {!items.length && <div className="pt-2"><p className="text-muted-foreground">No menu saved yet.</p></div>}
         </div>
-        <div data-runsheet-details className="min-w-0 p-4 [&>*]:break-inside-avoid">
+        <div data-runsheet-details className="contents">
           {Number(b?.chafing_dishes) > 0 && <div className="pt-2"><p className="font-bold">Chafing dishes: {b.chafing_dishes}</p></div>}
           {rs.special_requests && <div className="pt-2"><p>Special requests: {rs.special_requests}</p></div>}
           {((rs.setup_items?.length ?? 0) > 0 || rs.setup_notes) && <div className="pt-4"><h2 className="font-bold">Setup & styling</h2>{(rs.setup_items || []).map((s: string) => <p key={s} className="pl-3">• {s}</p>)}{rs.setup_notes && <p className="whitespace-pre-line pl-3">{rs.setup_notes}</p>}</div>}

@@ -683,6 +683,9 @@
 }
 
 .runsheet-page { width: 210mm; transform-origin: top left; }
+/* Magazine flow: sections fill column 1, then column 2, before a new page. */
+.runsheet-flow { column-count: 2; column-gap: 1.5rem; column-rule: 1px solid hsl(var(--border)); column-fill: balance; }
+.runsheet-flow > div > * { break-inside: avoid; page-break-inside: avoid; }
 
 @media print {
   html, body, #root { min-height: 0 !important; height: auto !important; background: hsl(var(--background)); }
