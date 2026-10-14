@@ -58,7 +58,7 @@ export async function downloadRunsheetPdf(el: HTMLElement, fileName: string) {
 }
 
 // Keep menu items on the left and operational details on the right on every page.
-function paginateFlow(root: HTMLElement) {
+export function paginateFlow(root: HTMLElement) {
   const flow = root.querySelector<HTMLElement>("[data-runsheet-flow]");
   if (!flow) return;
   const menu = flow.querySelector<HTMLElement>("[data-runsheet-menu]");
