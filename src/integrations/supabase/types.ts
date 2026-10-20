@@ -4294,6 +4294,7 @@ export type Database = {
           chairs_per_table: number | null
           cold_sparkles: boolean | null
           created_at: string | null
+          crm_runsheet_id: string | null
           date: string
           decor_access: boolean | null
           dry_ice: boolean | null
@@ -4322,6 +4323,7 @@ export type Database = {
           chairs_per_table?: number | null
           cold_sparkles?: boolean | null
           created_at?: string | null
+          crm_runsheet_id?: string | null
           date: string
           decor_access?: boolean | null
           dry_ice?: boolean | null
@@ -4350,6 +4352,7 @@ export type Database = {
           chairs_per_table?: number | null
           cold_sparkles?: boolean | null
           created_at?: string | null
+          crm_runsheet_id?: string | null
           date?: string
           decor_access?: boolean | null
           dry_ice?: boolean | null
@@ -4383,6 +4386,13 @@ export type Database = {
             columns: ["business_id"]
             isOneToOne: false
             referencedRelation: "businesses_public"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "roster_day_events_crm_runsheet_id_fkey"
+            columns: ["crm_runsheet_id"]
+            isOneToOne: false
+            referencedRelation: "crm_runsheets"
             referencedColumns: ["id"]
           },
         ]
@@ -4772,6 +4782,25 @@ export type Database = {
         Returns: number
       }
       crm_next_event_order: { Args: { _business_id: string }; Returns: string }
+      crm_roster_runsheet_values: {
+        Args: { _id: string }
+        Returns: {
+          adult_guests: number
+          banquet_tier: string
+          bev_package: string
+          business_id: string
+          crm_runsheet_id: string
+          date: string
+          event_space: string
+          event_time: string
+          event_type: string
+          host_contact_number: string
+          host_name: string
+          kids_guests: number
+          notes: string
+        }[]
+      }
+      crm_sync_runsheet_roster: { Args: { _id: string }; Returns: undefined }
       delete_employee: { Args: { _employee_id: string }; Returns: boolean }
       delete_employee_request: {
         Args: {
@@ -5071,6 +5100,7 @@ export type Database = {
         Args: { _business_id: string }
         Returns: string[]
       }
+      get_roster_runsheet: { Args: { _event_id: string }; Returns: Json }
       has_business_access: { Args: { _business_id: string }; Returns: boolean }
       has_role: {
         Args: {
