@@ -1,4 +1,5 @@
 ## Open tasks
+- [ ] Link all successfully emailed app run sheets to Daily Event Setup and verify ongoing live updates.
 - [x] Restore compact fixed run-sheet columns, remove duplicated Agenda, and verify print/PDF fitting.
 - [x] Make live data sync reliable across active devices with backend broadcasts, reconnect catch-up, and visible-page polling.
 - [x] Rename Events list status to Event status and show days until the event.
