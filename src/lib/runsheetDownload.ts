@@ -1,7 +1,9 @@
 import html2canvas from "html2canvas";
 import jsPDF from "jspdf";
 
-export async function downloadRunsheetPdf(el: HTMLElement, fileName: string) {
+export async function downloadRunsheetPdf(el: HTMLElement, fileName: string, print = false) {
+  const printWindow = print ? window.open("", "_blank") : null;
+  if (print && !printWindow) throw new Error("Allow popups to print the run sheet");
   // Capture an unscaled A4 copy, even when the preview is scaled down on a phone.
   const copy = el.cloneNode(true) as HTMLElement;
   copy.style.transform = "none";
@@ -52,7 +54,16 @@ export async function downloadRunsheetPdf(el: HTMLElement, fileName: string) {
        pdf.addImage(slice.toDataURL("image/jpeg", 0.94), "JPEG", 0, offset, pw, Math.min(ph - offset, (h * pw) / canvas.width));
       y += h;
     }
-    pdf.save(`${fileName.replace(/[^\w\- ]+/g, "").trim() || "Run sheet"}.pdf`);
+    if (printWindow) {
+      pdf.autoPrint();
+      const url = URL.createObjectURL(pdf.output("blob"));
+      printWindow.opener = null;
+      printWindow.location.replace(url);
+      setTimeout(() => URL.revokeObjectURL(url), 300_000);
+    } else pdf.save(`${fileName.replace(/[^\w\- ]+/g, "").trim() || "Run sheet"}.pdf`);
+  } catch (error) {
+    printWindow?.close();
+    throw error;
   } finally {
     copy.remove();
   }

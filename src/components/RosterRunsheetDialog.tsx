@@ -33,8 +33,7 @@ export default function RosterRunsheetDialog({ eventId, businessId, onClose }: {
           <Button variant="outline" onClick={async () => {
             if (!docRef.current) return;
             // Print only the operational document, never the roster behind the dialog.
-            const { downloadRunsheetPdf: download } = await import("@/lib/runsheetDownload");
-            try { await download(docRef.current, "Run sheet", true); } catch { toast.error("Could not print run sheet"); }
+            try { await downloadRunsheetPdf(docRef.current, "Run sheet", true); } catch { toast.error("Could not print run sheet"); }
           }}><Printer className="mr-2 h-4 w-4" />Print</Button>
           <Button variant="outline" disabled={downloading} onClick={async () => {
             if (!docRef.current) return;
