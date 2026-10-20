@@ -15,6 +15,9 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { useToast } from "@/hooks/use-toast";
 import { ChevronDown, ChevronUp, Plus, Trash2, Sparkles, Wind, Ribbon, Palette, Upload, FileText, X, Loader2, Flame, Users, Baby, UtensilsCrossed, User, Phone, Clock, Edit2, Eye } from "lucide-react";
 import { logAudit } from "@/lib/auditLog";
+import { useLiveSync } from "@/hooks/useLiveSync";
+import { isLinkedRunsheet } from "@/lib/rosterRunsheet";
+import RosterRunsheetDialog from "./RosterRunsheetDialog";
 
 interface DayEvent {
   id: string;
@@ -40,6 +43,7 @@ interface DayEvent {
   notes: string | null;
   runsheet_url: string | null;
   banquet_tier: string | null;
+  crm_runsheet_id?: string | null;
 }
 
 interface ConfigItem {
@@ -91,6 +95,7 @@ export default function RosterDayEvents({ weekDates, fmtDate }: Props) {
   const [extracting, setExtracting] = useState<string | null>(null);
   const [sectionUploading, setSectionUploading] = useState(false);
   const [sectionExtracting, setSectionExtracting] = useState(false);
+  const [viewingEventId, setViewingEventId] = useState<string | null>(null);
 
   // Only admin and super admin can edit/add daily events
   const isAdmin = business ? isAdminOf(business.id) : false;
@@ -104,11 +109,13 @@ export default function RosterDayEvents({ weekDates, fmtDate }: Props) {
       supabase.from("roster_day_events").select("*").eq("business_id", business.id).in("date", dates),
       supabase.from("event_setup_config").select("*").eq("business_id", business.id).eq("active", true).order("sort_order"),
     ]);
+    if (evRes.error) { toast({ title: "Could not load daily events", description: evRes.error.message, variant: "destructive" }); return; }
     setEvents((evRes.data as DayEvent[]) || []);
     setConfig((cfgRes.data as ConfigItem[]) || []);
   }, [business, weekDates, fmtDate]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
+  useLiveSync(["roster_day_events", "event_setup_config"], business?.id, fetchData);
 
   const toggleDay = (idx: number) => {
     setOpenDays(prev => {
@@ -431,6 +438,7 @@ export default function RosterDayEvents({ weekDates, fmtDate }: Props) {
 
   return (
     <div className="space-y-2">
+      <RosterRunsheetDialog eventId={viewingEventId} businessId={business?.id} onClose={() => setViewingEventId(null)} />
       {/* Single PDF Upload for whole section */}
       {!cannotEdit && (
         <div className="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-primary/5 border border-primary/20">
@@ -485,6 +493,8 @@ export default function RosterDayEvents({ weekDates, fmtDate }: Props) {
                   const isExpanded = expandedEvents.has(ev.id);
                   const activeBadges = getEquipmentBadges(ev);
                   const totalGuests = (ev.adult_guests || 0) + (ev.kids_guests || 0);
+                  const linked = isLinkedRunsheet(ev);
+                  const sourceReadOnly = cannotEdit || linked;
 
                   return (
                     <div key={ev.id} className="rounded-lg border border-border/60 bg-card overflow-hidden">
@@ -497,8 +507,9 @@ export default function RosterDayEvents({ weekDates, fmtDate }: Props) {
                             {!ev.event_type && !ev.host_name && <span className="text-xs text-muted-foreground italic">New event</span>}
                           </div>
                           <div className="flex items-center gap-1.5 shrink-0 ml-2">
-                            {ev.runsheet_url && (
-                              <Button variant="ghost" size="sm" className="h-6 px-1.5 text-[10px] text-primary" onClick={(e) => { e.stopPropagation(); viewPdf(ev.runsheet_url!); }}>
+                            {linked && <Button variant="ghost" size="sm" className="h-6 px-1.5 text-[10px] text-primary" onClick={() => setViewingEventId(ev.id)}><FileText className="mr-0.5 h-3 w-3" />Live run sheet</Button>}
+                            {!linked && ev.runsheet_url && (
+                              <Button variant="ghost" size="sm" className="h-6 px-1.5 text-[10px] text-primary" onClick={(e) => { e.stopPropagation(); if (ev.runsheet_url) void viewPdf(ev.runsheet_url); }}>
                                 <FileText className="h-3 w-3 mr-0.5" /> PDF
                               </Button>
                             )}
@@ -661,9 +672,9 @@ export default function RosterDayEvents({ weekDates, fmtDate }: Props) {
                           <div className="flex items-center gap-2 pt-1 border-t border-border/40">
                             <FileText className="h-3.5 w-3.5 text-muted-foreground" />
                             <Label className="text-[11px] text-muted-foreground">Runsheet</Label>
-                            {ev.runsheet_url ? (
+                            {linked ? <Button variant="ghost" size="sm" className="ml-auto h-7 text-xs" onClick={() => setViewingEventId(ev.id)}><Eye className="mr-1 h-3 w-3" />View live run sheet</Button> : ev.runsheet_url ? (
                               <div className="flex items-center gap-2 ml-auto">
-                                <button onClick={() => viewPdf(ev.runsheet_url!)} className="text-[11px] text-primary hover:underline flex items-center gap-1">
+                                <button onClick={() => { if (ev.runsheet_url) void viewPdf(ev.runsheet_url); }} className="text-[11px] text-primary hover:underline flex items-center gap-1">
                                   <Eye className="h-3 w-3" /> View PDF
                                 </button>
                                 {!cannotEdit && (
@@ -685,7 +696,7 @@ export default function RosterDayEvents({ weekDates, fmtDate }: Props) {
                             )}
                           </div>
 
-                          {!cannotEdit && (
+                          {!cannotEdit && !linked && (
                             <div className="flex justify-end">
                               <AlertDialog>
                                 <AlertDialogTrigger asChild>
