@@ -552,15 +552,15 @@ export default function RosterDayEvents({ weekDates, fmtDate }: Props) {
                           <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                             <div className="space-y-1">
                               <Label className="text-[11px] text-muted-foreground flex items-center gap-1"><User className="h-3 w-3" /> Host Name</Label>
-                              <DebouncedInput value={ev.host_name || ""} onSave={v => updateEvent(ev.id, { host_name: v || null })} placeholder="Client name..." className="h-8 text-xs" disabled={cannotEdit} />
+                              <DebouncedInput value={ev.host_name || ""} onSave={v => updateEvent(ev.id, { host_name: v || null })} placeholder="Client name..." className="h-8 text-xs" disabled={sourceReadOnly} />
                             </div>
                             <div className="space-y-1">
                               <Label className="text-[11px] text-muted-foreground flex items-center gap-1"><Phone className="h-3 w-3" /> Host Contact</Label>
-                              <DebouncedInput value={ev.host_contact_number || ""} onSave={v => updateEvent(ev.id, { host_contact_number: v || null })} placeholder="Contact number..." className="h-8 text-xs" disabled={cannotEdit} />
+                              <DebouncedInput value={ev.host_contact_number || ""} onSave={v => updateEvent(ev.id, { host_contact_number: v || null })} placeholder="Contact number..." className="h-8 text-xs" disabled={sourceReadOnly} />
                             </div>
                             <div className="space-y-1">
                               <Label className="text-[11px] text-muted-foreground flex items-center gap-1"><Clock className="h-3 w-3" /> Event Time</Label>
-                              <DebouncedInput value={ev.event_time || ""} onSave={v => updateEvent(ev.id, { event_time: v || null })} placeholder="e.g. 6:00 PM - 11:00 PM" className="h-8 text-xs" disabled={cannotEdit} />
+                              <DebouncedInput value={ev.event_time || ""} onSave={v => updateEvent(ev.id, { event_time: v || null })} placeholder="e.g. 6:00 PM - 11:00 PM" className="h-8 text-xs" disabled={sourceReadOnly} />
                             </div>
                           </div>
 
@@ -568,11 +568,11 @@ export default function RosterDayEvents({ weekDates, fmtDate }: Props) {
                           <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                             <div className="space-y-1">
                               <Label className="text-[11px] text-muted-foreground">Event Space</Label>
-                              <DebouncedInput value={ev.event_space || ""} onSave={v => updateEvent(ev.id, { event_space: v || null })} placeholder="Enter event space..." className="h-8 text-xs" disabled={cannotEdit} />
+                              <DebouncedInput value={ev.event_space || ""} onSave={v => updateEvent(ev.id, { event_space: v || null })} placeholder="Enter event space..." className="h-8 text-xs" disabled={sourceReadOnly} />
                             </div>
                             <div className="space-y-1">
                               <Label className="text-[11px] text-muted-foreground">Event Type</Label>
-                              <DebouncedInput value={ev.event_type || ""} onSave={v => updateEvent(ev.id, { event_type: v || null })} placeholder="Enter event type..." className="h-8 text-xs" disabled={cannotEdit} />
+                              <DebouncedInput value={ev.event_type || ""} onSave={v => updateEvent(ev.id, { event_type: v || null })} placeholder="Enter event type..." className="h-8 text-xs" disabled={sourceReadOnly} />
                             </div>
                             <div className="space-y-1">
                               <Label className="text-[11px] text-muted-foreground">Tablecloth</Label>
@@ -595,7 +595,7 @@ export default function RosterDayEvents({ weekDates, fmtDate }: Props) {
                                 const totalG = adults + (ev.kids_guests || 0);
                                 const chairs = ev.chairs_per_table || 8;
                                 updateEvent(ev.id, { adult_guests: adults, num_tables: totalG > 0 ? Math.ceil(totalG / chairs) : 0 });
-                              }} className="h-8 text-xs" disabled={cannotEdit} />
+                              }} className="h-8 text-xs" disabled={sourceReadOnly} />
                             </div>
                             <div className="space-y-1">
                               <Label className="text-[11px] text-muted-foreground flex items-center gap-1"><Baby className="h-3 w-3" /> Kids</Label>
@@ -604,7 +604,7 @@ export default function RosterDayEvents({ weekDates, fmtDate }: Props) {
                                 const totalG = (ev.adult_guests || 0) + kids;
                                 const chairs = ev.chairs_per_table || 8;
                                 updateEvent(ev.id, { kids_guests: kids, num_tables: totalG > 0 ? Math.ceil(totalG / chairs) : 0 });
-                              }} className="h-8 text-xs" disabled={cannotEdit} />
+                              }} className="h-8 text-xs" disabled={sourceReadOnly} />
                             </div>
                             <div className="space-y-1">
                               <Label className="text-[11px] text-muted-foreground">Chairs/Table</Label>
@@ -624,15 +624,15 @@ export default function RosterDayEvents({ weekDates, fmtDate }: Props) {
                           <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                             <div className="space-y-1">
                               <Label className="text-[11px] text-muted-foreground">Bev Package</Label>
-                              <DebouncedInput value={ev.bev_package || ""} onSave={v => updateEvent(ev.id, { bev_package: v || null })} placeholder="e.g. Gold, Silver, BYO..." className="h-8 text-xs" disabled={cannotEdit} />
+                              <DebouncedInput value={ev.bev_package || ""} onSave={v => updateEvent(ev.id, { bev_package: v || null })} placeholder="e.g. Gold, Silver, BYO..." className="h-8 text-xs" disabled={sourceReadOnly} />
                             </div>
                             <div className="space-y-1">
                               <Label className="text-[11px] text-muted-foreground">🍽️ Banquet Tier</Label>
-                              <DebouncedInput value={ev.banquet_tier || ""} onSave={v => updateEvent(ev.id, { banquet_tier: v || null })} placeholder="e.g. Premium, Gold..." className="h-8 text-xs" disabled={cannotEdit} />
+                              <DebouncedInput value={ev.banquet_tier || ""} onSave={v => updateEvent(ev.id, { banquet_tier: v || null })} placeholder="e.g. Premium, Gold..." className="h-8 text-xs" disabled={sourceReadOnly} />
                             </div>
                             <div className="space-y-1 col-span-2 sm:col-span-1">
                               <Label className="text-[11px] text-muted-foreground">Notes</Label>
-                              <DebouncedInput value={ev.notes || ""} onSave={v => updateEvent(ev.id, { notes: v || null })} placeholder="Additional info..." className="h-8 text-xs" disabled={cannotEdit} />
+                              <DebouncedInput value={ev.notes || ""} onSave={v => updateEvent(ev.id, { notes: v || null })} placeholder="Additional info..." className="h-8 text-xs" disabled={sourceReadOnly} />
                             </div>
                           </div>
 
