@@ -4301,6 +4301,7 @@ export type Database = {
           event_space: string | null
           event_time: string | null
           event_type: string | null
+          foh_notes: string | null
           host_contact_number: string | null
           host_name: string | null
           id: string
@@ -4309,8 +4310,10 @@ export type Database = {
           live_stall_details: string | null
           notes: string | null
           num_tables: number | null
+          ops_notes: string | null
           red_carpet: boolean | null
           runsheet_url: string | null
+          seating_auto: boolean
           smoke_machine: boolean | null
           tablecloth_color: string | null
           updated_at: string | null
@@ -4330,6 +4333,7 @@ export type Database = {
           event_space?: string | null
           event_time?: string | null
           event_type?: string | null
+          foh_notes?: string | null
           host_contact_number?: string | null
           host_name?: string | null
           id?: string
@@ -4338,8 +4342,10 @@ export type Database = {
           live_stall_details?: string | null
           notes?: string | null
           num_tables?: number | null
+          ops_notes?: string | null
           red_carpet?: boolean | null
           runsheet_url?: string | null
+          seating_auto?: boolean
           smoke_machine?: boolean | null
           tablecloth_color?: string | null
           updated_at?: string | null
@@ -4359,6 +4365,7 @@ export type Database = {
           event_space?: string | null
           event_time?: string | null
           event_type?: string | null
+          foh_notes?: string | null
           host_contact_number?: string | null
           host_name?: string | null
           id?: string
@@ -4367,8 +4374,10 @@ export type Database = {
           live_stall_details?: string | null
           notes?: string | null
           num_tables?: number | null
+          ops_notes?: string | null
           red_carpet?: boolean | null
           runsheet_url?: string | null
+          seating_auto?: boolean
           smoke_machine?: boolean | null
           tablecloth_color?: string | null
           updated_at?: string | null
