@@ -7,6 +7,7 @@ import { RunsheetDocument } from "@/features/events/RunsheetViewPage";
 import { useLiveSync } from "@/hooks/useLiveSync";
 import { downloadRunsheetPdf } from "@/lib/runsheetDownload";
 import { toast } from "sonner";
+import { loadBeverageDetail } from "@/lib/beverageDetail";
 
 export default function RosterRunsheetDialog({ eventId, businessId, onClose }: {
   eventId: string | null; businessId?: string; onClose: () => void;
@@ -15,14 +16,22 @@ export default function RosterRunsheetDialog({ eventId, businessId, onClose }: {
   const [error, setError] = useState("");
   const [downloading, setDownloading] = useState(false);
   const docRef = useRef<HTMLDivElement>(null);
+  const requestRef = useRef(0);
   const reload = useCallback(async () => {
     if (!eventId) return;
+    const request = ++requestRef.current;
     const result = await supabase.rpc("get_roster_runsheet", { _event_id: eventId });
+    if (request !== requestRef.current) return;
     if (result.error) { setError(result.error.message); return; }
+    const next = result.data as any;
+    if (next?.selection && businessId) {
+      next.selection.beverage_detail = await loadBeverageDetail(supabase, businessId, next.selection.beverage_package);
+    }
+    if (request !== requestRef.current) return;
     setError("");
-    setData(result.data);
-  }, [eventId]);
-  useEffect(() => { setData(null); setError(""); void reload(); }, [reload]);
+    setData(next);
+  }, [eventId, businessId]);
+  useEffect(() => { setData(null); setError(""); void reload(); return () => { requestRef.current++; }; }, [reload]);
   useLiveSync(["roster_day_events", "crm_runsheets", "crm_bookings", "crm_leads", "crm_menu_selections", "crm_menu_selection_items", "crm_packages", "crm_package_courses", "crm_package_course_items", "crm_drinks", "crm_dishes"], eventId ? businessId : undefined, reload, ["crm_package_courses", "crm_package_course_items"]);
 
   return <Dialog open={Boolean(eventId)} onOpenChange={open => { if (!open) onClose(); }}>

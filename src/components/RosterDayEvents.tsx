@@ -16,7 +16,7 @@ import { useToast } from "@/hooks/use-toast";
 import { ChevronDown, ChevronUp, Plus, Trash2, Sparkles, Wind, Ribbon, Palette, Upload, FileText, X, Loader2, Flame, Users, Baby, UtensilsCrossed, User, Phone, Clock, Edit2, Eye } from "lucide-react";
 import { logAudit } from "@/lib/auditLog";
 import { useLiveSync } from "@/hooks/useLiveSync";
-import { isLinkedRunsheet } from "@/lib/rosterRunsheet";
+import { isLinkedRunsheet, estimateRosterTables } from "@/lib/rosterRunsheet";
 import RosterRunsheetDialog from "./RosterRunsheetDialog";
 
 interface DayEvent {
@@ -44,6 +44,9 @@ interface DayEvent {
   runsheet_url: string | null;
   banquet_tier: string | null;
   crm_runsheet_id?: string | null;
+  ops_notes?: string | null;
+  foh_notes?: string | null;
+  seating_auto?: boolean;
 }
 
 interface ConfigItem {
@@ -536,6 +539,9 @@ export default function RosterDayEvents({ weekDates, fmtDate }: Props) {
                         </div>
 
                         {/* Equipment badges */}
+                        {linked && ev.tablecloth_color && <p className="text-[11px] text-muted-foreground">Tablecloth: {ev.tablecloth_color}</p>}
+                        {linked && ev.ops_notes && <p className="whitespace-pre-wrap break-words text-xs text-kitchen-note"><strong>Kitchen team notes: </strong>{ev.ops_notes}</p>}
+                        {linked && ev.foh_notes && <p className="whitespace-pre-wrap break-words text-xs text-foreground"><strong>Front of house notes: </strong>{ev.foh_notes}</p>}
                         {activeBadges.length > 0 && (
                           <div className="flex flex-wrap gap-1">
                             {activeBadges.map(b => (
@@ -576,9 +582,10 @@ export default function RosterDayEvents({ weekDates, fmtDate }: Props) {
                             </div>
                             <div className="space-y-1">
                               <Label className="text-[11px] text-muted-foreground">Tablecloth</Label>
-                              <Select value={ev.tablecloth_color || "black"} onValueChange={v => updateEvent(ev.id, { tablecloth_color: v })} disabled={cannotEdit}>
+                              <Select value={ev.tablecloth_color || "not_selected"} onValueChange={v => updateEvent(ev.id, { tablecloth_color: v === "not_selected" ? null : v })} disabled={sourceReadOnly}>
                                 <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
                                 <SelectContent>
+                                  <SelectItem value="not_selected">Not selected</SelectItem>
                                   <SelectItem value="white">⬜ White</SelectItem>
                                   <SelectItem value="black">⬛ Black</SelectItem>
                                 </SelectContent>
@@ -611,12 +618,13 @@ export default function RosterDayEvents({ weekDates, fmtDate }: Props) {
                               <DebouncedInput type="number" min={1} value={String(ev.chairs_per_table || 8)} onSave={v => {
                                 const chairs = parseInt(v) || 8;
                                 const totalG = (ev.adult_guests || 0) + (ev.kids_guests || 0);
-                                updateEvent(ev.id, { chairs_per_table: chairs, num_tables: totalG > 0 ? Math.ceil(totalG / chairs) : ev.num_tables });
+                                updateEvent(ev.id, { chairs_per_table: chairs, ...(ev.seating_auto !== false ? { num_tables: estimateRosterTables(ev.adult_guests || 0, ev.kids_guests || 0, chairs) } : {}) });
                               }} className="h-8 text-xs" disabled={cannotEdit} />
                             </div>
                             <div className="space-y-1">
                               <Label className="text-[11px] text-muted-foreground">Tables</Label>
-                              <DebouncedInput type="number" min={0} value={String(ev.num_tables || 0)} onSave={v => updateEvent(ev.id, { num_tables: parseInt(v) || 0 })} className="h-8 text-xs" disabled={cannotEdit} />
+                              <DebouncedInput type="number" min={0} value={String(ev.num_tables || 0)} onSave={v => updateEvent(ev.id, { num_tables: parseInt(v) || 0, seating_auto: false })} className="h-8 text-xs" disabled={cannotEdit} />
+                              {linked && <div className="flex items-center gap-1.5"><DebouncedSwitch checked={ev.seating_auto !== false} disabled={cannotEdit} onSave={v => updateEvent(ev.id, { seating_auto: v, ...(v ? { num_tables: estimateRosterTables(ev.adult_guests || 0, ev.kids_guests || 0, ev.chairs_per_table || 8) } : {}) })} /><Label className="text-[11px] text-muted-foreground">Auto tables</Label></div>}
                             </div>
                           </div>
 
@@ -647,7 +655,7 @@ export default function RosterDayEvents({ weekDates, fmtDate }: Props) {
                               { key: "live_stall", label: "Live Stall", icon: UtensilsCrossed },
                             ].map(({ key, label, icon: Icon }) => (
                               <div key={key} className="flex items-center gap-1.5">
-                                <DebouncedSwitch checked={ev[key as keyof DayEvent] as boolean} onSave={v => updateEvent(ev.id, { [key]: v })} disabled={cannotEdit} />
+                                <DebouncedSwitch checked={ev[key as keyof DayEvent] as boolean} onSave={v => updateEvent(ev.id, { [key]: v })} disabled={sourceReadOnly} />
                                 <Label className="text-[11px] text-muted-foreground flex items-center gap-1 cursor-pointer">
                                   <Icon className="h-3 w-3" /> {label}
                                 </Label>
