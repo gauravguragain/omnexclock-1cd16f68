@@ -49,6 +49,18 @@ function TermsPage({ terms, businessName, rs }: { terms: string; businessName?: 
 
 export function runsheetTitle(lead: any, b: any) { return `${prettyCrmValue(lead?.event_type || b?.event_type || "Event")} — ${lead?.full_name || "Client"}`; }
 
+/** Menu order on run sheets: entrées, mains, sides, desserts, other courses, kids menu last. */
+export function courseRank(name: string) {
+  const n = name.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+  if (n.includes("kid")) return 99;
+  if (/entree|starter|appetis|appetiz|canape/.test(n)) return 1;
+  if (n.includes("main")) return 2;
+  if (n.includes("side")) return 3;
+  if (/dessert|sweet/.test(n)) return 4;
+  return 5;
+}
+export function sortCourses<T>(entries: [string, T][]) { return entries.map((e, i) => ({ e, i })).sort((a, b) => courseRank(a.e[0]) - courseRank(b.e[0]) || a.i - b.i).map(x => x.e); }
+
 // Keep the document at its real A4 dimensions; only its on-screen preview is scaled.
 function A4Preview({ children, documentRef }: { children: React.ReactNode; documentRef: React.RefObject<HTMLDivElement> }) {
   const frameRef = useRef<HTMLDivElement>(null);
@@ -160,8 +172,16 @@ export function RunsheetDocument({ rs, lead, b, items, selection, businessName, 
         <div data-runsheet-menu><div>
           {stalls.length > 0 && <div className="pb-3"><h2 className="font-bold">Live Stalls{stalls[0].service_start_time ? ` — ${to12(stalls[0].service_start_time)}${stalls[0].service_end_time ? ` to ${to12(stalls[0].service_end_time)}` : ""}` : ""}</h2>{stalls.map(s => <p key={s.id} className="pl-3">• {String(s.item_name || "").replace(/_/g, " ").replace(/\b\p{L}/gu, letter => letter.toLocaleUpperCase())}</p>)}</div>}
           <div><h2 className="font-bold">Menu selection{pkgs.length ? ` – ${pkgs.map(p => p.item_name).join(" · ")}` : ""}</h2></div>
-          {Object.entries(courses as Record<string, any[]>).map(([course, dishes]) => { const sch = schedule.find((s: any) => s?.label && String(s.label).trim().toLowerCase() === course.trim().toLowerCase()); return <div key={course} className="pt-2"><h3 className="pl-3 font-semibold">{course}{sch ? ` — ${slot(sch) || "—"}` : ""}</h3>{dishes.map(d => <p key={d.id} className="pl-6">- {d.item_name}{d.notes && !String(d.notes).startsWith("pkg:") ? <span className="font-semibold"> — {d.notes}</span> : null}</p>)}</div>; })}
-          {kidsRows.length > 0 && <div className="pt-2"><p>Kids menu{kidsRows.reduce((s, k) => s + (Number(k.quantity) || 0), 0) > 0 ? `: ${kidsRows.reduce((s, k) => s + (Number(k.quantity) || 0), 0)} kids` : ""}</p></div>}
+          {(() => {
+            const kidsTotal = kidsRows.reduce((s, k) => s + (Number(k.quantity) || 0), 0);
+            const entries = sortCourses(Object.entries(courses as Record<string, any[]>));
+            if (kidsRows.length && !entries.some(([c]) => courseRank(c) === 99)) entries.push(["Kids Menu", []]);
+            return entries.map(([course, dishes]) => {
+              const sch = schedule.find((s: any) => s?.label && String(s.label).trim().toLowerCase() === course.trim().toLowerCase());
+              const isKids = courseRank(course) === 99;
+              return <div key={course} className="pt-2"><h3 className="pl-3 font-semibold">{course}{isKids && kidsTotal > 0 ? ` (${kidsTotal} kids)` : ""}{sch ? ` — ${slot(sch) || "—"}` : ""}</h3>{dishes.map(d => <p key={d.id} className="pl-6">- {d.item_name}{d.notes && !String(d.notes).startsWith("pkg:") ? <span className="font-semibold"> — {d.notes}</span> : null}</p>)}</div>;
+            });
+          })()}
           {selection?.beverage_package && <div className="pt-3"><h2 className="font-bold">Beverages – {selection.beverage_detail?.name || prettyCrmValue(selection.beverage_package)}</h2>{selection.beverage_detail?.description && <p className="pl-3 italic">{selection.beverage_detail.description}</p>}</div>}
           {(selection?.beverage_detail?.sections || []).filter((sec: any) => sec.name || sec.items.length || sec.notes).map((sec: any, i: number) => <div key={i} className="pt-1"><h3 className="pl-3 font-bold">{sec.name}{sec.picks ? ` (choose ${sec.picks})` : ""}</h3>{sec.notes && <p className="whitespace-pre-line pl-6 font-normal">{sec.notes}</p>}{sec.items.map((n: string) => <p key={n} className="pl-6 font-normal">- {n}</p>)}</div>)}
           {selection?.corkage_enabled && <div className="pt-1 font-bold"><p>Corkage: Host is bringing their own alcohol.</p>{selection?.corkage_note && <p className="whitespace-pre-wrap">{selection.corkage_note}</p>}</div>}
