@@ -624,6 +624,13 @@
       "when": 1792541529002,
       "tag": "0088_backfill_emailed_runsheets_roster",
       "breakpoints": true
+    },
+    {
+      "idx": 89,
+      "version": "7",
+      "when": 1792631850874,
+      "tag": "0089_sync_runsheet_setup_and_seating",
+      "breakpoints": true
     }
   ]
 }
