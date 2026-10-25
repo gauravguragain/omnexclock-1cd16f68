@@ -210,7 +210,7 @@ var create_task_default = defineTool5({
 });
 
 // src/lib/mcp/index.ts
-var projectRef = "fhotpjcgoyuqyhttawef";
+var projectRef = "oulvbpeofotxxnkxndzv";
 var mcp_default = defineMcp({
   name: "regalclock",
   title: "Pro Regal Management",
