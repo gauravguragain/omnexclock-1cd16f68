@@ -287,21 +287,22 @@ export function PublicRunsheetPage() {
         <Button variant="outline" onClick={() => window.print()}><Printer className="mr-2 h-4 w-4" />Print</Button>
         <Button disabled={dl} onClick={async () => { if (!docRef.current) return; setDl(true); try { await downloadRunsheetPdf(docRef.current, `Run sheet - ${runsheetTitle(data.lead, data.booking)}`); } catch { toast.error("Could not create PDF"); } setDl(false); }}><Download className="mr-2 h-4 w-4" />{dl ? "Preparing…" : "Download PDF"}</Button>
       </div>
-         {!data.internal && <ClientSignForm data={data} runsheetId={runsheetId || ""} t={t} onSigned={rs => {
-            setData({ ...data, rs: { ...data.rs, ...rs } });
-            // Once the signature renders, email the venue a PDF copy of the signed run sheet.
-            setTimeout(async () => {
-              let pdf = "";
-              try { if (docRef.current) pdf = String(await downloadRunsheetPdf(docRef.current, "Signed run sheet", false, true) || ""); } catch { /* fall back to a link-only email */ }
-              fetch(`https://${import.meta.env.VITE_SUPABASE_PROJECT_ID}.supabase.co/functions/v1/crm-runsheet-public`, { method: "POST", headers: { apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY, "Content-Type": "application/json" }, body: JSON.stringify({ action: "notify", id: runsheetId, t, pdf }), keepalive: !pdf || pdf.length < 60000 }).catch(() => undefined);
-            }, 600);
-          }} />}
+         {!data.internal && <ClientSignForm data={data} runsheetId={runsheetId || ""} t={t} onSigned={rs => setData((d: any) => ({ ...d, rs: { ...d.rs, ...rs } }))}
+            makePdf={async patch => {
+              // Render the signature into the document first, then capture it as the PDF sent with the signature.
+              const before = data.rs;
+              setData((d: any) => ({ ...d, rs: { ...d.rs, ...patch } }));
+              await new Promise(r => setTimeout(r, 700));
+              try { return docRef.current ? String(await downloadRunsheetPdf(docRef.current, "Signed run sheet", false, true) || "") : ""; }
+              catch { return ""; }
+              finally { setData((d: any) => ({ ...d, rs: before })); }
+            }} />}
          <A4Preview documentRef={docRef}><RunsheetDocument internal={data.internal === true} rs={data.rs} lead={data.lead} b={data.booking} items={data.items || []} selection={data.selection} businessName={data.businessName} businessPhone={data.businessPhone || ""} businessEmail={data.businessEmail || ""} terms={data.terms} /></A4Preview>
     </div>
   </div>;
 }
 
-function ClientSignForm({ data, runsheetId, t, onSigned }: { data: any; runsheetId: string; t: string; onSigned: (rs: any) => void }) {
+function ClientSignForm({ data, runsheetId, t, onSigned, makePdf }: { data: any; runsheetId: string; t: string; onSigned: (rs: any) => void; makePdf: (patch: any) => Promise<string> }) {
   const rs = data.rs || {};
   const [name, setName] = useState(rs.client_sign_name || data.lead?.full_name || "");
   const [date, setDate] = useState(rs.client_sign_date || format(new Date(), "yyyy-MM-dd"));
@@ -312,7 +313,7 @@ function ClientSignForm({ data, runsheetId, t, onSigned }: { data: any; runsheet
     if (!sig) { toast.error("Please sign first"); return; }
     setSending(true);
     try {
-      const r = await fetch(`https://${import.meta.env.VITE_SUPABASE_PROJECT_ID}.supabase.co/functions/v1/crm-runsheet-public`, { method: "POST", headers: { apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY, "Content-Type": "application/json" }, body: JSON.stringify({ id: runsheetId, t, name: name.trim(), date, signature: sig }) });
+      const r = await fetch(`https://${import.meta.env.VITE_SUPABASE_PROJECT_ID}.supabase.co/functions/v1/crm-runsheet-public`, { method: "POST", headers: { apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY, "Content-Type": "application/json" }, body: JSON.stringify({ id: runsheetId, t, name: name.trim(), date, signature: sig, pdf: await makePdf({ client_sign_name: name.trim(), client_sign_date: date, client_signature: sig, client_signed_at: new Date().toISOString() }) }) });
       const j = await r.json();
       if (!r.ok) throw new Error(j.error || "Could not send");
       onSigned(j.rs); toast.success("Signed run sheet sent — thank you!");
