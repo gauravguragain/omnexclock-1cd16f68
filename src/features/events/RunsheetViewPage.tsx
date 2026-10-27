@@ -287,7 +287,15 @@ export function PublicRunsheetPage() {
         <Button variant="outline" onClick={() => window.print()}><Printer className="mr-2 h-4 w-4" />Print</Button>
         <Button disabled={dl} onClick={async () => { if (!docRef.current) return; setDl(true); try { await downloadRunsheetPdf(docRef.current, `Run sheet - ${runsheetTitle(data.lead, data.booking)}`); } catch { toast.error("Could not create PDF"); } setDl(false); }}><Download className="mr-2 h-4 w-4" />{dl ? "Preparing…" : "Download PDF"}</Button>
       </div>
-         {!data.internal && <ClientSignForm data={data} runsheetId={runsheetId || ""} t={t} onSigned={rs => setData({ ...data, rs: { ...data.rs, ...rs } })} />}
+         {!data.internal && <ClientSignForm data={data} runsheetId={runsheetId || ""} t={t} onSigned={rs => {
+            setData({ ...data, rs: { ...data.rs, ...rs } });
+            // Once the signature renders, email the venue a PDF copy of the signed run sheet.
+            setTimeout(async () => {
+              let pdf = "";
+              try { if (docRef.current) pdf = String(await downloadRunsheetPdf(docRef.current, "Signed run sheet", false, true) || ""); } catch { /* fall back to a link-only email */ }
+              fetch(`https://${import.meta.env.VITE_SUPABASE_PROJECT_ID}.supabase.co/functions/v1/crm-runsheet-public`, { method: "POST", headers: { apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY, "Content-Type": "application/json" }, body: JSON.stringify({ action: "notify", id: runsheetId, t, pdf }), keepalive: !pdf || pdf.length < 60000 }).catch(() => undefined);
+            }, 600);
+          }} />}
          <A4Preview documentRef={docRef}><RunsheetDocument internal={data.internal === true} rs={data.rs} lead={data.lead} b={data.booking} items={data.items || []} selection={data.selection} businessName={data.businessName} businessPhone={data.businessPhone || ""} businessEmail={data.businessEmail || ""} terms={data.terms} /></A4Preview>
     </div>
   </div>;

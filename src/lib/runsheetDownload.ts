@@ -1,7 +1,7 @@
 import html2canvas from "html2canvas";
 import jsPDF from "jspdf";
 
-export async function downloadRunsheetPdf(el: HTMLElement, fileName: string, print = false) {
+export async function downloadRunsheetPdf(el: HTMLElement, fileName: string, print = false, asBase64 = false): Promise<string | void> {
   const printWindow = print ? window.open("", "_blank") : null;
   if (print && !printWindow) throw new Error("Allow popups to print the run sheet");
   // Capture an unscaled A4 copy, even when the preview is scaled down on a phone.
@@ -54,6 +54,7 @@ export async function downloadRunsheetPdf(el: HTMLElement, fileName: string, pri
        pdf.addImage(slice.toDataURL("image/jpeg", 0.94), "JPEG", 0, offset, pw, Math.min(ph - offset, (h * pw) / canvas.width));
       y += h;
     }
+    if (asBase64) return pdf.output("datauristring").split(",")[1];
     if (printWindow) {
       pdf.autoPrint();
       const url = URL.createObjectURL(pdf.output("blob"));
