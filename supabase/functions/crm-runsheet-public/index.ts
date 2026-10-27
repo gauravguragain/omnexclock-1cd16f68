@@ -46,11 +46,6 @@ async function handleSign(req: Request) {
   const patch = { client_sign_name: name, client_sign_date: date, client_signature: signature, client_signed_at: new Date().toISOString() };
   const { error } = await db.from("crm_runsheets").update(patch).eq("id", id);
   if (error) { console.error(error); return json({ error: "Could not save signature" }, 500); }
-  const [settings, biz, lead] = await Promise.all([
-    db.from("crm_settings").select("signed_runsheet_email").eq("business_id", rs.business_id).maybeSingle(),
-    db.from("businesses").select("name, email, logo_url, phone, address").eq("id", rs.business_id).maybeSingle(),
-    rs.lead_id ? db.from("crm_leads").select("full_name, event_type").eq("id", rs.lead_id).maybeSingle() : { data: null },
-  ]);
   if (rs.lead_id) await db.from("crm_interactions").insert({ business_id: rs.business_id, lead_id: rs.lead_id, interaction_type: "note", occurred_at: patch.client_signed_at, notes: `Client signed the run sheet online (${name}, ${date}).` });
   // The venue email (with the signed PDF attached) is part of the same request, so it is never skipped.
   try { await sendSignedEmail(db, id, b?.pdf); } catch (e) { console.error("Signed email failed", e); }
