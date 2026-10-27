@@ -34,7 +34,6 @@ const json = (b: unknown, status = 200) => new Response(JSON.stringify(b), { sta
 const esc = (v: string) => v.replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]!));
 async function handleSign(req: Request) {
   const b = await req.json().catch(() => null);
-  if (b?.action === "notify") return handleNotify(b);
   const id = String(b?.id || ""), t = String(b?.t || ""), name = String(b?.name || "").trim(), date = String(b?.date || ""), signature = String(b?.signature || "");
   if (!UUID.test(id) || !UUID.test(t)) return json({ error: "Invalid link" }, 400);
   if (!name || name.length > 100) return json({ error: "Please enter your name" }, 400);
@@ -47,25 +46,17 @@ async function handleSign(req: Request) {
   const patch = { client_sign_name: name, client_sign_date: date, client_signature: signature, client_signed_at: new Date().toISOString() };
   const { error } = await db.from("crm_runsheets").update(patch).eq("id", id);
   if (error) { console.error(error); return json({ error: "Could not save signature" }, 500); }
-  const [settings, biz, lead] = await Promise.all([
-    db.from("crm_settings").select("signed_runsheet_email").eq("business_id", rs.business_id).maybeSingle(),
-    db.from("businesses").select("name, email, logo_url, phone, address").eq("id", rs.business_id).maybeSingle(),
-    rs.lead_id ? db.from("crm_leads").select("full_name, event_type").eq("id", rs.lead_id).maybeSingle() : { data: null },
-  ]);
   if (rs.lead_id) await db.from("crm_interactions").insert({ business_id: rs.business_id, lead_id: rs.lead_id, interaction_type: "note", occurred_at: patch.client_signed_at, notes: `Client signed the run sheet online (${name}, ${date}).` });
+  // The venue email (with the signed PDF attached) is part of the same request, so it is never skipped.
+  try { await sendSignedEmail(db, id, b?.pdf); } catch (e) { console.error("Signed email failed", e); }
   return json({ ok: true, rs: patch });
 }
 
 // Emails the venue the signed run sheet as a PDF attachment (generated in the client's browser right after signing).
-async function handleNotify(b: any) {
-  const id = String(b?.id || ""), t = String(b?.t || "");
-  const pdf = typeof b?.pdf === "string" && /^[A-Za-z0-9+/=]+$/.test(b.pdf) && b.pdf.length < 12_000_000 ? b.pdf : "";
-  if (!UUID.test(id) || !UUID.test(t)) return json({ error: "Invalid link" }, 400);
-  const db = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
-  const { data: rs } = await db.from("crm_runsheets").select("id, business_id, lead_id, internal_share_token, event_order_number, client_signed_at, client_sign_name, client_sign_date").eq("id", id).eq("share_token", t).maybeSingle();
-  if (!rs?.client_signed_at) return json({ error: "Run sheet not signed" }, 409);
-  // Only right after signing, so the link cannot be used to resend emails later.
-  if (Date.now() - new Date(rs.client_signed_at).getTime() > 15 * 60_000) return json({ error: "Too late" }, 409);
+async function sendSignedEmail(db: any, id: string, rawPdf: unknown) {
+  const pdf = typeof rawPdf === "string" && /^[A-Za-z0-9+/=]+$/.test(rawPdf) && rawPdf.length < 12_000_000 ? rawPdf : "";
+  const { data: rs } = await db.from("crm_runsheets").select("id, business_id, lead_id, internal_share_token, event_order_number, client_signed_at, client_sign_name, client_sign_date").eq("id", id).maybeSingle();
+  if (!rs) return;
   const [settings, biz, lead] = await Promise.all([
     db.from("crm_settings").select("signed_runsheet_email").eq("business_id", rs.business_id).maybeSingle(),
     db.from("businesses").select("name, email, logo_url, phone, address").eq("id", rs.business_id).maybeSingle(),
@@ -73,7 +64,7 @@ async function handleNotify(b: any) {
   ]);
   const to = settings.data?.signed_runsheet_email || biz.data?.email;
   const key = Deno.env.get("RESEND_API_KEY");
-  if (!to || !key) return json({ ok: true });
+  if (!to || !key) return;
   const name = rs.client_sign_name || "", date = rs.client_sign_date || "";
   const client = lead.data?.full_name || name;
   const bd: any = biz.data || {};
@@ -87,8 +78,7 @@ async function handleNotify(b: any) {
       (pdf ? p("The signed run sheet is attached as a PDF.") : button("View signed run sheet", link)),
   });
   const r = await fetch("https://api.resend.com/emails", { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${key}` }, body: JSON.stringify({ from: `${bd.name || "Pro Regal Management"} <noreply@regalmanagement.com.au>`, to: [to], subject: `Signed run sheet — ${client}`, html, ...(pdf ? { attachments: [{ filename: fileName, content: pdf }] } : {}) }) });
-  if (!r.ok) { console.error("Resend error", r.status, await r.text()); return json({ error: "Email failed" }, 502); }
-  return json({ ok: true });
+  if (!r.ok) console.error("Resend error", r.status, await r.text());
 }
 
 Deno.serve(async (req) => {
