@@ -26,6 +26,7 @@ const PageLoader = () => (
 
 // Lazy-load all page components for faster initial load
 const PublicRunsheetPage = React.lazy(() => import("./features/events/RunsheetViewPage").then(m => ({ default: m.PublicRunsheetPage })));
+const RunsheetCollectionPage = React.lazy(() => import("./pages/RunsheetCollectionPage"));
 const NotFound = React.lazy(() => import("./pages/NotFound"));
 const Index = React.lazy(() => import("./pages/Index"));
 const AuthPage = React.lazy(() => import("./pages/AuthPage"));
@@ -144,6 +145,7 @@ const App = () => (
                   <Route path="/auth" element={<AuthPage />} />
                   <Route path="/.lovable/oauth/consent" element={<OAuthConsentPage />} />
                   <Route path="/runsheet/:runsheetId" element={<PublicRunsheetPage />} />
+                  <Route path="/runsheets" element={<RunsheetCollectionPage />} />
                   <Route path="/menu/:token" element={<GuestMenuPage />} />
                   <Route path="/m/:token" element={<MenuSharePage />} />
                   <Route path="/reset-password" element={<ResetPasswordPage />} />
