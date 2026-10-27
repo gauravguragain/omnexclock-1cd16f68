@@ -55,7 +55,7 @@ async function handleSign(req: Request) {
 // Emails the venue the signed run sheet as a PDF attachment (generated in the client's browser right after signing).
 async function sendSignedEmail(db: any, id: string, rawPdf: unknown) {
   const pdf = typeof rawPdf === "string" && /^[A-Za-z0-9+/=]+$/.test(rawPdf) && rawPdf.length < 12_000_000 ? rawPdf : "";
-  const { data: rs } = await db.from("crm_runsheets").select("id, business_id, lead_id, internal_share_token, event_order_number, client_signed_at, client_sign_name, client_sign_date").eq("id", id).maybeSingle();
+  const { data: rs } = await db.from("crm_runsheets").select("id, business_id, lead_id, share_token, event_order_number, client_signed_at, client_sign_name, client_sign_date").eq("id", id).maybeSingle();
   if (!rs) return;
   const [settings, biz, lead] = await Promise.all([
     db.from("crm_settings").select("signed_runsheet_email").eq("business_id", rs.business_id).maybeSingle(),
@@ -68,7 +68,7 @@ async function sendSignedEmail(db: any, id: string, rawPdf: unknown) {
   const name = rs.client_sign_name || "", date = rs.client_sign_date || "";
   const client = lead.data?.full_name || name;
   const bd: any = biz.data || {};
-  const link = `https://regalmanagement.com.au/runsheet/${rs.id}?t=${rs.internal_share_token}`;
+  const link = `https://regalmanagement.com.au/runsheet/${rs.id}?t=${rs.share_token}`;
   const fileName = `Signed run sheet - ${client}${rs.event_order_number ? ` - ${rs.event_order_number}` : ""}`.replace(/[^\w\- ]+/g, "").trim() + ".pdf";
   const html = renderBrandedEmail({
     brand: { name: bd.name || "Pro Regal Management", logoUrl: bd.logo_url, phone: bd.phone, email: bd.email, address: bd.address },
