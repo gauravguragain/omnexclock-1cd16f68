@@ -9,8 +9,23 @@ type Entry = { id: string; t: string; ok: boolean; label: string; date: string; 
 export default function RunsheetCollectionPage() {
   const [items, setItems] = useState<Entry[] | null>(null);
   useEffect(() => {
-    const pairs = (new URLSearchParams(window.location.search).get("r") || "").split(",").map(s => s.split(".")).filter(p => p.length === 2 && p[0] && p[1]).slice(0, 100);
-    const base = `https://${import.meta.env.VITE_SUPABASE_PROJECT_ID}.supabase.co/functions/v1/crm-runsheet-public`;
+    const qs = new URLSearchParams(window.location.search);
+    const fnBase = `https://${import.meta.env.VITE_SUPABASE_PROJECT_ID}.supabase.co/functions/v1`;
+    if (qs.get("b") && qs.get("t")) {
+      const today = new Date().toLocaleDateString("en-CA", { timeZone: "Australia/Sydney" });
+      const load = () => fetch(`${fnBase}/crm-runsheet-board?b=${encodeURIComponent(qs.get("b")!)}&t=${encodeURIComponent(qs.get("t")!)}`, { headers: { apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY } })
+        .then(r => r.json()).then(d => {
+          const list: Entry[] = (d.items || []).map((i: any) => ({ ...i, ok: true }));
+          const up = list.filter(i => !i.date || i.date >= today).sort((a, b) => (a.date || "9999").localeCompare(b.date || "9999"));
+          const past = list.filter(i => i.date && i.date < today).sort((a, b) => b.date.localeCompare(a.date));
+          setItems([...up, ...past]);
+        }).catch(() => setItems([]));
+      load();
+      const iv = setInterval(() => { if (document.visibilityState === "visible") load(); }, 30000);
+      return () => clearInterval(iv);
+    }
+    const pairs = (qs.get("r") || "").split(",").map(s => s.split(".")).filter(p => p.length === 2 && p[0] && p[1]).slice(0, 100);
+    const base = `${fnBase}/crm-runsheet-public`;
     Promise.all(pairs.map(async ([id, t]) => {
       try {
         const r = await fetch(`${base}?id=${encodeURIComponent(id)}&t=${encodeURIComponent(t)}`, { headers: { apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY } });
