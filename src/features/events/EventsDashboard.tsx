@@ -19,8 +19,8 @@ export default function EventsDashboard({ businessId, ownerView = false, canOpen
   if (!businessId && !crm.business) return null;
   const base = `/b/${businessCode}/events`;
   const today = format(new Date(), "yyyy-MM-dd"); const in7 = format(addDays(new Date(), 7), "yyyy-MM-dd");
-  // Dashboards only show the current calendar year — anything dated next year or later is hidden.
-  const yearEnd = `${new Date().getFullYear()}-12-31`;
+  // Dashboards show this year and next — anything dated after 31 Dec next year is hidden.
+  const yearEnd = `${new Date().getFullYear() + 1}-12-31`;
   // Same rule as the Events tab: not cancelled, and the lead is at a confirmed stage (or the booking has no lead).
   const active = crm.bookings.filter(b => {
     if (b.status === "cancelled" || b.booking_kind === "catering") return false;
