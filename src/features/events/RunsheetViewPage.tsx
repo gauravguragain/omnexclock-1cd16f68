@@ -221,7 +221,7 @@ export default function RunsheetViewPage() {
   const [items, setItems] = useState<any[]>([]);
   const [selection, setSelection] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const [sendOpen, setSendOpen] = useState(false);
+  const [sendOpen, setSendOpen] = useState(false); const [teamCopy, setTeamCopy] = useState(false);
   const docRef = useRef<HTMLDivElement>(null);
   const [dl, setDl] = useState(false);
 
@@ -253,6 +253,8 @@ export default function RunsheetViewPage() {
     ? b ? `/b/${businessCode}/catering/bookings/${b.id}` : `/b/${businessCode}/catering/leads`
     : b ? `/b/${businessCode}/events/events/${b.id}` : back;
   const issueCatering = async () => { const data = await issueCateringRunsheet(rs, lead?.id); if (!data) return null; setRs(data); crm.refresh(); return data; };
+   const signed = !!rs.client_signature;
+   const showInternal = !signed || teamCopy;
    const copyLink = async (internal: boolean) => { await navigator.clipboard.writeText(runsheetPublicUrl(rs, internal)); toast.success(internal ? "Internal link copied" : "Client link copied"); };
 
   return <div className="mx-auto w-full max-w-[210mm] space-y-6">
@@ -261,11 +263,13 @@ export default function RunsheetViewPage() {
       <Button variant="outline" asChild><Link to={backTo}><ArrowLeft className="mr-2 h-4 w-4" />{isCatering ? "Back to booking" : "Back to event"}</Link></Button>
        <Button variant="outline" onClick={() => copyLink(false)}><LinkIcon className="mr-2 h-4 w-4" />Copy client link</Button>
        <Button variant="outline" onClick={() => copyLink(true)}><LinkIcon className="mr-2 h-4 w-4" />Copy internal link</Button>
+      {signed && <Button variant="outline" onClick={() => setTeamCopy(v => !v)}>{teamCopy ? "Show signed client copy" : "Show team copy"}</Button>}
       <Button variant="outline" onClick={() => window.print()}><Printer className="mr-2 h-4 w-4" />Print</Button>
-      <Button variant="outline" disabled={dl} onClick={async () => { if (!docRef.current) return; setDl(true); try { await downloadRunsheetPdf(docRef.current, `Run sheet - ${title}`); } catch { toast.error("Could not create PDF"); } setDl(false); }}><Download className="mr-2 h-4 w-4" />{dl ? "Preparing…" : "Download PDF"}</Button>
+      <Button variant="outline" disabled={dl} onClick={async () => { if (!docRef.current) return; setDl(true); try { await downloadRunsheetPdf(docRef.current, `${showInternal ? "Run sheet" : "Signed run sheet"} - ${title}`); } catch { toast.error("Could not create PDF"); } setDl(false); }}><Download className="mr-2 h-4 w-4" />{dl ? "Preparing…" : "Download PDF"}</Button>
       {lead && (rs.sent_at || isCatering) && <Button onClick={() => setSendOpen(true)}><Mail className="mr-2 h-4 w-4" />{rs.sent_at ? "Resend Email" : "Send run sheet"}</Button>}
     </div>
-     <A4Preview documentRef={docRef}><RunsheetDocument internal rs={rs} lead={lead} b={b} items={items} selection={selection} businessName={crm.business?.name} businessPhone={crm.business?.phone || ""} businessEmail={crm.business?.email || ""} terms={runsheetTermsFor(crm.settings, b)} /></A4Preview>
+     {signed && !teamCopy && <div className="rounded-md border border-border bg-muted/40 p-3 text-sm print:hidden">Signed client copy — signed by <strong>{rs.client_sign_name}</strong>{rs.client_signed_at ? ` on ${format(new Date(rs.client_signed_at), "dd/MM/yyyy")}` : ""}.</div>}
+     <A4Preview documentRef={docRef}><RunsheetDocument internal={showInternal} rs={rs} lead={lead} b={b} items={items} selection={selection} businessName={crm.business?.name} businessPhone={crm.business?.phone || ""} businessEmail={crm.business?.email || ""} terms={runsheetTermsFor(crm.settings, b)} /></A4Preview>
     {lead && <SendRunsheetDialog mode={isCatering && !rs.sent_at ? "issue" : "resend"} onIssue={issueCatering} open={sendOpen} onOpenChange={setSendOpen} rs={rs} lead={lead} booking={b} businessName={crm.business?.name || ""} />}
   </div>;
 }
