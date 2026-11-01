@@ -1,7 +1,7 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
 import { getCaller } from "../_shared/auth.ts";
-import { loadBeverageDetail } from "../../../src/lib/beverageDetail.ts";
+import { loadBeverageDetail } from "../_shared/beverageDetail.ts";
 
 const json = (data: unknown, status = 200) => new Response(JSON.stringify(data), { status, headers: { ...corsHeaders, "Content-Type": "application/json" } });
 
