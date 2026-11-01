@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import { loadRosterRunsheet } from "./loadRosterRunsheet";
 
 function client(result: Promise<any>) {
-  const abortSignal = vi.fn(() => result);
+  const abortSignal = vi.fn((_signal: AbortSignal) => result);
   return { rpc: vi.fn(() => ({ abortSignal })), abortSignal };
 }
 
@@ -30,7 +30,7 @@ describe("roster run sheet loading", () => {
       const assertion = expect(result).rejects.toThrow("too long");
       await vi.advanceTimersByTimeAsync(15_000);
       await assertion;
-      expect(db.abortSignal.mock.calls[0][0].aborted).toBe(true);
+      expect(db.abortSignal.mock.calls[0]?.[0].aborted).toBe(true);
     } finally { vi.useRealTimers(); }
   });
 });
