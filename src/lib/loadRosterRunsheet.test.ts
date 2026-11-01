@@ -2,8 +2,8 @@ import { describe, expect, it, vi } from "vitest";
 import { loadRosterRunsheet } from "./loadRosterRunsheet";
 
 function client(result: Promise<any>) {
-  const abortSignal = vi.fn((_signal: AbortSignal) => result);
-  return { rpc: vi.fn(() => ({ abortSignal })), abortSignal };
+  const invoke = vi.fn((_name: string, _options: { body: { eventId: string }; signal: AbortSignal }) => result);
+  return { functions: { invoke } };
 }
 
 describe("roster run sheet loading", () => {
@@ -11,7 +11,7 @@ describe("roster run sheet loading", () => {
     const data = { rs: { id: "sheet-1" }, selection: { beverage_detail: { name: "Package A" } } };
     const db = client(Promise.resolve({ data, error: null }));
     expect(await loadRosterRunsheet(db, "event-1")).toEqual(data);
-    expect(db.rpc).toHaveBeenCalledWith("get_roster_runsheet", { _event_id: "event-1" });
+    expect(db.functions.invoke).toHaveBeenCalledWith("roster-runsheet-view", { body: { eventId: "event-1" }, signal: expect.any(AbortSignal) });
   });
   it("reports access denial rather than remaining in loading", async () => {
     await expect(loadRosterRunsheet(client(Promise.resolve({ error: { message: "Access denied" } })), "event-1")).rejects.toThrow("Access denied");
@@ -30,7 +30,7 @@ describe("roster run sheet loading", () => {
       const assertion = expect(result).rejects.toThrow("too long");
       await vi.advanceTimersByTimeAsync(15_000);
       await assertion;
-      expect(db.abortSignal.mock.calls[0]?.[0].aborted).toBe(true);
+      expect(db.functions.invoke.mock.calls[0]?.[1].signal.aborted).toBe(true);
     } finally { vi.useRealTimers(); }
   });
 });
