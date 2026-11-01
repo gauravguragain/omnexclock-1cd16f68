@@ -7,7 +7,7 @@ import { RunsheetDocument } from "@/features/events/RunsheetViewPage";
 import { useLiveSync } from "@/hooks/useLiveSync";
 import { downloadRunsheetPdf } from "@/lib/runsheetDownload";
 import { toast } from "sonner";
-import { loadBeverageDetail } from "@/lib/beverageDetail";
+import { loadRosterRunsheet } from "@/lib/loadRosterRunsheet";
 
 export default function RosterRunsheetDialog({ eventId, businessId, onClose }: {
   eventId: string | null; businessId?: string; onClose: () => void;
@@ -20,24 +20,24 @@ export default function RosterRunsheetDialog({ eventId, businessId, onClose }: {
   const reload = useCallback(async () => {
     if (!eventId) return;
     const request = ++requestRef.current;
-    const result = await supabase.rpc("get_roster_runsheet", { _event_id: eventId });
-    if (request !== requestRef.current) return;
-    if (result.error) { setError(result.error.message); return; }
-    const next = result.data as any;
-    if (next?.selection && businessId) {
-      next.selection.beverage_detail = await loadBeverageDetail(supabase, businessId, next.selection.beverage_package);
-    }
-    if (request !== requestRef.current) return;
     setError("");
-    setData(next);
-  }, [eventId, businessId]);
+    try {
+      const next = await loadRosterRunsheet(supabase, eventId);
+      if (request !== requestRef.current) return;
+      setData(next);
+    } catch (cause) {
+      if (request !== requestRef.current) return;
+      setError(cause instanceof Error ? cause.message : "Could not load the run sheet. Please try again.");
+    }
+  }, [eventId]);
   useEffect(() => { setData(null); setError(""); void reload(); return () => { requestRef.current++; }; }, [reload]);
   useLiveSync(["roster_day_events", "crm_runsheets", "crm_bookings", "crm_leads", "crm_menu_selections", "crm_menu_selection_items", "crm_packages", "crm_package_courses", "crm_package_course_items", "crm_drinks", "crm_dishes"], eventId ? businessId : undefined, reload, ["crm_package_courses", "crm_package_course_items"]);
 
   return <Dialog open={Boolean(eventId)} onOpenChange={open => { if (!open) onClose(); }}>
     <DialogContent className="max-h-[95vh] max-w-[900px] overflow-auto">
       <DialogHeader><DialogTitle>Live run sheet</DialogTitle></DialogHeader>
-      {error ? <p className="text-sm text-destructive">{error}</p> : !data ? <p className="text-sm text-muted-foreground">Loading…</p> : <>
+      {error && <div className="flex items-center gap-3" role="alert"><p className="text-sm text-destructive">{error}</p><Button variant="outline" onClick={() => void reload()}>Try again</Button></div>}
+      {!data ? !error && <p className="text-sm text-muted-foreground">Loading…</p> : <>
         <div className="flex gap-2">
           <Button variant="outline" onClick={async () => {
             if (!docRef.current) return;
