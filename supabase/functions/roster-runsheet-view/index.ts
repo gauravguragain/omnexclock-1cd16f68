@@ -2,6 +2,7 @@ import { createClient } from "npm:@supabase/supabase-js@2";
 import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
 import { getCaller } from "../_shared/auth.ts";
 import { loadBeverageDetail } from "../_shared/beverageDetail.ts";
+import { canViewRosterRunsheet } from "../_shared/rosterRunsheetAccess.ts";
 
 const json = (data: unknown, status = 200) => new Response(JSON.stringify(data), { status, headers: { ...corsHeaders, "Content-Type": "application/json" } });
 
@@ -19,8 +20,7 @@ Deno.serve(async req => {
     if (typeof body.eventId !== "string" || !/^[0-9a-f-]{36}$/i.test(body.eventId)) return json({ error: "Invalid event" }, 400);
     const { data: event, error: eventError } = await db.from("roster_day_events").select("business_id,crm_runsheet_id").eq("id", body.eventId).maybeSingle();
     if (eventError) throw eventError;
-    const master = caller.roles.some(r => r.role === "master" && r.business_id === null);
-    const allowed = event && (master || caller.roles.some(r => r.business_id === event.business_id && ["admin", "super_admin", "viewer", "roster_admin", "sales_marketing_manager", "food_safety_manager", "owner"].includes(r.role)));
+    const allowed = event && canViewRosterRunsheet(caller.roles, event.business_id);
     if (!allowed || !event?.crm_runsheet_id) return json({ error: "Run sheet unavailable or access denied" }, 403);
     const scope = event.business_id;
     const { data: source, error: sourceError } = await db.from("crm_runsheets").select("id,lead_id,booking_id,emailed_at,emailed_to,event_order_number,booking_reference,revision,sales_person,sales_person_phone,event_coordinator,event_coordinator_phone,onsite_contact_name,onsite_contact_phone,adult_guests,kids_guests,setup_items,setup_notes,service_schedule,service_schedule_foh,special_requests,client_notes,ops_notes,foh_notes,staff_sign_name,staff_sign_date,staff_signature").eq("id", event.crm_runsheet_id).eq("business_id", scope).maybeSingle();
