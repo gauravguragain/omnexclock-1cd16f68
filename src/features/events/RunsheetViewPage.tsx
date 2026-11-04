@@ -1,6 +1,8 @@
 import { issueCateringRunsheet } from "./issueCateringRunsheet";
 import { loadBeverageDetail } from "@/lib/beverageDetail";
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useLiveSync } from "@/hooks/useLiveSync";
+import { runsheetGuests } from "@/lib/runsheetGuests";
 import { downloadRunsheetPdf, fitRunsheetColumns } from "@/lib/runsheetDownload";
 import { Link, Navigate, useLocation, useParams } from "react-router-dom";
 import { format } from "date-fns";
@@ -116,12 +118,13 @@ export function RunsheetDocument({ rs, lead, b, items, selection, businessName, 
   const end = start && b?.duration_minutes ? (() => { const [h, m] = start.split(":").map(Number); const total = (h * 60 + m + b.duration_minutes) % 1440; return `${String(Math.floor(total / 60)).padStart(2, "0")}:${String(total % 60).padStart(2, "0")}`; })() : "";
   const time = start ? `${to12(start)}${end ? ` – ${to12(end)}` : ""}` : "—";
   const catering = b?.booking_kind === "catering";
+  const guests = runsheetGuests(rs, b);
   const pickup = catering && b?.fulfilment_method === "pickup";
   const eventType = catering ? "Catering" : prettyCrmValue(lead?.event_type || b?.event_type || "Event");
   const eventTitle = catering ? `${b?.event_name || lead?.full_name || "Catering"}` : runsheetTitle(lead, b);
-  const childCounts = b?.kids_5_to_10 != null || b?.kids_under_5 != null
+  const childCounts = !catering && (b?.kids_5_to_10 != null || b?.kids_under_5 != null)
     ? [["Kids (5–10)", b?.kids_5_to_10], ["Kids (under 5)", b?.kids_under_5]]
-    : [["Kids", rs.kids_guests ?? b?.kids]];
+    : [["Kids", guests.kids]];
   const contacts = [
     ["Sales Person:", rs.sales_person, rs.sales_person_phone],
     [catering ? "Coordinator:" : "Event Coordinator:", rs.event_coordinator, rs.event_coordinator_phone],
@@ -133,7 +136,7 @@ export function RunsheetDocument({ rs, lead, b, items, selection, businessName, 
     return <div className={`grid grid-cols-[20%_30%_20%_30%] divide-x divide-border border border-border text-xs${bold ? " font-bold" : ""}`}>
       <div className={`p-2 ${heavy}`}>{catering && <span className="block text-[10px]">{pickup ? "Pickup window" : "Delivery window"}</span>}{time}</div>
       <div className={`p-2 ${heavy}`}>{catering ? eventTitle : eventType}</div>
-      <div className="p-2">Adults: {rs.adult_guests ?? b?.adults ?? "—"}{childCounts.filter(([, count]) => Number(count) > 0).map(([label, count]) => <span key={String(label)} className="block">{label}: {count}</span>)}</div>
+      <div className="p-2">Adults: {guests.adults ?? "—"}{childCounts.filter(([, count]) => Number(count) > 0).map(([label, count]) => <span key={String(label)} className="block">{label}: {count}</span>)}</div>
       {catering
         ? <div className="p-2"><span className="block text-[10px]">{pickup ? "Pickup" : "Delivery to"}</span><span className={heavy}>{pickup ? (businessName || "At venue") : (b?.service_location || lead?.service_location || "—")}</span></div>
         : <div className="p-2"><span className="block text-[10px]">Venue</span><span className={heavy}>{prettyCrmValue(b?.venue_space || lead?.venue_space || "—")}</span></div>}
@@ -225,9 +228,8 @@ export default function RunsheetViewPage() {
   const docRef = useRef<HTMLDivElement>(null);
   const [dl, setDl] = useState(false);
 
-  useEffect(() => {
+  const reload = useCallback(async () => {
     if (!runsheetId) return;
-    (async () => {
       const { data } = await supabase.from("crm_runsheets").select("*").eq("id", runsheetId).maybeSingle();
       setRs(data);
       if (data?.lead_id) {
@@ -235,10 +237,12 @@ export default function RunsheetViewPage() {
         if (sel.data) (sel.data as any).beverage_detail = await loadBeverageDetail(supabase, data.business_id, sel.data.beverage_package);
         setSelection(sel.data);
         if (sel.data) { const r = await supabase.from("crm_menu_selection_items").select("*").eq("selection_id", sel.data.id).order("created_at"); setItems(r.data || []); }
+        else setItems([]);
       }
       setLoading(false);
-    })();
   }, [runsheetId]);
+  useEffect(() => { void reload(); }, [reload]);
+  useLiveSync(["crm_runsheets", "crm_menu_selections", "crm_menu_selection_items", "crm_packages", "crm_package_courses", "crm_package_course_items", "crm_drinks", "crm_dishes"], crm.business?.id, () => void reload(), ["crm_package_courses", "crm_package_course_items"]);
 
   if (loading || crm.loading) return <div className="py-20 text-center text-muted-foreground">Loading…</div>;
   const back = `/b/${businessCode}/events/events`;
@@ -280,8 +284,20 @@ export function PublicRunsheetPage() {
   const [data, setData] = useState<any>(null); const [err, setErr] = useState("");
   const docRef = useRef<HTMLDivElement>(null); const [dl, setDl] = useState(false);
   useEffect(() => {
+    let active = true;
     const url = `https://${import.meta.env.VITE_SUPABASE_PROJECT_ID}.supabase.co/functions/v1/crm-runsheet-public?id=${encodeURIComponent(runsheetId || "")}&t=${encodeURIComponent(t)}`;
-    fetch(url, { headers: { apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY } }).then(async r => { const j = await r.json(); if (!r.ok) setErr(j.error || "Run sheet not found"); else setData(j); }).catch(() => setErr("Unable to load run sheet"));
+    const reload = () => fetch(url, { cache: "no-store", headers: { apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY } }).then(async r => {
+      const j = await r.json(); if (!active) return;
+      if (!r.ok) setErr(j.error || "Run sheet not found");
+      else { setErr(""); setData(j); }
+    }).catch(() => { if (active) setErr("Unable to load run sheet"); });
+    const refresh = () => { if (document.visibilityState === "visible") void reload(); };
+    void reload();
+    const timer = setInterval(refresh, 20_000);
+    window.addEventListener("focus", refresh);
+    window.addEventListener("online", refresh);
+    document.addEventListener("visibilitychange", refresh);
+    return () => { active = false; clearInterval(timer); window.removeEventListener("focus", refresh); window.removeEventListener("online", refresh); document.removeEventListener("visibilitychange", refresh); };
   }, [runsheetId, t]);
   if (err) return <div className="py-20 text-center text-muted-foreground">{err}</div>;
   if (!data) return <div className="py-20 text-center text-muted-foreground">Loading…</div>;

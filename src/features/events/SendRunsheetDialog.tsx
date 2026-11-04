@@ -15,6 +15,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { prettyCrmValue } from "@/features/sales/types";
 import { to12 } from "./useEventsData";
 import { getAppOrigin } from "@/lib/appOrigin";
+import { runsheetGuests } from "@/lib/runsheetGuests";
 
 export const runsheetPublicUrl = (rs: any, internal = false) => `${getAppOrigin()}/runsheet/${rs.id}?t=${internal ? rs.internal_share_token : rs.share_token}`;
 
@@ -92,13 +93,14 @@ export default function SendRunsheetDialog({ open, onOpenChange, rs, lead, booki
     sheet = signed;
     const start = booking?.start_time ? String(booking.start_time).slice(0, 5) : "";
     const endMin = start && booking?.duration_minutes ? (() => { const [h, m] = start.split(":").map(Number); const t = (h * 60 + m + booking.duration_minutes) % 1440; return `${String(Math.floor(t / 60)).padStart(2, "0")}:${String(t % 60).padStart(2, "0")}`; })() : "";
+    const guests = runsheetGuests(sheet, booking);
     const base = {
       type: "runsheet", businessName, resend: !issuing,
        eventTitle: booking?.booking_kind === "catering" ? (booking.event_name || `Catering — ${lead.full_name}`) : `${prettyCrmValue(lead.event_type || booking?.event_type || "Event")} — ${lead.full_name}`,
       dateLabel: booking?.event_date ? format(new Date(`${booking.event_date}T00:00:00`), "EEEE, d MMMM yyyy") : "",
       timeLabel: start ? `${to12(start)}${endMin ? ` – ${to12(endMin)}` : ""}` : "",
        venue: booking?.booking_kind === "catering" ? (booking.fulfilment_method === "pickup" ? "Pickup from venue" : booking.service_location || "Delivery") : prettyCrmValue(booking?.venue_space || lead.venue_space || ""),
-      guestsLabel: sheet.adult_guests != null ? `${sheet.adult_guests} adults${sheet.kids_guests ? ` + ${sheet.kids_guests} kids` : ""}` : "",
+      guestsLabel: guests.adults != null ? `${guests.adults} adults${guests.kids ? ` + ${guests.kids} kids` : ""}` : "",
       eventOrder: sheet.event_order_number || "",
     };
     const ok: string[] = []; const failed: string[] = [];
