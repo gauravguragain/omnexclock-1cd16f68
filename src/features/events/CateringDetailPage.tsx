@@ -1,6 +1,7 @@
 import { issueCateringRunsheet } from "./issueCateringRunsheet";
 import { eventLabel } from "@/lib/eventLabel";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { useLiveSync } from "@/hooks/useLiveSync";
 import CateringMenuEditor, { cateringItemsTotal, cateringMenuRows, cateringMenuTotal, useBookPackages, type CPkg, type CDish } from "./CateringMenuEditor";
 import ChafingCard from "./ChafingCard";
 import LeadMenuShareButton from "./LeadMenuShareButton";
@@ -51,20 +52,17 @@ export default function CateringDetailPage({ view }: { view: "lead" | "booking" 
   const base = `/b/${businessCode}/catering`;
   const bookPackages = useBookPackages(ev);
 
-  useEffect(() => {
+  const reloadMenu = useCallback(async () => {
     if (!lead?.id) return;
-    let cancelled = false;
-    (async () => {
       const { data } = await supabase.from("crm_menu_selections").select("*").eq("lead_id", lead.id).order("updated_at", { ascending: false }).limit(1).maybeSingle();
-      if (cancelled) return;
       setSelection(data);
       if (data) {
         const result = await supabase.from("crm_menu_selection_items").select("*").eq("selection_id", data.id).order("created_at");
-        if (!cancelled) setItems(result.data || []);
+        setItems(result.data || []);
       } else setItems([]);
-    })();
-    return () => { cancelled = true; };
   }, [lead?.id]);
+  useEffect(() => { void reloadMenu(); }, [reloadMenu]);
+  useLiveSync(["crm_menu_selections", "crm_menu_selection_items"], crm.business?.id, () => void reloadMenu());
 
   if (!crm.business || crm.loading) return <div className="py-16 text-center text-muted-foreground">Loading…</div>;
   if ((view === "booking" && !booking) || !lead) return <div className="space-y-3 py-16 text-center"><p>Catering {view === "lead" ? "lead" : "booking"} not found.</p><Button variant="outline" asChild><Link to={`${base}/leads`}>Back to catering leads</Link></Button></div>;
@@ -120,20 +118,22 @@ export default function CateringDetailPage({ view }: { view: "lead" | "booking" 
     const { error } = await supabase.from("crm_bookings").update({ event_name: bk.event_name, event_date: bk.event_date, start_time: bk.start_time, end_time: bk.end_time, duration_minutes: minutesBetween(bk.start_time, bk.end_time), fulfilment_method: bk.fulfilment_method, service_location: bk.fulfilment_method === "pickup" ? null : booking.service_location || bk.service_location || null, adults: Number(bk.adults) || 0, kids: Number(bk.kids) || 0, guest_count: total, notes: bk.notes || null } as any).eq("id", booking.id);
     if (error) { setBkSaving(false); toast.error(error.message); return; }
     const chosen = pkgs;
-    const { data: sel, error: se } = await supabase.from("crm_menu_selections").upsert({ business_id: bid, lead_id: lead.id, guest_count: Number(bk.adults) || total, package_name: chosen[0]?.name || null, updated_by: null } as any, { onConflict: "lead_id" }).select("id").single();
+    const rows = cateringMenuRows(chosen, bid, selection?.id || booking.id);
+    const { error: se } = await supabase.rpc("save_menu_selection", {
+      _selection: { ...selection, business_id: bid, lead_id: lead.id, guest_count: Number(bk.adults) || total, package_name: chosen[0]?.name || null, total_estimate: cateringMenuTotal(chosen, total) },
+      _items: rows.map(({ selection_id, business_id, ...row }: any) => row),
+    });
     if (se) { setBkSaving(false); toast.error(se.message); return; }
-    await supabase.from("crm_menu_selection_items").delete().eq("selection_id", sel.id);
-    const rows = cateringMenuRows(chosen, bid, sel.id);
-    if (rows.length) { const { error: ie } = await supabase.from("crm_menu_selection_items").insert(rows as any); if (ie) { setBkSaving(false); toast.error(ie.message); return; } }
     if (rs) {
-      const { error: re } = await supabase.from("crm_runsheets").update({ sales_person: team.sales_person || null, sales_person_phone: team.sales_person_phone || null, event_coordinator: team.coordinator || null, event_coordinator_phone: team.coordinator_phone || null, onsite_contact_name: team.onsite_name || null, onsite_contact_phone: team.onsite_phone || null, client_notes: team.client_notes || null } as any).eq("id", rs.id);
+      const { error: re } = await supabase.from("crm_runsheets").update({ adult_guests: Number(bk.adults) || 0, kids_guests: Number(bk.kids) || 0, sales_person: team.sales_person || null, sales_person_phone: team.sales_person_phone || null, event_coordinator: team.coordinator || null, event_coordinator_phone: team.coordinator_phone || null, onsite_contact_name: team.onsite_name || null, onsite_contact_phone: team.onsite_phone || null, client_notes: team.client_notes || null } as any).eq("id", rs.id);
       if (re) { setBkSaving(false); toast.error(re.message); return; }
     }
     const newTotal = cateringMenuTotal(chosen, total) + (bk.fulfilment_method === "pickup" ? 0 : Number(booking.delivery_fee || 0)) + Number(booking.chafing_dishes || 0) * Number(booking.chafing_dish_price ?? 15);
-    await supabase.from("crm_bookings").update({ total_amount: Math.round(newTotal * 100) / 100 } as any).eq("id", booking.id);
+    const { error: totalError } = await supabase.from("crm_bookings").update({ total_amount: Math.round(newTotal * 100) / 100 } as any).eq("id", booking.id);
+    if (totalError) { setBkSaving(false); toast.error(totalError.message); return; }
     setBkSaving(false);
     toast.success("Catering booking updated.");
-    await crm.refresh();
+    await Promise.all([crm.refresh(true), reloadMenu()]);
   };
 
   return <div className="mx-auto max-w-5xl space-y-5">
