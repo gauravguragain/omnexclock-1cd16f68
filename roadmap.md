@@ -1,4 +1,5 @@
 ## Open tasks
+- [ ] Sync saved catering booking details, guest counts and menus across run-sheet copies and verify read-back.
 - [x] Fix roster live run-sheet loading, secure beverage hydration and master access; verified authenticated viewer with real emailed catering and event sheets. Full roster navigation remains blocked by its business-loading screen in sandbox.
 - [ ] Sync emailed run-sheet equipment, team notes and automatic seating; enrich AI forecasting and verify live updates.
 - [ ] Link all successfully emailed app run sheets to Daily Event Setup and verify ongoing live updates.
