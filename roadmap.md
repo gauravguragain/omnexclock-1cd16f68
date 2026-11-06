@@ -1,4 +1,6 @@
 ## Open tasks
+- [x] Add Operations bookings-made report by Sydney creation date regardless of event date; seven rule tests passed and authenticated PDF/Excel downloads verified.
+- [ ] Verify populated bookings-made report through authenticated UI (sandbox session returns no booking rows, including for the full year).
 - [x] Sync saved catering details and menus in live run-sheet views; correct existing stale guest counts; 15 focused tests passed.
 - [ ] Verify catering edit/save through authenticated UI (sandbox account cannot read the real catering bookings).
 - [x] Fix roster live run-sheet loading, secure beverage hydration and master access; verified authenticated viewer with real emailed catering and event sheets. Full roster navigation remains blocked by its business-loading screen in sandbox.

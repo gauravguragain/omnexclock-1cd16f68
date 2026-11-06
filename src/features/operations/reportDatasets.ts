@@ -1,5 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
 import { addDays, type OpsData, type Range } from "@/lib/operationsData";
+import { sydneyReportRange } from "@/lib/sydneyReportRange";
 
 const db = supabase as any;
 
@@ -86,6 +87,26 @@ const loadBookings = (kind: "event" | "catering") => async ({ bid, range }: Ctx)
       deposit_paid: b.deposit_paid ? "Yes" : "No",
     }));
 };
+const loadBookingsMade = async ({ bid, range }: Ctx) => {
+  const window = sydneyReportRange(range);
+  const rows = await all(() => db.from("crm_bookings")
+    .select("id,created_at,event_date,start_time,end_time,event_name,event_type,venue_space,service_location,guest_count,adults,kids,status,total_amount,deposit_amount,deposit_paid,balance_due_date,booking_kind,crm_leads(full_name,event_type)")
+    .eq("business_id", bid).gte("created_at", window.from).lt("created_at", window.toExclusive)
+    .order("created_at", { ascending: false }).order("id"));
+  return rows.map(b => {
+    const client = b.crm_leads?.full_name || "";
+    const eventType = pretty(b.event_type || b.crm_leads?.event_type);
+    return {
+      ...b, created: sydDate(b.created_at), created_time: sydTime(b.created_at),
+      kind: b.booking_kind === "catering" ? "Catering" : "Event",
+      time: [t12(b.start_time), t12(b.end_time)].filter(Boolean).join(" – "),
+      event_name: client ? [eventType, client].filter(Boolean).join(" – ") : b.event_name || "",
+      event_type: eventType, client, venue_space: b.venue_space || b.service_location || "",
+      guests: n(b.guest_count) || n(b.adults) + n(b.kids), status: pretty(b.status),
+      deposit_paid: b.deposit_paid ? "Yes" : "No",
+    };
+  });
+};
 const bookingSummary = (rows: Row[]): [string, string | number][] => {
   const live = rows.filter(r => !["Cancelled", "Declined", "Lost"].includes(r.status));
   return [
@@ -97,6 +118,22 @@ const bookingSummary = (rows: Row[]): [string, string | number][] => {
 
 export const DATASETS: Dataset[] = [
   // ---------- Sales & events ----------
+  {
+    key: "bookings_made", group: "Sales & events", label: "Bookings made",
+    description: "Bookings created in the period · all event dates",
+    columns: [
+      { key: "created", label: "Booking made", type: "date" },
+      { key: "created_time", label: "Created time (Sydney)" },
+      { key: "kind", label: "Event / catering" },
+      ...bookingCols.map(c => c.key === "event_date" ? { ...c, label: "Event date" } : c),
+    ],
+    load: loadBookingsMade,
+    summary: rows => [
+      ...bookingSummary(rows),
+      ["Event bookings", rows.filter(r => r.kind === "Event").length],
+      ["Catering bookings", rows.filter(r => r.kind === "Catering").length],
+    ],
+  },
   {
     key: "leads", group: "Sales & events", label: "Leads", description: "Enquiries with an event date in the period (creation date used when no date is set)",
     columns: [
