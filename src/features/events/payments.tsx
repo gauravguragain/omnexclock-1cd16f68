@@ -2,6 +2,7 @@ import { eventLabel } from "@/lib/eventLabel";
 import { prettyCrmValue } from "@/features/sales/types";
 import { useLiveSync } from "@/hooks/useLiveSync";
 import { fetchAllRows } from "@/lib/fetchAllRows";
+import { confirmBookingAfterPayment } from "@/lib/confirmOnPayment";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { format } from "date-fns";
 import { toast } from "sonner";
@@ -152,6 +153,10 @@ export function RecordPaymentDialog({ open, onOpenChange, booking, bookings, sug
       paid_on: form.paid_on, payment_type: form.payment_type, method: form.method, reference: form.reference.trim() || null, notes: form.notes.trim() || null,
     });
     if (error) { setSaving(false); toast.error(error.message); return; }
+    if (form.payment_type !== "refund") {
+      const res = await confirmBookingAfterPayment(target.id);
+      if (res.error) toast.warning(`Payment saved, but the booking stays pending: ${res.error}`);
+    }
     if (sendConfirmation) {
       const fmt = (d?: string | null) => d ? format(new Date(d + "T00:00"), "d MMMM yyyy") : "";
       const total = Number(target.total_amount) || 0;
