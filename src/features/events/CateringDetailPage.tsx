@@ -41,7 +41,7 @@ export default function CateringDetailPage({ view }: { view: "lead" | "booking" 
   const [bkTab, setBkTab] = useState<"details" | "delivery" | "menu" | "team" | "customer">("details");
   const [bk, setBk] = useState({ event_name: "", event_date: "", start_time: "18:00", end_time: "23:00", fulfilment_method: "delivery", service_location: "", adults: "", kids: "", notes: "" });
   const [pkgs, setPkgs] = useState<CPkg[]>([]);
-  const [team, setTeam] = useState({ sales_person: "", sales_person_phone: "", coordinator: "", coordinator_phone: "", onsite_name: "", onsite_phone: "", client_notes: "" });
+  const [team, setTeam] = useState({ sales_person: "", sales_person_phone: "", coordinator: "", coordinator_phone: "", onsite_name: "", onsite_phone: "", client_notes: "", ops_notes: "", foh_notes: "" });
   const [bkSaving, setBkSaving] = useState(false);
   const [sendOpen, setSendOpen] = useState(false);
   const [selection, setSelection] = useState<any>(null);
@@ -106,7 +106,7 @@ export default function CateringDetailPage({ view }: { view: "lead" | "booking" 
       });
       return { key, pkgId: pk?.id || "", bookId: pk?.book_id, name: row.item_name, pricePerHead: Number(row.price_per_head || 0), flatPrice: Number(row.flat_price || 0), dishes };
     }));
-    setTeam({ sales_person: rs?.sales_person || "", sales_person_phone: rs?.sales_person_phone || "", coordinator: rs?.event_coordinator || "", coordinator_phone: rs?.event_coordinator_phone || "", onsite_name: rs?.onsite_contact_name || "", onsite_phone: rs?.onsite_contact_phone || "", client_notes: rs?.client_notes || booking.notes || "" });
+    setTeam({ sales_person: rs?.sales_person || "", sales_person_phone: rs?.sales_person_phone || "", coordinator: rs?.event_coordinator || "", coordinator_phone: rs?.event_coordinator_phone || "", onsite_name: rs?.onsite_contact_name || "", onsite_phone: rs?.onsite_contact_phone || "", client_notes: rs?.client_notes || booking.notes || "", ops_notes: rs?.ops_notes || "", foh_notes: rs?.foh_notes || "" });
     setEditBkOpen(true);
   };
   const saveBk = async () => {
@@ -125,7 +125,7 @@ export default function CateringDetailPage({ view }: { view: "lead" | "booking" 
     });
     if (se) { setBkSaving(false); toast.error(se.message); return; }
     if (rs) {
-      const { error: re } = await supabase.from("crm_runsheets").update({ adult_guests: Number(bk.adults) || 0, kids_guests: Number(bk.kids) || 0, sales_person: team.sales_person || null, sales_person_phone: team.sales_person_phone || null, event_coordinator: team.coordinator || null, event_coordinator_phone: team.coordinator_phone || null, onsite_contact_name: team.onsite_name || null, onsite_contact_phone: team.onsite_phone || null, client_notes: team.client_notes || null } as any).eq("id", rs.id);
+      const { error: re } = await supabase.from("crm_runsheets").update({ adult_guests: Number(bk.adults) || 0, kids_guests: Number(bk.kids) || 0, sales_person: team.sales_person || null, sales_person_phone: team.sales_person_phone || null, event_coordinator: team.coordinator || null, event_coordinator_phone: team.coordinator_phone || null, onsite_contact_name: team.onsite_name || null, onsite_contact_phone: team.onsite_phone || null, client_notes: team.client_notes || null, ops_notes: team.ops_notes || null, foh_notes: team.foh_notes || null } as any).eq("id", rs.id);
       if (re) { setBkSaving(false); toast.error(re.message); return; }
     }
     const newTotal = cateringMenuTotal(chosen, total) + (bk.fulfilment_method === "pickup" ? 0 : Number(booking.delivery_fee || 0)) + Number(booking.chafing_dishes || 0) * Number(booking.chafing_dish_price ?? 15);
@@ -155,7 +155,7 @@ export default function CateringDetailPage({ view }: { view: "lead" | "booking" 
         {booking && !pickup && <Section title="Delivery"><dl className="grid gap-4 sm:grid-cols-2"><Field label="Address" value={booking.service_location ? <a className="text-primary underline" target="_blank" rel="noreferrer" href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(booking.service_location)}`}>{booking.service_location}</a> : null} /><Field label="Distance from Wentworthville" value={booking.delivery_distance_km != null ? `${Number(booking.delivery_distance_km).toFixed(2)} km` : null} /><Field label="Delivery fee" value={booking.delivery_fee != null ? `$${Number(booking.delivery_fee).toFixed(2)}${booking.delivery_fee_manual ? " (manual)" : ""}` : null} /></dl></Section>}
         {booking && <><Section title="Menu selection"><div className="space-y-3 text-sm">{packages.length ? <p><strong>Packages:</strong> {packages.map(i => i.course === "kids_package" ? `Kids menu (${i.quantity || booking.kids || 0})` : i.item_name).join(" · ")}</p> : <p className="text-muted-foreground">No packages selected.</p>}{Object.entries(courses).map(([course, dishes]) => <div key={course}><p className="font-semibold">{course}</p><p>{dishes.map(i => `${i.item_name}${i.package_group_key && i.notes ? ` — ${i.notes}` : ""}`).join(" · ")}</p></div>)}{items.filter(i => i.course === "live_stall").map(i => <p key={i.id}>Live stall: {String(i.item_name || "").replace(/_/g, " ")}</p>)}{selection?.dietary_requirements && <p>Dietary: {selection.dietary_requirements}</p>}{selection?.allergies && <p>Allergies: {selection.allergies}</p>}</div></Section>
           {(() => { const menuT = cateringItemsTotal(items, (booking.adults ?? 0) + (booking.kids ?? 0)); const del = pickup ? 0 : Number(booking.delivery_fee || 0); const cq = Number(booking.chafing_dishes || 0); const cp = Number(booking.chafing_dish_price ?? 15); return <><Section title="Chafing dishes"><Field label="Chafing dishes required" value={cq > 0 ? `${cq} × $${cp.toFixed(2)} = $${(cq * cp).toFixed(2)}` : "No"} /></Section><Section title="Total"><dl className="grid gap-4 sm:grid-cols-2"><Field label="Menu" value={`$${menuT.toFixed(2)}`} />{!pickup && <Field label="Delivery" value={`$${del.toFixed(2)}`} />}<Field label={`Chafing dishes${cq ? ` (${cq} × $${cp.toFixed(2)})` : ""}`} value={`$${(cq * cp).toFixed(2)}`} /><Field label="Booking total" value={<strong>${Number(booking.total_amount || 0).toFixed(2)}</strong>} /></dl></Section></>; })()}
-          <Section title="Notes"><p className="whitespace-pre-wrap text-sm">{rs?.client_notes || booking.notes || "No notes recorded."}</p></Section></>}
+          <Section title="Notes"><div className="space-y-3 text-sm"><div><p className="font-semibold">Client notes</p><p className="whitespace-pre-wrap">{rs?.client_notes || booking.notes || "No notes recorded."}</p></div>{rs?.ops_notes && <div className="text-kitchen-note"><p className="font-semibold">Kitchen team notes</p><p className="whitespace-pre-wrap">{rs.ops_notes}</p></div>}{rs?.foh_notes && <div className="text-foh-note"><p className="font-semibold">Front of house notes</p><p className="whitespace-pre-wrap">{rs.foh_notes}</p></div>}</div></Section></>}
       </div>
       <div>
         {booking && <div className="mb-6"><BookingPaymentsCard booking={booking} onChanged={crm.refresh} /></div>}
@@ -191,6 +191,8 @@ export default function CateringDetailPage({ view }: { view: "lead" | "booking" 
           <div><Label>Contact phone</Label><Input placeholder="Defaults to client phone" value={team.onsite_phone} onChange={e => setTeam(p => ({ ...p, onsite_phone: e.target.value }))} /></div>
         </div>
         <div><Label>Client notes (shown on run sheet)</Label><Textarea rows={3} value={team.client_notes} onChange={e => setTeam(p => ({ ...p, client_notes: e.target.value }))} /></div>
+        <div><Label className="text-kitchen-note">Kitchen team notes (team copy only)</Label><Textarea rows={2} className="text-kitchen-note" placeholder="Notes for the kitchen team" value={team.ops_notes} onChange={e => setTeam(p => ({ ...p, ops_notes: e.target.value }))} /></div>
+        <div><Label className="text-foh-note">Front of house notes (team copy only)</Label><Textarea rows={2} className="text-foh-note" placeholder="Notes for the front of house team" value={team.foh_notes} onChange={e => setTeam(p => ({ ...p, foh_notes: e.target.value }))} /></div>
         {!rs && <p className="text-xs text-muted-foreground">Team details save once a run sheet exists — preview the run sheet first.</p>}
       </div>}
       <div className="flex justify-end gap-2 border-t border-border pt-4"><Button variant="outline" onClick={() => setEditBkOpen(false)}>Cancel</Button><Button onClick={saveBk} disabled={bkSaving}>{bkSaving ? "Saving…" : "Save changes"}</Button></div>
