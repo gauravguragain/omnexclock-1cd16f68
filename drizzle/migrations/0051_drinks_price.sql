@@ -1,1 +1,2 @@
-ALTER TABLE public.crm_drinks ADD COLUMN IF NOT EXISTS price numeric(10,2);
+-- Lovable Test/Live retirement: current Live database accepted as baseline.
+-- ALTER TABLE public.crm_drinks ADD COLUMN IF NOT EXISTS price numeric(10,2);

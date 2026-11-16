@@ -1,1 +1,2 @@
-ALTER TABLE public.crm_bookings ADD COLUMN IF NOT EXISTS delivery_distance_km numeric, ADD COLUMN IF NOT EXISTS delivery_fee numeric, ADD COLUMN IF NOT EXISTS delivery_fee_manual boolean NOT NULL DEFAULT false, ADD COLUMN IF NOT EXISTS delivery_rate_per_km numeric;
+-- Lovable Test/Live retirement: current Live database accepted as baseline.
+-- ALTER TABLE public.crm_bookings ADD COLUMN IF NOT EXISTS delivery_distance_km numeric, ADD COLUMN IF NOT EXISTS delivery_fee numeric, ADD COLUMN IF NOT EXISTS delivery_fee_manual boolean NOT NULL DEFAULT false, ADD COLUMN IF NOT EXISTS delivery_rate_per_km numeric;

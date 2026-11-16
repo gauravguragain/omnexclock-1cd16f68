@@ -1,2 +1,3 @@
-ALTER TABLE public.crm_menu_items DROP CONSTRAINT IF EXISTS crm_menu_items_category_check;
-ALTER TABLE public.crm_menu_items ADD CONSTRAINT crm_menu_items_category_check CHECK (category IN ('nepali_express','nepali_catering','indian_catering','addon','beverage','live_stall','custom'));
+-- Lovable Test/Live retirement: current Live database accepted as baseline.
+-- ALTER TABLE public.crm_menu_items DROP CONSTRAINT IF EXISTS crm_menu_items_category_check;
+-- ALTER TABLE public.crm_menu_items ADD CONSTRAINT crm_menu_items_category_check CHECK (category IN ('nepali_express','nepali_catering','indian_catering','addon','beverage','live_stall','custom'));

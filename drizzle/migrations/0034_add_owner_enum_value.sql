@@ -1,1 +1,2 @@
-ALTER TYPE public.app_role ADD VALUE IF NOT EXISTS 'owner';
+-- Lovable Test/Live retirement: current Live database accepted as baseline.
+-- ALTER TYPE public.app_role ADD VALUE IF NOT EXISTS 'owner';

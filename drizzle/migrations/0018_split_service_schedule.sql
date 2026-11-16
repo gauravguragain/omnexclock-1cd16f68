@@ -1,1 +1,2 @@
-alter table public.crm_runsheets add column if not exists service_schedule_foh jsonb not null default '[]'::jsonb;
+-- Lovable Test/Live retirement: current Live database accepted as baseline.
+-- alter table public.crm_runsheets add column if not exists service_schedule_foh jsonb not null default '[]'::jsonb;

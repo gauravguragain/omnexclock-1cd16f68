@@ -1,1 +1,2 @@
-DROP POLICY IF EXISTS "Service role can update invitations" ON public.admin_invitations;
+-- Lovable Test/Live retirement: current Live database accepted as baseline.
+-- DROP POLICY IF EXISTS "Service role can update invitations" ON public.admin_invitations;

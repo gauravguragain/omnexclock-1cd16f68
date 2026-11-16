@@ -1,2 +1,3 @@
-ALTER TABLE public.crm_menu_selection_items ADD COLUMN one_off_diet text;
-ALTER TABLE public.crm_menu_selection_items ADD CONSTRAINT crm_menu_selection_items_one_off_diet_valid CHECK (one_off_diet IS NULL OR one_off_diet IN ('veg', 'nonveg', 'seafood'));
+-- Lovable Test/Live retirement: current Live database accepted as baseline.
+-- ALTER TABLE public.crm_menu_selection_items ADD COLUMN one_off_diet text;
+-- ALTER TABLE public.crm_menu_selection_items ADD CONSTRAINT crm_menu_selection_items_one_off_diet_valid CHECK (one_off_diet IS NULL OR one_off_diet IN ('veg', 'nonveg', 'seafood'));

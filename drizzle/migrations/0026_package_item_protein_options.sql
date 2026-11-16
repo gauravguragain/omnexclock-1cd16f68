@@ -1,1 +1,2 @@
-ALTER TABLE public.crm_package_course_items ADD COLUMN IF NOT EXISTS protein_options text[] NOT NULL DEFAULT '{}';
+-- Lovable Test/Live retirement: current Live database accepted as baseline.
+-- ALTER TABLE public.crm_package_course_items ADD COLUMN IF NOT EXISTS protein_options text[] NOT NULL DEFAULT '{}';

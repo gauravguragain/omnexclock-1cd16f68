@@ -1,1 +1,2 @@
-ALTER TABLE public.crm_settings ADD COLUMN IF NOT EXISTS runsheet_terms text, ADD COLUMN IF NOT EXISTS runsheet_terms_enabled boolean NOT NULL DEFAULT true;
+-- Lovable Test/Live retirement: current Live database accepted as baseline.
+-- ALTER TABLE public.crm_settings ADD COLUMN IF NOT EXISTS runsheet_terms text, ADD COLUMN IF NOT EXISTS runsheet_terms_enabled boolean NOT NULL DEFAULT true;

@@ -1,2 +1,3 @@
-ALTER TABLE public.crm_bookings DROP CONSTRAINT crm_bookings_status_check;
-ALTER TABLE public.crm_bookings ADD CONSTRAINT crm_bookings_status_check CHECK (status = ANY (ARRAY['pending_confirmation'::text, 'confirmed'::text, 'completed'::text, 'declined'::text, 'cancelled'::text]));
+-- Lovable Test/Live retirement: current Live database accepted as baseline.
+-- ALTER TABLE public.crm_bookings DROP CONSTRAINT crm_bookings_status_check;
+-- ALTER TABLE public.crm_bookings ADD CONSTRAINT crm_bookings_status_check CHECK (status = ANY (ARRAY['pending_confirmation'::text, 'confirmed'::text, 'completed'::text, 'declined'::text, 'cancelled'::text]));
